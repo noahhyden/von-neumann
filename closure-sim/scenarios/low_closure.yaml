@@ -1,0 +1,71 @@
+# Deliberately low-closure factory (~43% of its own mass made locally). It's
+# electronics-heavy and leans on imported precision parts, so it stays starved for
+# Earth resupply. Use it to see the electronics wall bite from BOTH sides: as
+# vitamins the chips throttle growth; made locally their enormous energy cost
+# (thousands of kWh/kg) starves the factory of power instead.
+#
+# energy_to_produce_kwh_per_kg = electricity the factory spends per kg on-site.
+# See REFERENCES.md for sources.
+name: Low-Closure Outpost Factory
+
+subsystems:
+  - name: Structure (cast/printed metal)
+    mass_kg: 2000
+    category: structure
+    producible_locally: true
+    processes: [casting, machining]
+    energy_to_produce_kwh_per_kg: 5.0
+
+  - name: Power arrays (assembled locally)
+    mass_kg: 1000
+    category: power
+    producible_locally: true
+    processes: [assembly]
+    energy_to_produce_kwh_per_kg: 50.0
+
+  # ---- Vitamins ----
+  - name: Compute & control electronics (chips)
+    mass_kg: 1500
+    category: compute
+    producible_locally: false
+    processes: [semiconductor_fab]
+    energy_to_produce_kwh_per_kg: 8000.0
+
+  - name: Power electronics & ICs
+    mass_kg: 800
+    category: electronics
+    producible_locally: false
+    processes: [semiconductor_fab]
+    energy_to_produce_kwh_per_kg: 2500.0
+
+  - name: Precision actuators (imported)
+    mass_kg: 700
+    category: actuators
+    producible_locally: false
+    processes: [machining]
+    energy_to_produce_kwh_per_kg: 40.0
+
+  - name: Electronic sensors / instruments
+    mass_kg: 500
+    category: sensors
+    producible_locally: false
+    processes: [semiconductor_fab, assembly]
+    energy_to_produce_kwh_per_kg: 4000.0
+
+  - name: Specialty alloys & seals
+    mass_kg: 500
+    category: structure
+    producible_locally: false
+    processes: [machining]
+    energy_to_produce_kwh_per_kg: 35.0
+
+replication:
+  seed_mass_kg: 7000
+  local_build_rate_kg_per_day: 15.0
+  vitamin_resupply_mass_kg: 80.0
+  resupply_cadence_days: 30.0
+  available_power_kw: 2000.0    # ~2 MW — generous for this seed, still nowhere near
+                                # enough to fab its own chips
+  target_output_kg_per_day: 100.0   # a tenth of the lunar target — still out of reach
+  duration_days: 29200         # 80 years
+  dt_days: 1.0

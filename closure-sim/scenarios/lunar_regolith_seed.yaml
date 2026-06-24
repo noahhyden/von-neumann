@@ -1,0 +1,95 @@
+# Toy "lunar regolith seed factory" — a fairly self-sufficient design (~97% of its
+# own mass made on the Moon). The bits it CAN'T make locally ("vitamins", shipped
+# from Earth) are the chips and power electronics, plus a few precision parts.
+#
+# energy_to_produce_kwh_per_kg = the ELECTRICITY the factory itself spends to make
+# 1 kg of that part on-site (not Earth factory-gate energy). Numbers are rounded,
+# research-backed order-of-magnitude figures — see REFERENCES.md for sources.
+# Key point: chips cost thousands of kWh/kg; metal you smelt from regolith costs
+# single digits. That gap is the whole story.
+name: Lunar Regolith Seed Factory
+
+subsystems:
+  - name: Structure & supports (cast regolith/metal)
+    mass_kg: 4000
+    category: structure
+    producible_locally: true
+    processes: [casting, machining]
+    energy_to_produce_kwh_per_kg: 5.0      # in-situ iron from regolith, electric
+
+  - name: Solar power arrays (Si refined from regolith)
+    mass_kg: 2500
+    category: power
+    producible_locally: true
+    processes: [refining, additive]
+    energy_to_produce_kwh_per_kg: 50.0     # purifying silicon is energy-heavy
+
+  - name: Thermal radiators
+    mass_kg: 800
+    category: thermal
+    producible_locally: true
+    processes: [casting, machining]
+    energy_to_produce_kwh_per_kg: 3.0
+
+  - name: Actuators & motors (cast + wound wire)
+    mass_kg: 1500
+    category: actuators
+    producible_locally: true
+    processes: [casting, machining, wire_drawing]
+    energy_to_produce_kwh_per_kg: 15.0
+
+  - name: Robotic manipulators
+    mass_kg: 1200
+    category: actuators
+    producible_locally: true
+    processes: [machining, additive]
+    energy_to_produce_kwh_per_kg: 18.0
+
+  - name: Refining / chemical plant
+    mass_kg: 1500
+    category: structure
+    producible_locally: true
+    processes: [casting, machining]
+    energy_to_produce_kwh_per_kg: 7.0
+
+  - name: Basic sensors (machined optics/housings)
+    mass_kg: 150
+    category: sensors
+    producible_locally: true
+    processes: [machining]
+    energy_to_produce_kwh_per_kg: 60.0
+
+  # ---- Vitamins (must be shipped from Earth) ----
+  - name: Control electronics / compute (chips)
+    mass_kg: 60
+    category: compute
+    producible_locally: false
+    processes: [semiconductor_fab]
+    energy_to_produce_kwh_per_kg: 8000.0   # finished, packaged logic chips
+
+  - name: Power electronics (inverters, driver ICs)
+    mass_kg: 90
+    category: electronics
+    producible_locally: false
+    processes: [semiconductor_fab]
+    energy_to_produce_kwh_per_kg: 2500.0
+
+  - name: Precision bearings & special alloys
+    mass_kg: 200
+    category: structure
+    producible_locally: false
+    processes: [machining]
+    energy_to_produce_kwh_per_kg: 35.0
+
+replication:
+  seed_mass_kg: 12000          # one full copy landed from Earth (a modern, small
+                               # seed; NASA's 1980 strawman was 100 tonnes)
+  local_build_rate_kg_per_day: 20.0   # the seed's starting output (~1-yr doubling)
+  vitamin_resupply_mass_kg: 50.0
+  resupply_cadence_days: 30.0
+  available_power_kw: 4000.0   # ~4 MW, delivered/built as SEPARATE power
+                               # infrastructure (a multi-MW plant outmasses the
+                               # seed itself — that is the real cost of making chips)
+  target_output_kg_per_day: 1000.0
+  duration_days: 14600         # 40 years
+  dt_days: 1.0

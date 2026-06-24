@@ -1,0 +1,421 @@
+<title>The Electronics Wall — Can a factory in space copy itself?</title>
+<style>
+  :root {
+    --ground: #1B2230;
+    --panel: #232C3C;
+    --text: #E8E2D6;
+    --muted: #98A2B3;
+    --metal: #E8A33D;   /* what it can cheaply make: local rock & metal */
+    --chip:  #58C7D6;   /* the scarce, hard thing: chips & the wall */
+    --line: rgba(232, 226, 214, 0.12);
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --serif: Georgia, "Times New Roman", serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background-color: var(--ground);
+    /* faint graph-paper grid — engineering-report atmosphere, kept low */
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 28px 28px;
+    color: var(--text);
+    font-family: var(--serif);
+    font-size: clamp(1.05rem, 0.9rem + 0.55vw, 1.2rem);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---- type roles ---- */
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--chip);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: clamp(2rem, 1.1rem + 4.4vw, 3.7rem);
+    line-height: 1.04;
+    letter-spacing: -0.01em;
+    margin: 0 0 24px;
+  }
+  h2 {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: clamp(1.4rem, 1rem + 1.8vw, 2.1rem);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin: 0 0 20px;
+  }
+  .lede { font-size: 1.15em; color: var(--text); }
+  p { margin: 0 0 20px; }
+  a { color: var(--chip); text-decoration: none; border-bottom: 1px solid rgba(88,199,214,0.4); }
+  a:hover { border-bottom-color: var(--chip); }
+  sup a { border: none; font-family: var(--mono); font-size: 0.7em; padding: 0 1px; }
+  strong { color: #FFF; font-weight: 600; }
+
+  /* ---- section rhythm ---- */
+  section { padding: 64px 0; border-top: 1px solid var(--line); }
+  section.hero { padding: clamp(56px, 9vw, 110px) 0 56px; border-top: none; }
+
+  .marker {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 14px;
+  }
+  .marker b { color: var(--metal); font-weight: 600; }
+
+  /* ---- hero chart ---- */
+  .chartcard {
+    margin-top: 40px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 22px 22px 16px;
+  }
+  canvas { display: block; width: 100%; height: auto; }
+  .chartcap {
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    color: var(--muted);
+    letter-spacing: 0.03em;
+    margin: 14px 2px 0;
+    line-height: 1.5;
+  }
+
+  /* ---- two-sided make / can't-make ---- */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 28px 0 8px; }
+  .col { padding: 20px; border-radius: 4px; background: var(--panel); border-top: 3px solid; }
+  .col.make { border-color: var(--metal); }
+  .col.cant { border-color: var(--chip); }
+  .col h3 {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+  }
+  .col.make h3 { color: var(--metal); }
+  .col.cant h3 { color: var(--chip); }
+  .col p { font-size: 0.98em; margin: 0; color: var(--text); }
+
+  /* ---- big stat ---- */
+  .stat { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; margin: 8px 0 24px; }
+  .stat .num {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: clamp(2.8rem, 1.5rem + 6vw, 5rem);
+    line-height: 0.9;
+    color: var(--chip);
+    letter-spacing: -0.02em;
+  }
+  .stat .cap { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); max-width: 22ch; line-height: 1.5; }
+
+  /* ---- double-bind cards ---- */
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 24px 0; }
+  .card { padding: 22px; border-radius: 4px; background: var(--panel); border: 1px solid var(--line); }
+  .card .tag {
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin: 0 0 12px;
+    display: inline-block;
+    padding: 4px 9px;
+    border-radius: 3px;
+  }
+  .card.a .tag { color: var(--metal); background: rgba(232,163,61,0.12); }
+  .card.b .tag { color: var(--chip); background: rgba(88,199,214,0.12); }
+  .card p { font-size: 0.98em; margin: 0; }
+  .punch {
+    font-family: var(--serif);
+    font-size: 1.2em;
+    line-height: 1.5;
+    border-left: 3px solid var(--metal);
+    padding-left: 20px;
+    margin: 28px 0 0;
+    color: #FFF;
+  }
+
+  /* ---- results table ---- */
+  .results { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; margin: 8px 0 14px; }
+  .results .head {
+    font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); padding: 14px 20px; border-bottom: 1px solid var(--line);
+  }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: none; }
+  .row .what { font-size: 0.98em; }
+  .row .val { font-family: var(--mono); font-weight: 600; white-space: nowrap; }
+  .row .val.good { color: var(--metal); }
+  .row .val.bad { color: var(--chip); }
+  .row .val.never { color: var(--muted); }
+
+  /* ---- sources ---- */
+  ol.src { font-family: var(--mono); font-size: 0.82rem; line-height: 1.6; color: var(--muted); padding-left: 2.4em; }
+  ol.src li { margin-bottom: 12px; }
+  ol.src a { word-break: break-word; color: var(--text); border-bottom-color: var(--line); }
+
+  footer { padding: 48px 0 72px; border-top: 1px solid var(--line); }
+  footer p { font-family: var(--mono); font-size: 0.8rem; color: var(--muted); line-height: 1.7; margin: 0; }
+
+  .note { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); line-height: 1.55; }
+
+  @media (max-width: 640px) {
+    .split, .cards { grid-template-columns: 1fr; }
+    body { background-size: 22px 22px; }
+  }
+  :focus-visible { outline: 2px solid var(--chip); outline-offset: 3px; }
+</style>
+
+<section class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Self-replicating factories in space</p>
+    <h1>One factory makes two. Two make four. Then it hits a wall.</h1>
+    <p class="lede">The long-term dream is to land a single robotic factory on the Moon and let it copy itself — two become four, four become eight — until you've grown an entire industry from one rocket's worth of cargo. Whether that ever works comes down to a single number, and one stubborn part the factory can't make.</p>
+    <div class="chartcard">
+      <canvas id="growth" width="800" height="380"
+        role="img"
+        aria-label="A chart of factory size over time. One line keeps doubling forever, labelled 'if it could make everything'. A second line doubles at first then flattens into a wall, labelled 'what actually happens — stuck waiting on chips from Earth'."></canvas>
+      <p class="chartcap">FIG.1 — How a self-replicating factory grows, and where it gets stuck.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="marker"><b>01</b> &nbsp;/&nbsp; The idea — "closure"</p>
+    <h2>How much of itself can it build?</h2>
+    <p><strong>Closure</strong> is the share of its own weight a factory can build from local material — the rock, metal and dust it digs up on site. Everything else has to keep arriving from Earth. The 1980 NASA study that first worked this out called those imported parts <strong>"vitamins"</strong>: small, essential, and you can't survive without a steady supply.<sup><a href="#s1">[1]</a></sup></p>
+    <div class="split">
+      <div class="col make">
+        <h3>What it can make</h3>
+        <p>Structural frames, solar mounts, motors, radiators — smelted and machined from local rock. Cheap to make, built on site.</p>
+      </div>
+      <div class="col cant">
+        <h3>What it can't</h3>
+        <p>Computer chips, power electronics, precision sensors. The vitamins. Every one has to ride up from Earth.</p>
+      </div>
+    </div>
+    <p>Here's why this one number decides everything. Local parts <strong>grow with the factory</strong> — more machines make more parts, which is what powers the doubling. But vitamins arrive at a <strong>fixed trickle</strong> from Earth, no matter how big the factory gets. So the vitamins become the bottleneck: the factory can only grow as fast as its rarest essential part shows up.</p>
+    <p>NASA judged <strong>90–96% closure achievable</strong>, and advised shipping the last 5–10% as vitamins rather than chasing perfection.<sup><a href="#s1">[1]</a></sup> The deeper rule: below full self-sufficiency a factory stays tethered to resupply; only as it nears 100% can growth truly run away.<sup><a href="#s2">[2]</a></sup> More recent work puts realistic near-term closure around 70% — with chips, solar cells and circuitry still coming from home.<sup><a href="#s3">[3]</a></sup></p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="marker"><b>02</b> &nbsp;/&nbsp; The wall — why chips are the hard part</p>
+    <h2>A chip is the tip of the deepest supply chain on Earth.</h2>
+    <div class="stat">
+      <span class="num">~600×</span>
+      <span class="cap">The fuel, water, chemicals and gases needed to make one 2-gram microchip outweigh the chip itself about 600 times.<sup><a href="#s4">[4]</a></sup></span>
+    </div>
+    <p>Making a chip takes 400-plus separate manufacturing steps and materials purified to 99.9999999%.<sup><a href="#s7">[7]</a></sup> You cannot recreate that on the Moon with a handful of robots. And the energy alone is staggering: a finished chip takes roughly <strong>3,000–15,000 kilowatt-hours of electricity per kilogram</strong> to manufacture.<sup><a href="#s4">[4]</a></sup><sup><a href="#s5">[5]</a></sup> That's about <strong>a thousand times</strong> the energy the same factory spends to smelt a kilogram of metal from local rock.<span class="note">*</span></p>
+    <p class="note">* Our model uses 8,000 kWh/kg for chips against ~5–8 kWh/kg for smelted metal — both inside the cited ranges. Even making solar cells locally is its own energy sink: purifying silicon runs 40–120 kWh/kg.<sup><a href="#s6">[6]</a></sup></p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="marker"><b>03</b> &nbsp;/&nbsp; The double bind</p>
+    <h2>So why not just make the chips on site?</h2>
+    <p>Because that swaps one wall for another. The factory is trapped from both directions:</p>
+    <div class="cards">
+      <div class="card a">
+        <span class="tag">Ship the chips in</span>
+        <p>The factory grows fast at first, then slows to the speed of the rocket schedule. It can only build as quickly as its rarest part arrives — so it crawls.</p>
+      </div>
+      <div class="card b">
+        <span class="tag">Make the chips itself</span>
+        <p>Now it's limited by electricity. Chips are so power-hungry the factory runs out of energy before it runs out of parts. Closing the gap would need a power plant heavier than the factory — and today's best lunar reactor design makes just 40 kW at under 6 tonnes.<sup><a href="#s8">[8]</a></sup></p>
+      </div>
+    </div>
+    <p class="punch">Chips are a "vitamin" for a reason. A factory only beats the wall if it's already highly self-sufficient <em>and</em> swimming in power — both at once.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="marker"><b>04</b> &nbsp;/&nbsp; What the model shows</p>
+    <h2>Years saved, or never at all.</h2>
+    <p>Running a sample lunar seed factory through the trade-off above — goal: reach 1,000 kg of output per day — the choices play out like this:</p>
+    <div class="results">
+      <div class="head">Lunar seed factory · time to reach the goal</div>
+      <div class="row"><span class="what">Chips shipped from Earth</span><span class="val never">~29 years</span></div>
+      <div class="row"><span class="what">Chips made on site, with a 4 MW power plant</span><span class="val good">~17 years</span></div>
+      <div class="row"><span class="what">Chips made on site, with only 1 MW</span><span class="val bad">never — runs out of power</span></div>
+    </div>
+    <p class="note">Illustrative output from <strong style="color:var(--text)">closure-sim</strong>, an open tool for exploring these trade-offs — a way to reason about the problem, not a forecast.</p>
+  </div>
+</section>
+
+<section id="sources">
+  <div class="wrap">
+    <p class="marker">Sources</p>
+    <ol class="src">
+      <li id="s1">NASA, <em>Advanced Automation for Space Missions</em> (CP-2255), 1980 — the original self-replicating lunar factory study (Freitas, von Tiesenhausen et al.); origin of the 90–96% closure estimate, the "vitamins" framing and the ~1-year doubling time. <a href="https://ntrs.nasa.gov/citations/19830007081">ntrs.nasa.gov/citations/19830007081</a> · <a href="https://www.rfreitas.com/Astro/GrowingLunarFactory1981.htm">rfreitas.com</a></li>
+      <li id="s2">R. Freitas &amp; R. Merkle, <em>Kinematic Self-Replicating Machines</em>, 2004 — closure theory and the resupply-bottleneck-vs-runaway-growth dynamic. <a href="http://www.molecularassembler.com/KSRM.htm">molecularassembler.com/KSRM.htm</a></li>
+      <li id="s3">A. Ellery et al., "Guided Self-Replicating Factory," arXiv:2110.15198, 2021 — modern revival; ~70% near-term closure, chips/solar still Earth-sourced. <a href="https://arxiv.org/abs/2110.15198">arxiv.org/abs/2110.15198</a></li>
+      <li id="s4">E. Williams, R. Ayres &amp; M. Heller, "The 1.7 Kilogram Microchip," <em>Environmental Science &amp; Technology</em>, 2002 — inputs to a 2 g chip outweigh it ~600×; chip embodied energy. <a href="https://pubs.acs.org/doi/10.1021/es025643o">pubs.acs.org/doi/10.1021/es025643o</a></li>
+      <li id="s5">S. Nagapurkar &amp; S. Das (Oak Ridge National Lab), "Embodied Energy Analysis of Integrated Circuit Manufacturing," <em>Sustainable Materials and Technologies</em>, 2022. <a href="https://www.osti.gov/servlets/purl/1884036">osti.gov/servlets/purl/1884036</a></li>
+      <li id="s6">J. Peng et al., "Review on life cycle assessment of energy payback and greenhouse gas emission of solar photovoltaic systems," 2013 — silicon PV embodied energy. <a href="https://krichlab.ca/wp-content/uploads/2014/06/Peng2013_Review-LCA-EPBTGHG-SolarPV.pdf">krichlab.ca (PDF)</a></li>
+      <li id="s7">Center for Strategic &amp; International Studies, "Mapping the Semiconductor Supply Chain" — depth of the chip supply chain (process steps, ultrapure materials). <a href="https://www.csis.org/analysis/mapping-semiconductor-supply-chain-critical-role-indo-pacific-region">csis.org</a></li>
+      <li id="s8">NASA, Fission Surface Power Project — a 40 kW lunar reactor under 6 tonnes (the real near-term power building block). <a href="https://www.nasa.gov/centers-and-facilities/glenn/nasas-fission-surface-power-project-energizes-lunar-exploration/">nasa.gov</a></li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>closure-sim · module 1 of an open exploration of self-replicating space manufacturing.<br>
+    Concepts follow NASA CP-2255 (1980) and Freitas &amp; Merkle (2004). Figures are research-grounded order-of-magnitude estimates, not predictions.</p>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var canvas = document.getElementById("growth");
+    if (!canvas) return;
+    var ctx = canvas.getContext("2d");
+    var css = getComputedStyle(document.documentElement);
+    var COL = {
+      metal: css.getPropertyValue("--metal").trim() || "#E8A33D",
+      chip: css.getPropertyValue("--chip").trim() || "#58C7D6",
+      text: css.getPropertyValue("--text").trim() || "#E8E2D6",
+      muted: css.getPropertyValue("--muted").trim() || "#98A2B3",
+      line: "rgba(232,226,214,0.10)"
+    };
+    var W = 800, H = 380, PAD_L = 52, PAD_R = 20, PAD_T = 26, PAD_B = 46;
+
+    function resize() {
+      var cssW = canvas.clientWidth || W;
+      var ratio = H / W;
+      var dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssW * ratio * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { w: cssW, h: cssW * ratio };
+    }
+
+    // Curve definitions in normalized 0..1 domain.
+    var WALL = 0.42; // where the "reality" curve flattens (resupply ceiling kicks in)
+    function dreamY(t) { return Math.pow(t, 2.4); }            // keeps accelerating
+    function realY(t) {
+      if (t <= WALL) return dreamY(t);
+      // after the wall: linear crawl from the value at the wall
+      var base = dreamY(WALL);
+      var slope = 0.16; // gentle linear growth
+      return base + slope * (t - WALL);
+    }
+    var MAXY = dreamY(1); // scale both curves to the dream's top
+
+    function draw(dims, prog) {
+      var w = dims.w, h = dims.h;
+      var plotW = w - PAD_L - PAD_R, plotH = h - PAD_T - PAD_B;
+      ctx.clearRect(0, 0, w, h);
+
+      function X(t) { return PAD_L + t * plotW; }
+      function Y(v) { return PAD_T + plotH - (v / MAXY) * plotH; }
+
+      // grid
+      ctx.strokeStyle = COL.line; ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (var i = 0; i <= 4; i++) {
+        var gy = PAD_T + (plotH / 4) * i;
+        ctx.moveTo(PAD_L, gy); ctx.lineTo(w - PAD_R, gy);
+      }
+      ctx.stroke();
+
+      // axes labels (mono)
+      ctx.fillStyle = COL.muted;
+      ctx.font = "11px ui-monospace, Menlo, monospace";
+      ctx.textAlign = "left";
+      ctx.fillText("FACTORY SIZE", PAD_L, PAD_T - 10);
+      ctx.textAlign = "center";
+      ctx.fillText("TIME  →", PAD_L + plotW / 2, h - 12);
+
+      function plot(fn, color, dash, end) {
+        ctx.save();
+        ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+        ctx.setLineDash(dash || []);
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        var first = true;
+        for (var t = 0; t <= end + 0.0001; t += 0.005) {
+          var px = X(t), py = Y(fn(t));
+          if (first) { ctx.moveTo(px, py); first = false; } else { ctx.lineTo(px, py); }
+        }
+        ctx.stroke();
+        ctx.restore();
+        return { x: X(end), y: Y(fn(end)) };
+      }
+
+      // wall marker (drawn once curve passes it)
+      if (prog > WALL) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(88,199,214,0.35)"; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(X(WALL), PAD_T); ctx.lineTo(X(WALL), PAD_T + plotH); ctx.stroke();
+        ctx.restore();
+        ctx.fillStyle = COL.chip;
+        ctx.font = "10px ui-monospace, Menlo, monospace";
+        ctx.textAlign = "left";
+        ctx.fillText("THE WALL", X(WALL) + 6, PAD_T + 12);
+      }
+
+      // dream curve (amber, dashed) and reality curve (cyan, solid)
+      var dEnd = plot(dreamY, COL.metal, [6, 5], prog);
+      var rEnd = plot(realY, COL.chip, [], prog);
+
+      // end dots + inline labels once fully drawn
+      if (prog >= 0.999) {
+        ctx.fillStyle = COL.metal;
+        ctx.beginPath(); ctx.arc(dEnd.x, dEnd.y, 4, 0, 7); ctx.fill();
+        ctx.fillStyle = COL.chip;
+        ctx.beginPath(); ctx.arc(rEnd.x, rEnd.y, 4, 0, 7); ctx.fill();
+
+        ctx.font = "11px ui-monospace, Menlo, monospace";
+        ctx.textAlign = "right";
+        ctx.fillStyle = COL.metal;
+        ctx.fillText("if it could make everything", dEnd.x - 8, dEnd.y + 4);
+        ctx.fillStyle = COL.chip;
+        ctx.fillText("stuck waiting on chips", rEnd.x - 8, rEnd.y - 10);
+      }
+    }
+
+    var dims = resize();
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (reduce) {
+      draw(dims, 1);
+    } else {
+      var start = null, DUR = 1500;
+      function frame(ts) {
+        if (start === null) start = ts;
+        var p = Math.min(1, (ts - start) / DUR);
+        // ease-out
+        var eased = 1 - Math.pow(1 - p, 3);
+        draw(dims, eased);
+        if (p < 1) requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    }
+
+    var rt;
+    window.addEventListener("resize", function () {
+      clearTimeout(rt);
+      rt = setTimeout(function () { dims = resize(); draw(dims, 1); }, 120);
+    });
+  })();
+</script>
