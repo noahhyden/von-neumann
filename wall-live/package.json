@@ -1,0 +1,19 @@
+{
+  "name": "wall-live",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The Electronics Wall, live — closure-sim run reactively in pimas: drag the assumptions, speculate the wall, watch the real model recompute.",
+  "scripts": {
+    "build": "node build.mjs",
+    "serve": "node --watch-path=src build.mjs",
+    "test": "node --test src/model.test.ts",
+    "test:diff": "node scripts/gen-diff.mjs && cd ../closure-sim && uv run python ../wall-live/scripts/diff_check.py"
+  },
+  "dependencies": {
+    "pimas": "file:../../pimas"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.2"
+  }
+}
