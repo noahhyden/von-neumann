@@ -19,7 +19,7 @@ is to keep each piece small, honest, and verifiable.
 | [`frontend`](frontend/) | ✅ live | **The monorepo's central interactive surface.** von-neumann's models run live in the browser, built entirely on [pimas](../pimas). A shell that hosts one surface per model; the first is the interactive electronics wall (drag the assumptions, speculate "make its own chips" before committing, watch the model explain which ceiling binds). |
 | `power-budget` | 🔜 planned | Compute power-budget modeling (e.g. intelligence-per-watt at ~20 W). |
 | `launch-economics` | 🔜 planned | Launch costs and the economics of iterating on a seed design. |
-| _more to come_ | | The plan is upwards of ten interacting projects over the coming year. |
+| _more to come_ | | The plan is upwards of ten interacting projects over the coming year — see [ROADMAP.md](ROADMAP.md). |
 
 ## Working in here
 
