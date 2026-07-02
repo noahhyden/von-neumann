@@ -10,6 +10,7 @@ import { createLaunchEconomicsModel } from "./launch-economics-model.js";
 import { createPowerBudgetModel } from "./power-budget-model.js";
 import { createProbeModel } from "./probe-sim-model.js";
 import { createMissionModel } from "./mission-model.js";
+import { createMultiProbeModel } from "./multi-probe-model.js";
 
 let failures = 0;
 const ok = (cond: boolean, msg: string) => {
@@ -92,6 +93,20 @@ ok(mi.outputs().reachesTarget === false, "mission is power-starved and never rep
 mi.params[0].set(1.0);
 mi.params[1].set(90); // all remaining power to compute -> manufacturing starved
 ok(mi.outputs().manufacturingW === 0 && mi.outputs().reachesTarget === false, "all power to compute stalls the factory (reactive)");
+
+// Fleet surface: the reactive fold grows a fleet near the Sun, the scrubber selects a
+// snapshot, and pushing the start distance out trips the spatial power wall.
+const fl = createMultiProbeModel();
+ok(fl.result().finalPopulation > 1, "fleet grows past one probe near the Sun (reactive)");
+ok(fl.snap().day === fl.durationDays, "scrubber starts at the final day");
+fl.scrub.set(0);
+ok(fl.snap().population === 1 && fl.snap().day === 0, "scrub to day 0 shows the single seed probe");
+fl.params[0].set(30); // start distance 1 -> 30 AU
+const farPop = fl.result().finalPopulation;
+fl.params[0].set(1);
+ok(fl.result().finalPopulation > farPop, "starting far from the Sun yields a smaller fleet (spatial power wall, reactive)");
+fl.params[1].set(0); // vitamin pool -> 0 t
+ok(fl.result().finalPopulation === 1 && fl.result().binding.vitaminLimited === true, "zero vitamins → no children (electronics wall)");
 
 console.log(failures === 0 ? "\nALL SMOKE CHECKS PASS" : `\n${failures} FAILURES`);
 if (failures > 0) process.exit(1);

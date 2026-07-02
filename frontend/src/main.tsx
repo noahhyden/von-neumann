@@ -22,8 +22,10 @@ import { createProbeModel } from "./probe-sim-model.js";
 import type { ProbeModel } from "./probe-sim-model.js";
 import { createMissionModel } from "./mission-model.js";
 import type { MissionModel } from "./mission-model.js";
+import { createMultiProbeModel } from "./multi-probe-model.js";
+import type { MultiProbeModel } from "./multi-probe-model.js";
 
-type Surface = "wall" | "mission" | "launch" | "power" | "probe";
+type Surface = "wall" | "mission" | "fleet" | "launch" | "power" | "probe";
 
 const fmtNum = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
 const fmtUsd = (n: number): string => {
@@ -582,12 +584,167 @@ function MissionSurface(props: { model: MissionModel }) {
   );
 }
 
+// ── the multi-probe surface: a small, deterministic, dispersing fleet ────────
+function FleetChart(props: { model: MultiProbeModel }) {
+  const W = 900, H = 230, PADL = 52, PADR = 54, PADT = 18, PADB = 34;
+  const geo = createMemo(() => {
+    const steps = props.model.result().steps;
+    const xmaxYr = Math.max(1e-6, steps[steps.length - 1].day / 365);
+    const maxPop = Math.max(2, ...steps.map((s) => s.population));
+    const maxDist = Math.max(1, ...steps.map((s) => s.maxDistanceAu));
+    const X = (yr: number) => PADL + (yr / xmaxYr) * (W - PADL - PADR);
+    const Yp = (v: number) => PADT + (H - PADT - PADB) * (1 - v / maxPop);
+    const Yd = (v: number) => PADT + (H - PADT - PADB) * (1 - v / maxDist);
+    const stride = Math.max(1, Math.floor(steps.length / 240));
+    const pop: string[] = [], front: string[] = [];
+    for (let i = 0; i < steps.length; i += stride) {
+      pop.push(`${X(steps[i].day / 365).toFixed(1)},${Yp(steps[i].population).toFixed(1)}`);
+      front.push(`${X(steps[i].day / 365).toFixed(1)},${Yd(steps[i].maxDistanceAu).toFixed(1)}`);
+    }
+    const last = steps[steps.length - 1];
+    pop.push(`${X(last.day / 365).toFixed(1)},${Yp(last.population).toFixed(1)}`);
+    front.push(`${X(last.day / 365).toFixed(1)},${Yd(last.maxDistanceAu).toFixed(1)}`);
+    return { xmaxYr, maxPop, maxDist, X, Yp, Yd, pop: pop.join(" "), front: front.join(" ") };
+  });
+  const cursorX = () => geo().X(props.model.snap().day / 365);
+
+  const content = () => {
+    const g = geo();
+    const els: unknown[] = [];
+    for (const f of [0, 0.5, 1]) {
+      const y = PADT + (H - PADT - PADB) * (1 - f);
+      els.push(<line x1={PADL} y1={y} x2={W - PADR} y2={y} stroke="rgba(232,226,214,0.08)" stroke-width="1" />);
+      els.push(<text x={PADL - 8} y={y + 4} text-anchor="end" fill="var(--chip)" style="font:11px var(--mono)">{fmtNum(g.maxPop * f)}</text>);
+      els.push(<text x={W - PADR + 8} y={y + 4} fill="var(--metal)" style="font:11px var(--mono)">{fmtNum(g.maxDist * f, 1)}</text>);
+    }
+    els.push(<text x={PADL} y={PADT - 6} fill="var(--chip)" style="font:11px var(--mono)">PROBES</text>);
+    els.push(<text x={W - PADR + 8} y={PADT - 6} text-anchor="end" fill="var(--metal)" style="font:11px var(--mono)">FRONTIER AU</text>);
+    els.push(<text x={(PADL + W - PADR) / 2} y={H - 6} text-anchor="middle" fill="var(--muted)" style="font:11px var(--mono)">YEARS →</text>);
+    els.push(<polyline points={g.front} fill="none" stroke="var(--metal)" stroke-width="2" stroke-dasharray="6 5" stroke-linejoin="round" />);
+    els.push(<polyline points={g.pop} fill="none" stroke="var(--chip)" stroke-width="2.5" stroke-linejoin="round" />);
+    els.push(<line x1={cursorX} y1={PADT} x2={cursorX} y2={H - PADB} stroke="var(--text)" stroke-width="1.5" stroke-dasharray="3 3" />);
+    return els;
+  };
+  return (
+    <svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Fleet population and dispersal frontier over time">{content}</svg>
+  );
+}
+
+function FleetScatter(props: { model: MultiProbeModel }) {
+  const W = 900, H = 118, PADL = 44, PADR = 44, MID = 60;
+  const geo = createMemo(() => {
+    const probes = props.model.result().finalProbes;
+    const maxD = Math.max(1.2, ...probes.map((p) => p.distanceAu));
+    const X = (d: number) => PADL + (d / maxD) * (W - PADL - PADR);
+    const dots = probes.map((p, i) => ({ x: X(p.distanceAu), y: MID + ((i % 9) - 4) * 8, active: p.status === "active" }));
+    const ticks = [1, 2, 5, 10, 20, 40].filter((d) => d <= maxD * 1.02).map((d) => ({ x: X(d), label: String(d) }));
+    return { X, dots, ticks, maxD };
+  });
+  const content = () => {
+    const g = geo();
+    const els: unknown[] = [];
+    els.push(<line x1={PADL} y1={MID} x2={W - PADR} y2={MID} stroke="rgba(232,226,214,0.14)" stroke-width="1" />);
+    els.push(<circle cx={PADL} cy={MID} r="7" fill="var(--metal)" />);
+    els.push(<text x={PADL} y={MID - 12} text-anchor="middle" fill="var(--muted)" style="font:11px var(--mono)">Sun</text>);
+    for (const t of g.ticks) {
+      els.push(<line x1={t.x} y1={MID - 4} x2={t.x} y2={MID + 4} stroke="var(--muted)" stroke-width="1" />);
+      els.push(<text x={t.x} y={H - 6} text-anchor="middle" fill="var(--muted)" style="font:11px var(--mono)">{t.label}</text>);
+    }
+    els.push(<text x={W - PADR} y={16} text-anchor="end" fill="var(--muted)" style="font:11px var(--mono)">HELIOCENTRIC DISTANCE (AU) →</text>);
+    for (const d of g.dots) {
+      els.push(<circle cx={d.x} cy={d.y} r="4" fill={d.active ? "var(--good)" : "var(--muted)"} opacity={d.active ? "0.95" : "0.6"} />);
+    }
+    return els;
+  };
+  return (
+    <svg class="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Final fleet, each probe placed by its distance from the Sun">{content}</svg>
+  );
+}
+
+const explainFleet = (m: MultiProbeModel): string => {
+  const r = m.result();
+  const walls: string[] = [];
+  if (r.binding.vitaminLimited) walls.push("it runs out of imported vitamins — the electronics wall, now at fleet scale");
+  if (r.binding.powerLimited) walls.push("its probes drift too far from the Sun to keep building — a spatial power wall");
+  if (r.binding.capLimited) walls.push("it reaches the fleet cap you set");
+  const why = walls.length ? walls.join("; and ") : "the mission window simply ends";
+  const dbl = r.doublingTimeDays === null ? "never doubles in the window" : `first doubles in ${fmtDays(r.doublingTimeDays)}`;
+  return `The fleet grows to ${r.finalPopulation} probes (${dbl}), spreading out to ${r.maxDistanceAu.toFixed(1)} AU and consuming ${fmtNum(r.vitaminsConsumedKg / 1000)} t of vitamins. It stops growing because ${why}. Same seed, same run — every time.`;
+};
+
+function MultiProbeSurface(props: { model: MultiProbeModel }) {
+  const m = props.model;
+  const r = () => m.result();
+  const s = () => m.snap();
+  return (
+    <div>
+      <section class="hero">
+        <div class="wrap">
+          <p class="eyebrow">A small, deterministic fleet · a live model</p>
+          <h1>One probe becomes a fleet — until it hits the same two walls.</h1>
+          <p class="lede">
+            Give one self-replicating probe local sunlight and imported parts, and it copies itself; the copies disperse outward and copy again. This is that fleet as a <strong>pure, seeded</strong> simulation — a handful of probes, not a swarm. Drag the knobs, then <strong>scrub through the mission</strong> and watch the fleet grow and spread. It's fully deterministic: same seed, same fleet, every run.
+          </p>
+          <div class="card chartcard">
+            <FleetChart model={m} />
+            <p class="chartcap">FIG.1 — fleet size (cyan) and how far the farthest probe has spread (amber) over 40 years. The dashed line is the day you're scrubbed to.</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <p class="marker"><b>01</b> &nbsp;/&nbsp; The knobs, and the day</p>
+          <div class="lab">
+            <div class="card controls">
+              <p class="panel-head">Fleet parameters</p>
+              <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
+              <div style="margin-top:14px;padding-top:8px;border-top:1px solid rgba(232,226,214,0.1)">
+                <Slider p={m.scrub} />
+              </div>
+            </div>
+            <div class="card readouts">
+              <p class="panel-head">At this day</p>
+              <StatRow what="Mission day" sub={() => `year ${(s().day / 365).toFixed(1)}`} value={() => `${fmtNum(s().day)} d`} />
+              <StatRow what="Probes alive" sub="traveling + active" value={() => fmtNum(s().population)} cls={() => "chip"} />
+              <StatRow what="Active (building)" value={() => fmtNum(s().active)} cls={() => "good"} />
+              <StatRow what="Dispersal frontier" sub="farthest probe" value={() => `${s().maxDistanceAu.toFixed(1)} AU`} cls={() => "metal"} />
+              <StatRow what="Mean distance" value={() => `${s().meanDistanceAu.toFixed(1)} AU`} />
+              <StatRow what="Vitamins left" sub="the electronics budget" value={() => `${fmtNum(s().vitaminPoolKg / 1000)} t`} />
+              <p class="explain" style="margin-top:18px">{() => explainFleet(m)}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <p class="marker"><b>02</b> &nbsp;/&nbsp; Where the fleet ends up</p>
+          <div class="card chartcard">
+            <FleetScatter model={m} />
+            <p class="chartcap">FIG.2 — the final fleet, each probe placed by its distance from the Sun. Green: still building. Grey: in transit. Push the start distance out and watch replication choke on the inverse-square power wall.</p>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <div class="wrap">
+          <p>
+            A pure, seeded fold (mulberry32 RNG threaded through state — byte-identical to the Python) over the <strong style="color:var(--text)">multi-probe</strong> module, live in pimas. Each probe builds at <strong style="color:var(--text)">closure-sim</strong>'s min(machinery, energy-cap) rate using <strong style="color:var(--text)">probe-sim</strong>'s 1/d² power; a finite vitamin pool and 1/d² dispersal are the two ceilings. Physics and figures trace to the sibling modules' REFERENCES.md; the factory is the lunar-regolith seed scenario used as a stand-in (the probe-BOM gap persists).
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
 // ── shell nav: one surface per model ────────────────────────────────────────
 function Nav(props: { surface: Surface }) {
   return (
     <div class="wrap" style="padding-top:18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <span style="font-weight:700;letter-spacing:.3px;margin-right:8px">von-neumann</span>
       <button class={`act ${props.surface === "mission" ? "primary" : "ghost"}`} onClick={() => mount("mission")}>Full mission</button>
+      <button class={`act ${props.surface === "fleet" ? "primary" : "ghost"}`} onClick={() => mount("fleet")}>Fleet</button>
       <button class={`act ${props.surface === "wall" ? "primary" : "ghost"}`} onClick={() => mount("wall")}>Electronics wall</button>
       <button class={`act ${props.surface === "probe" ? "primary" : "ghost"}`} onClick={() => mount("probe")}>Single probe</button>
       <button class={`act ${props.surface === "launch" ? "primary" : "ghost"}`} onClick={() => mount("launch")}>Launch economics</button>
@@ -646,6 +803,17 @@ function mount(surface: Surface, scenarioKey = "lunar") {
         <div>
           <Nav surface="mission" />
           <MissionSurface model={mm} />
+        </div>
+      ),
+      appEl,
+    );
+  } else if (surface === "fleet") {
+    const fm = createMultiProbeModel();
+    disposeRender = render(
+      () => (
+        <div>
+          <Nav surface="fleet" />
+          <MultiProbeSurface model={fm} />
         </div>
       ),
       appEl,

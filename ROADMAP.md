@@ -63,8 +63,10 @@ reusing probe-sim's 1/d² power) and disperses children outward. Two emergent ce
 a finite **vitamin pool** (the electronics wall at fleet scale) and a **spatial power
 wall** (~13.6 AU crossover). RNG is mulberry32 threaded through state (byte-identical
 to `gen-diff.mjs`); jitter = 0 is deterministic and seed-independent. 11 behavior tests.
-**Remaining:** a `frontend` surface (a live, dispersing fleet), and — as with the other
-probe work — swapping in a probe-specific BOM once the mass `[GAP]` is closed.
+**Frontend:** a live "Fleet" surface — knobs + a 40-year day-scrubber over two charts
+(fleet size, dispersal frontier) + a final-fleet distance scatter; parity-tested TS
+port with the mulberry32 RNG matching the Python bit-for-bit. **Remaining:** swapping in
+a probe-specific BOM once the mass `[GAP]` is closed.
 
 ### 4. The swarm — later 🔭
 

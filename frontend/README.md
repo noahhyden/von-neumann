@@ -26,6 +26,18 @@ never reaches target. Composes the parity-tested `mission.ts` port (itself a
 composition of the other four ports); reactive via signals + one memo (no
 store/speculate — the fold is cheap to re-run on every drag).
 
+### The fleet (`multi-probe`) — live
+
+A small, **deterministic, seeded** fleet running live: one probe copies itself, the
+copies disperse outward and copy again. Drag the knobs (start distance, vitamin pool,
+dispersal, fleet cap, transit time + jitter) and **scrub through the 40-year mission**
+to watch two charts move — fleet size (cyan) and the dispersal frontier in AU (amber) —
+plus a scatter of where every probe ends up along the Sun→distance axis. The two
+ceilings from the earlier modules reappear: a finite vitamin pool (the electronics wall
+at fleet scale) and 1/d² power vs dispersal (the spatial power wall). The RNG is
+mulberry32 threaded through the fold — byte-identical to the Python — so it replays
+bit-for-bit: same seed, same fleet. Parity-tested TS port of `multi-probe`.
+
 ### The electronics wall (`closure-sim`) — live
 
 `closure-sim`'s "electronics wall" essay began life as a static page — but its
