@@ -23,6 +23,17 @@ jobs:
         working-directory: closure-sim
         run: uv run --extra dev pytest -q
 
+  probe-sim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: pytest (real-number assertions)
+        working-directory: probe-sim
+        run: uv run --extra dev pytest -q
+
   frontend:
     runs-on: ubuntu-latest
     steps:
