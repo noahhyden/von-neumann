@@ -22,7 +22,13 @@ store + signals + memos + `speculate` + agent bridge) that everything else reuse
 The monorepo's single pimas-only surface; a shell hosting one surface per model.
 First surface: the electronics wall, live.
 
-### 2. Single probe — next 🔜
+### 2. Single probe — in progress 🚧 (`probe-sim/`)
+
+**Started:** `probe-sim/` has the solar environment (inverse-square delivered power
+vs heliocentric distance) and the operational-range computation (delivered power →
+`closure-sim` replication → the distance where the probe stops reaching target
+output), exercised on a synthetic fixture. **Remaining:** instantiate the real
+per-module probe factory (blocked on the mass `[GAP]`), then a `frontend` surface.
 
 **Source:** Borgue & Hein (2020), *Near-Term Self-replicating Probes — A Concept
 Design*, [arXiv:2005.12303](https://arxiv.org/abs/2005.12303) (*Acta Astronautica*
@@ -82,6 +88,56 @@ reconciling) is *new work*, not a port — and a natural fit for `speculate`
   per-seed; ensemble statistics over seeds remain inherently many-runs. Since the
   base swarm assumes perfect global info, coordination is deterministic given a seed
   — light-speed lag is the *optional* layer added on top.
+
+- **Determinism has depth — "fix the seed" is necessary, not sufficient.** Three
+  things break bit-exact reproducibility (and therefore `speculate` and replay), all
+  learned the hard way by deterministic sims like Factorio and Egregoria:
+  1. **RNG must be threaded state, not ambient.** Shape the tick as
+     `step(state, dt, rng) → {state, rng}` with a small seeded, splittable generator
+     (PCG / splitmix / xoshiro) carried *in the state*. Never `Math.random()`, never a
+     wall clock. This makes `speculate` fork the future exactly and gives free
+     Monte-Carlo (N seeds → a distribution). *The sneakiest bug in the whole project:
+     `Math.random()` in a fold works until an agent asks "what-if" and gets a
+     non-reproducible answer.*
+  2. **Iteration order must be deterministic.** Ordered containers, not hash
+     sets/maps, anywhere order affects results; sort before any parallel reduction.
+  3. **Float non-determinism is real** across platforms/builds (FMA, fast-math
+     reordering: `(v·dt)+(v·dt) ≠ v·2dt`). If cross-machine reproducibility ever
+     matters, use a fixed timestep and either fixed-point or our own deterministic
+     transcendental functions — don't discover this at swarm scale.
+
+- **speculate at scale forks the *fold*, not `pimas/store`.** For small models a
+  what-if is a signal/store write that `speculate` shadows in a `Map` — perfect. At
+  swarm scale, don't try to copy-on-write thousands of entity cells through the store
+  (that turns a reactive engine into a database). Instead the fold owns its own
+  structural sharing (a persistent/immutable state structure if memory demands it),
+  and `speculate` shadows the *one* signal holding the swarm-state handle — the fold
+  produces a new state from the old, which it already does (`step(s)→s'`). pimas stays
+  the thin what-if *orchestrator*, exactly as in `frontend`. The one legitimate future
+  *core* change is letting `speculate` **nest/fork** (it currently forbids nesting), so
+  an agent can plan a *tree* of what-ifs — deferred until an agent actually needs it.
+
+- **Rendering is the biggest new build at swarm scale — and it lives in `frontend`,
+  not pimas.** Fine-grained DOM (a node per entity) dies in the low thousands. The
+  ladder is ~10× per rung: Canvas 2D (~10⁴) → WebGL instanced (~10⁵) → WebGPU compute
+  (10⁶+). The clean boundary: the sim core owns state in flat typed arrays and knows
+  nothing about rendering; the render layer **reads those buffers each frame** and
+  uploads them, and is driven by a **single `createEffect`** over camera/selection/
+  tick signals. Do **not** implement it as a canvas `RenderBackend` (that seam is a
+  retained-node/DOM contract; canvas is immediate-mode — you'd rebuild a scene graph
+  just to satisfy it) and do **not** build a reactive scene graph (it reintroduces
+  per-node cost in the paint layer). One `<canvas>` hosted by pimas + a plain
+  `SwarmView.draw(state, camera)` is the whole design.
+
+- **Keep it out of pimas' core.** pimas *describes and observes*; it does not
+  simulate, store-at-scale, or render-at-scale. The tick loop, sim-clock, SoA state,
+  RNG, spatial index, persistence, and per-entity drawing all live here in `frontend`
+  (userland), never in the kernel. The test for anything proposed for pimas itself:
+  *would noahhyden.com's static build pay for it?* If a byte lands in the indivisible
+  kernel, it's wrong — use a subpath (`pimas/agent` etc.) or keep it here. A ~10–30 Hz
+  **sampler** (snapshot sim → coarse reactive store at UI rate, not tick rate) and
+  delta-**coalescing** in the agent bridge are the two things that keep the reactive
+  skin cheap when the fold ticks fast.
 - **pimas' role narrows with scale.** speculate / agent-bridge / explain are most
   valuable in the small deterministic models (closure, probe) and least at raw swarm
   scale, where the value is the numerical SoA core (pimas contributes nothing to

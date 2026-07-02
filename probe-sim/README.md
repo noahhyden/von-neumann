@@ -16,16 +16,22 @@ This module starts from exactly that gate.
   (inverse-square from the measured 1 AU solar constant) and a `SolarArray`
   (area + efficiency) that turns it into delivered electrical power, plus
   `max_distance_au(required_power)` — the range a given array can sustain a demand to.
+- **`range.py`** — the **operational range**. Feeds the array's delivered power into
+  `closure-sim`'s replication model (via its public API, not a copy) and bisects on
+  heliocentric distance to find where the probe stops reaching its target output —
+  i.e. how far out replication stays viable before the falling power budget stalls
+  it. `is_viable_at()` answers the question at one distance; `operational_range()`
+  finds the crossover (and flags underpowered / saturated edges).
 - **`models.py`** — the probe's sourced facts: the six modules and the 70% replicated
   mass fraction. (Per-module masses are an open `[GAP]` — see REFERENCES.md — and are
   not invented.)
 
 ## What's next (see [`../ROADMAP.md`](../ROADMAP.md))
 
-Feed the delivered power into `closure-sim`'s replication model (as a clean
-dependency, not a copy) to compute the **operational range**: the heliocentric
-distance out to which the probe's power supports self-sustaining replication versus
-where it falls to resupply-limited or stalls. Then a `frontend` surface for it.
+Instantiate the real Borgue & Hein probe factory once the per-module mass `[GAP]` is
+resolved (currently the range machinery is exercised on a synthetic fixture). Then a
+`frontend` surface: drag the array size / efficiency and watch the operational range
+move across the solar system.
 
 ## Architecture
 

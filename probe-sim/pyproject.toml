@@ -9,10 +9,15 @@ description = "A single self-replicating probe: solar-electric power vs heliocen
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.6",
+    "closure-sim",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+
+# closure-sim is a sibling module in this monorepo, consumed through its public API.
+[tool.uv.sources]
+closure-sim = { path = "../closure-sim", editable = true }
 
 [tool.setuptools.packages.find]
 where = ["src"]

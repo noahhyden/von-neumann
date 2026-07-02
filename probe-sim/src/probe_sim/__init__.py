@@ -20,6 +20,12 @@ from probe_sim.models import (
     REPLICATED_MASS_FRACTION,
     ProbeModule,
 )
+from probe_sim.range import (
+    RangeResult,
+    available_power_kw,
+    is_viable_at,
+    operational_range,
+)
 
 __all__ = [
     "SOLAR_CONSTANT_1AU_W_M2",
@@ -28,4 +34,8 @@ __all__ = [
     "solar_irradiance_w_m2",
     "REPLICATED_MASS_FRACTION",
     "ProbeModule",
+    "RangeResult",
+    "available_power_kw",
+    "is_viable_at",
+    "operational_range",
 ]
