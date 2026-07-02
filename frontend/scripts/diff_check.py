@@ -2,8 +2,8 @@
 REAL closure-sim and assert the TS port agrees. Run from the closure-sim package
 so the import resolves:
 
-    node ../wall-live/scripts/gen-diff.mjs
-    cd ../closure-sim && uv run python ../wall-live/scripts/diff_check.py
+    node ../frontend/scripts/gen-diff.mjs
+    cd ../closure-sim && uv run python ../frontend/scripts/diff_check.py
 
 Handles the JS<->Python edge encodings: JS Infinity -> math.inf, JS null -> None.
 """
@@ -15,7 +15,7 @@ from closure_sim.closure import compute_closure
 from closure_sim.models import Factory, ReplicationParams, Subsystem
 from closure_sim.replication import simulate
 
-CASES = "/tmp/wall-live-diff-cases.json"
+CASES = "/tmp/frontend-diff-cases.json"
 
 
 def decode(v):

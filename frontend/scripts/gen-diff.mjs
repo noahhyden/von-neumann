@@ -5,7 +5,7 @@
  * asserts the two agree. This is the strongest correctness proof — it pins the
  * port against the reference across the whole input space, not just two scenarios.
  *
- *   node scripts/gen-diff.mjs && (cd ../closure-sim && uv run python ../wall-live/scripts/diff_check.py)
+ *   node scripts/gen-diff.mjs && (cd ../closure-sim && uv run python ../frontend/scripts/diff_check.py)
  *
  * Deterministic: a seeded PRNG (no Math.random) so cases are reproducible.
  */
@@ -95,6 +95,6 @@ const enc = (_k, v) =>
         : "__-inf__"
     : v;
 
-const out = "/tmp/wall-live-diff-cases.json";
+const out = "/tmp/frontend-diff-cases.json";
 writeFileSync(out, JSON.stringify(cases, enc));
 console.log(`wrote ${N} cases -> ${out}`);

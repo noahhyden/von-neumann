@@ -89,6 +89,14 @@ This is physics-heavy. Grounding is not optional.
   `REFERENCES.md`. Independently runnable.
 - Modules share concepts and data through **clean interfaces**, never by reaching
   into each other's internals. Leave seams for the modules still to come.
+- **`frontend` is the one shared surface, and it is pimas-only.** The repo's single
+  interactive/presentation layer lives in `frontend/` — a shell that hosts *one
+  surface per model* rather than fusing them (each model still owns its slice; the
+  frontend just presents it). It, and any interactive code in this repo, must use
+  [pimas](../pimas) as its reactive framework — signals, memos, store, JSX (via
+  `jsxImportSource: "pimas"`), flow control, and the agent bridge. Do **not**
+  introduce React, SolidJS, Vue, Svelte, or any other reactive/UI framework. Plain
+  DOM and build-only tooling (esbuild) are fine; a competing reactive runtime is not.
 - **Plain language.** This work is shared with non-specialists — explain the "why"
   in words, not only in code and equations.
 
@@ -101,6 +109,30 @@ This is physics-heavy. Grounding is not optional.
 - **Git:** commit or push only when asked. The repo is **private** at
   `noahhyden/von-neumann`. **Never push to `Klarum-Software`** (or anywhere else).
 - New numbers in a change → update that module's `REFERENCES.md` in the same change.
+
+---
+
+## 6. pimas is first-party and single-maintainer
+
+pimas (`https://github.com/noahhyden/pimas`, linked from `frontend/` via
+`file:../../pimas`) is our own reactive framework, built and — for the foreseeable
+future — solely maintained by the repo owner. It is a dependency we *control*, not a
+stable third-party package. Practical implications:
+
+- **Things may break or not work out-of-the-box.** If a frontend problem traces to
+  **pimas itself** (a framework bug or missing capability), **do not build a
+  workaround around it** — stop and flag it so it gets fixed in the pimas repo. Only
+  work around issues that are genuinely in this repo's own code. When flagging,
+  distinguish clearly: is the failure our code, or verified framework breakage?
+- **A cross-repo canary makes that distinction decidable.** `frontend`'s tests are
+  layered by blame surface: **Layer A** (`npm test`) is the pure model with no pimas
+  — a failure is *our* logic; **Layer B** (`npm run test:contract`) exercises only
+  pimas primitives — with A green and our tree unchanged, a failure is **pimas**. On
+  the A-green/B-red gate, `.github/workflows/pimas-canary.yml` files an issue in the
+  pimas repo. The baseline is pinned by git SHA in `frontend/.pimas-good-sha` (pimas
+  is `0.0.0` with no tags; its `dist/` is gitignored, so CI builds pimas first). When
+  Layer B fails against a new pimas, that's verified framework breakage — flag it in
+  pimas, don't work around it here.
 
 ---
 

@@ -1,6 +1,6 @@
 /**
- * The Electronics Wall, live. The narrative of closure-sim's `explainer.html`,
- * but every number is the real model running in pimas: drag the assumptions and
+ * The Electronics Wall, live. The narrative of closure-sim's electronics-wall
+ * essay, but every number is the real model running in pimas: drag the assumptions and
  * the simulation recomputes; preview "make its own chips" as a speculation (the
  * exact after-state, nothing committed) before you commit it; and watch the model
  * explain which ceiling is binding. The last panel shows the very same reactive
