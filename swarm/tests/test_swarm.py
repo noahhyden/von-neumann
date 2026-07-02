@@ -27,11 +27,12 @@ def test_baseline_regression() -> None:
     r = simulate_swarm(SwarmParams(n_stars=400), seed=BASE_SEED)
     assert r.final_settled == 400
     assert r.total_probes_launched == 797
-    assert r.t50_years == 625.0
-    assert r.t90_years == 825.0
-    assert r.t100_years == 1025.0
-    assert r.front_radius_pc == pytest.approx(12.097583, abs=1e-4)
-    assert len(r.steps) == 64
+    # ~1.5 Myr to fill a 400-star, 1 star/pc^3 box at N&F's 3e-5c — Myr-scale, as in the paper.
+    assert r.t50_years == 895_000.0
+    assert r.t90_years == 1_170_000.0
+    assert r.t100_years == 1_515_000.0
+    assert r.front_radius_pc == pytest.approx(6.281663, abs=1e-4)
+    assert len(r.steps) == 521
 
 
 def test_same_seed_is_bit_identical() -> None:
@@ -85,9 +86,10 @@ def test_more_offspring_settles_faster() -> None:
 
 
 def test_faster_probes_settle_faster() -> None:
-    slow = simulate_swarm(SwarmParams(n_stars=400, probe_speed_c=0.1)).t100_years
-    fast = simulate_swarm(SwarmParams(n_stars=400, probe_speed_c=0.2)).t100_years
-    assert fast < slow
+    # Speeds in the resolved regime (hop time >> dt); doubling the speed roughly halves the time.
+    slow = simulate_swarm(SwarmParams(n_stars=400, probe_speed_c=3e-5)).t100_years
+    fast = simulate_swarm(SwarmParams(n_stars=400, probe_speed_c=6e-5)).t100_years
+    assert fast is not None and slow is not None and fast < slow
 
 
 def test_front_never_exceeds_the_box_diagonal() -> None:

@@ -36,12 +36,12 @@ export interface SwarmParams {
 
 export const SWARM_DEFAULTS: SwarmParams = {
   nStars: 500,
-  densityStarsPerPc3: 0.14,
-  probeSpeedC: 0.1,
+  densityStarsPerPc3: 1.0, // Nicholson & Forgan use a uniform 1 star/pc^3
+  probeSpeedC: 3e-5, // N&F powered cruise: 3e-5 c ≈ 9 km/s
   offspringPerSettlement: 2,
   settleTimeYears: 0,
-  dtYears: 25,
-  maxYears: 2_000_000,
+  dtYears: 5000,
+  maxYears: 50_000_000,
 };
 
 export const boxSidePc = (p: SwarmParams): number => Math.pow(p.nStars / p.densityStarsPerPc3, 1 / 3);

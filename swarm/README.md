@@ -12,13 +12,15 @@ come in later slices (below).
 
 ## What it models now
 
-- A **seeded star field**: N stars placed uniformly in a cube whose size comes from a
-  sourced local stellar density (so the mean hop is a realistic ~2 pc).
+- A **seeded star field**: N stars placed uniformly in a cube at the paper's density of
+  1 star/pc³ (so the mean hop is ~1 pc).
 - A **homeworld** at the field's centre launches probes.
-- Each probe **cruises at a fraction of c** (0.1c fiducial, Nicholson & Forgan) to the
+- Each probe **cruises at the paper's powered speed** (3×10⁻⁵c ≈ 9 km/s) to the
   **nearest unsettled star**, settles it on arrival, and launches `offspring` new probes.
 - The reachable field fills outward. We report the **exploration timescale** (years to
-  settle 50% / 90% / 100%) and the **settlement-front radius** over time.
+  settle 50% / 90% / 100%) and the **settlement-front radius** over time. Filling a
+  500-star box takes ~1.5 Myr — the same **Myr order** as the paper's 5–10 Myr for
+  200,000 stars.
 
 The headline result matches the paper's spirit: the settlement *front* advances at only
 ~40% of an individual probe's speed — nearest-hop zig-zag and settling make the wave

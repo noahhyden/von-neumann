@@ -29,7 +29,7 @@ export interface SwarmModel {
 export function createSwarmModel(): SwarmModel {
   const [nStars, setNStars] = createSignal(500);
   const [offspring, setOffspring] = createSignal(2);
-  const [probeSpeedC, setProbeSpeedC] = createSignal(0.1);
+  const [probeSpeedKmS, setProbeSpeedKmS] = createSignal(9); // N&F powered cruise ≈ 9 km/s
   const [seed, setSeed] = createSignal(1);
   const [scrubYear, setScrubYear] = createSignal(0);
   const [playing, setPlaying] = createSignal(false);
@@ -37,13 +37,14 @@ export function createSwarmModel(): SwarmModel {
   const params: ParamSignal[] = [
     { get: nStars, set: setNStars, min: 50, max: 2000, step: 50, label: "Stars in the field", unit: "" },
     { get: offspring, set: setOffspring, min: 0, max: 6, step: 1, label: "Offspring per settlement", unit: "" },
-    { get: probeSpeedC, set: setProbeSpeedC, min: 0.01, max: 0.5, step: 0.01, label: "Probe speed", unit: "c" },
+    { get: probeSpeedKmS, set: setProbeSpeedKmS, min: 1, max: 100, step: 1, label: "Probe speed", unit: "km/s" },
     { get: seed, set: setSeed, min: 1, max: 9999, step: 1, label: "Galaxy seed", unit: "" },
   ];
 
+  const KM_S_TO_C = 1 / 299792.458;
   const result = createMemo<SwarmResult>(() =>
     simulateSwarm(
-      { ...SWARM_DEFAULTS, nStars: nStars(), offspringPerSettlement: offspring(), probeSpeedC: probeSpeedC() },
+      { ...SWARM_DEFAULTS, nStars: nStars(), offspringPerSettlement: offspring(), probeSpeedC: probeSpeedKmS() * KM_S_TO_C },
       seed(),
     ),
   );

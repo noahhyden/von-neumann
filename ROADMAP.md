@@ -76,7 +76,7 @@ Probes and the Effect on Exploration Timescales*,
 
 **Built (slice 1):** `swarm/` — the pure, seeded, fixed-step algorithm core. Probes
 spread star-to-star through a seeded field (density from a sourced local stellar
-density), settling the nearest unsettled star at 0.1c and launching offspring; reports
+density), settling the nearest unsettled star at the paper's powered speed (3e-5c ≈ 9 km/s) and launching offspring; reports
 the exploration timescale (50/90/100%) and the settlement-front radius. The front
 advances at ~40% of probe speed (nearest-hop zig-zag + settling). SoA-style state,
 mulberry32 RNG (byte-identical to the other modules), 13 behavior tests. A live

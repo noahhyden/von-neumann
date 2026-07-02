@@ -799,8 +799,9 @@ const explainSwarm = (m: SwarmModel): string => {
   if (r.t100Years === null) {
     return `With ${m.params[1].get()} offspring per settlement the front can't fill the field — raise it above zero and the reachable galaxy fills exponentially.`;
   }
-  const frontSpeedFrac = (r.frontRadiusPc / r.t100Years) / (0.3066 * m.params[2].get()) * 100;
-  return `From one homeworld, the front settles all ${r.nStars} stars in ${fmtNum(r.t100Years)} years (50% by ${fmtNum(r.t50Years ?? 0)}, 90% by ${fmtNum(r.t90Years ?? 0)}), reaching ${r.frontRadiusPc.toFixed(1)} pc. The wavefront advances at only ~${frontSpeedFrac.toFixed(0)}% of a single probe's speed — nearest-hop zig-zag and settling slow the wave, just as Nicholson & Forgan found. Same seed, same galaxy, every run.`;
+  const probeSpeedPcPerYr = (m.params[2].get() * 3.15576e7) / 3.0856775814913673e13; // km/s → pc/yr
+  const frontSpeedFrac = (r.frontRadiusPc / r.t100Years) / probeSpeedPcPerYr * 100;
+  return `From one homeworld, the front settles all ${r.nStars} stars in ${fmtNum(r.t100Years / 1e6)} Myr (50% by ${fmtNum((r.t50Years ?? 0) / 1e6)}, 90% by ${fmtNum((r.t90Years ?? 0) / 1e6)} Myr), reaching ${r.frontRadiusPc.toFixed(1)} pc. The wavefront advances at only ~${frontSpeedFrac.toFixed(0)}% of a single probe's speed — nearest-hop zig-zag and settling slow the wave, just as Nicholson & Forgan found. Same seed, same galaxy, every run.`;
 };
 
 function SwarmSurface(props: { model: SwarmModel }) {
@@ -894,7 +895,7 @@ function SwarmSurface(props: { model: SwarmModel }) {
       <footer>
         <div class="wrap">
           <p>
-            A pure, seeded, fixed-step fold (mulberry32 threaded through state, byte-identical to the Python) over the <strong style="color:var(--text)">swarm</strong> module, live in pimas — the canvas reads the fold's settlement buffers each frame; there is no DOM node per star (the rendering discipline that scales, CLAUDE.md §7). Slice 1: straight-line travel, nearest-unsettled policy. Gravitational slingshots, 200k-star scale, and the light-speed-limited-coordination extension are later slices. Speed 0.1c and stellar density trace to Nicholson &amp; Forgan (2013) and the solar-neighborhood census; see swarm/REFERENCES.md.
+            A pure, seeded, fixed-step fold (mulberry32 threaded through state, byte-identical to the Python) over the <strong style="color:var(--text)">swarm</strong> module, live in pimas — the canvas reads the fold's settlement buffers each frame; there is no DOM node per star (the rendering discipline that scales, CLAUDE.md §7). Slice 1: straight-line travel, nearest-unsettled policy. Gravitational slingshots, 200k-star scale, and the light-speed-limited-coordination extension are later slices. Powered speed (3×10⁻⁵c ≈ 9 km/s) and density (1 star/pc³) are Nicholson &amp; Forgan's (2013) own parameters; the field fills on a Myr timescale, as in the paper. See swarm/REFERENCES.md.
           </p>
         </div>
       </footer>

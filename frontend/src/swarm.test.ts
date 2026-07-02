@@ -36,17 +36,17 @@ const CASES: Case[] = [
   {
     nStars: 300, offspring: 2, seed: 0x9e3779b9,
     expect: {
-      finalSettled: 300, totalProbesLaunched: 597, t50: 625, t90: 900, t100: 1125,
-      frontRadiusPc: 10.991383784780565, nsteps: 63,
-      popSamples: [[0, 1], [15, 49], [31, 233], [47, 300], [62, 300]],
+      finalSettled: 300, totalProbesLaunched: 597, t50: 875_000, t90: 1_265_000, t100: 1_610_000,
+      frontRadiusPc: 5.707269547365495, nsteps: 531,
+      popSamples: [[0, 1], [132, 79], [265, 278], [398, 300], [530, 300]],
     },
   },
   {
     nStars: 200, offspring: 3, seed: 42,
     expect: {
-      finalSettled: 200, totalProbesLaunched: 594, t50: 375, t90: 500, t100: 600,
-      frontRadiusPc: 9.506577825269131, nsteps: 47,
-      popSamples: [[0, 1], [11, 49], [23, 199], [35, 200], [46, 200]],
+      finalSettled: 200, totalProbesLaunched: 594, t50: 550_000, t90: 760_000, t100: 970_000,
+      frontRadiusPc: 4.936284928649846, nsteps: 362,
+      popSamples: [[0, 1], [90, 61], [181, 198], [271, 200], [361, 200]],
     },
   },
 ];

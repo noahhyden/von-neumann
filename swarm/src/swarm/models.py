@@ -25,10 +25,10 @@ class SwarmParams(BaseModel):
 
     n_stars: int = Field(gt=1, default=500)
     density_stars_per_pc3: float = Field(
-        gt=0, default=0.14, description="local stellar number density [ESTIMATE]"
+        gt=0, default=1.0, description="uniform stellar density (Nicholson & Forgan use 1 star/pc^3)"
     )
     probe_speed_c: float = Field(
-        gt=0, le=1, default=0.1, description="cruise speed as a fraction of c (Nicholson & Forgan)"
+        gt=0, le=1, default=3e-5, description="powered cruise speed, fraction of c (N&F: 3e-5 c ≈ 9 km/s)"
     )
     offspring_per_settlement: int = Field(
         ge=0, default=2, description="probes launched from each newly settled star"
@@ -37,9 +37,9 @@ class SwarmParams(BaseModel):
         ge=0, default=0.0, description="dwell to build offspring before they depart [ESTIMATE]"
     )
     dt_years: float = Field(
-        gt=0, default=25.0, description="fixed timestep; keep ≲ mean hop time (~63 yr at defaults)"
+        gt=0, default=5000.0, description="fixed timestep; keep ≲ mean hop time (~1e5 yr at defaults)"
     )
-    max_years: float = Field(gt=0, default=2_000_000.0, description="safety cap; the run ends when the front does")
+    max_years: float = Field(gt=0, default=50_000_000.0, description="safety cap; the run ends when the front does")
 
     @property
     def probe_speed_pc_per_year(self) -> float:
