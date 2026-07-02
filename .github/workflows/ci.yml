@@ -1,0 +1,70 @@
+name: ci
+
+# The standard push/PR gate: is OUR code green? Runs closure-sim's pytest suite and
+# the frontend's parity + contract tests + build. The frontend is tested against the
+# PINNED pimas (frontend/.pimas-good-sha) so this job is deterministic and isolates
+# our regressions; catching pimas HEAD regressions is the separate pimas-canary.yml.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  closure-sim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: pytest (real-number assertions)
+        working-directory: closure-sim
+        run: uv run --extra dev pytest -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out von-neumann
+        uses: actions/checkout@v4
+        with:
+          path: von-neumann
+
+      - name: Resolve pinned pimas SHA
+        id: pin
+        run: echo "sha=$(cat von-neumann/frontend/.pimas-good-sha)" >> "$GITHUB_OUTPUT"
+
+      - name: Check out pimas at the pinned SHA
+        uses: actions/checkout@v4
+        with:
+          repository: noahhyden/pimas
+          ref: ${{ steps.pin.outputs.sha }}
+          path: pimas
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      # dist/ is gitignored and pimas has no prepare hook — build before consuming.
+      - name: Build pimas
+        working-directory: pimas
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install frontend (resolves file:../../pimas)
+        working-directory: von-neumann/frontend
+        run: npm ci
+
+      - name: Layer A — model parity vs the Python CLI (no pimas)
+        working-directory: von-neumann/frontend
+        run: npm test
+
+      - name: Layer B — pimas contract (against the pinned pimas)
+        working-directory: von-neumann/frontend
+        run: npm run test:contract
+
+      - name: Build the page
+        working-directory: von-neumann/frontend
+        run: npm run build
