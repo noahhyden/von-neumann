@@ -15,12 +15,17 @@ come in later slices (below).
 - A **seeded star field**: N stars placed uniformly in a cube at the paper's density of
   1 star/pc³ (so the mean hop is ~1 pc).
 - A **homeworld** at the field's centre launches probes.
-- Each probe **cruises at the paper's powered speed** (3×10⁻⁵c ≈ 9 km/s) to the
-  **nearest unsettled star**, settles it on arrival, and launches `offspring` new probes.
+- Each probe travels to a target star, settles it on arrival, and launches `offspring`
+  new probes. Three **policies** (the paper's three scenarios), set by `policy`:
+  - `powered` (default) — constant cruise (3×10⁻⁵c ≈ 9 km/s), nearest unsettled star.
+  - `slingshot_nearest` — gain a **gravitational-assist boost** at each star (extracting
+    energy from stellar motion, N&F Eq. 3–4), still targeting the nearest star.
+  - `slingshot_maxboost` — target the star giving the **biggest boost**, not the nearest.
 - The reachable field fills outward. We report the **exploration timescale** (years to
-  settle 50% / 90% / 100%) and the **settlement-front radius** over time. Filling a
-  500-star box takes ~1.5 Myr — the same **Myr order** as the paper's 5–10 Myr for
-  200,000 stars.
+  settle 50 / 90 / 100%), the **settlement-front radius**, and the **peak probe speed**.
+  Powered fills a 500-star box in ~1.5 Myr (Myr order, as in the paper's 5–10 Myr for
+  200k); slingshots fill it **far faster** and probes reach ~10³ km/s — and, as the paper
+  found, **nearest-slingshot beats max-boost** on time (chasing boosts wastes travel).
 
 The headline result matches the paper's spirit: the settlement *front* advances at only
 ~40% of an individual probe's speed — nearest-hop zig-zag and settling make the wave
@@ -47,22 +52,25 @@ print(f'settled {r.final_settled}/{r.n_stars}; 50/90/100% at {r.t50_years}/{r.t9
 ```
 
 Knobs (`SwarmParams`): `n_stars`, `density_stars_per_pc3`, `probe_speed_c`,
-`offspring_per_settlement`, `settle_time_years`, `dt_years` (keep ≲ mean hop time).
+`offspring_per_settlement`, `settle_time_years`, `dt_years` (keep ≲ mean hop time), and
+`policy` (`powered` | `slingshot_nearest` | `slingshot_maxboost`).
 
-## What's deferred (the later slices)
+## Done since slice 1
 
-1. **Scale + spatial hashing** — 200k stars; replace the O(N) nearest search with a
-   spatial index. State becomes typed arrays (SoA) in the frontend TS port.
-2. **WebGL rendering** — the frontend fleet view (Canvas→WebGL→WebGPU ladder); pimas is
-   only the control/metrics skin, never the hot loop (§7).
-3. **Slingshot dynamics** — gravitational assists and stellar motion (the core of
-   Nicholson & Forgan), plus their nearest-powered / nearest-slingshot / max-boost
-   policies. Replicate-in-transit from the ISM.
-4. **Light-speed-limited coordination** — *the novel extension*: the source paper grants
-   every probe perfect instantaneous global knowledge; finite-c is explicitly its future
-   work. Probes deciding from stale, propagation-delayed local views (and reconciling) is
-   new work — a natural fit for `speculate` (a choice against a probe's *believed* world)
-   and `explain` (why a decision was made on lagged info).
+- **Slingshot dynamics** — the three policies above (this section's boost physics).
+- **Spatial hashing** — the frontend TS port uses a uniform-grid index (proven identical
+  to brute force) so the live "Swarm" surface scales to thousands of stars smoothly.
+
+## What's still deferred
+
+1. **Full 200k-star scale + WebGL rendering** — the frontend uses canvas today (fine to
+   ~10⁴); the WebGL instanced draw for 10⁵⁺ (Canvas→WebGL→WebGPU ladder) is future work.
+   pimas stays the control/metrics skin, never the hot loop (§7).
+2. **Light-speed-limited coordination** — *the novel extension* (FRONTIER issue #1): the
+   source paper grants every probe perfect instantaneous global knowledge; finite-c is
+   explicitly its future work. Probes deciding from stale, propagation-delayed local views
+   (and reconciling) is new work — a natural fit for `speculate` (a choice against a
+   probe's *believed* world) and `explain` (why a decision was made on lagged info).
 
 ## Shape (CLAUDE.md §7)
 

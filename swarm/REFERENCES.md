@@ -50,14 +50,49 @@ read from the full text ([ar5iv](https://ar5iv.labs.arxiv.org/html/1307.1648)).
   stars. The front advances at only ~40% of a single probe's speed (nearest-hop zig-zag +
   settling), consistent with the paper's finding that exploration is slower than naive.
 
-## Slice-1 simplifications (documented, deferred to later slices)
+## Slingshot dynamics (the `slingshot_*` policies)
+
+The paper's core mechanism: a probe flying past a star is deflected elastically in the
+star's frame, but because the star moves in the galactic frame the probe's galactic-frame
+speed changes — extracting energy from the star's motion "for free." Boosted probes
+accumulate speed across encounters and far outrun powered flight. All of the following is
+from Nicholson & Forgan (2013); the numbers the paper defers are tagged `[ESTIMATE]`.
+
+- **Max boost per encounter** — `Δv_max = u_esc² / ( u_esc²/(2·u_i) + u_i )` (their Eq. 4),
+  with `u_i` = the probe's speed relative to the star. This *self-limits*: Δv_max peaks near
+  `u_i ≈ u_esc` and falls off for fast probes, so speed does not run away.
+- **Stellar escape velocity `u_esc = 617.5 km/s`** — solar, `u_esc = √(2GM☉/R☉)`. Derived:
+  `√(2 · 6.674e-11 · 1.989e30 / 6.957e8) = 6.18×10⁵ m/s`. Sourced (the paper "assumes solar
+  values for M∗ and R∗"); constants are IAU/CODATA nominal. **Derived, not a free number.**
+- **Boost-optimal geometry `[ESTIMATE]`** — the paper gives `Δv = 2|u_i|·sin(δ/2)` (Eq. 3)
+  but not how the deflection angle δ is set per flyby. We assume each slingshot achieves
+  `Δv_max` (Eq. 4) in the boost-optimal direction, and we track **scalar speeds** (not full
+  velocity vectors / true encounter geometry), taking `u_i ≈ probe speed + star speed`. A
+  deliberate simplification for an experimental model.
+- **Stellar speed `220 km/s ± 40 km/s` `[ESTIMATE]`** — the paper places stars in a shearing
+  box to mimic Galactic rotation but **does not print the rotation speed or velocity
+  dispersion** (it defers to Forgan, Papadogiannakis & Kitching 2012). We use the standard
+  local circular speed (~220 km/s) with a thin-disc-like dispersion (~40 km/s), random per
+  star (seeded). Stars are **fixed in position** but carry a speed that drives the boost —
+  as the paper does ("stars remain fixed in position even though they have velocity vectors").
+- **Max-boost candidate bound = 30 `[ESTIMATE]`** — policy (iii) targets the biggest boost;
+  we scan only the 30 nearest unsettled stars so a probe doesn't cross the galaxy for a
+  marginal kick. Our fallback when no candidate exists = stop (a modelling choice).
+- **Speed cap = 0.05 c `[ESTIMATE]`** — a sanity ceiling on accumulated speed; Eq. 4's
+  fall-off usually keeps speeds well below it.
+- **Observed speedup is `dt`-limited.** Boosted probes are fast (~10³ km/s), so their hops
+  (~10² yr) are shorter than `dt=5000 yr` and get quantized to one step. The measured
+  slingshot-vs-powered speedup is therefore ~20× at the default `dt`; the paper's true
+  figure is ~100×. Lowering `dt` recovers more of it (at more steps). The **qualitative**
+  results are faithful: slingshots ≫ powered, and **nearest-slingshot beats max-boost on
+  time** (max-boost reaches higher speed but wastes travel — the paper's finding).
+
+## Simplifications still deferred to later slices
 
 - **Uniform cube star field**, not a galactic disk with a density gradient.
-- **Straight-line, constant-speed travel** — no gravitational slingshots, no stellar
-  motion (the core of Nicholson & Forgan's paper; a later slice).
-- **Nearest-unsettled policy only** — not their nearest-powered / nearest-slingshot /
-  max-boost policies.
-- **Settle-on-arrival**, not replicate-in-transit from the ISM.
-- **Modest N (hundreds–few thousand)** with an O(N) nearest search — the 200k-star SoA +
-  spatial-hash performance engine, WebGL rendering, and the novel **light-speed-limited
-  coordination** extension are the later slices (ROADMAP §4).
+- **Replicate at the settled star**, not truly replicate-in-transit from the ISM (the
+  effect is similar — one child per arrival, inheriting the parent's boosted speed).
+- **Scalar speeds, not velocity vectors** (see the boost-geometry `[ESTIMATE]` above).
+- **200k-star scale + WebGL rendering** — the frontend uses a spatial hash and canvas; the
+  full 10⁵-star SoA/WebGL engine and the novel **light-speed-limited coordination**
+  extension are the remaining slices (ROADMAP §4; light-speed is FRONTIER issue #1).

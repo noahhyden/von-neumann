@@ -105,6 +105,51 @@ def test_higher_density_makes_a_smaller_box() -> None:
     assert dense < sparse
 
 
+def test_powered_default_unchanged_by_slingshot_feature() -> None:
+    # Adding slingshots must not perturb the powered baseline (star speeds are drawn in a
+    # separate RNG pass after positions). Explicit policy="powered" == the default.
+    a = simulate_swarm(SwarmParams(n_stars=300, policy="powered"), seed=BASE_SEED)
+    b = simulate_swarm(SwarmParams(n_stars=300), seed=BASE_SEED)
+    assert [s.n_settled for s in a.steps] == [s.n_settled for s in b.steps]
+    assert a.t100_years == b.t100_years
+    assert a.max_probe_speed_km_s == pytest.approx(8.99, abs=0.05)  # = 3e-5 c, the cruise
+
+
+def test_slingshots_far_outrun_powered_flight() -> None:
+    # The paper's headline: slingshot probes accumulate speed from stellar motion and
+    # explore far faster than powered flight. (Observed ratio is dt-limited; the true
+    # speedup is larger — see REFERENCES.md.)
+    powered = simulate_swarm(SwarmParams(n_stars=400, policy="powered"), seed=BASE_SEED)
+    sling = simulate_swarm(SwarmParams(n_stars=400, policy="slingshot_nearest"), seed=BASE_SEED)
+    assert sling.t100_years is not None and powered.t100_years is not None
+    assert sling.t100_years < powered.t100_years / 5  # dramatically faster
+    assert sling.max_probe_speed_km_s > 10 * powered.max_probe_speed_km_s  # speed accumulates
+    assert sling.final_settled == sling.n_stars  # still fills the field
+
+
+def test_nearest_slingshot_beats_max_boost_on_time() -> None:
+    # N&F's key finding: chasing maximum boost reaches higher speeds but wastes travel,
+    # so nearest-neighbour slingshot remains the most time-effective policy.
+    nearest = simulate_swarm(SwarmParams(n_stars=400, policy="slingshot_nearest"), seed=BASE_SEED)
+    maxboost = simulate_swarm(SwarmParams(n_stars=400, policy="slingshot_maxboost"), seed=BASE_SEED)
+    assert nearest.t100_years < maxboost.t100_years  # nearest fills sooner
+    assert maxboost.max_probe_speed_km_s > nearest.max_probe_speed_km_s  # but goes faster
+
+
+def test_boost_self_limits_below_cap() -> None:
+    # Eq. 4 falls off for fast probes, and speed_cap_c backstops — no runaway.
+    r = simulate_swarm(SwarmParams(n_stars=400, policy="slingshot_maxboost"), seed=BASE_SEED)
+    cap_km_s = 0.05 * 299792.458
+    assert r.max_probe_speed_km_s <= cap_km_s
+
+
+def test_slingshot_is_deterministic() -> None:
+    a = simulate_swarm(SwarmParams(n_stars=300, policy="slingshot_nearest"), seed=7)
+    b = simulate_swarm(SwarmParams(n_stars=300, policy="slingshot_nearest"), seed=7)
+    assert [s.n_settled for s in a.steps] == [s.n_settled for s in b.steps]
+    assert a.max_probe_speed_km_s == b.max_probe_speed_km_s
+
+
 def test_step_settles_only_at_or_after_arrival() -> None:
     # No star (other than the homeworld) is settled before a probe could have reached it.
     p = SwarmParams(n_stars=200)

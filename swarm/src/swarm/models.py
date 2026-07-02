@@ -11,6 +11,7 @@ Nothing here imports pimas, the DOM, or a clock.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -18,6 +19,11 @@ from pydantic import BaseModel, Field
 # and the parsec definition: 1 pc = 3.0856775814913673e13 km, 1 yr = 3.15576e7 s
 # (Julian year). c = 299792.458 * 3.15576e7 / 3.0856775814913673e13 pc/yr.
 C_PC_PER_YEAR: float = 299792.458 * 3.15576e7 / 3.0856775814913673e13
+# 1 km/s expressed in pc/yr (derived from the same constants).
+KM_S_TO_PC_YR: float = 3.15576e7 / 3.0856775814913673e13
+
+# Target-selection / travel policies (Nicholson & Forgan 2013, their three scenarios).
+Policy = Literal["powered", "slingshot_nearest", "slingshot_maxboost"]
 
 
 class SwarmParams(BaseModel):
@@ -41,6 +47,24 @@ class SwarmParams(BaseModel):
     )
     max_years: float = Field(gt=0, default=50_000_000.0, description="safety cap; the run ends when the front does")
 
+    # --- slingshot dynamics (ROADMAP §4; N&F 2013). Default 'powered' = no slingshots. ---
+    policy: Policy = Field(default="powered", description="target/travel policy: powered | slingshot_nearest | slingshot_maxboost")
+    star_speed_km_s: float = Field(
+        gt=0, default=220.0, description="[ESTIMATE] mean stellar speed (galactic rotation ~220 km/s; paper defers to Forgan+2012)"
+    )
+    star_speed_dispersion_km_s: float = Field(
+        ge=0, default=40.0, description="[ESTIMATE] spread in stellar speeds (thin-disc dispersion ~30-40 km/s)"
+    )
+    escape_velocity_km_s: float = Field(
+        gt=0, default=617.5, description="stellar escape velocity for the slingshot cap; solar sqrt(2GM/R) (derived, see REFERENCES.md)"
+    )
+    max_boost_candidates: int = Field(
+        ge=1, default=30, description="[ESTIMATE] max-boost policy scans this many nearest unsettled stars"
+    )
+    speed_cap_c: float = Field(
+        gt=0, le=1, default=0.05, description="[ESTIMATE] sanity ceiling on accumulated probe speed"
+    )
+
     @property
     def probe_speed_pc_per_year(self) -> float:
         return self.probe_speed_c * C_PC_PER_YEAR
@@ -53,11 +77,16 @@ class SwarmParams(BaseModel):
 
 @dataclass
 class Probe:
-    """One in-flight hop: heading to ``target`` star, arriving at ``arrive_year``."""
+    """One in-flight hop: heading to ``target`` star, arriving at ``arrive_year``.
+
+    ``speed_pc_yr`` is the probe's current galactic-frame speed — constant (= powered
+    cruise) under the powered policy, but accumulated across slingshots otherwise.
+    """
 
     id: int
     target: int
     arrive_year: float
+    speed_pc_yr: float
 
 
 @dataclass
@@ -69,11 +98,13 @@ class SwarmState:
     xs: list[float]
     ys: list[float]
     zs: list[float]
+    star_speed_pc_yr: list[float]  # per-star speed magnitude (drives the slingshot boost)
     settled_year: list[float]  # -1.0 while unsettled, else the year it was settled
     origin: int  # index of the homeworld star (front radius is measured from here)
     probes: list[Probe]
     next_probe_id: int
     total_launched: int
+    max_speed_pc_yr: float  # fastest probe launched so far (shows accumulated boost)
 
     def n_settled(self) -> int:
         return sum(1 for y in self.settled_year if y >= 0.0)
@@ -97,4 +128,6 @@ class SwarmResult:
     t90_years: float | None
     t100_years: float | None
     front_radius_pc: float
+    max_probe_speed_km_s: float  # peak accumulated probe speed (powered = the cruise speed)
+    policy: str
     steps: list[SwarmStep] = field(default_factory=list)
