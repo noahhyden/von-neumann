@@ -12,6 +12,20 @@ fuse into one giant simulation.
 
 ## Surfaces
 
+### Full mission (`mission`) — live
+
+The flagship end-to-end surface (first in the nav). It runs the **whole operation as
+one pure fold** over all four models: launch a seed, fly it to a heliocentric
+distance, split its solar power between building and thinking, replicate, and price
+the launch-mass payoff. Drag the five knobs — or jump to a destination (Earth orbit,
+Mars, the belt, Jupiter, deep space) — and the entire six-stage chain recomputes,
+including a plain-language verdict on whether the operation *succeeds* at that distance
+and split. Move the probe far enough out and it visibly starves: the manufacturing
+share of the inverse-square power drops below what replication needs, and the factory
+never reaches target. Composes the parity-tested `mission.ts` port (itself a
+composition of the other four ports); reactive via signals + one memo (no
+store/speculate — the fold is cheap to re-run on every drag).
+
 ### The electronics wall (`closure-sim`) — live
 
 `closure-sim`'s "electronics wall" essay began life as a static page — but its

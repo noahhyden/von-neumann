@@ -9,6 +9,7 @@ import { LUNAR_REGOLITH_SEED } from "./scenarios.js";
 import { createLaunchEconomicsModel } from "./launch-economics-model.js";
 import { createPowerBudgetModel } from "./power-budget-model.js";
 import { createProbeModel } from "./probe-sim-model.js";
+import { createMissionModel } from "./mission-model.js";
 
 let failures = 0;
 const ok = (cond: boolean, msg: string) => {
@@ -77,6 +78,20 @@ const pr = createProbeModel();
 const p1 = pr.outputs().deliveredPowerW;
 pr.params[0].set(2.0); // distance 1 AU -> 2 AU
 near(pr.outputs().deliveredPowerW, p1 / 4, 1e-6 * p1, "at 2x distance, delivered power is quartered (reactive)");
+
+// Mission surface: the end-to-end fold reacts to the knobs, and starves when the
+// probe is moved far from the Sun (the whole point of the follow-along).
+const mi = createMissionModel();
+near(mi.outputs().closureRatio, 0.970833, 1e-4, "mission closure = 0.9708 (through the graph)");
+ok(mi.outputs().reachesTarget === true, "mission reaches target near Earth (1 AU baseline)");
+const near1 = mi.outputs().deliveredPowerW;
+mi.params[0].set(2.0); // distance 1 -> 2 AU
+near(mi.outputs().deliveredPowerW, near1 / 4, 1e-6 * near1, "mission delivered power quarters at 2x distance (reactive)");
+mi.params[0].set(30.0); // far out -> power-starved
+ok(mi.outputs().reachesTarget === false, "mission is power-starved and never replicates at 30 AU");
+mi.params[0].set(1.0);
+mi.params[1].set(90); // all remaining power to compute -> manufacturing starved
+ok(mi.outputs().manufacturingW === 0 && mi.outputs().reachesTarget === false, "all power to compute stalls the factory (reactive)");
 
 console.log(failures === 0 ? "\nALL SMOKE CHECKS PASS" : `\n${failures} FAILURES`);
 if (failures > 0) process.exit(1);

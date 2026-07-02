@@ -20,6 +20,7 @@ is to keep each piece small, honest, and verifiable.
 | [`probe-sim`](probe-sim/) | 🚧 in progress | **A single self-replicating probe** (after Borgue & Hein 2020). Solar-electric power vs heliocentric distance, and the operational range it gates — feeds delivered power into `closure-sim`'s replication to find where a probe stops being able to reproduce. |
 | [`power-budget`](power-budget/) | ✅ live | **Making vs. thinking, per watt.** Split a solar-limited power budget among manufacturing, compute, and housekeeping; convert compute-watts to throughput — floored by the Landauer limit and anchored to the ~20 W human brain. |
 | [`launch-economics`](launch-economics/) | ✅ live | **The economics of not launching mass.** Launch cost, the rocket-equation Δv penalty, and the launch-mass leverage of shipping a self-replicating seed instead of the finished installation. |
+| [`mission`](mission/) | ✅ live | **The whole operation, end to end.** One pure fold that composes all four modules above: launch a seed, arrive at a heliocentric distance, split its solar power between building and thinking, replicate, and price the launch-mass payoff. The frontend's "Full mission" surface follows the chain stage by stage. |
 | _more to come_ | | The plan is upwards of ten interacting projects over the coming year — see [ROADMAP.md](ROADMAP.md). |
 
 ## Working in here

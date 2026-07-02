@@ -20,8 +20,10 @@ import { createPowerBudgetModel } from "./power-budget-model.js";
 import type { PowerBudgetModel } from "./power-budget-model.js";
 import { createProbeModel } from "./probe-sim-model.js";
 import type { ProbeModel } from "./probe-sim-model.js";
+import { createMissionModel } from "./mission-model.js";
+import type { MissionModel } from "./mission-model.js";
 
-type Surface = "wall" | "launch" | "power" | "probe";
+type Surface = "wall" | "mission" | "launch" | "power" | "probe";
 
 const fmtNum = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
 const fmtUsd = (n: number): string => {
@@ -455,11 +457,137 @@ function ProbeSurface(props: { model: ProbeModel }) {
   );
 }
 
+// ── the mission surface: the whole operation, end to end ─────────────────────
+// Quick-jump destinations (heliocentric distance, AU) — mean distances, NASA fact sheet.
+const DESTINATIONS: [string, number][] = [["Earth orbit", 1.0], ["Mars", 1.524], ["Asteroid belt", 2.7], ["Jupiter", 5.203], ["Deep", 20]];
+
+const explainMission = (m: MissionModel): string => {
+  const r = m.outputs();
+  const lev = r.massLeverage;
+  if (!r.reachesTarget) {
+    if (r.manufacturingW <= 0) {
+      return `You've handed all the power to thinking, so the factory never builds a thing — it stalls at the seed. Give manufacturing some power and the operation comes alive.`;
+    }
+    return `At ${r.distanceAu.toFixed(1)} AU the array delivers only ${fmtPower(r.deliveredPowerW)}, and the ${fmtPower(r.manufacturingW)} left for building isn't enough to ever reach target output — the operation is power-starved. Move closer to the Sun, or grow the array.`;
+  }
+  return `It works: launch ${fmtNum(r.launchedMassKg / 1000)} t of seed + vitamins, and it grows into a ${fmtNum(r.targetInstalledMassKg / 1000)} t factory — ${lev.toFixed(1)}× leverage, ${fmtUsd(r.costSavingsUsd)} saved versus launching it all, reaching full output in ${fmtDays(r.timeToTargetDays)}. The ${fmtPower(r.manufacturingW)} to manufacturing builds; the ${fmtPower(r.computeW)} to compute thinks.`;
+};
+
+function MissionStage(props: { n: string; title: string; value: () => string; cls?: () => string; note: () => string }) {
+  return (
+    <div class="card" style="margin-bottom:14px">
+      <p class="marker" style="margin:0 0 10px"><b>{props.n}</b> &nbsp;/&nbsp; {props.title}</p>
+      <div class="stat-row" style="border:0;padding-top:0">
+        <span class="what" />
+        <span class={() => `val ${props.cls ? props.cls() : ""}`} style="font-size:1.5rem">{props.value}</span>
+      </div>
+      <p class="explain" style="margin:6px 0 0">{props.note}</p>
+    </div>
+  );
+}
+
+function MissionSurface(props: { model: MissionModel }) {
+  const m = props.model;
+  const r = () => m.outputs();
+  const okCls = () => (r().reachesTarget ? "good" : "bad");
+  return (
+    <div>
+      <section class="hero">
+        <div class="wrap">
+          <p class="eyebrow">The whole operation · end to end · a live model</p>
+          <h1>Launch a seed. Fly it to the Sun's light. Watch it build a factory.</h1>
+          <p class="lede">
+            This is every piece at once: the <strong>launch</strong> bill, the factory's <strong>closure</strong>, the <strong>solar power</strong> that reaches it, the <strong>split</strong> between building and thinking, and whether it ever <strong>replicates</strong> into a full installation. One deterministic run over all four models. Drag the knobs — or pick a destination — and the whole chain recomputes.
+          </p>
+          <div class="card" style="margin-top:8px">
+            <p class="panel-head" style="margin-bottom:8px">Does the operation succeed?</p>
+            <p class="explain" style="margin:0;font-size:1.05rem">{() => explainMission(m)}</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <p class="marker"><b>◆</b> &nbsp;/&nbsp; The knobs</p>
+          <div class="lab">
+            <div class="card controls">
+              <p class="panel-head">Mission parameters</p>
+              <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
+              <div class="btnrow" style="margin-top:12px">
+                <span class="note" style="align-self:center;margin-right:4px">jump to:</span>
+                <For each={() => DESTINATIONS}>
+                  {(d: [string, number]) => (
+                    <button
+                      class={() => `act ${Math.abs(m.params[0].get() - d[1]) < 0.05 ? "primary" : "ghost"}`}
+                      onClick={() => m.params[0].set(d[1])}
+                    >{d[0]}</button>
+                  )}
+                </For>
+              </div>
+            </div>
+            <div class="card readouts">
+              <p class="panel-head">Headline</p>
+              <StatRow what="Reaches full output?" sub="does it ever hit target" value={() => (r().reachesTarget ? "yes" : "no")} cls={okCls} />
+              <StatRow what="Launch-mass leverage" sub="installed kg per launched kg" value={() => `${r().massLeverage.toFixed(1)}×`} cls={() => "metal"} />
+              <StatRow what="Savings vs launch-it-all" value={() => fmtUsd(r().costSavingsUsd)} cls={() => "good"} />
+              <StatRow what="Time to full output" value={() => fmtDays(r().timeToTargetDays)} cls={okCls} />
+              <StatRow what="Delivered power here" sub="inverse-square" value={() => fmtPower(r().deliveredPowerW)} cls={() => "metal"} />
+              <StatRow what="Compute afforded" sub="brain-equivalents · [ESTIMATE]" value={() => (r().brainEquivalents >= 0.01 ? `${r().brainEquivalents.toFixed(2)}×` : `${fmtSci(r().brainEquivalents, 1)}×`)} cls={() => "chip"} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <p class="marker"><b>▶</b> &nbsp;/&nbsp; The chain, stage by stage</p>
+          <MissionStage n="00" title="Launch — put the seed in space"
+            value={() => `${fmtNum(r().launchedMassKg / 1000)} t launched`}
+            cls={() => "metal"}
+            note={() => `You launch the ${fmtNum(r().seedMassKg / 1000)} t seed plus ${fmtNum(r().vitaminMassKg / 1000)} t of "vitamins" (parts it can't make). Reaching orbit is ${(r().propellantFraction * 100).toFixed(0)}% propellant by mass (Δv ${fmtNum(r().deltaVMs)} m/s, Isp ${fmtNum(r().specificImpulseS)} s) — that exponential penalty is why launching the finished factory is unthinkable.`} />
+          <MissionStage n="01" title="Closure — how much it makes for itself"
+            value={() => `${(r().closureRatio * 100).toFixed(1)}% closed`}
+            cls={() => "metal"}
+            note={() => `The seed factory can build ${(r().closureRatio * 100).toFixed(1)}% of its own mass from local material; the remaining ${((1 - r().closureRatio) * 100).toFixed(1)}% must be imported as vitamins. That single fraction sets both the launch bill above and the payoff below.`} />
+          <MissionStage n="02" title="Arrive — solar power at distance"
+            value={() => fmtPower(r().deliveredPowerW)}
+            cls={() => "metal"}
+            note={() => `At ${r().distanceAu.toFixed(1)} AU sunlight is ${fmtNum(r().irradianceWM2)} W/m²; the ${fmtNum(m.params[2].get())} m² array converts it to ${fmtPower(r().deliveredPowerW)}. Double the distance and this quarters — the inverse-square law is the whole constraint on where a solar probe can work.`} />
+          <MissionStage n="03" title="Split — build vs. think"
+            value={() => `${fmtPower(r().manufacturingW)} build · ${fmtPower(r().computeW)} think`}
+            note={() => `That power is divided: manufacturing gets ${fmtPower(r().manufacturingW)}, computation ${fmtPower(r().computeW)}, housekeeping the rest. This is the one dial the modules didn't share — here it's decided once and routed to the two stages below.`} />
+          <MissionStage n="04" title="Replicate — does it grow?"
+            value={() => (r().reachesTarget ? `reaches target in ${fmtDays(r().timeToTargetDays)}` : "never reaches target")}
+            cls={okCls}
+            note={() => (r().reachesTarget
+              ? `Fed ${fmtPower(r().manufacturingW)}, the factory doubles about every ${fmtDays(r().doublingTimeDays)} and climbs to target output, ending ${regimeWord(r().bindingRegime ?? "")}-limited.`
+              : `With only ${fmtPower(r().manufacturingW)} for manufacturing, growth never reaches the target output rate — the operation is power-starved at this distance and split.`)} />
+          <MissionStage n="05" title="Payoff — what you saved"
+            value={() => `${r().massLeverage.toFixed(1)}× · ${fmtUsd(r().costSavingsUsd)}`}
+            cls={() => "good"}
+            note={() => `Launching a ${fmtNum(r().launchedMassKg / 1000)} t seed instead of a ${fmtNum(r().targetInstalledMassKg / 1000)} t factory is ${r().massLeverage.toFixed(1)}× leverage — ${fmtUsd(r().replicationLaunchCostUsd)} instead of ${fmtUsd(r().directLaunchCostUsd)}, a saving of ${fmtUsd(r().costSavingsUsd)}. That gap is the entire reason to send a self-replicating seed.`} />
+        </div>
+      </section>
+
+      <footer>
+        <div class="wrap">
+          <p>
+            One pure fold over all four modules — <strong style="color:var(--text)">launch-economics</strong>, <strong style="color:var(--text)">closure-sim</strong>, <strong style="color:var(--text)">probe-sim</strong>, and <strong style="color:var(--text)">power-budget</strong> — composed in the <strong style="color:var(--text)">mission</strong> module and run live in pimas. Every number traces to a source (see each module's REFERENCES.md); the launch scalars are representative sourced values.
+            <br /><br />
+            <em>Honest caveat:</em> there is no sourced per-module mass breakdown for the Borgue &amp; Hein probe yet (an open gap), so the factory here is closure-sim's lunar-regolith seed scenario used as a stand-in — a real bill of materials, but not probe-specific. No masses are invented to fill that gap.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
 // ── shell nav: one surface per model ────────────────────────────────────────
 function Nav(props: { surface: Surface }) {
   return (
     <div class="wrap" style="padding-top:18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <span style="font-weight:700;letter-spacing:.3px;margin-right:8px">von-neumann</span>
+      <button class={`act ${props.surface === "mission" ? "primary" : "ghost"}`} onClick={() => mount("mission")}>Full mission</button>
       <button class={`act ${props.surface === "wall" ? "primary" : "ghost"}`} onClick={() => mount("wall")}>Electronics wall</button>
       <button class={`act ${props.surface === "probe" ? "primary" : "ghost"}`} onClick={() => mount("probe")}>Single probe</button>
       <button class={`act ${props.surface === "launch" ? "primary" : "ghost"}`} onClick={() => mount("launch")}>Launch economics</button>
@@ -507,6 +635,17 @@ function mount(surface: Surface, scenarioKey = "lunar") {
         <div>
           <Nav surface="power" />
           <PowerBudgetSurface model={pm} />
+        </div>
+      ),
+      appEl,
+    );
+  } else if (surface === "mission") {
+    const mm = createMissionModel();
+    disposeRender = render(
+      () => (
+        <div>
+          <Nav surface="mission" />
+          <MissionSurface model={mm} />
         </div>
       ),
       appEl,

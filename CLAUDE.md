@@ -136,10 +136,39 @@ stable third-party package. Practical implications:
 
 ---
 
+## 7. Architecture is binding: pure fold, reactive skin, speculate
+
+Every model has the same shape, and it is not optional — it is what makes
+`speculate` exact, rollback free, and replay reproducible, and what keeps pimas' core
+tiny. See [ROADMAP.md](ROADMAP.md) for the full rationale.
+
+- **The model is a pure fold.** The math is a deterministic `step(state, dt, rng) →
+  {state, rng}` (or a one-shot `simulate()`), in plain data, with **zero pimas
+  imports** — framework-agnostic, serializable, independently testable (Layer A). It
+  does not know pimas, the DOM, or rendering exist.
+- **Randomness is seeded state, threaded through the fold.** Never `Math.random()`,
+  never a wall clock. Use a small seeded generator carried in the state. Keep
+  iteration order deterministic (ordered containers, not hash sets). This is the one
+  discipline that silently breaks everything downstream if ignored — a `Math.random()`
+  in a fold *works* until someone asks it to reproduce or `speculate`.
+- **pimas is the skin, never the loop.** Signals for the knobs, memos for aggregates
+  and selection, `speculate` + the agent bridge for what-if and provenance. **Never a
+  signal/store-node per entity; never fine-grained reactivity in the per-entity /
+  per-tick loop.** The reactive graph scales with what a human or agent *looks at*,
+  not with entity count.
+- **Rendering reads the fold's buffers; it never owns state.** At scale, one
+  `<canvas>` + a plain draw loop driven by a single effect — not a DOM node per
+  entity, not a reactive scene graph, not a canvas `RenderBackend`.
+- **Nothing simulation-shaped enters pimas itself.** The tick loop, clock, state
+  storage, RNG, spatial index, persistence, and drawing live here. If a change seems
+  to need a pimas core feature, that's a §6 flag, not a local workaround — and the bar
+  is high (would noahhyden.com's static build pay for it?).
+
 ## The one-line test before you commit
 
 > Can I point at a source for every number, did a simple end-to-end check confirm
-> the flow behaves correctly, and is the model grounded in physics without burying
-> the logic under needless nesting?
+> the flow behaves correctly, is the model grounded in physics without burying the
+> logic under needless nesting, and is it a **pure, seeded, deterministic fold with
+> pimas only as its skin** (§7)?
 
 If any answer is no, it's not done.

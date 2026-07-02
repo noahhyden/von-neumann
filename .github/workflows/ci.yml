@@ -56,6 +56,17 @@ jobs:
         working-directory: launch-economics
         run: uv run --extra dev pytest -q
 
+  mission:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: pytest (end-to-end behavior assertions)
+        working-directory: mission
+        run: uv run --extra dev pytest -q
+
   frontend:
     runs-on: ubuntu-latest
     steps:

@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mission"
+version = "0.1.0"
+description = "The end-to-end von Neumann probe mission: launch a seed, arrive at a heliocentric distance, split solar power between building and thinking, and replicate — one pure fold over the four sibling modules"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.6",
+    "closure-sim",
+    "power-budget",
+    "launch-economics",
+    "probe-sim",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+# Sibling modules in this monorepo, consumed only through their public APIs (CLAUDE.md §4).
+[tool.uv.sources]
+closure-sim = { path = "../closure-sim", editable = true }
+power-budget = { path = "../power-budget", editable = true }
+launch-economics = { path = "../launch-economics", editable = true }
+probe-sim = { path = "../probe-sim", editable = true }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

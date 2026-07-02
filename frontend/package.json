@@ -7,7 +7,7 @@
   "scripts": {
     "build": "node build.mjs",
     "serve": "node --watch-path=src build.mjs",
-    "test": "node --test src/model.test.ts src/launch-economics.test.ts src/power-budget.test.ts src/probe-sim.test.ts",
+    "test": "node --test src/model.test.ts src/launch-economics.test.ts src/power-budget.test.ts src/probe-sim.test.ts src/mission.test.ts",
     "test:contract": "node --test src/pimas-contract.test.ts",
     "smoke": "esbuild src/smoke.ts --bundle --format=esm --platform=node --outfile=/tmp/frontend-smoke.mjs && node /tmp/frontend-smoke.mjs",
     "test:diff": "node scripts/gen-diff.mjs && cd ../closure-sim && uv run python ../frontend/scripts/diff_check.py"
