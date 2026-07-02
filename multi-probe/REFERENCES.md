@@ -48,6 +48,12 @@ cap binds — the spatial power wall is emergent, not hard-coded.
 - **Max probes = 64 default** — a **scope bound**, not physics: this is deliberately the
   *small* deterministic model (tens of probes), the intermediate step before the 10⁵-star
   swarm (ROADMAP §3–4).
+- **Start distance = 1 AU** — a scenario **choice**: the fleet's first probes begin at
+  Earth's heliocentric distance. Not physical, just a reference starting point.
+- **Observation window = 3650 days (`simulate_fleet` default)** — a sim-control **choice**,
+  like `dt_days`: how long we watch the fleet. It shapes the `power_limited` verdict (a
+  slow far-out probe may not finish a copy within the window), so it is a documented knob,
+  not a physical constant.
 
 ## Open gap (inherited)
 

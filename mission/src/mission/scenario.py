@@ -57,7 +57,8 @@ DEFAULT_SPECIFIC_IMPULSE_S: float = 311.0
 DEFAULT_COST_PER_KG_USD: float = 3000.0
 
 # Target installed factory mass — a scenario *design choice* (not a physical fact):
-# grow a ~12 t seed into a 1000 t installation (leverage ~80x). Flagged as a choice.
+# grow a ~12 t seed into a 1000 t installation. The naive mass ratio is ~83x, but the
+# effective launch-mass leverage is ~24.5x once vitamins are counted (see REFERENCES.md).
 DEFAULT_TARGET_INSTALLED_MASS_KG: float = 1_000_000.0
 
 # Power split — scenario design choices (fractions of delivered power), not physics.

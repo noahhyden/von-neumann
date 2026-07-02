@@ -14,6 +14,10 @@ math from ones that do. Units: energy in joules, power in watts, temperature in 
   `1 / 2.871e-21 = 3.48e20` irreversible bit-operations per joule. Solid (first
   principles + measured constant). Experimentally approached: Bérut et al. (2012),
   *Nature* 483:187–189.
+  - **Reference temperature = 300 K** (the default in `landauer_limit_j_per_bit` /
+    `max_bit_operations_per_joule`) is a documented **choice** — ≈ room temperature, the
+    conventional basis for quoting the Landauer floor. Any radiator temperature can be
+    passed; the floor scales linearly with T.
 
 ## Scale anchors
 

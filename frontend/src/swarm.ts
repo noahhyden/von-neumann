@@ -53,6 +53,21 @@ interface Probe {
   arriveYear: number;
 }
 
+/**
+ * A uniform-grid spatial index over the (static) star positions. Cells hold star
+ * indices; nearest-unsettled queries expand Chebyshev shells outward and stop once no
+ * unexamined cell can beat the best distance. Built once (positions never move); only
+ * the settled mask changes between queries. Returns EXACTLY what the brute-force scan
+ * returns — same nearest star, same lowest-index tie-break — so it's a pure speedup
+ * (proven bit-identical in the tests). This is the "scale" slice's core (§7: the
+ * spatial index lives in the frontend, not the pure Python ground truth).
+ */
+export interface Grid {
+  cellSize: number;
+  dim: number; // cells per axis
+  cells: number[][]; // cells[ix*dim*dim + iy*dim + iz] = star indices in that cell
+}
+
 export interface SwarmState {
   rng: number;
   year: number;
@@ -64,6 +79,78 @@ export interface SwarmState {
   probes: Probe[];
   nextProbeId: number;
   totalLaunched: number;
+  grid: Grid; // spatial index for nearest-unsettled (accelerates the O(N) scan)
+}
+
+function buildGrid(xs: number[], ys: number[], zs: number[], boxSide: number): Grid {
+  const n = xs.length;
+  const dim = Math.max(1, Math.round(Math.cbrt(n))); // ~1 star per cell
+  const cellSize = boxSide / dim;
+  const cells: number[][] = Array.from({ length: dim * dim * dim }, () => []);
+  const cellIndex = (x: number, y: number, z: number): number => {
+    const ix = Math.min(dim - 1, Math.max(0, Math.floor(x / cellSize)));
+    const iy = Math.min(dim - 1, Math.max(0, Math.floor(y / cellSize)));
+    const iz = Math.min(dim - 1, Math.max(0, Math.floor(z / cellSize)));
+    return (ix * dim + iy) * dim + iz;
+  };
+  for (let i = 0; i < n; i++) cells[cellIndex(xs[i], ys[i], zs[i])].push(i);
+  return { cellSize, dim, cells };
+}
+
+/** Brute-force nearest unsettled star — the reference the grid must match exactly. */
+function bruteNearestUnsettled(s: SwarmState, frm: number, exclude: Set<number>): number | null {
+  let best: number | null = null;
+  let bestD2 = Infinity;
+  const fx = s.xs[frm], fy = s.ys[frm], fz = s.zs[frm];
+  for (let i = 0; i < s.xs.length; i++) {
+    if (s.settledYear[i] >= 0 || exclude.has(i)) continue;
+    const dx = s.xs[i] - fx, dy = s.ys[i] - fy, dz = s.zs[i] - fz;
+    const d2 = dx * dx + dy * dy + dz * dz;
+    if (d2 < bestD2) {
+      bestD2 = d2;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/** Grid-accelerated nearest unsettled star; returns the same result as brute force. */
+function gridNearestUnsettled(s: SwarmState, frm: number, exclude: Set<number>): number | null {
+  const g = s.grid;
+  const dim = g.dim, cs = g.cellSize;
+  const fx = s.xs[frm], fy = s.ys[frm], fz = s.zs[frm];
+  const qx = Math.min(dim - 1, Math.max(0, Math.floor(fx / cs)));
+  const qy = Math.min(dim - 1, Math.max(0, Math.floor(fy / cs)));
+  const qz = Math.min(dim - 1, Math.max(0, Math.floor(fz / cs)));
+  let best: number | null = null;
+  let bestD2 = Infinity;
+  const consider = (i: number) => {
+    if (s.settledYear[i] >= 0 || exclude.has(i)) return;
+    const dx = s.xs[i] - fx, dy = s.ys[i] - fy, dz = s.zs[i] - fz;
+    const d2 = dx * dx + dy * dy + dz * dz;
+    // strict <, or equal-distance tie broken by lowest index — matches brute force.
+    if (d2 < bestD2 || (d2 === bestD2 && (best === null || i < best))) {
+      bestD2 = d2;
+      best = i;
+    }
+  };
+  for (let r = 0; r < dim; r++) {
+    const lox = Math.max(0, qx - r), hix = Math.min(dim - 1, qx + r);
+    const loy = Math.max(0, qy - r), hiy = Math.min(dim - 1, qy + r);
+    const loz = Math.max(0, qz - r), hiz = Math.min(dim - 1, qz + r);
+    for (let ix = lox; ix <= hix; ix++) {
+      for (let iy = loy; iy <= hiy; iy++) {
+        for (let iz = loz; iz <= hiz; iz++) {
+          // shell only: skip cells strictly inside the r-1 cube (already examined).
+          if (Math.max(Math.abs(ix - qx), Math.abs(iy - qy), Math.abs(iz - qz)) !== r) continue;
+          for (const i of g.cells[(ix * dim + iy) * dim + iz]) consider(i);
+        }
+      }
+    }
+    // After finishing shell r, the closest possible star in shell r+1 is >= r*cs away.
+    if (best !== null && r * cs >= Math.sqrt(bestD2)) break;
+  }
+  return best;
 }
 
 export interface SwarmStep {
