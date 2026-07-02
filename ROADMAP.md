@@ -68,11 +68,21 @@ to `gen-diff.mjs`); jitter = 0 is deterministic and seed-independent. 11 behavio
 port with the mulberry32 RNG matching the Python bit-for-bit. **Remaining:** swapping in
 a probe-specific BOM once the mass `[GAP]` is closed.
 
-### 4. The swarm — later 🔭
+### 4. The swarm — slice 1 done 🚧 (`swarm/`)
 
 **Source:** Nicholson & Forgan (2013), *Slingshot Dynamics for Self-Replicating
 Probes and the Effect on Exploration Timescales*,
 [arXiv:1307.1648](https://arxiv.org/abs/1307.1648) (*Int. J. Astrobiology* 2013).
+
+**Built (slice 1):** `swarm/` — the pure, seeded, fixed-step algorithm core. Probes
+spread star-to-star through a seeded field (density from a sourced local stellar
+density), settling the nearest unsettled star at 0.1c and launching offspring; reports
+the exploration timescale (50/90/100%) and the settlement-front radius. The front
+advances at ~40% of probe speed (nearest-hop zig-zag + settling). SoA-style state,
+mulberry32 RNG (byte-identical to the other modules), 13 behavior tests. **Slices
+remaining:** (1) scale + spatial hashing (200k stars); (2) WebGL frontend surface;
+(3) slingshot dynamics + the paper's policies; (4) the novel **light-speed-limited
+coordination** extension. The rest of this section is the design for those slices.
 
 Agent-based Monte-Carlo over up to **200,000 stars**: per-probe next-star policies
 (nearest powered / nearest slingshot / max-boost), gravitational slingshots,
