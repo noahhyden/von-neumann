@@ -754,43 +754,65 @@ function drawSwarm(cv: HTMLCanvasElement, m: SwarmModel): void {
   const px = (x: number) => offx + x * s;
   const py = (y: number) => CANVAS_PAD + y * s;
 
-  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-  ctx.fillStyle = "#0b0d10";
+  // Deep-space background + a soft vignette.
+  ctx.globalCompositeOperation = "source-over";
+  ctx.fillStyle = "#06070a";
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  const vg = ctx.createRadialGradient(CANVAS_W / 2, CANVAS_H / 2, 0, CANVAS_W / 2, CANVAS_H / 2, CANVAS_W * 0.6);
+  vg.addColorStop(0, "rgba(22,28,38,0.45)");
+  vg.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = vg;
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-  // unsettled stars: dim; settled (by this year): bright cyan, brighter when recent.
+  // Stars, drawn additively so settled clusters bloom into a glowing front. Settled
+  // stars flash white when the scrub has just crossed their settlement year, then cool
+  // from cyan to teal with age; unsettled stars are a dim dust.
+  const flash = Math.max(1, m.maxYear() * 0.03);
+  const coolSpan = Math.max(1, m.maxYear() * 0.6);
+  ctx.globalCompositeOperation = "lighter";
   for (let i = 0; i < r.xs.length; i++) {
     const sy = r.settledYear[i];
-    const settled = sy >= 0 && sy <= year;
-    if (settled) {
-      const age = year > 0 ? (year - sy) / year : 1;
-      ctx.fillStyle = age < 0.06 ? "#e8e2d6" : "#58c7d6"; // freshly-settled flashes white
-      ctx.globalAlpha = 0.9;
+    const x = px(r.xs[i]), y = py(r.ys[i]);
+    if (sy >= 0 && sy <= year) {
+      const age = year - sy;
+      if (age < flash) {
+        ctx.fillStyle = "rgba(240,245,255,0.95)"; // just settled — a white flash
+      } else {
+        const t = Math.min(1, age / coolSpan); // cyan (88,199,214) → teal (36,116,150)
+        ctx.fillStyle = `rgba(${Math.round(88 - 52 * t)},${Math.round(199 - 83 * t)},${Math.round(214 - 64 * t)},0.8)`;
+      }
       ctx.beginPath();
-      ctx.arc(px(r.xs[i]), py(r.ys[i]), 2.4, 0, Math.PI * 2);
+      ctx.arc(x, y, age < flash ? 2.8 : 2.0, 0, Math.PI * 2);
       ctx.fill();
     } else {
-      ctx.fillStyle = "#3a4048";
-      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = "rgba(96,116,140,0.22)";
       ctx.beginPath();
-      ctx.arc(px(r.xs[i]), py(r.ys[i]), 1.5, 0, Math.PI * 2);
+      ctx.arc(x, y, 1.2, 0, Math.PI * 2);
       ctx.fill();
     }
   }
-  ctx.globalAlpha = 1;
 
-  // the wavefront: a faint ring at the current front radius, centred on the homeworld.
+  ctx.globalCompositeOperation = "source-over";
+  // The wavefront: a ring at the current front radius, centred on the homeworld.
   const front = m.settledAt().frontPc;
-  ctx.strokeStyle = "rgba(232,163,61,0.35)";
+  const ox = px(r.xs[r.origin]), oy = py(r.ys[r.origin]);
+  ctx.strokeStyle = "rgba(232,163,61,0.5)";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.arc(px(r.xs[r.origin]), py(r.ys[r.origin]), front * s, 0, Math.PI * 2);
+  ctx.arc(ox, oy, front * s, 0, Math.PI * 2);
   ctx.stroke();
 
-  // the homeworld.
-  ctx.fillStyle = "#e8a33d";
+  // The homeworld — a bright amber core with a soft halo.
+  const halo = ctx.createRadialGradient(ox, oy, 0, ox, oy, 12);
+  halo.addColorStop(0, "rgba(232,163,61,0.9)");
+  halo.addColorStop(1, "rgba(232,163,61,0)");
+  ctx.fillStyle = halo;
   ctx.beginPath();
-  ctx.arc(px(r.xs[r.origin]), py(r.ys[r.origin]), 4.5, 0, Math.PI * 2);
+  ctx.arc(ox, oy, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#f4c46a";
+  ctx.beginPath();
+  ctx.arc(ox, oy, 4, 0, Math.PI * 2);
   ctx.fill();
 }
 

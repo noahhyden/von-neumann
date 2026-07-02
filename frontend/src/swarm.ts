@@ -80,6 +80,8 @@ export interface SwarmState {
   nextProbeId: number;
   totalLaunched: number;
   grid: Grid; // spatial index for nearest-unsettled (accelerates the O(N) scan)
+  settledCount: number; // tracked incrementally so per-step metrics are O(1), not O(N)
+  frontMaxPc: number; // farthest settled star from the origin, tracked incrementally
 }
 
 function buildGrid(xs: number[], ys: number[], zs: number[], boxSide: number): Grid {
@@ -95,6 +97,18 @@ function buildGrid(xs: number[], ys: number[], zs: number[], boxSide: number): G
   };
   for (let i = 0; i < n; i++) cells[cellIndex(xs[i], ys[i], zs[i])].push(i);
   return { cellSize, dim, cells };
+}
+
+/** Remove a (now-settled) star from its grid cell, so future queries never scan it.
+ *  This keeps nearest-unsettled fast even late in the fill, when most stars are settled. */
+function removeFromGrid(s: SwarmState, i: number): void {
+  const g = s.grid;
+  const ix = Math.min(g.dim - 1, Math.max(0, Math.floor(s.xs[i] / g.cellSize)));
+  const iy = Math.min(g.dim - 1, Math.max(0, Math.floor(s.ys[i] / g.cellSize)));
+  const iz = Math.min(g.dim - 1, Math.max(0, Math.floor(s.zs[i] / g.cellSize)));
+  const cell = g.cells[(ix * g.dim + iy) * g.dim + iz];
+  const at = cell.indexOf(i);
+  if (at !== -1) cell[cell.length - 1] === i ? cell.pop() : (cell[at] = cell.pop()!);
 }
 
 /** Brute-force nearest unsettled star — the reference the grid must match exactly. */
@@ -199,21 +213,11 @@ function dist(s: SwarmState, a: number, b: number): number {
   return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-function nearestUnsettled(s: SwarmState, frm: number, exclude: Set<number>): number | null {
-  let best: number | null = null;
-  let bestD2 = Infinity;
-  const fx = s.xs[frm], fy = s.ys[frm], fz = s.zs[frm];
-  for (let i = 0; i < s.xs.length; i++) {
-    if (s.settledYear[i] >= 0 || exclude.has(i)) continue;
-    const dx = s.xs[i] - fx, dy = s.ys[i] - fy, dz = s.zs[i] - fz;
-    const d2 = dx * dx + dy * dy + dz * dz;
-    if (d2 < bestD2) {
-      bestD2 = d2;
-      best = i;
-    }
-  }
-  return best;
-}
+// Production path: the grid-accelerated search (identical result to brute force).
+const nearestUnsettled = gridNearestUnsettled;
+
+// Exported so the tests can prove grid ≡ brute across many queries.
+export { bruteNearestUnsettled, gridNearestUnsettled };
 
 function launchFrom(s: SwarmState, star: number, p: SwarmParams): void {
   const speed = probeSpeedPcPerYear(p);
@@ -244,7 +248,9 @@ export function initialState(p: SwarmParams, seed: number): SwarmState {
   }
   const settledYear = new Array<number>(n).fill(-1);
   settledYear[origin] = 0;
-  const s: SwarmState = { rng, year: 0, xs, ys, zs, settledYear, origin, probes: [], nextProbeId: 0, totalLaunched: 0 };
+  const grid = buildGrid(xs, ys, zs, L);
+  const s: SwarmState = { rng, year: 0, xs, ys, zs, settledYear, origin, probes: [], nextProbeId: 0, totalLaunched: 0, grid, settledCount: 1, frontMaxPc: 0 };
+  removeFromGrid(s, origin); // the homeworld is settled; take it out of the candidate set
   launchFrom(s, origin, p);
   return s;
 }
@@ -263,6 +269,10 @@ export function step(s: SwarmState, p: SwarmParams): SwarmState {
   for (const pr of arrivals) {
     if (s.settledYear[pr.target] < 0) {
       s.settledYear[pr.target] = s.year;
+      removeFromGrid(s, pr.target);
+      s.settledCount += 1;
+      const d = dist(s, pr.target, s.origin);
+      if (d > s.frontMaxPc) s.frontMaxPc = d;
       launchFrom(s, pr.target, p);
     } else {
       const target = nearestUnsettled(s, pr.target, new Set());
@@ -275,26 +285,9 @@ export function step(s: SwarmState, p: SwarmParams): SwarmState {
   return s;
 }
 
-function nSettled(s: SwarmState): number {
-  let n = 0;
-  for (const y of s.settledYear) if (y >= 0) n++;
-  return n;
-}
-
-function frontRadius(s: SwarmState): number {
-  let r = 0;
-  for (let i = 0; i < s.xs.length; i++) {
-    if (s.settledYear[i] >= 0) {
-      const d = dist(s, i, s.origin);
-      if (d > r) r = d;
-    }
-  }
-  return r;
-}
-
 function snapshot(s: SwarmState, nStars: number): SwarmStep {
-  const n = nSettled(s);
-  return { year: s.year, nSettled: n, fractionSettled: n / nStars, inFlight: s.probes.length, frontRadiusPc: frontRadius(s) };
+  const n = s.settledCount;
+  return { year: s.year, nSettled: n, fractionSettled: n / nStars, inFlight: s.probes.length, frontRadiusPc: s.frontMaxPc };
 }
 
 export function simulateSwarm(params: SwarmParams, seed = 0x9e3779b9): SwarmResult {
@@ -303,7 +296,7 @@ export function simulateSwarm(params: SwarmParams, seed = 0x9e3779b9): SwarmResu
   const steps = [snapshot(s, nStars)];
   const thr: Record<number, number | null> = { 50: null, 90: null, 100: null };
   const recordThresholds = () => {
-    const frac = (nSettled(s) / nStars) * 100;
+    const frac = (s.settledCount / nStars) * 100;
     for (const pct of [50, 90, 100]) if (thr[pct] === null && frac >= pct) thr[pct] = s.year;
   };
   recordThresholds();
@@ -318,12 +311,12 @@ export function simulateSwarm(params: SwarmParams, seed = 0x9e3779b9): SwarmResu
 
   return {
     nStars,
-    finalSettled: nSettled(s),
+    finalSettled: s.settledCount,
     totalProbesLaunched: s.totalLaunched,
     t50Years: thr[50],
     t90Years: thr[90],
     t100Years: thr[100],
-    frontRadiusPc: frontRadius(s),
+    frontRadiusPc: s.frontMaxPc,
     steps,
     xs: s.xs,
     ys: s.ys,

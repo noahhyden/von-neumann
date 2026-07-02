@@ -27,7 +27,7 @@ export interface SwarmModel {
 }
 
 export function createSwarmModel(): SwarmModel {
-  const [nStars, setNStars] = createSignal(500);
+  const [nStars, setNStars] = createSignal(1200);
   const [offspring, setOffspring] = createSignal(2);
   const [probeSpeedKmS, setProbeSpeedKmS] = createSignal(9); // N&F powered cruise ≈ 9 km/s
   const [seed, setSeed] = createSignal(1);
@@ -35,7 +35,7 @@ export function createSwarmModel(): SwarmModel {
   const [playing, setPlaying] = createSignal(false);
 
   const params: ParamSignal[] = [
-    { get: nStars, set: setNStars, min: 50, max: 2000, step: 50, label: "Stars in the field", unit: "" },
+    { get: nStars, set: setNStars, min: 50, max: 5000, step: 50, label: "Stars in the field", unit: "" },
     { get: offspring, set: setOffspring, min: 0, max: 6, step: 1, label: "Offspring per settlement", unit: "" },
     { get: probeSpeedKmS, set: setProbeSpeedKmS, min: 1, max: 100, step: 1, label: "Probe speed", unit: "km/s" },
     { get: seed, set: setSeed, min: 1, max: 9999, step: 1, label: "Galaxy seed", unit: "" },

@@ -6,7 +6,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { simulateSwarm, SWARM_DEFAULTS, C_PC_PER_YEAR } from "./swarm.ts";
+import { simulateSwarm, SWARM_DEFAULTS, C_PC_PER_YEAR, initialState, bruteNearestUnsettled, gridNearestUnsettled } from "./swarm.ts";
 import type { SwarmParams } from "./swarm.ts";
 
 const near = (a: number, b: number, relEps = 1e-9) =>
@@ -65,6 +65,32 @@ test("swarm port reproduces Python ground truth (field + trajectory)", () => {
     assert.equal(r.steps.length, e.nsteps, `n=${c.nStars}: nsteps`);
     for (const [i, pop] of e.popSamples) assert.equal(r.steps[i].nSettled, pop, `n=${c.nStars}: pop@${i}`);
   }
+});
+
+test("spatial-hash nearest search is bit-identical to brute force (prove small)", () => {
+  // The grid is a pure speedup: for many queries, over evolving settled masks, it must
+  // return exactly the brute-force nearest — including the lowest-index tie-break.
+  for (const [n, seed] of [[300, 1], [800, 7], [1500, 42]] as [number, number][]) {
+    const s = initialState({ ...SWARM_DEFAULTS, nStars: n }, seed);
+    // Mark a deterministic ~40% of stars settled to exercise a sparse candidate set.
+    for (let i = 0; i < n; i++) if ((i * 2654435761) % 5 < 2) s.settledYear[i] = 1;
+    let checked = 0;
+    for (let frm = 0; frm < n; frm += 7) {
+      const exclude = new Set<number>([(frm + 3) % n, (frm + 11) % n]);
+      const g = gridNearestUnsettled(s, frm, exclude);
+      const b = bruteNearestUnsettled(s, frm, exclude);
+      assert.equal(g, b, `n=${n} seed=${seed} frm=${frm}: grid ${g} != brute ${b}`);
+      checked++;
+    }
+    assert.ok(checked > 10, "ran a meaningful number of queries");
+  }
+});
+
+test("grid scales to a large field and still fills it (build large)", () => {
+  // 8000 stars would be ~6.4e7 ops for the brute O(N^2) settlement; the grid keeps it fast.
+  const r = simulateSwarm({ ...SWARM_DEFAULTS, nStars: 8000 }, 123);
+  assert.equal(r.finalSettled, 8000);
+  assert.ok(r.t100Years !== null && r.t100Years > 0);
 });
 
 test("same seed is bit-identical; a connected field always fills", () => {
