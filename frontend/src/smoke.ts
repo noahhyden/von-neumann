@@ -11,6 +11,7 @@ import { createPowerBudgetModel } from "./power-budget-model.js";
 import { createProbeModel } from "./probe-sim-model.js";
 import { createMissionModel } from "./mission-model.js";
 import { createMultiProbeModel } from "./multi-probe-model.js";
+import { createSwarmModel } from "./swarm-model.js";
 
 let failures = 0;
 const ok = (cond: boolean, msg: string) => {
@@ -107,6 +108,21 @@ fl.params[0].set(1);
 ok(fl.result().finalPopulation > farPop, "starting far from the Sun yields a smaller fleet (spatial power wall, reactive)");
 fl.params[1].set(0); // vitamin pool -> 0 t
 ok(fl.result().finalPopulation === 1 && fl.result().binding.vitaminLimited === true, "zero vitamins → no children (electronics wall)");
+
+// Swarm surface: the reactive fold fills the field, and the scrubber selects a moment
+// (settled count is monotonic in the scrubbed year).
+const sw = createSwarmModel();
+ok(sw.result().finalSettled === sw.result().nStars, "swarm fills the reachable field (reactive)");
+sw.setScrubYear(0);
+ok(sw.settledAt().count === 1, "at year 0 only the homeworld is settled");
+sw.setScrubYear(sw.maxYear());
+ok(sw.settledAt().count === sw.result().nStars, "at the final year the whole field is settled");
+const midY = sw.maxYear() / 2;
+sw.setScrubYear(midY);
+const midCount = sw.settledAt().count;
+ok(midCount > 1 && midCount < sw.result().nStars, "mid-run the front is partway through the field");
+sw.params[1].set(0); // offspring 2 -> 0
+ok(sw.result().finalSettled === 1 && sw.result().t100Years === null, "zero offspring settles only the homeworld (reactive)");
 
 console.log(failures === 0 ? "\nALL SMOKE CHECKS PASS" : `\n${failures} FAILURES`);
 if (failures > 0) process.exit(1);

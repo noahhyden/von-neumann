@@ -26,6 +26,17 @@ never reaches target. Composes the parity-tested `mission.ts` port (itself a
 composition of the other four ports); reactive via signals + one memo (no
 store/speculate — the fold is cheap to re-run on every drag).
 
+### The swarm (`swarm`) — live
+
+A settlement front filling a galaxy, live **on a canvas**: press **play** and watch the
+reachable star field light up from one homeworld as probes settle and re-launch; drag
+the knobs (star count, offspring, probe speed) and reseed the galaxy. The canvas reads
+the fold's per-star settlement buffers each frame and redraws — one `<canvas>` + a
+single effect, **never a DOM node per star** (the rendering discipline that scales,
+§7). Deterministic: same seed, same spread, every run (mulberry32 byte-identical to the
+Python). Parity-tested TS port of `swarm` slice 1; scale/WebGL/slingshots/light-speed
+are later slices.
+
 ### The fleet (`multi-probe`) — live
 
 A small, **deterministic, seeded** fleet running live: one probe copies itself, the

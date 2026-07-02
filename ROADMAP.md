@@ -79,10 +79,14 @@ spread star-to-star through a seeded field (density from a sourced local stellar
 density), settling the nearest unsettled star at 0.1c and launching offspring; reports
 the exploration timescale (50/90/100%) and the settlement-front radius. The front
 advances at ~40% of probe speed (nearest-hop zig-zag + settling). SoA-style state,
-mulberry32 RNG (byte-identical to the other modules), 13 behavior tests. **Slices
-remaining:** (1) scale + spatial hashing (200k stars); (2) WebGL frontend surface;
-(3) slingshot dynamics + the paper's policies; (4) the novel **light-speed-limited
-coordination** extension. The rest of this section is the design for those slices.
+mulberry32 RNG (byte-identical to the other modules), 13 behavior tests. A live
+**"Swarm" frontend surface** now renders the front on a `<canvas>` (play/scrub the fill,
+reseed the galaxy) — one canvas + a single effect reading the fold's buffers, no
+node-per-star (§7); parity-tested TS port. **Slices remaining:** (1) scale + spatial
+hashing (200k stars) → typed-array SoA + WebGL instanced draw; (2) slingshot dynamics +
+the paper's nearest-powered/slingshot/max-boost policies + replicate-in-transit; (3) the
+novel **light-speed-limited coordination** extension. The rest of this section is the
+design for those slices.
 
 Agent-based Monte-Carlo over up to **200,000 stars**: per-probe next-star policies
 (nearest powered / nearest slingshot / max-boost), gravitational slingshots,

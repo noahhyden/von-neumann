@@ -6,7 +6,7 @@
  * explain which ceiling is binding. The last panel shows the very same reactive
  * graph projected as an agent surface (subscribe / speculate / explain).
  */
-import { createSignal, createMemo } from "pimas";
+import { createSignal, createMemo, createEffect, onCleanup } from "pimas";
 import { render } from "pimas/dom";
 import { Show, For } from "pimas/flow";
 import { createWallModel, fmtDays } from "./reactive-model.js";
@@ -24,8 +24,10 @@ import { createMissionModel } from "./mission-model.js";
 import type { MissionModel } from "./mission-model.js";
 import { createMultiProbeModel } from "./multi-probe-model.js";
 import type { MultiProbeModel } from "./multi-probe-model.js";
+import { createSwarmModel } from "./swarm-model.js";
+import type { SwarmModel } from "./swarm-model.js";
 
-type Surface = "wall" | "mission" | "fleet" | "launch" | "power" | "probe";
+type Surface = "wall" | "mission" | "fleet" | "swarm" | "launch" | "power" | "probe";
 
 const fmtNum = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
 const fmtUsd = (n: number): string => {
@@ -738,6 +740,168 @@ function MultiProbeSurface(props: { model: MultiProbeModel }) {
   );
 }
 
+// ── the swarm surface: a settlement front filling the galaxy, live on a canvas ─
+const CANVAS_W = 900, CANVAS_H = 520, CANVAS_PAD = 26;
+
+function drawSwarm(cv: HTMLCanvasElement, m: SwarmModel): void {
+  const ctx = cv.getContext("2d");
+  if (!ctx) return;
+  const r = m.result();
+  const year = m.scrubYear();
+  const L = r.boxSidePc;
+  const s = (CANVAS_H - 2 * CANVAS_PAD) / L; // square scale (pc → px)
+  const offx = (CANVAS_W - L * s) / 2;
+  const px = (x: number) => offx + x * s;
+  const py = (y: number) => CANVAS_PAD + y * s;
+
+  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+  ctx.fillStyle = "#0b0d10";
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // unsettled stars: dim; settled (by this year): bright cyan, brighter when recent.
+  for (let i = 0; i < r.xs.length; i++) {
+    const sy = r.settledYear[i];
+    const settled = sy >= 0 && sy <= year;
+    if (settled) {
+      const age = year > 0 ? (year - sy) / year : 1;
+      ctx.fillStyle = age < 0.06 ? "#e8e2d6" : "#58c7d6"; // freshly-settled flashes white
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.arc(px(r.xs[i]), py(r.ys[i]), 2.4, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = "#3a4048";
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath();
+      ctx.arc(px(r.xs[i]), py(r.ys[i]), 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // the wavefront: a faint ring at the current front radius, centred on the homeworld.
+  const front = m.settledAt().frontPc;
+  ctx.strokeStyle = "rgba(232,163,61,0.35)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(px(r.xs[r.origin]), py(r.ys[r.origin]), front * s, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // the homeworld.
+  ctx.fillStyle = "#e8a33d";
+  ctx.beginPath();
+  ctx.arc(px(r.xs[r.origin]), py(r.ys[r.origin]), 4.5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+const explainSwarm = (m: SwarmModel): string => {
+  const r = m.result();
+  if (r.t100Years === null) {
+    return `With ${m.params[1].get()} offspring per settlement the front can't fill the field — raise it above zero and the reachable galaxy fills exponentially.`;
+  }
+  const frontSpeedFrac = (r.frontRadiusPc / r.t100Years) / (0.3066 * m.params[2].get()) * 100;
+  return `From one homeworld, the front settles all ${r.nStars} stars in ${fmtNum(r.t100Years)} years (50% by ${fmtNum(r.t50Years ?? 0)}, 90% by ${fmtNum(r.t90Years ?? 0)}), reaching ${r.frontRadiusPc.toFixed(1)} pc. The wavefront advances at only ~${frontSpeedFrac.toFixed(0)}% of a single probe's speed — nearest-hop zig-zag and settling slow the wave, just as Nicholson & Forgan found. Same seed, same galaxy, every run.`;
+};
+
+function SwarmSurface(props: { model: SwarmModel }) {
+  const m = props.model;
+  const [canvas, setCanvas] = createSignal<HTMLCanvasElement | null>(null);
+
+  // Draw whenever the field (knobs/seed) or the scrubbed year changes — a single effect
+  // reading the fold's buffers (§7), never a DOM node per star.
+  createEffect(() => {
+    const cv = canvas();
+    if (cv) drawSwarm(cv, m);
+  });
+
+  // Play: advance the scrubber toward the end over ~240 frames; stop at the end.
+  createEffect(() => {
+    if (!m.playing()) return;
+    let raf = 0;
+    const tick = () => {
+      const mx = m.maxYear();
+      const cur = m.scrubYear();
+      if (cur >= mx) { m.setPlaying(false); return; }
+      m.setScrubYear(Math.min(mx, cur + mx / 240));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    onCleanup(() => cancelAnimationFrame(raf));
+  });
+
+  const togglePlay = () => {
+    if (m.scrubYear() >= m.maxYear()) m.setScrubYear(0);
+    m.setPlaying(!m.playing());
+  };
+  const pct = () => (m.result().nStars ? (m.settledAt().count / m.result().nStars) * 100 : 0);
+
+  return (
+    <div>
+      <section class="hero">
+        <div class="wrap">
+          <p class="eyebrow">The swarm · a settlement front · a live model</p>
+          <h1>One probe. Then the galaxy fills in.</h1>
+          <p class="lede">
+            Give a self-replicating probe a galaxy of stars and it spreads — settle a star, build copies, send them to the next nearest stars, repeat. This is that front as a <strong>pure, seeded</strong> simulation (slice 1 of the swarm). Press play and watch the reachable field light up from one homeworld; drag the knobs and reseed the galaxy. Deterministic: same seed, same spread, every run.
+          </p>
+          <div class="card chartcard">
+            <canvas
+              ref={setCanvas}
+              width={CANVAS_W}
+              height={CANVAS_H}
+              style="width:100%;height:auto;display:block;border-radius:8px;background:#0b0d10"
+            />
+            <p class="chartcap">FIG.1 — the star field. Amber: the homeworld. Cyan: settled by the scrubbed year (white = just settled). Grey: not yet reached. The amber ring is the settlement wavefront.</p>
+          </div>
+          <div class="btnrow" style="align-items:center;gap:12px">
+            <button class="act primary" onClick={togglePlay}>{() => (m.playing() ? "⏸ pause" : "▶ play")}</button>
+            <input
+              type="range"
+              min={0}
+              max={() => m.maxYear()}
+              step={() => Math.max(1, m.maxYear() / 400)}
+              value={() => m.scrubYear()}
+              onInput={(e: Event) => { m.setPlaying(false); m.setScrubYear(Number((e.target as HTMLInputElement).value)); }}
+              style="flex:1"
+            />
+            <span class="ctl-val" style="min-width:110px;text-align:right">{() => fmtNum(m.scrubYear())} yr</span>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <p class="marker"><b>01</b> &nbsp;/&nbsp; The galaxy and the probes</p>
+          <div class="lab">
+            <div class="card controls">
+              <p class="panel-head">Parameters</p>
+              <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
+            </div>
+            <div class="card readouts">
+              <p class="panel-head">At this year</p>
+              <StatRow what="Year" value={() => `${fmtNum(m.scrubYear())} yr`} />
+              <StatRow what="Stars settled" sub={() => `of ${fmtNum(m.result().nStars)}`} value={() => `${fmtNum(m.settledAt().count)} (${pct().toFixed(0)}%)`} cls={() => "chip"} />
+              <StatRow what="Wavefront radius" value={() => `${m.settledAt().frontPc.toFixed(1)} pc`} cls={() => "metal"} />
+              <StatRow what="Fill 50% / 90%" sub="exploration timescale" value={() => `${fmtNum(m.result().t50Years ?? 0)} / ${fmtNum(m.result().t90Years ?? 0)} yr`} />
+              <StatRow what="Fill 100%" value={() => (m.result().t100Years === null ? "never" : `${fmtNum(m.result().t100Years!)} yr`)} cls={() => (m.result().t100Years === null ? "bad" : "good")} />
+              <StatRow what="Probes launched" value={() => fmtNum(m.result().totalProbesLaunched)} />
+              <p class="explain" style="margin-top:18px">{() => explainSwarm(m)}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <div class="wrap">
+          <p>
+            A pure, seeded, fixed-step fold (mulberry32 threaded through state, byte-identical to the Python) over the <strong style="color:var(--text)">swarm</strong> module, live in pimas — the canvas reads the fold's settlement buffers each frame; there is no DOM node per star (the rendering discipline that scales, CLAUDE.md §7). Slice 1: straight-line travel, nearest-unsettled policy. Gravitational slingshots, 200k-star scale, and the light-speed-limited-coordination extension are later slices. Speed 0.1c and stellar density trace to Nicholson &amp; Forgan (2013) and the solar-neighborhood census; see swarm/REFERENCES.md.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
 // ── shell nav: one surface per model ────────────────────────────────────────
 function Nav(props: { surface: Surface }) {
   return (
@@ -745,6 +909,7 @@ function Nav(props: { surface: Surface }) {
       <span style="font-weight:700;letter-spacing:.3px;margin-right:8px">von-neumann</span>
       <button class={`act ${props.surface === "mission" ? "primary" : "ghost"}`} onClick={() => mount("mission")}>Full mission</button>
       <button class={`act ${props.surface === "fleet" ? "primary" : "ghost"}`} onClick={() => mount("fleet")}>Fleet</button>
+      <button class={`act ${props.surface === "swarm" ? "primary" : "ghost"}`} onClick={() => mount("swarm")}>Swarm</button>
       <button class={`act ${props.surface === "wall" ? "primary" : "ghost"}`} onClick={() => mount("wall")}>Electronics wall</button>
       <button class={`act ${props.surface === "probe" ? "primary" : "ghost"}`} onClick={() => mount("probe")}>Single probe</button>
       <button class={`act ${props.surface === "launch" ? "primary" : "ghost"}`} onClick={() => mount("launch")}>Launch economics</button>
@@ -814,6 +979,17 @@ function mount(surface: Surface, scenarioKey = "lunar") {
         <div>
           <Nav surface="fleet" />
           <MultiProbeSurface model={fm} />
+        </div>
+      ),
+      appEl,
+    );
+  } else if (surface === "swarm") {
+    const sm = createSwarmModel();
+    disposeRender = render(
+      () => (
+        <div>
+          <Nav surface="swarm" />
+          <SwarmSurface model={sm} />
         </div>
       ),
       appEl,
