@@ -52,6 +52,14 @@ throughput, brain-equivalents (~20 W / ~1e18 FLOPS anchor), and how many orders 
 magnitude the compute runs above the hard **Landauer** thermodynamic floor (k·T·ln2).
 Parity-tested TS port of `power-budget`, live in pimas.
 
+### The single probe (`probe-sim`) — live
+
+The fourth surface. Drag a solar probe out past Mars and Jupiter and watch its
+delivered power — and the compute headroom that power buys — collapse as the inverse
+square of distance. Composes the environment (inverse-square) with the compute model,
+parity-tested TS port of `probe-sim`, live in pimas. (The probe's full replication
+range awaits a sourced per-module mass breakdown — an open `[GAP]` in the module.)
+
 ## Layout
 
 ```

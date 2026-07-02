@@ -18,8 +18,10 @@ import { createLaunchEconomicsModel } from "./launch-economics-model.js";
 import type { LaunchModel } from "./launch-economics-model.js";
 import { createPowerBudgetModel } from "./power-budget-model.js";
 import type { PowerBudgetModel } from "./power-budget-model.js";
+import { createProbeModel } from "./probe-sim-model.js";
+import type { ProbeModel } from "./probe-sim-model.js";
 
-type Surface = "wall" | "launch" | "power";
+type Surface = "wall" | "launch" | "power" | "probe";
 
 const fmtNum = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
 const fmtUsd = (n: number): string => {
@@ -34,6 +36,7 @@ const fmtFlops = (n: number): string => {
   for (const [u, v] of FLOPS_UNITS) if (n >= v) return `${(n / v).toFixed(2)} ${u}`;
   return `${fmtNum(n)} FLOPS`;
 };
+const fmtPower = (w: number): string => (w >= 1000 ? `${(w / 1000).toFixed(1)} kW` : `${fmtNum(w)} W`);
 const regimeClass = (r: string) => (r === "material-limited" ? "rg-material" : r === "energy-limited" ? "rg-energy" : "rg-resupply");
 const regimeWord = (r: string) => r.replace("-limited", "");
 
@@ -396,12 +399,69 @@ function PowerBudgetSurface(props: { model: PowerBudgetModel }) {
   );
 }
 
+// ── the probe surface ───────────────────────────────────────────────────────
+const explainProbe = (m: ProbeModel): string => {
+  const o = m.outputs();
+  const d = m.distanceAu();
+  const be = o.brainEquivalents;
+  const beStr = be >= 1 ? `${be.toFixed(1)} brains` : be >= 0.01 ? `${(be * 100).toFixed(0)}% of a brain` : `${fmtSci(be, 1)} of a brain`;
+  return `At ${d.toFixed(1)} AU the array delivers ${fmtPower(o.deliveredPowerW)} — and its compute headroom is about ${beStr}. Move outward and both fall as 1/d²: at twice the distance, a quarter the power. That inverse-square wall is what caps a solar probe's reach.`;
+};
+
+function ProbeSurface(props: { model: ProbeModel }) {
+  const m = props.model;
+  const o = () => m.outputs();
+  return (
+    <div>
+      <section class="hero">
+        <div class="wrap">
+          <p class="eyebrow">The single probe · a live model</p>
+          <h1>How far out can a self-powered probe still work — and still think?</h1>
+          <p class="lede">
+            A self-replicating probe is solar-powered, so how far from the Sun it can operate is set by how much power sunlight delivers there — and sunlight falls as the inverse square of distance. Drag the probe out past Mars, past Jupiter, and watch its power and compute collapse. Everything below is computed, not narrated.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <p class="marker"><b>01</b> &nbsp;/&nbsp; The probe and where it is</p>
+          <div class="lab">
+            <div class="card controls">
+              <p class="panel-head">Assumptions</p>
+              <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
+            </div>
+            <div class="card readouts">
+              <p class="panel-head">Live results</p>
+              <StatRow what="Sunlight here" sub="irradiance, inverse-square" value={() => `${fmtNum(o().irradianceWM2)} W/m²`} />
+              <StatRow what="Delivered power" sub="array × efficiency × sunlight" value={() => fmtPower(o().deliveredPowerW)} cls={() => "metal"} />
+              <StatRow what="Compute power" sub="share for thinking" value={() => fmtPower(o().computePowerW)} />
+              <StatRow what="Compute throughput" sub="at this efficiency" value={() => fmtFlops(o().computeFlops)} cls={() => "metal"} />
+              <StatRow what="Brain-equivalents" sub="≈1e18 FLOPS each · [ESTIMATE]" value={() => (o().brainEquivalents >= 0.01 ? `${o().brainEquivalents.toFixed(2)}×` : `${fmtSci(o().brainEquivalents, 1)}×`)} cls={() => (o().brainEquivalents >= 1 ? "good" : "chip")} />
+              <p class="explain" style="margin-top:18px">{() => explainProbe(m)}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <div class="wrap">
+          <p>
+            Irradiance = solar constant ÷ distance² (1360.8 W/m² at 1 AU, Kopp &amp; Lean 2011); delivered power = irradiance × area × efficiency; compute headroom couples in the <strong style="color:var(--text)">power-budget</strong> model. This is <strong style="color:var(--text)">probe-sim</strong> live in pimas, after Borgue &amp; Hein (2020). The probe's full replication range awaits a sourced per-module mass breakdown.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
 // ── shell nav: one surface per model ────────────────────────────────────────
 function Nav(props: { surface: Surface }) {
   return (
     <div class="wrap" style="padding-top:18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <span style="font-weight:700;letter-spacing:.3px;margin-right:8px">von-neumann</span>
       <button class={`act ${props.surface === "wall" ? "primary" : "ghost"}`} onClick={() => mount("wall")}>Electronics wall</button>
+      <button class={`act ${props.surface === "probe" ? "primary" : "ghost"}`} onClick={() => mount("probe")}>Single probe</button>
       <button class={`act ${props.surface === "launch" ? "primary" : "ghost"}`} onClick={() => mount("launch")}>Launch economics</button>
       <button class={`act ${props.surface === "power" ? "primary" : "ghost"}`} onClick={() => mount("power")}>Power budget</button>
     </div>
@@ -440,13 +500,24 @@ function mount(surface: Surface, scenarioKey = "lunar") {
       ),
       appEl,
     );
-  } else {
+  } else if (surface === "power") {
     const pm = createPowerBudgetModel();
     disposeRender = render(
       () => (
         <div>
           <Nav surface="power" />
           <PowerBudgetSurface model={pm} />
+        </div>
+      ),
+      appEl,
+    );
+  } else {
+    const prm = createProbeModel();
+    disposeRender = render(
+      () => (
+        <div>
+          <Nav surface="probe" />
+          <ProbeSurface model={prm} />
         </div>
       ),
       appEl,

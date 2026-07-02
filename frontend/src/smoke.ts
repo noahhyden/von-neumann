@@ -8,6 +8,7 @@ import { createWallModel } from "./reactive-model.js";
 import { LUNAR_REGOLITH_SEED } from "./scenarios.js";
 import { createLaunchEconomicsModel } from "./launch-economics-model.js";
 import { createPowerBudgetModel } from "./power-budget-model.js";
+import { createProbeModel } from "./probe-sim-model.js";
 
 let failures = 0;
 const ok = (cond: boolean, msg: string) => {
@@ -70,6 +71,12 @@ const flops0 = pb.outputs().computeFlops;
 pb.params[1].set(40); // compute share 20% -> 40%
 ok(pb.outputs().computeFlops > flops0, "raising compute share raises throughput (reactive)");
 near(pb.outputs().brainEquivalents, pb.outputs().computeFlops / 1e18, 1e-9, "brain-equivalents = flops / 1e18");
+
+// Probe surface: delivered power falls as 1/d^2 as the probe moves outward.
+const pr = createProbeModel();
+const p1 = pr.outputs().deliveredPowerW;
+pr.params[0].set(2.0); // distance 1 AU -> 2 AU
+near(pr.outputs().deliveredPowerW, p1 / 4, 1e-6 * p1, "at 2x distance, delivered power is quartered (reactive)");
 
 console.log(failures === 0 ? "\nALL SMOKE CHECKS PASS" : `\n${failures} FAILURES`);
 if (failures > 0) process.exit(1);
