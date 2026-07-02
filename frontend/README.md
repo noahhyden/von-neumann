@@ -44,6 +44,14 @@ launching everything. It runs the parity-tested TS port of `launch-economics` co
 to closure, live in pimas (signals + a memo — no store/speculate needed for this
 simpler model).
 
+### Power budget (`power-budget`) — live
+
+The third surface. Split a power budget between making and thinking (total power,
+compute share, hardware efficiency, radiator temperature) and watch compute
+throughput, brain-equivalents (~20 W / ~1e18 FLOPS anchor), and how many orders of
+magnitude the compute runs above the hard **Landauer** thermodynamic floor (k·T·ln2).
+Parity-tested TS port of `power-budget`, live in pimas.
+
 ## Layout
 
 ```

@@ -7,6 +7,7 @@
 import { createWallModel } from "./reactive-model.js";
 import { LUNAR_REGOLITH_SEED } from "./scenarios.js";
 import { createLaunchEconomicsModel } from "./launch-economics-model.js";
+import { createPowerBudgetModel } from "./power-budget-model.js";
 
 let failures = 0;
 const ok = (cond: boolean, msg: string) => {
@@ -62,6 +63,13 @@ const lev0 = le.comparison().massLeverage;
 le.params[0].set(100); // closure -> 100%
 ok(le.comparison().massLeverage > lev0, "raising closure raises launch-mass leverage (reactive)");
 near(le.comparison().massLeverage, le.params[1].get() / le.params[2].get(), 1e-6, "at full closure, leverage = target/seed");
+
+// Power-budget surface: throughput responds to the compute-share signal.
+const pb = createPowerBudgetModel();
+const flops0 = pb.outputs().computeFlops;
+pb.params[1].set(40); // compute share 20% -> 40%
+ok(pb.outputs().computeFlops > flops0, "raising compute share raises throughput (reactive)");
+near(pb.outputs().brainEquivalents, pb.outputs().computeFlops / 1e18, 1e-9, "brain-equivalents = flops / 1e18");
 
 console.log(failures === 0 ? "\nALL SMOKE CHECKS PASS" : `\n${failures} FAILURES`);
 if (failures > 0) process.exit(1);

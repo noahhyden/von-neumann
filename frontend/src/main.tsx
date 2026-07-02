@@ -16,8 +16,10 @@ import { GrowthChart } from "./chart.js";
 import type { SimResult } from "./model.js";
 import { createLaunchEconomicsModel } from "./launch-economics-model.js";
 import type { LaunchModel } from "./launch-economics-model.js";
+import { createPowerBudgetModel } from "./power-budget-model.js";
+import type { PowerBudgetModel } from "./power-budget-model.js";
 
-type Surface = "wall" | "launch";
+type Surface = "wall" | "launch" | "power";
 
 const fmtNum = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
 const fmtUsd = (n: number): string => {
@@ -25,6 +27,12 @@ const fmtUsd = (n: number): string => {
   if (abs >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
   if (abs >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
   return `$${fmtNum(n)}`;
+};
+const fmtSci = (n: number, d = 2) => n.toExponential(d);
+const FLOPS_UNITS: [string, number][] = [["EFLOPS", 1e18], ["PFLOPS", 1e15], ["TFLOPS", 1e12], ["GFLOPS", 1e9], ["MFLOPS", 1e6], ["kFLOPS", 1e3]];
+const fmtFlops = (n: number): string => {
+  for (const [u, v] of FLOPS_UNITS) if (n >= v) return `${(n / v).toFixed(2)} ${u}`;
+  return `${fmtNum(n)} FLOPS`;
 };
 const regimeClass = (r: string) => (r === "material-limited" ? "rg-material" : r === "energy-limited" ? "rg-energy" : "rg-resupply");
 const regimeWord = (r: string) => r.replace("-limited", "");
@@ -331,6 +339,63 @@ function LaunchSurface(props: { model: LaunchModel }) {
   );
 }
 
+// ── the power-budget surface ────────────────────────────────────────────────
+const explainPower = (m: PowerBudgetModel): string => {
+  const o = m.outputs();
+  const be = o.brainEquivalents;
+  const beStr = be >= 1 ? `${be.toFixed(1)} human brains` : be >= 0.01 ? `${(be * 100).toFixed(0)}% of one brain` : `${fmtSci(be, 1)} of a brain`;
+  const orders = Math.round(Math.log10(o.headroomOverLandauer));
+  return `This budget buys about ${beStr} of compute. Each FLOP burns ~${fmtSci(o.energyPerFlopJ, 1)} J — roughly ${orders} orders of magnitude above the single-bit Landauer floor, so the real ceiling here is hardware and waste heat, not thermodynamics.`;
+};
+
+function PowerBudgetSurface(props: { model: PowerBudgetModel }) {
+  const m = props.model;
+  const o = () => m.outputs();
+  return (
+    <div>
+      <section class="hero">
+        <div class="wrap">
+          <p class="eyebrow">Power budget · a live model</p>
+          <h1>How much can a factory think, if it also has to build?</h1>
+          <p class="lede">
+            An autonomous factory light-minutes from Earth spends some of its power making things and some <em>thinking</em>. Split the budget and watch how much compute it buys — measured against the ~20 W human brain and the hard thermodynamic floor on computation. Everything below is computed, not narrated.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <p class="marker"><b>01</b> &nbsp;/&nbsp; The budget</p>
+          <div class="lab">
+            <div class="card controls">
+              <p class="panel-head">Assumptions</p>
+              <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
+            </div>
+            <div class="card readouts">
+              <p class="panel-head">Live results</p>
+              <StatRow what="Compute power" sub="share of the budget" value={() => `${fmtNum(o().computeW)} W`} cls={() => "metal"} />
+              <StatRow what="Compute throughput" sub="at this efficiency" value={() => fmtFlops(o().computeFlops)} cls={() => "metal"} />
+              <StatRow what="Brain-equivalents" sub="≈1e18 FLOPS each · [ESTIMATE]" value={() => (o().brainEquivalents >= 0.01 ? `${o().brainEquivalents.toFixed(2)}×` : `${fmtSci(o().brainEquivalents, 1)}×`)} cls={() => (o().brainEquivalents >= 1 ? "good" : "chip")} />
+              <StatRow what="Energy per FLOP" value={() => `${fmtSci(o().energyPerFlopJ, 2)} J`} />
+              <StatRow what="Landauer floor" sub="k·T·ln2 at the radiator temp" value={() => `${fmtSci(o().landauerJPerBit, 2)} J/bit`} />
+              <StatRow what="Above the floor" sub="a FLOP is many bit-ops" value={() => `${fmtSci(o().headroomOverLandauer, 1)}×`} />
+              <p class="explain" style="margin-top:18px">{() => explainPower(m)}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <div class="wrap">
+          <p>
+            Throughput = compute-watts × efficiency; the <strong style="color:var(--text)">Landauer floor</strong> is k·T·ln2 (~2.9e-21 J/bit at 300 K) — the hard thermodynamic minimum. This is the <strong style="color:var(--text)">power-budget</strong> module live in pimas. The brain scale (~20 W, ~1e18 FLOPS) and Landauer limit are sourced; brain-FLOPS is an order-of-magnitude estimate.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
 // ── shell nav: one surface per model ────────────────────────────────────────
 function Nav(props: { surface: Surface }) {
   return (
@@ -338,6 +403,7 @@ function Nav(props: { surface: Surface }) {
       <span style="font-weight:700;letter-spacing:.3px;margin-right:8px">von-neumann</span>
       <button class={`act ${props.surface === "wall" ? "primary" : "ghost"}`} onClick={() => mount("wall")}>Electronics wall</button>
       <button class={`act ${props.surface === "launch" ? "primary" : "ghost"}`} onClick={() => mount("launch")}>Launch economics</button>
+      <button class={`act ${props.surface === "power" ? "primary" : "ghost"}`} onClick={() => mount("power")}>Power budget</button>
     </div>
   );
 }
@@ -363,13 +429,24 @@ function mount(surface: Surface, scenarioKey = "lunar") {
       ),
       appEl,
     );
-  } else {
+  } else if (surface === "launch") {
     const lm = createLaunchEconomicsModel();
     disposeRender = render(
       () => (
         <div>
           <Nav surface="launch" />
           <LaunchSurface model={lm} />
+        </div>
+      ),
+      appEl,
+    );
+  } else {
+    const pm = createPowerBudgetModel();
+    disposeRender = render(
+      () => (
+        <div>
+          <Nav surface="power" />
+          <PowerBudgetSurface model={pm} />
         </div>
       ),
       appEl,
