@@ -26,6 +26,7 @@ import { createMultiProbeModel } from "./multi-probe-model.js";
 import type { MultiProbeModel } from "./multi-probe-model.js";
 import { createSwarmModel } from "./swarm-model.js";
 import type { SwarmModel } from "./swarm-model.js";
+import { RUNGS } from "./coordination.js";
 
 type Surface = "wall" | "mission" | "fleet" | "swarm" | "launch" | "power" | "probe";
 
@@ -814,6 +815,47 @@ function drawSwarm(cv: HTMLCanvasElement, m: SwarmModel): void {
   ctx.beginPath();
   ctx.arc(ox, oy, 4, 0, Math.PI * 2);
   ctx.fill();
+
+  // Coordination cue: the link from the homeworld to the hovered star, drawn in the
+  // rung's colour, plus a ring on the star. The "aha" — every inter-star link is red
+  // (independent colonies). Reading hoverStar here means a hover redraws the field, which
+  // at ~10³ stars is trivially cheap (§7: still one canvas, one effect).
+  const hv = m.hoverStar();
+  const info = m.hoverInfo();
+  if (hv !== null && info !== null && hv < r.xs.length) {
+    const hx = px(r.xs[hv]), hy = py(r.ys[hv]);
+    const col = info.rung.color;
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.moveTo(ox, oy);
+    ctx.lineTo(hx, hy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(hx, hy, 7, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+/**
+ * Map a canvas-space point to the nearest star index (within ~8 px), or null. Inverts the
+ * same projection `drawSwarm` uses — no per-star DOM, no hit regions; a brute O(N) scan is
+ * negligible at slice-1 field sizes.
+ */
+function pickStar(m: SwarmModel, mx: number, my: number): number | null {
+  const r = m.result();
+  const L = r.boxSidePc;
+  const s = (CANVAS_H - 2 * CANVAS_PAD) / L;
+  const offx = (CANVAS_W - L * s) / 2;
+  let best = -1, bestD2 = Infinity;
+  for (let i = 0; i < r.xs.length; i++) {
+    const x = offx + r.xs[i] * s, y = CANVAS_PAD + r.ys[i] * s;
+    const d2 = (x - mx) * (x - mx) + (y - my) * (y - my);
+    if (d2 < bestD2) { bestD2 = d2; best = i; }
+  }
+  return bestD2 <= 8 * 8 ? best : null;
 }
 
 const POLICY_LABELS: Record<string, string> = {
@@ -838,6 +880,50 @@ const explainSwarm = (m: SwarmModel): string => {
     : "Nearest-star slingshots stay the most time-effective policy (Nicholson & Forgan's headline).";
   return `Slingshots: probes steal speed from the stars' galactic motion, peaking at ${fmtNum(r.maxProbeSpeedKmS)} km/s (from a ${fmtNum(m.params[2].get())} km/s powered cruise) and filling the field in just ${myr(r.t100Years)} Myr. ${tail} Same seed, same galaxy, every run.`;
 };
+
+const SEC_PER_YEAR = 3.15576e7;
+/** A light-time / latency in years, shown in whatever unit reads cleanly. */
+const fmtLatency = (years: number): string => {
+  const sec = years * SEC_PER_YEAR;
+  if (sec < 1) return `${(sec * 1000).toFixed(sec < 0.01 ? 2 : 1)} ms`;
+  if (sec < 60) return `${sec.toFixed(2)} s`;
+  if (sec < 3600) return `${(sec / 60).toFixed(1)} min`;
+  if (sec < 86400) return `${(sec / 3600).toFixed(1)} hr`;
+  if (years < 1) return `${(years * 365.25).toFixed(0)} d`;
+  return `${fmtNum(years, years < 100 ? 1 : 0)} yr`;
+};
+
+// The coordination-mode readout for the hovered star. Reads one memo (hoverInfo) — the
+// reactive graph scales with the star a human inspects, never with nStars (§7).
+const explainCoord = (m: SwarmModel): string => {
+  const info = m.hoverInfo();
+  if (info === null)
+    return "Hover any star in the field above. Coordination fidelity is set by ρ = round-trip light-time ÷ decision timescale: when ρ ≪ 1 news arrives while it's still current (tight control possible); when ρ ≳ 1 the world changes faster than word of it arrives. Every ~1 pc hop in this galaxy already lands in the top rung — light-years of lag, so each settled system is a causally-disconnected autonomous colony. That collapse is the lesson: across interstellar space you don't coordinate a swarm, you set its priors before launch and let geometry do the rest.";
+  if (info.isOrigin) return "That's the homeworld — zero lag to itself. Hover another star to see the light-speed gap open up.";
+  return `This star is ${info.distPc.toFixed(2)} pc from home. A signal takes ${fmtLatency(info.oneWayYears)} one way, ${fmtLatency(info.roundTripYears)} round-trip — that's ρ ≈ ${info.rho < 0.001 ? info.rho.toExponential(1) : fmtNum(info.rho, 2)} against a ${fmtNum(m.decisionTimescale(), 2)}-yr decision cadence. Coordination mode: ${info.rung.label} (${info.rung.who}), the ${info.rung.analog} regime.`;
+};
+
+function RungLegend(props: { model: SwarmModel }) {
+  const m = props.model;
+  const activeKey = () => m.hoverInfo()?.rung.key ?? null;
+  return (
+    <div class="btnrow" style="flex-wrap:wrap;gap:6px 14px;align-items:center">
+      <For each={() => RUNGS}>
+        {(rung) => (
+          <span
+            class="note"
+            style={() =>
+              `display:inline-flex;align-items:center;gap:6px;opacity:${activeKey() === null || activeKey() === rung.key ? 1 : 0.4};font-weight:${activeKey() === rung.key ? 700 : 400}`
+            }
+          >
+            <span style={`width:10px;height:10px;border-radius:50%;background:${rung.color};display:inline-block`} />
+            {rung.label} <span style="opacity:.6">· {rung.analog}</span>
+          </span>
+        )}
+      </For>
+    </div>
+  );
+}
 
 function SwarmSurface(props: { model: SwarmModel }) {
   const m = props.model;
@@ -885,9 +971,17 @@ function SwarmSurface(props: { model: SwarmModel }) {
               ref={setCanvas}
               width={CANVAS_W}
               height={CANVAS_H}
-              style="width:100%;height:auto;display:block;border-radius:8px;background:#0b0d10"
+              style="width:100%;height:auto;display:block;border-radius:8px;background:#0b0d10;cursor:crosshair"
+              onMouseMove={(e: MouseEvent) => {
+                const cv = e.currentTarget as HTMLCanvasElement;
+                const rect = cv.getBoundingClientRect();
+                const mx = (e.clientX - rect.left) * (cv.width / rect.width);
+                const my = (e.clientY - rect.top) * (cv.height / rect.height);
+                m.setHoverStar(pickStar(m, mx, my));
+              }}
+              onMouseLeave={() => m.setHoverStar(null)}
             />
-            <p class="chartcap">FIG.1 — the star field. Amber: the homeworld. Cyan: settled by the scrubbed year (white = just settled). Grey: not yet reached. The amber ring is the settlement wavefront.</p>
+            <p class="chartcap">FIG.1 — the star field. Amber: the homeworld. Cyan: settled by the scrubbed year (white = just settled). Grey: not yet reached. The amber ring is the settlement wavefront. <b>Hover any star</b> to read its light-speed coordination lag from home.</p>
           </div>
           <div class="btnrow" style="align-items:center;gap:12px">
             <button class="act primary" onClick={togglePlay}>{() => (m.playing() ? "⏸ pause" : "▶ play")}</button>
@@ -939,10 +1033,50 @@ function SwarmSurface(props: { model: SwarmModel }) {
         </div>
       </section>
 
+      <section>
+        <div class="wrap">
+          <p class="marker"><b>02</b> &nbsp;/&nbsp; The coordination horizon — can the swarm even talk?</p>
+          <div class="lab">
+            <div class="card controls">
+              <p class="panel-head">The coordination ratio</p>
+              <p class="note" style="margin:0 0 12px">
+                ρ = round-trip light-time ÷ decision timescale. The rung a link falls into is fixed by its <em>absolute</em> light-lag (sourced from teleoperation &amp; DTN regimes); ρ is a tunable lens — set the decision cadence you care about.
+              </p>
+              <div class="ctl">
+                <div class="ctl-top">
+                  <span class="ctl-label">Decision timescale <span class="note">τ · [ESTIMATE]</span></span>
+                  <span class="ctl-val">{() => `${fmtNum(m.decisionTimescale(), 2)} yr`}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0.01}
+                  max={100}
+                  step={0.01}
+                  value={() => m.decisionTimescale()}
+                  onInput={(e: Event) => m.setDecisionTimescale(Number((e.target as HTMLInputElement).value))}
+                  style="width:100%"
+                />
+              </div>
+              <p class="panel-head" style="margin-top:18px">The staircase</p>
+              <RungLegend model={m} />
+            </div>
+            <div class="card readouts">
+              <p class="panel-head">The hovered star</p>
+              <StatRow what="Distance from home" value={() => (m.hoverInfo() ? `${m.hoverInfo()!.distPc.toFixed(2)} pc` : "—")} cls={() => "metal"} />
+              <StatRow what="One-way light time" value={() => (m.hoverInfo() ? fmtLatency(m.hoverInfo()!.oneWayYears) : "—")} />
+              <StatRow what="Round-trip latency" sub="a message and its reply" value={() => (m.hoverInfo() ? fmtLatency(m.hoverInfo()!.roundTripYears) : "—")} cls={() => "metal"} />
+              <StatRow what="ρ = latency ÷ τ" value={() => { const i = m.hoverInfo(); return i ? (i.rho < 0.001 ? i.rho.toExponential(1) : `${fmtNum(i.rho, 2)}×`) : "—"; }} cls={() => { const i = m.hoverInfo(); return i && i.rho >= 1 ? "bad" : i ? "good" : ""; }} />
+              <StatRow what="Coordination mode" sub={() => (m.hoverInfo() ? m.hoverInfo()!.rung.analog + " regime" : "hover a star")} value={() => (m.hoverInfo() ? m.hoverInfo()!.rung.label : "—")} cls={() => { const i = m.hoverInfo(); return i && i.rung.index >= 3 ? "bad" : i && i.rung.index >= 2 ? "chip" : i ? "good" : ""; }} />
+              <p class="explain" style="margin-top:18px">{() => explainCoord(m)}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <footer>
         <div class="wrap">
           <p>
-            A pure, seeded, fixed-step fold (mulberry32 threaded through state, byte-identical to the Python) over the <strong style="color:var(--text)">swarm</strong> module, live in pimas — the canvas reads the fold's settlement buffers each frame; there is no DOM node per star (the rendering discipline that scales, CLAUDE.md §7). Three travel policies (powered, and two gravitational-slingshot policies that steal speed from stellar motion) after Nicholson &amp; Forgan (2013); powered speed (3×10⁻⁵c ≈ 9 km/s), density (1 star/pc³), and the slingshot boost (their Eq. 4, u_esc ≈ 617.5 km/s solar) are the paper's parameters, with rotation/dispersion tagged [ESTIMATE]. Full 200k-star WebGL scale and the light-speed-limited-coordination extension are the remaining slices. See swarm/REFERENCES.md.
+            A pure, seeded, fixed-step fold (mulberry32 threaded through state, byte-identical to the Python) over the <strong style="color:var(--text)">swarm</strong> module, live in pimas — the canvas reads the fold's settlement buffers each frame; there is no DOM node per star (the rendering discipline that scales, CLAUDE.md §7). Three travel policies (powered, and two gravitational-slingshot policies that steal speed from stellar motion) after Nicholson &amp; Forgan (2013); powered speed (3×10⁻⁵c ≈ 9 km/s), density (1 star/pc³), and the slingshot boost (their Eq. 4, u_esc ≈ 617.5 km/s solar) are the paper's parameters, with rotation/dispersion tagged [ESTIMATE]. The coordination-horizon overlay (§02) turns each link's light-lag into a coordination rung after Olfati-Saber &amp; Murray (2004), Ferrell (1965) and RFC 4838; rung edges tagged [ESTIMATE]. Full 200k-star WebGL scale and the light-speed-limited-coordination <em>simulation</em> (FRONTIER #1) are the remaining slices. See swarm/REFERENCES.md.
           </p>
         </div>
       </footer>

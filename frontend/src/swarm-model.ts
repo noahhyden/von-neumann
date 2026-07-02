@@ -13,6 +13,19 @@ import type { Accessor, Setter } from "pimas";
 import type { ParamSignal } from "./reactive-model.js";
 import { simulateSwarm, SWARM_DEFAULTS } from "./swarm.js";
 import type { SwarmResult, Policy } from "./swarm.js";
+import { lightTimeYears, roundTripYears, rho, classifyRung } from "./coordination.js";
+import type { Rung } from "./coordination.js";
+
+/** Everything the coordination readout needs for the one star a human is inspecting. */
+export interface HoverInfo {
+  star: number;
+  isOrigin: boolean;
+  distPc: number;
+  oneWayYears: number;
+  roundTripYears: number;
+  rho: number;
+  rung: Rung;
+}
 
 export interface SwarmModel {
   params: ParamSignal[];
@@ -26,6 +39,15 @@ export interface SwarmModel {
   setPolicy: Setter<Policy>;
   /** stars settled at or before the scrubbed year, and the front radius then. */
   settledAt: Accessor<{ count: number; frontPc: number }>;
+  /** the star the pointer is over (index into the field), or null. §7: the reactive
+   * graph scales with the one thing a human looks at, never with nStars. */
+  hoverStar: Accessor<number | null>;
+  setHoverStar: Setter<number | null>;
+  /** the decision timescale τ (years) in ρ = latency/τ — a knob, default 1 yr [ESTIMATE]. */
+  decisionTimescale: Accessor<number>;
+  setDecisionTimescale: Setter<number>;
+  /** light-time / ρ / rung for the hovered star relative to the homeworld, or null. */
+  hoverInfo: Accessor<HoverInfo | null>;
 }
 
 export function createSwarmModel(): SwarmModel {
@@ -36,6 +58,8 @@ export function createSwarmModel(): SwarmModel {
   const [scrubYear, setScrubYear] = createSignal(0);
   const [playing, setPlaying] = createSignal(false);
   const [policy, setPolicy] = createSignal<Policy>("powered");
+  const [hoverStar, setHoverStar] = createSignal<number | null>(null);
+  const [decisionTimescale, setDecisionTimescale] = createSignal(1); // yr, [ESTIMATE] knob
 
   const params: ParamSignal[] = [
     { get: nStars, set: setNStars, min: 50, max: 5000, step: 50, label: "Stars in the field", unit: "" },
@@ -75,5 +99,32 @@ export function createSwarmModel(): SwarmModel {
     return { count, frontPc: front };
   });
 
-  return { params, result, maxYear, scrubYear, setScrubYear, playing, setPlaying, policy, setPolicy, settledAt };
+  // The coordination readout for the hovered star — reads the fold's position buffers,
+  // classifies the light-time to the homeworld into a rung. Recomputes only when the
+  // hover, the run, or τ changes; independent of nStars (§7).
+  const hoverInfo = createMemo<HoverInfo | null>(() => {
+    const i = hoverStar();
+    if (i === null) return null;
+    const r = result();
+    if (i < 0 || i >= r.xs.length) return null;
+    const dx = r.xs[i] - r.xs[r.origin];
+    const dy = r.ys[i] - r.ys[r.origin];
+    const dz = r.zs[i] - r.zs[r.origin];
+    const distPc = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const rtt = roundTripYears(distPc);
+    return {
+      star: i,
+      isOrigin: i === r.origin,
+      distPc,
+      oneWayYears: lightTimeYears(distPc),
+      roundTripYears: rtt,
+      rho: rho(distPc, decisionTimescale()),
+      rung: classifyRung(rtt),
+    };
+  });
+
+  return {
+    params, result, maxYear, scrubYear, setScrubYear, playing, setPlaying, policy, setPolicy, settledAt,
+    hoverStar, setHoverStar, decisionTimescale, setDecisionTimescale, hoverInfo,
+  };
 }

@@ -129,6 +129,24 @@ sw.setPolicy("slingshot_nearest");
 ok(sw.result().t100Years! < poweredT100, "slingshot_nearest fills faster than powered (reactive policy toggle)");
 ok(sw.result().maxProbeSpeedKmS > 10 * poweredSpeed, "slingshot accumulates speed far above the powered cruise");
 sw.setPolicy("powered");
+
+// Coordination horizon: the hover→ρ path through the reactive graph. Homeworld has zero
+// lag; any settled star is light-years away → the top rung; τ scales ρ but never the rung.
+ok(sw.hoverInfo() === null, "no hover → no coordination readout");
+sw.setHoverStar(sw.result().origin);
+ok(sw.hoverInfo()!.isOrigin && sw.hoverInfo()!.rho === 0, "hovering the homeworld reads zero lag");
+const other = sw.result().origin === 0 ? 1 : 0; // any non-origin star
+sw.setHoverStar(other);
+const hi = sw.hoverInfo()!;
+ok(hi.distPc > 0 && hi.roundTripYears > 1, "a neighbor star is light-years round-trip");
+ok(hi.rung.key === "independent", "every inter-star hop is 'independent colonies' (the lesson)");
+const rhoAt1 = hi.rho;
+sw.setDecisionTimescale(2);
+near(sw.hoverInfo()!.rho, rhoAt1 / 2, 1e-9 * rhoAt1 + 1e-12, "doubling τ halves ρ (reactive knob)");
+ok(sw.hoverInfo()!.rung.key === "independent", "τ changes ρ but not the (latency-fixed) rung");
+sw.setHoverStar(null);
+sw.setDecisionTimescale(1);
+
 sw.params[1].set(0); // offspring 2 -> 0
 ok(sw.result().finalSettled === 1 && sw.result().t100Years === null, "zero offspring settles only the homeworld (reactive)");
 

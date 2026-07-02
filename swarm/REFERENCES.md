@@ -87,6 +87,60 @@ from Nicholson & Forgan (2013); the numbers the paper defers are tagged `[ESTIMA
   results are faithful: slingshots ≫ powered, and **nearest-slingshot beats max-boost on
   time** (max-boost reaches higher speed but wastes travel — the paper's finding).
 
+## Coordination-horizon visualization (the light-speed rungs)
+
+A frontend-only teaching overlay (FRONTIER issue #1, near-term slice) that turns an
+inter-star distance into a *coordination mode* via the light-travel time. No new sim
+physics — it reuses `C_PC_PER_YEAR` above; the only inputs are the rung thresholds and
+the real-world analog distances below.
+
+- **Round-trip latency = `2 · d / c`**, one-way = `d / c`. Both derived from
+  `C_PC_PER_YEAR` (above): a distance `d` in pc has one-way light-time `d / 0.30660` yr.
+  *Check:* 1 AU = `1.495978707e8 / 3.0856775814913673e13 = 4.8481e-6 pc` → one-way
+  `4.8481e-6 / 0.30660 = 1.5813e-5 yr = 499.0 s = 8.32 min`, the textbook 1-AU light time. ✓
+- **The ρ ratio** — `ρ = round-trip latency / decision timescale`. Coordination fidelity
+  degrades as ρ grows (Olfati-Saber & Murray 2004, *IEEE TAC* 49(9),
+  [DOI 10.1109/TAC.2004.834113](https://doi.org/10.1109/TAC.2004.834113): the standard
+  consensus protocol is stable iff the one-hop delay `τ < π/(2λₙ)`, so tighter coupling
+  tolerates *less* delay). The **decision timescale is a knob, default 1 yr `[ESTIMATE]`**
+  — the literature gives no single value for "a probe's targeting-decision cadence," so ρ
+  is presented as a tunable lens over the *sourced* absolute-latency rungs below, not as a
+  hard number itself.
+
+- **Rung thresholds (by round-trip latency) `[ESTIMATE]`** — the *transitions* are sourced
+  from the teleoperation/networking literature; the round-number bucket edges (1 s, 1 min,
+  1 hr, 1 yr) are a presentation choice, so the set is tagged `[ESTIMATE]`:
+  - **≤ 1 s — real-time closed-loop.** Continuous closed-loop teleoperation breaks down and
+    operators switch to "move-and-wait" once delay approaches ~1 s (Ferrell 1965, *Remote
+    Manipulation with Transmission Delay*, NASA TN D-2665, [NTRS
+    19650052768](https://ntrs.nasa.gov/citations/19650052768)).
+  - **1 s – 1 min — move-and-wait.** The degraded regime Ferrell (1965) characterized:
+    command open-loop, wait a full round trip, correct.
+  - **1 min – 1 hr — supervisory.** Send goals, let the node execute; the operator
+    supervises rather than pilots (Ferrell & Sheridan 1967, *Supervisory Control of Remote
+    Manipulation*, IEEE Spectrum).
+  - **1 hr – 1 yr — delay-tolerant / store-and-forward.** No continuous end-to-end path;
+    hop-by-hop custody transfer, no real-time handshake (Cerf, Burleigh et al.,
+    *Delay-Tolerant Networking Architecture*, IETF [RFC 4838](https://www.rfc-editor.org/info/rfc4838), 2007).
+  - **> 1 yr — fully independent colonies.** No live command exists; each node acts on
+    priors set before launch (Freitas 1980, *A Self-Reproducing Interstellar Probe*, *JBIS*
+    33:251 — each probe "an independent agent").
+
+- **Real-world analog distances** (each classified by the arithmetic above; used only as
+  legend anchors — every value is a citable astronomical constant):
+  - **LEO ≈ 550 km** (Starlink operational shell) → `1.7824e-11 pc`, round-trip **3.67 ms**
+    → *real-time*. (SpaceX/FCC filings; 550 km is the primary shell.)
+  - **Earth–Moon = 384,400 km** (mean distance, IAU) → `1.2458e-8 pc`, round-trip **2.564 s**
+    → *move-and-wait*.
+  - **Mars ≈ 0.52–2.52 AU** (min/max Earth–Mars range) → round-trip **~8.7–42 min** →
+    *supervisory* across the whole range.
+  - **Saturn = 9.5 AU** (semi-major axis 9.582 AU, NASA planetary fact sheet, rounded) →
+    `4.606e-5 pc`, round-trip **~2.6 hr** → *delay-tolerant*.
+  - **Proxima Centauri = 1.301 pc** (4.2465 ly; RECONS/Gaia parallax) → round-trip **8.49 yr**
+    → *fully independent colonies* — and this is the regime **every ~1 pc inter-star hop in
+    the sim already sits in** (mean hop ~1 pc → round-trip ~6.5 yr). That collapse is the
+    lesson, not a rendering bug: at galactic scale the four faster rungs are sub-pixel.
+
 ## Simplifications still deferred to later slices
 
 - **Uniform cube star field**, not a galactic disk with a density gradient.
