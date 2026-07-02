@@ -17,7 +17,8 @@ is to keep each piece small, honest, and verifiable.
 |---|---|---|
 | [`closure-sim`](closure-sim/) | ✅ v1 | **Closure & replication.** Define a factory as a bill of materials; compute how much of itself it can build locally ("closure"), simulate how a seed multiplies over time, and analyze the "electronics wall" — why chips are the part that can't be made in space. |
 | [`frontend`](frontend/) | ✅ live | **The monorepo's central interactive surface.** von-neumann's models run live in the browser, built entirely on [pimas](../pimas). A shell that hosts one surface per model; the first is the interactive electronics wall (drag the assumptions, speculate "make its own chips" before committing, watch the model explain which ceiling binds). |
-| `power-budget` | 🔜 planned | Compute power-budget modeling (e.g. intelligence-per-watt at ~20 W). |
+| [`probe-sim`](probe-sim/) | 🚧 in progress | **A single self-replicating probe** (after Borgue & Hein 2020). Solar-electric power vs heliocentric distance, and the operational range it gates — feeds delivered power into `closure-sim`'s replication to find where a probe stops being able to reproduce. |
+| [`power-budget`](power-budget/) | ✅ live | **Making vs. thinking, per watt.** Split a solar-limited power budget among manufacturing, compute, and housekeeping; convert compute-watts to throughput — floored by the Landauer limit and anchored to the ~20 W human brain. |
 | `launch-economics` | 🔜 planned | Launch costs and the economics of iterating on a seed design. |
 | _more to come_ | | The plan is upwards of ten interacting projects over the coming year — see [ROADMAP.md](ROADMAP.md). |
 
