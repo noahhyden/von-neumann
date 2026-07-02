@@ -6,6 +6,7 @@
  */
 import { createWallModel } from "./reactive-model.js";
 import { LUNAR_REGOLITH_SEED } from "./scenarios.js";
+import { createLaunchEconomicsModel } from "./launch-economics-model.js";
 
 let failures = 0;
 const ok = (cond: boolean, msg: string) => {
@@ -54,5 +55,13 @@ const bf = m.previewChipsLocal();
 ok(bf.after.time_to_target_days === null, "at 1 MW, making chips locally never reaches target (backfire)");
 
 m.dispose();
+
+// Launch-economics surface: the reactive model recomputes leverage on a signal change.
+const le = createLaunchEconomicsModel();
+const lev0 = le.comparison().massLeverage;
+le.params[0].set(100); // closure -> 100%
+ok(le.comparison().massLeverage > lev0, "raising closure raises launch-mass leverage (reactive)");
+near(le.comparison().massLeverage, le.params[1].get() / le.params[2].get(), 1e-6, "at full closure, leverage = target/seed");
+
 console.log(failures === 0 ? "\nALL SMOKE CHECKS PASS" : `\n${failures} FAILURES`);
 if (failures > 0) process.exit(1);

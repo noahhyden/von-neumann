@@ -14,8 +14,18 @@ import type { WallModel, ParamSignal } from "./reactive-model.js";
 import { SCENARIOS } from "./scenarios.js";
 import { GrowthChart } from "./chart.js";
 import type { SimResult } from "./model.js";
+import { createLaunchEconomicsModel } from "./launch-economics-model.js";
+import type { LaunchModel } from "./launch-economics-model.js";
+
+type Surface = "wall" | "launch";
 
 const fmtNum = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
+const fmtUsd = (n: number): string => {
+  const abs = Math.abs(n);
+  if (abs >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  return `$${fmtNum(n)}`;
+};
 const regimeClass = (r: string) => (r === "material-limited" ? "rg-material" : r === "energy-limited" ? "rg-energy" : "rg-resupply");
 const regimeWord = (r: string) => r.replace("-limited", "");
 
@@ -264,17 +274,107 @@ function App(props: { model: WallModel; scenarioKey: string; onScenario: (k: str
   );
 }
 
-// ── mount, with scenario swapping by re-render ─────────────────────────────
+// ── the launch-economics surface ───────────────────────────────────────────
+const explainLeverage = (m: LaunchModel): string => {
+  const c = m.comparison();
+  const pct = m.closurePct().toFixed(0);
+  if (c.massLeverage <= 1) {
+    return `At ${pct}% closure the seed can't build enough of itself to pay off — you'd launch about as much as you install. Raise closure.`;
+  }
+  return `At ${pct}% closure, each launched kilogram becomes ${c.massLeverage.toFixed(1)} kg of installed factory — turning a launch-it-all bill into ${fmtUsd(c.costSavingsUsd)} of savings. That leverage is the whole economic case for replicating in place.`;
+};
+
+function LaunchSurface(props: { model: LaunchModel }) {
+  const m = props.model;
+  const c = () => m.comparison();
+  return (
+    <div>
+      <section class="hero">
+        <div class="wrap">
+          <p class="eyebrow">Launch economics · a live model</p>
+          <h1>Don't launch the factory. Launch a seed that builds it.</h1>
+          <p class="lede">
+            Every kilogram to orbit is expensive. Self-replication trades launched mass for local mass, so the more of itself a factory can build — its <strong>closure</strong> — the less you launch. Drag closure and watch the leverage. Everything below is computed, not narrated.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <p class="marker"><b>01</b> &nbsp;/&nbsp; The assumptions</p>
+          <div class="lab">
+            <div class="card controls">
+              <p class="panel-head">Assumptions</p>
+              <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
+            </div>
+            <div class="card readouts">
+              <p class="panel-head">Live results</p>
+              <StatRow what="Launch-mass leverage" sub="installed kg per launched kg" value={() => `${c().massLeverage.toFixed(1)}×`} cls={() => "metal"} />
+              <StatRow what="Mass launched" sub="seed + vitamins" value={() => `${fmtNum(c().launchedMassKg / 1000)} t`} />
+              <StatRow what="Launch it all" sub="direct cost" value={() => fmtUsd(c().directLaunchCostUsd)} cls={() => "bad"} />
+              <StatRow what="Launch a seed" sub="seed + vitamins" value={() => fmtUsd(c().replicationLaunchCostUsd)} cls={() => "metal"} />
+              <StatRow what="Savings" sub="direct − replication" value={() => fmtUsd(c().costSavingsUsd)} cls={() => "good"} />
+              <p class="explain" style="margin-top:18px">{() => explainLeverage(m)}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <div class="wrap">
+          <p>
+            Launch-mass leverage = target ÷ (seed + vitamins), with the vitamin mass set by closure (mass balance: (1−C) imported per kg built) — the <strong style="color:var(--text)">launch-economics</strong> module coupled to <strong style="color:var(--text)">closure-sim</strong>, running live in pimas. $/kg figures are research-grounded (SpaceX published capabilities; standard Δv tables), not predictions.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+// ── shell nav: one surface per model ────────────────────────────────────────
+function Nav(props: { surface: Surface }) {
+  return (
+    <div class="wrap" style="padding-top:18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span style="font-weight:700;letter-spacing:.3px;margin-right:8px">von-neumann</span>
+      <button class={`act ${props.surface === "wall" ? "primary" : "ghost"}`} onClick={() => mount("wall")}>Electronics wall</button>
+      <button class={`act ${props.surface === "launch" ? "primary" : "ghost"}`} onClick={() => mount("launch")}>Launch economics</button>
+    </div>
+  );
+}
+
+// ── mount: a shell hosting one surface per model, swapped by re-render ───────
 const appEl = document.getElementById("app")!;
 let disposeRender: (() => void) | null = null;
 let model: WallModel | null = null;
 
-function mount(key: string) {
+function mount(surface: Surface, scenarioKey = "lunar") {
   disposeRender?.();
   model?.dispose();
-  model = createWallModel(SCENARIOS[key]);
-  const active = model;
-  disposeRender = render(() => <App model={active} scenarioKey={key} onScenario={mount} />, appEl);
+  model = null;
+  if (surface === "wall") {
+    model = createWallModel(SCENARIOS[scenarioKey]);
+    const active = model;
+    disposeRender = render(
+      () => (
+        <div>
+          <Nav surface="wall" />
+          <App model={active} scenarioKey={scenarioKey} onScenario={(k: string) => mount("wall", k)} />
+        </div>
+      ),
+      appEl,
+    );
+  } else {
+    const lm = createLaunchEconomicsModel();
+    disposeRender = render(
+      () => (
+        <div>
+          <Nav surface="launch" />
+          <LaunchSurface model={lm} />
+        </div>
+      ),
+      appEl,
+    );
+  }
 }
 
-mount("lunar");
+mount("wall");

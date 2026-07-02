@@ -35,6 +35,15 @@ The point: `analysis.py` is a *hand-rolled* speculate (deep-copy the factory,
 toggle a field, re-run the whole sim, diff, discard). Here that is a first-class
 primitive — `speculate(apply, read)` against the live graph.
 
+### Launch economics (`launch-economics`) — live
+
+The second surface (switch via the nav at the top of the page). Drag the **mass
+closure** and watch **launch-mass leverage** — installed kg per launched kg — and the
+mission cost move: at high closure you launch only a seed; at low closure you end up
+launching everything. It runs the parity-tested TS port of `launch-economics` coupled
+to closure, live in pimas (signals + a memo — no store/speculate needed for this
+simpler model).
+
 ## Layout
 
 ```
