@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "launch-economics"
+version = "0.1.0"
+description = "The economics of not launching mass: launch cost, the rocket-equation Δv penalty, and the launch-mass leverage of a self-replicating seed"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

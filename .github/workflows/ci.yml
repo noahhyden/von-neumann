@@ -45,6 +45,17 @@ jobs:
         working-directory: power-budget
         run: uv run --extra dev pytest -q
 
+  launch-economics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: pytest (real-number assertions)
+        working-directory: launch-economics
+        run: uv run --extra dev pytest -q
+
   frontend:
     runs-on: ubuntu-latest
     steps:
