@@ -816,14 +816,27 @@ function drawSwarm(cv: HTMLCanvasElement, m: SwarmModel): void {
   ctx.fill();
 }
 
+const POLICY_LABELS: Record<string, string> = {
+  powered: "Powered",
+  slingshot_nearest: "Slingshot · nearest",
+  slingshot_maxboost: "Slingshot · max-boost",
+};
+
 const explainSwarm = (m: SwarmModel): string => {
   const r = m.result();
+  const myr = (y: number) => fmtNum(y / 1e6);
   if (r.t100Years === null) {
     return `With ${m.params[1].get()} offspring per settlement the front can't fill the field — raise it above zero and the reachable galaxy fills exponentially.`;
   }
-  const probeSpeedPcPerYr = (m.params[2].get() * 3.15576e7) / 3.0856775814913673e13; // km/s → pc/yr
-  const frontSpeedFrac = (r.frontRadiusPc / r.t100Years) / probeSpeedPcPerYr * 100;
-  return `From one homeworld, the front settles all ${r.nStars} stars in ${fmtNum(r.t100Years / 1e6)} Myr (50% by ${fmtNum((r.t50Years ?? 0) / 1e6)}, 90% by ${fmtNum((r.t90Years ?? 0) / 1e6)} Myr), reaching ${r.frontRadiusPc.toFixed(1)} pc. The wavefront advances at only ~${frontSpeedFrac.toFixed(0)}% of a single probe's speed — nearest-hop zig-zag and settling slow the wave, just as Nicholson & Forgan found. Same seed, same galaxy, every run.`;
+  if (r.policy === "powered") {
+    const probeSpeedPcPerYr = (m.params[2].get() * 3.15576e7) / 3.0856775814913673e13;
+    const frontSpeedFrac = (r.frontRadiusPc / r.t100Years) / probeSpeedPcPerYr * 100;
+    return `Powered flight: from one homeworld the front settles all ${r.nStars} stars in ${myr(r.t100Years)} Myr (50% by ${myr(r.t50Years ?? 0)}, 90% by ${myr(r.t90Years ?? 0)}), the wavefront advancing at only ~${frontSpeedFrac.toFixed(0)}% of a probe's speed. Now switch on a slingshot policy and watch it accelerate — the whole point of Nicholson & Forgan's paper.`;
+  }
+  const tail = r.policy === "slingshot_maxboost"
+    ? "Chasing the biggest boost reaches higher speeds but wastes travel, so it's actually slower than nearest-star — exactly what Nicholson & Forgan found."
+    : "Nearest-star slingshots stay the most time-effective policy (Nicholson & Forgan's headline).";
+  return `Slingshots: probes steal speed from the stars' galactic motion, peaking at ${fmtNum(r.maxProbeSpeedKmS)} km/s (from a ${fmtNum(m.params[2].get())} km/s powered cruise) and filling the field in just ${myr(r.t100Years)} Myr. ${tail} Same seed, same galaxy, every run.`;
 };
 
 function SwarmSurface(props: { model: SwarmModel }) {
@@ -889,6 +902,17 @@ function SwarmSurface(props: { model: SwarmModel }) {
             />
             <span class="ctl-val" style="min-width:110px;text-align:right">{() => fmtNum(m.scrubYear())} yr</span>
           </div>
+          <div class="btnrow" style="align-items:center;gap:8px;margin-top:4px">
+            <span class="note" style="align-self:center;margin-right:4px">travel policy:</span>
+            <For each={() => ["powered", "slingshot_nearest", "slingshot_maxboost"] as const}>
+              {(pol: "powered" | "slingshot_nearest" | "slingshot_maxboost") => (
+                <button
+                  class={() => `act ${m.policy() === pol ? "primary" : "ghost"}`}
+                  onClick={() => { m.setPolicy(pol); m.setPlaying(false); m.setScrubYear(m.maxYear()); }}
+                >{POLICY_LABELS[pol]}</button>
+              )}
+            </For>
+          </div>
         </div>
       </section>
 
@@ -908,6 +932,7 @@ function SwarmSurface(props: { model: SwarmModel }) {
               <StatRow what="Fill 50% / 90%" sub="exploration timescale" value={() => `${fmtNum(m.result().t50Years ?? 0)} / ${fmtNum(m.result().t90Years ?? 0)} yr`} />
               <StatRow what="Fill 100%" value={() => (m.result().t100Years === null ? "never" : `${fmtNum(m.result().t100Years!)} yr`)} cls={() => (m.result().t100Years === null ? "bad" : "good")} />
               <StatRow what="Probes launched" value={() => fmtNum(m.result().totalProbesLaunched)} />
+              <StatRow what="Peak probe speed" sub="powered = the cruise; slingshots accumulate" value={() => `${fmtNum(m.result().maxProbeSpeedKmS)} km/s`} cls={() => (m.result().policy === "powered" ? "" : "good")} />
               <p class="explain" style="margin-top:18px">{() => explainSwarm(m)}</p>
             </div>
           </div>
@@ -917,7 +942,7 @@ function SwarmSurface(props: { model: SwarmModel }) {
       <footer>
         <div class="wrap">
           <p>
-            A pure, seeded, fixed-step fold (mulberry32 threaded through state, byte-identical to the Python) over the <strong style="color:var(--text)">swarm</strong> module, live in pimas — the canvas reads the fold's settlement buffers each frame; there is no DOM node per star (the rendering discipline that scales, CLAUDE.md §7). Slice 1: straight-line travel, nearest-unsettled policy. Gravitational slingshots, 200k-star scale, and the light-speed-limited-coordination extension are later slices. Powered speed (3×10⁻⁵c ≈ 9 km/s) and density (1 star/pc³) are Nicholson &amp; Forgan's (2013) own parameters; the field fills on a Myr timescale, as in the paper. See swarm/REFERENCES.md.
+            A pure, seeded, fixed-step fold (mulberry32 threaded through state, byte-identical to the Python) over the <strong style="color:var(--text)">swarm</strong> module, live in pimas — the canvas reads the fold's settlement buffers each frame; there is no DOM node per star (the rendering discipline that scales, CLAUDE.md §7). Three travel policies (powered, and two gravitational-slingshot policies that steal speed from stellar motion) after Nicholson &amp; Forgan (2013); powered speed (3×10⁻⁵c ≈ 9 km/s), density (1 star/pc³), and the slingshot boost (their Eq. 4, u_esc ≈ 617.5 km/s solar) are the paper's parameters, with rotation/dispersion tagged [ESTIMATE]. Full 200k-star WebGL scale and the light-speed-limited-coordination extension are the remaining slices. See swarm/REFERENCES.md.
           </p>
         </div>
       </footer>

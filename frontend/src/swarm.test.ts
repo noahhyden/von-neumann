@@ -67,6 +67,44 @@ test("swarm port reproduces Python ground truth (field + trajectory)", () => {
   }
 });
 
+test("slingshot policies reproduce Python ground truth (boost + policy)", () => {
+  // Ground truth from the Python swarm (n=300, seed 0x9e3779b9). Verifies the boost
+  // (Eq. 4), the star-speed RNG pass, and both target policies match bit-for-bit.
+  const sling: { policy: "slingshot_nearest" | "slingshot_maxboost"; e: { settled: number; launched: number; t100: number; maxSpd: number; front: number; nsteps: number; samples: [number, number][] } }[] = [
+    {
+      policy: "slingshot_nearest",
+      e: { settled: 300, launched: 597, t100: 80000, maxSpd: 3306.146761, front: 5.70727, nsteps: 18,
+           samples: [[0, 1], [4, 23], [9, 138], [13, 268], [17, 300]] },
+    },
+    {
+      policy: "slingshot_maxboost",
+      e: { settled: 300, launched: 597, t100: 265000, maxSpd: 5720.451103, front: 5.70727, nsteps: 55,
+           samples: [[0, 1], [13, 149], [27, 239], [41, 276], [54, 300]] },
+    },
+  ];
+  for (const { policy, e } of sling) {
+    const r = simulateSwarm({ ...SWARM_DEFAULTS, nStars: 300, policy }, 0x9e3779b9);
+    assert.equal(r.finalSettled, e.settled, `${policy}: settled`);
+    assert.equal(r.totalProbesLaunched, e.launched, `${policy}: launched`);
+    assert.equal(r.t100Years, e.t100, `${policy}: t100`);
+    near(r.maxProbeSpeedKmS, e.maxSpd, 1e-6);
+    near(r.frontRadiusPc, e.front, 1e-4);
+    assert.equal(r.steps.length, e.nsteps, `${policy}: nsteps`);
+    assert.equal(r.policy, policy);
+    for (const [i, pop] of e.samples) assert.equal(r.steps[i].nSettled, pop, `${policy}: pop@${i}`);
+  }
+});
+
+test("nearest-slingshot beats max-boost on time (N&F finding), both faster than powered", () => {
+  const powered = simulateSwarm({ ...SWARM_DEFAULTS, nStars: 300, policy: "powered" }, 0x9e3779b9);
+  const nearest = simulateSwarm({ ...SWARM_DEFAULTS, nStars: 300, policy: "slingshot_nearest" }, 0x9e3779b9);
+  const maxboost = simulateSwarm({ ...SWARM_DEFAULTS, nStars: 300, policy: "slingshot_maxboost" }, 0x9e3779b9);
+  assert.ok(nearest.t100Years! < powered.t100Years!, "nearest slingshot beats powered");
+  assert.ok(nearest.t100Years! < maxboost.t100Years!, "nearest beats max-boost on time");
+  assert.ok(maxboost.maxProbeSpeedKmS > nearest.maxProbeSpeedKmS, "max-boost reaches higher speed");
+  assert.ok(nearest.maxProbeSpeedKmS > 10 * powered.maxProbeSpeedKmS, "slingshot speed accumulates");
+});
+
 test("spatial-hash nearest search is bit-identical to brute force (prove small)", () => {
   // The grid is a pure speedup: for many queries, over evolving settled masks, it must
   // return exactly the brute-force nearest — including the lowest-index tie-break.

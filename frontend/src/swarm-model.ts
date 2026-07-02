@@ -12,7 +12,7 @@ import { createSignal, createMemo } from "pimas";
 import type { Accessor, Setter } from "pimas";
 import type { ParamSignal } from "./reactive-model.js";
 import { simulateSwarm, SWARM_DEFAULTS } from "./swarm.js";
-import type { SwarmResult } from "./swarm.js";
+import type { SwarmResult, Policy } from "./swarm.js";
 
 export interface SwarmModel {
   params: ParamSignal[];
@@ -22,6 +22,8 @@ export interface SwarmModel {
   setScrubYear: Setter<number>;
   playing: Accessor<boolean>;
   setPlaying: Setter<boolean>;
+  policy: Accessor<Policy>;
+  setPolicy: Setter<Policy>;
   /** stars settled at or before the scrubbed year, and the front radius then. */
   settledAt: Accessor<{ count: number; frontPc: number }>;
 }
@@ -33,18 +35,19 @@ export function createSwarmModel(): SwarmModel {
   const [seed, setSeed] = createSignal(1);
   const [scrubYear, setScrubYear] = createSignal(0);
   const [playing, setPlaying] = createSignal(false);
+  const [policy, setPolicy] = createSignal<Policy>("powered");
 
   const params: ParamSignal[] = [
     { get: nStars, set: setNStars, min: 50, max: 5000, step: 50, label: "Stars in the field", unit: "" },
     { get: offspring, set: setOffspring, min: 0, max: 6, step: 1, label: "Offspring per settlement", unit: "" },
-    { get: probeSpeedKmS, set: setProbeSpeedKmS, min: 1, max: 100, step: 1, label: "Probe speed", unit: "km/s" },
+    { get: probeSpeedKmS, set: setProbeSpeedKmS, min: 1, max: 100, step: 1, label: "Powered speed", unit: "km/s" },
     { get: seed, set: setSeed, min: 1, max: 9999, step: 1, label: "Galaxy seed", unit: "" },
   ];
 
   const KM_S_TO_C = 1 / 299792.458;
   const result = createMemo<SwarmResult>(() =>
     simulateSwarm(
-      { ...SWARM_DEFAULTS, nStars: nStars(), offspringPerSettlement: offspring(), probeSpeedC: probeSpeedKmS() * KM_S_TO_C },
+      { ...SWARM_DEFAULTS, nStars: nStars(), offspringPerSettlement: offspring(), probeSpeedC: probeSpeedKmS() * KM_S_TO_C, policy: policy() },
       seed(),
     ),
   );
@@ -72,5 +75,5 @@ export function createSwarmModel(): SwarmModel {
     return { count, frontPc: front };
   });
 
-  return { params, result, maxYear, scrubYear, setScrubYear, playing, setPlaying, settledAt };
+  return { params, result, maxYear, scrubYear, setScrubYear, playing, setPlaying, policy, setPolicy, settledAt };
 }

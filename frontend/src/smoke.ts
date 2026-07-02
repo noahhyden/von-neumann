@@ -121,6 +121,14 @@ const midY = sw.maxYear() / 2;
 sw.setScrubYear(midY);
 const midCount = sw.settledAt().count;
 ok(midCount > 1 && midCount < sw.result().nStars, "mid-run the front is partway through the field");
+// Policy toggle: slingshots fill faster and reach far higher peak speed than powered.
+sw.setScrubYear(0);
+const poweredT100 = sw.result().t100Years!;
+const poweredSpeed = sw.result().maxProbeSpeedKmS;
+sw.setPolicy("slingshot_nearest");
+ok(sw.result().t100Years! < poweredT100, "slingshot_nearest fills faster than powered (reactive policy toggle)");
+ok(sw.result().maxProbeSpeedKmS > 10 * poweredSpeed, "slingshot accumulates speed far above the powered cruise");
+sw.setPolicy("powered");
 sw.params[1].set(0); // offspring 2 -> 0
 ok(sw.result().finalSettled === 1 && sw.result().t100Years === null, "zero offspring settles only the homeworld (reactive)");
 
