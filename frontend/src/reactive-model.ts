@@ -38,6 +38,11 @@ export interface ParamSignal {
   step: number;
   label: string;
   unit: string;
+  /** When true, the slider commits (fires `set`) only on release, not on every drag
+   * pixel — the thumb/readout still track live. For knobs whose `set` triggers an
+   * expensive recompute (e.g. a full swarm re-simulation), this turns a drag from dozens
+   * of synchronous re-runs into one. Omit for cheap knobs that should update live. */
+  commitOnRelease?: boolean;
 }
 
 export interface WallModel {

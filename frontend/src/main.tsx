@@ -49,19 +49,31 @@ const regimeWord = (r: string) => r.replace("-limited", "");
 
 function Slider(props: { p: ParamSignal }) {
   const p = props.p;
+  // For commit-on-release knobs, a local signal tracks the thumb + readout live during a
+  // drag while the model value (which may trigger an expensive recompute) is committed only
+  // on release. A cheap knob (no flag) sets the model directly on every input, as before.
+  const [disp, setDisp] = createSignal(p.get());
+  if (p.commitOnRelease) createEffect(() => setDisp(p.get())); // pull in external changes
+  const shown = () => (p.commitOnRelease ? disp() : p.get());
   return (
     <div class="ctl">
       <div class="ctl-top">
         <span class="ctl-label">{p.label}</span>
-        <span class="ctl-val">{() => fmtNum(p.get())} {p.unit}</span>
+        <span class="ctl-val">{() => fmtNum(shown())} {p.unit}</span>
       </div>
       <input
         type="range"
         min={p.min}
         max={p.max}
         step={p.step}
-        value={() => p.get()}
-        onInput={(e: Event) => p.set(Number((e.target as HTMLInputElement).value))}
+        value={() => shown()}
+        onInput={(e: Event) => {
+          const v = Number((e.target as HTMLInputElement).value);
+          if (p.commitOnRelease) setDisp(v); else p.set(v);
+        }}
+        onChange={(e: Event) => {
+          if (p.commitOnRelease) p.set(Number((e.target as HTMLInputElement).value));
+        }}
       />
     </div>
   );

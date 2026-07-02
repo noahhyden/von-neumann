@@ -61,11 +61,13 @@ export function createSwarmModel(): SwarmModel {
   const [hoverStar, setHoverStar] = createSignal<number | null>(null);
   const [decisionTimescale, setDecisionTimescale] = createSignal(1); // yr, [ESTIMATE] knob
 
+  // All four feed the `result` memo → each `set` re-runs the whole simulateSwarm fold.
+  // commitOnRelease: a drag then triggers one re-sim on release, not one per pixel.
   const params: ParamSignal[] = [
-    { get: nStars, set: setNStars, min: 50, max: 5000, step: 50, label: "Stars in the field", unit: "" },
-    { get: offspring, set: setOffspring, min: 0, max: 6, step: 1, label: "Offspring per settlement", unit: "" },
-    { get: probeSpeedKmS, set: setProbeSpeedKmS, min: 1, max: 100, step: 1, label: "Powered speed", unit: "km/s" },
-    { get: seed, set: setSeed, min: 1, max: 9999, step: 1, label: "Galaxy seed", unit: "" },
+    { get: nStars, set: setNStars, min: 50, max: 5000, step: 50, label: "Stars in the field", unit: "", commitOnRelease: true },
+    { get: offspring, set: setOffspring, min: 0, max: 6, step: 1, label: "Offspring per settlement", unit: "", commitOnRelease: true },
+    { get: probeSpeedKmS, set: setProbeSpeedKmS, min: 1, max: 100, step: 1, label: "Powered speed", unit: "km/s", commitOnRelease: true },
+    { get: seed, set: setSeed, min: 1, max: 9999, step: 1, label: "Galaxy seed", unit: "", commitOnRelease: true },
   ];
 
   const KM_S_TO_C = 1 / 299792.458;
