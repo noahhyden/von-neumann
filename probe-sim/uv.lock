@@ -99,11 +99,27 @@ wheels = [
 ]
 
 [[package]]
+name = "power-budget"
+version = "0.1.0"
+source = { editable = "../power-budget" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.6" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+]
+provides-extras = ["dev"]
+
+[[package]]
 name = "probe-sim"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "closure-sim" },
+    { name = "power-budget" },
     { name = "pydantic" },
 ]
 
@@ -115,6 +131,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "closure-sim", editable = "../closure-sim" },
+    { name = "power-budget", editable = "../power-budget" },
     { name = "pydantic", specifier = ">=2.6" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
 ]

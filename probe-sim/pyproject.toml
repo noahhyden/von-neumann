@@ -10,14 +10,16 @@ requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.6",
     "closure-sim",
+    "power-budget",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
 
-# closure-sim is a sibling module in this monorepo, consumed through its public API.
+# Sibling modules in this monorepo, consumed through their public APIs.
 [tool.uv.sources]
 closure-sim = { path = "../closure-sim", editable = true }
+power-budget = { path = "../power-budget", editable = true }
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -26,6 +26,11 @@ from probe_sim.range import (
     is_viable_at,
     operational_range,
 )
+from probe_sim.autonomy import (
+    ComputeHeadroom,
+    compute_headroom_at,
+    max_distance_for_compute,
+)
 
 __all__ = [
     "SOLAR_CONSTANT_1AU_W_M2",
@@ -38,4 +43,7 @@ __all__ = [
     "available_power_kw",
     "is_viable_at",
     "operational_range",
+    "ComputeHeadroom",
+    "compute_headroom_at",
+    "max_distance_for_compute",
 ]

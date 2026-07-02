@@ -22,6 +22,11 @@ This module starts from exactly that gate.
   i.e. how far out replication stays viable before the falling power budget stalls
   it. `is_viable_at()` answers the question at one distance; `operational_range()`
   finds the crossover (and flags underpowered / saturated edges).
+- **`autonomy.py`** — compute headroom vs. distance (couples in `power-budget`). The
+  onboard compute a probe can afford — its autonomy — is powered by the same array,
+  so it falls as 1/d² too. `compute_headroom_at()` gives the FLOPS (and brain-
+  equivalents) available at a distance; `max_distance_for_compute()` gives the reach
+  for a required compute floor.
 - **`models.py`** — the probe's sourced facts: the six modules and the 70% replicated
   mass fraction. (Per-module masses are an open `[GAP]` — see REFERENCES.md — and are
   not invented.)
