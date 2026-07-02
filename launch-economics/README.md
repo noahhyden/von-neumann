@@ -15,6 +15,10 @@ quantifies the payoff.
   vs. land a self-replicating seed and import only the vitamins. Reports the
   **launch-mass leverage** (installed kg per launched kg), the cost ratio, and the
   dollar savings.
+- **`from_closure.py`** — the coupling to `closure-sim`: `comparison_from_closure()`
+  derives the imported-vitamin mass from a real factory's closure ratio (mass balance:
+  (1 − C) kg imported per kg built), so leverage becomes a function of closure —
+  C → 1 launches only the seed, C → 0 launches everything.
 
 Launch prices, Δv budgets, and Isp are scenario *inputs* (they vary by vehicle and
 year); representative sourced values are in [`REFERENCES.md`](REFERENCES.md). Only
@@ -22,10 +26,8 @@ defined physical constants (standard gravity) are hardcoded.
 
 ## What's next (see [`../ROADMAP.md`](../ROADMAP.md))
 
-Couple the vitamin mass to `closure-sim`: closure sets how much must be imported, so
-leverage becomes a function of closure — closing the loop between "how self-
-sufficient is the factory" and "how much does the mission cost". Then a `frontend`
-surface to trade closure against launch cost interactively.
+A `frontend` surface to trade closure against launch cost interactively — drag the
+closure ratio and watch launch-mass leverage and mission cost move.
 
 ## Architecture
 
