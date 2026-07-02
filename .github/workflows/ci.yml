@@ -67,6 +67,17 @@ jobs:
         working-directory: mission
         run: uv run --extra dev pytest -q
 
+  multi-probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: pytest (deterministic fleet behavior assertions)
+        working-directory: multi-probe
+        run: uv run --extra dev pytest -q
+
   frontend:
     runs-on: ubuntu-latest
     steps:

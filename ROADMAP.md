@@ -51,11 +51,20 @@ scenario + a few fields (modules, a `flux(distance)` term)* than a whole new mod
 electronics — is identical). Flux→*range* is stated; flux→*replication-rate* would
 be our extrapolation.
 
-### 3. Small deterministic multi-probe — intermediate 🔜
+### 3. Small deterministic multi-probe — v1 model done ✅ (`multi-probe/`)
 
 A handful of probes (tens, not 10⁵), deterministic. Validates the "probe-as-agent"
 abstraction and keeps `speculate` exact *before* taking on the paradigm jump to a
 stochastic spatial ABM and a performance engine at once. De-risks step 4.
+
+**Built:** `multi-probe/` — a pure, seeded fold (`step`/`simulate_fleet`) where each
+probe builds copies at `min(machinery rate, energy cap)` (closure-sim's regime logic,
+reusing probe-sim's 1/d² power) and disperses children outward. Two emergent ceilings:
+a finite **vitamin pool** (the electronics wall at fleet scale) and a **spatial power
+wall** (~13.6 AU crossover). RNG is mulberry32 threaded through state (byte-identical
+to `gen-diff.mjs`); jitter = 0 is deterministic and seed-independent. 11 behavior tests.
+**Remaining:** a `frontend` surface (a live, dispersing fleet), and — as with the other
+probe work — swapping in a probe-specific BOM once the mass `[GAP]` is closed.
 
 ### 4. The swarm — later 🔭
 
