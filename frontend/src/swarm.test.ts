@@ -1,7 +1,7 @@
 /**
  * Parity test: the TS swarm port must reproduce the Python `swarm.sim` exactly,
  * including the seeded star field and the settlement trajectory. Ground truth was
- * generated from the Python package. Pure — no pimas (Layer A). The cube-root box size
+ * generated from the Python package. Pure - no pimas (Layer A). The cube-root box size
  * (N/ρ)^(1/3) matches bit-for-bit between Python and JS, so full runs agree.
  */
 import { test } from "node:test";
@@ -107,7 +107,7 @@ test("nearest-slingshot beats max-boost on time (N&F finding), both faster than 
 
 test("spatial-hash nearest search is bit-identical to brute force (prove small)", () => {
   // The grid is a pure speedup: for many queries, over evolving settled masks, it must
-  // return exactly the brute-force nearest — including the lowest-index tie-break.
+  // return exactly the brute-force nearest - including the lowest-index tie-break.
   for (const [n, seed] of [[300, 1], [800, 7], [1500, 42]] as [number, number][]) {
     const s = initialState({ ...SWARM_DEFAULTS, nStars: n }, seed);
     // Mark a deterministic ~40% of stars settled to exercise a sparse candidate set.
@@ -134,7 +134,7 @@ test("grid scales to a large field and still fills it (build large)", () => {
 test("lightspeed coordination reproduces Python ground truth (belief gate + counters)", () => {
   // Ground truth from the Python swarm (n=300, seed 0x9e3779b9, coordination="lightspeed").
   // Verifies the light-cone belief gate, the grid-no-remove path, and the wasted-trip counters
-  // match bit-for-bit — including the slingshot regime where the effect lives.
+  // match bit-for-bit - including the slingshot regime where the effect lives.
   const cases: { policy: Policy; e: { settled: number; launched: number; t100: number; maxSpd: number; front: number; nsteps: number; totalArr: number; wasted: number; retarget: number; samples: [number, number][] } }[] = [
     {
       policy: "slingshot_nearest",
@@ -184,7 +184,7 @@ test("instant mode is bit-identical to the default (c→∞ reduction)", () => {
 });
 
 test("grid ≡ brute under the lightspeed belief gate", () => {
-  // The belief gate is a pure per-star predicate, so grid and brute must still agree — now
+  // The belief gate is a pure per-star predicate, so grid and brute must still agree - now
   // with settled stars kept in the grid (not removed) and news partially propagated.
   const p = { ...SWARM_DEFAULTS, nStars: 800, coordination: "lightspeed" as const };
   const s = initialState(p, 7);

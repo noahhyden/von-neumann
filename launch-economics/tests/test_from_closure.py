@@ -1,4 +1,4 @@
-"""Leverage as a function of closure — the launch-economics × closure-sim coupling."""
+"""Leverage as a function of closure - the launch-economics × closure-sim coupling."""
 
 import pytest
 from closure_sim.models import Factory, Subsystem

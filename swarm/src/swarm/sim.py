@@ -1,13 +1,13 @@
-"""The deterministic swarm fold — slice 1: a settlement front through a star field.
+"""The deterministic swarm fold - slice 1: a settlement front through a star field.
 
 A homeworld launches interstellar probes; each travels to a target star (chosen by
 policy), settles it on arrival, and launches ``offspring`` new probes. The reachable
-field fills from the origin outward — the "exploration timescale" question of Nicholson
+field fills from the origin outward - the "exploration timescale" question of Nicholson
 & Forgan (2013). Three policies (their three scenarios): ``powered`` (constant cruise
 speed, nearest unsettled), ``slingshot_nearest`` (accumulate a gravitational-assist
 boost at each star, nearest target), and ``slingshot_maxboost`` (target the star giving
 the biggest boost). Slingshots extract energy from the stars' galactic motion, so
-boosted probes far outrun the powered cruise — the paper's headline. Modelling
+boosted probes far outrun the powered cruise - the paper's headline. Modelling
 simplifications (scalar speeds, boost-optimal geometry, star velocities from an
 [ESTIMATE] rotation figure) are documented in REFERENCES.md; the light-speed-limited
 coordination extension is still future work (FRONTIER issue).
@@ -31,7 +31,7 @@ def _generate_galaxy(
     A real galaxy is a disk with a radial density gradient; a uniform cube is the
     minimal field that exercises the front dynamics. Star SPEEDS (magnitudes only, in
     pc/yr) are drawn in a SECOND pass after all positions, so adding the slingshot
-    feature does not perturb the position RNG stream — the ``powered`` policy stays
+    feature does not perturb the position RNG stream - the ``powered`` policy stays
     bit-identical to before. Speeds ~ galactic rotation ± dispersion [ESTIMATE]; the
     paper defers the actual shear/dispersion setup to Forgan+2012 (see REFERENCES.md).
     """
@@ -70,12 +70,12 @@ def _believes_settled(s: SwarmState, frm: int, i: int, params: SwarmParams) -> b
     emitting "I'm settled" at ``settled_year[i]``; the news reaches ``frm`` only after the
     light-travel time ``dist/c``. So under ``coordination="lightspeed"`` a decider believes
     ``i`` settled iff the beacon has had time to arrive. Under ``"instant"`` (the paper's
-    perfect-global-info assumption) this collapses to ``settled_year[i] >= 0`` — bit-identical
+    perfect-global-info assumption) this collapses to ``settled_year[i] >= 0`` - bit-identical
     to slices 1-3. This is a pure function of state already present (positions + settled_year
     + year + the sourced ``C_PC_PER_YEAR``); it adds no RNG and can't desync from truth.
 
     Observer is the decision star ``frm`` (decisions happen only at stars), so news a probe
-    passes THROUGH mid-flight is ignored — a conservative simplification that undercounts
+    passes THROUGH mid-flight is ignored - a conservative simplification that undercounts
     knowledge (documented in REFERENCES.md); mobile-relay gossip is a deferred sibling.
     """
     if s.settled_year[i] < 0.0:
@@ -131,7 +131,7 @@ def _select_target(s: SwarmState, frm: int, exclude: set[int], params: SwarmPara
     gives the largest boost. In this scalar model the boost grows with the destination star's
     speed, so max-boost = highest star speed among the candidates (tie-break lowest index). We
     scan only the nearest K (not the whole field) so a max-boost probe doesn't fly across the
-    galaxy for a marginally bigger kick — a documented [ESTIMATE] bound.
+    galaxy for a marginally bigger kick - a documented [ESTIMATE] bound.
     """
     if params.policy == "slingshot_maxboost":
         cand = _nearest_k_unsettled(s, frm, exclude, params.max_boost_candidates, params)
@@ -151,7 +151,7 @@ def _boosted_speed(current_pc_yr: float, star_speed_pc_yr: float, params: SwarmP
     Powered policy: no slingshot, always the cruise speed. Otherwise (N&F Eq. 3–4): the
     max single-encounter gain is Δv_max = u_esc² / (u_esc²/(2u_i) + u_i), with u_i the
     probe's speed relative to the star. We take the boost-optimal (head-on) geometry,
-    u_i ≈ current + star speed, and add Δv_max to the galactic speed — a documented
+    u_i ≈ current + star speed, and add Δv_max to the galactic speed - a documented
     [ESTIMATE] (we track scalar speeds, not full velocity vectors / true geometry). Eq. 4
     self-limits: Δv_max peaks near u_i ≈ u_esc and falls off for fast probes, so speed
     doesn't run away; a ``speed_cap_c`` ceiling backstops it anyway.
@@ -236,7 +236,7 @@ def step(state: SwarmState, params: SwarmParams) -> SwarmState:
 
     state.total_arrivals += len(arrivals)
     for p in arrivals:
-        # Physical arrival reads GROUND TRUTH — the star's real status is what the probe
+        # Physical arrival reads GROUND TRUTH - the star's real status is what the probe
         # finds when it gets there, regardless of what it believed when it aimed.
         if state.settled_year[p.target] < 0.0:
             # First to arrive: settle it and spread (slingshot off it, boosting offspring).
@@ -244,11 +244,11 @@ def step(state: SwarmState, params: SwarmParams) -> SwarmState:
             _launch_from(state, p.target, params, p.speed_pc_yr)
         else:
             # Raced and lost: a wasted trip (the cost of stale info). Re-target (by policy,
-            # from this arrival star's belief), keeping this probe's speed — up to the cap.
+            # from this arrival star's belief), keeping this probe's speed - up to the cap.
             state.wasted_arrivals += 1
             # The retarget cap only bites under lightspeed, where stale views cause bounce
             # chains; instant races resolve to a truly-unsettled star, so re-targeting is
-            # unbounded there — keeping the perfect-info baseline bit-identical.
+            # unbounded there - keeping the perfect-info baseline bit-identical.
             if params.coordination == "lightspeed" and p.retargets >= params.max_retargets:
                 continue  # bounce chain exhausted → retire the probe as wasted
             target = _select_target(state, p.target, set(), params)

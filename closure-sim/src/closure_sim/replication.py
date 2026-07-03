@@ -4,7 +4,7 @@ Model
 -----
 State is installed factory mass ``F`` (kg), all of it productive. Productivity
 ``alpha = K0 / seed_mass`` (kg local output per day per kg of factory) is fixed by
-the seed, so local production ``alpha * F`` scales with the factory — the source of
+the seed, so local production ``alpha * F`` scales with the factory - the source of
 exponential growth.
 
 Building new factory mass needs inputs in ratio ``C : (1 - C)`` (local : vitamin),
@@ -21,7 +21,7 @@ with ``energy_cap = available_power_per_day / e_local`` (e_local = energy per kg
 Key limiting behaviours, all emergent (not hardcoded):
   * C -> 1: resupply path -> infinity, growth stays exponential forever.
   * C -> 0: nothing is made locally; growth is pure linear resupply at rate R.
-  * R = 0 with C < 1: no vitamins, growth pins to zero — the factory is stuck.
+  * R = 0 with C < 1: no vitamins, growth pins to zero - the factory is stuck.
   * Making chips locally raises e_local sharply, which can move the bottleneck to
     energy rather than removing it.
 """

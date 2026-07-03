@@ -1,6 +1,6 @@
 """Operational-range mechanism: power vs distance gating replication viability.
 
-These use a small SYNTHETIC factory to exercise the sweep/bisection logic — the
+These use a small SYNTHETIC factory to exercise the sweep/bisection logic - the
 values are test scaffolding, not physical claims (the real Borgue & Hein probe
 factory awaits the per-module mass [GAP]; see REFERENCES.md). The assertions are on
 structural behaviour: monotonic viability, correct crossover bracketing, and the

@@ -1,5 +1,5 @@
 /**
- * The power-budget model as a pimas reactive graph — the third surface.
+ * The power-budget model as a pimas reactive graph - the third surface.
  *
  * Sliders are signals; the compute outputs are a memo over the parity-tested TS port
  * (`power-budget.ts`). Same shape as the launch-economics model: signals + one memo,

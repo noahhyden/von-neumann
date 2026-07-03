@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>The Electronics Wall, live — a self-replicating factory you can steer</title>
-<meta name="description" content="closure-sim run reactively in pimas: drag the assumptions, speculate the electronics wall before committing, watch the real model recompute and explain itself." />
+<title>von-neumann: self-replicating space manufacturing, modelled live</title>
+<meta name="description" content="A set of small, live, source-checked models of self-replicating space manufacturing - closure, power, launch economics, and a galaxy-filling swarm - with every number traced to published research. Built on pimas." />
 <style>
   :root {
     --ground: #1B2230;
@@ -107,6 +107,59 @@
   .note { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); line-height: 1.55; }
   footer { padding: 44px 0 72px; border-top: 1px solid var(--line); }
   footer p { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); line-height: 1.7; margin: 0; }
+
+  /* inline citation marker + hover/focus tooltip (Cite) */
+  .cite { position: relative; display: inline; cursor: help; }
+  .cite > sup { font-family: var(--mono); font-size: 0.62em; color: var(--chip); font-weight: 600; padding: 0 1px; }
+  .cite:hover > sup, .cite:focus-within > sup { text-decoration: underline; }
+  .cite-pop {
+    position: absolute; left: 0; bottom: 1.5em; z-index: 60;
+    width: min(360px, 78vw);
+    background: var(--panel); border: 1px solid var(--chip); border-radius: 6px;
+    padding: 12px 14px; box-shadow: 0 12px 34px rgba(0,0,0,0.55);
+    opacity: 0; visibility: hidden; transform: translateY(4px);
+    transition: opacity .12s ease, transform .12s ease;
+    font-family: var(--mono); font-size: 0.72rem; line-height: 1.5;
+    color: var(--text); white-space: normal; text-align: left; pointer-events: none;
+    font-weight: 400; letter-spacing: 0;
+  }
+  .cite:hover .cite-pop, .cite:focus-within .cite-pop { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; }
+  .cite-item + .cite-item { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .cite-ref { display: block; }
+  .cite-ref b { color: #fff; }
+  .cite-pop a { display: inline-block; margin-top: 5px; word-break: break-all; font-size: 0.68rem; }
+  .cite-nolink { display: block; margin-top: 5px; color: var(--muted); font-style: italic; }
+  .cite-use { display: block; margin-top: 6px; color: var(--muted); }
+
+  /* overview: brand button + module status rows + gap lists */
+  .nav-brand { font-family: var(--serif); font-weight: 700; letter-spacing: .3px; margin-right: 8px; background: none; border: 0; color: var(--text); cursor: pointer; font-size: 1rem; padding: 0; }
+  .nav-brand:hover { color: var(--chip); }
+  .mod-row { padding: 16px 2px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .mod-row:last-child { border-bottom: none; }
+  .mod-row:hover .mod-name, .mod-row:focus-visible .mod-name { color: var(--chip); }
+  .mod-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .mod-name { font-family: var(--mono); font-weight: 600; font-size: 1.02rem; }
+  .mod-status { font-family: var(--mono); font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 20px; border: 1px solid var(--line); }
+  .mod-status.good { color: var(--good); border-color: rgba(127,209,140,0.4); }
+  .mod-status.chip { color: var(--chip); border-color: rgba(88,199,214,0.4); }
+  .mod-desc { margin: 8px 0 0; color: var(--muted); font-size: 0.98em; }
+  ul.gaps { margin: 8px 0 0; padding-left: 20px; }
+  ul.gaps li { margin-bottom: 12px; }
+
+  /* sources: one bibliography entry */
+  .src { padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .src:last-child { border-bottom: none; }
+  .src-top { display: flex; gap: 10px; align-items: baseline; }
+  .src-num { font-family: var(--mono); font-weight: 600; color: var(--chip); }
+  .src-cite { font-size: 0.98em; }
+  .src-cite b { color: #fff; }
+  .src-meta { display: flex; gap: 14px; flex-wrap: wrap; margin: 6px 0 0 26px; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.03em; }
+  .src-strength { color: var(--metal); }
+  .src-strength.st-vendor, .src-strength.st-wiki, .src-strength.st-grey { color: var(--bad); }
+  .src-mods { color: var(--muted); }
+  .src-grounds { margin: 8px 0 0 26px; color: var(--muted); font-size: 0.96em; }
+  .src-link { display: inline-block; margin: 6px 0 0 26px; font-family: var(--mono); font-size: 0.7rem; word-break: break-all; }
+  .src-nolink { display: block; margin: 6px 0 0 26px; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); font-style: italic; }
 
   @media (max-width: 760px) { .lab { grid-template-columns: 1fr; } }
   :focus-visible { outline: 2px solid var(--chip); outline-offset: 3px; }

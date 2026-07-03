@@ -1,16 +1,16 @@
-"""The inputs to one end-to-end probe mission — every scalar sourced or a flagged choice.
+"""The inputs to one end-to-end probe mission - every scalar sourced or a flagged choice.
 
 A `MissionScenario` gathers exactly what the driver in `run.py` needs and nothing it
 can derive itself. It holds:
 
-- a closure-sim `Factory` (the bill of materials) — we default to the sourced
+- a closure-sim `Factory` (the bill of materials) - we default to the sourced
   `lunar_regolith_seed.yaml` scenario, so the masses/energies all trace to
-  closure-sim/REFERENCES.md. There is no probe-specific BOM yet — the Borgue & Hein
-  per-module masses are an open `[GAP]` in probe-sim — so we honestly reuse the
+  closure-sim/REFERENCES.md. There is no probe-specific BOM yet - the Borgue & Hein
+  per-module masses are an open `[GAP]` in probe-sim - so we honestly reuse the
   lunar seed factory as the stand-in and say so.
-- launch scalars (Δv, Isp, $/kg) — representative sourced values from
+- launch scalars (Δv, Isp, $/kg) - representative sourced values from
   launch-economics/REFERENCES.md; the caller may override per scenario.
-- the solar array + power split + compute efficiency — sourced or `[ESTIMATE]`,
+- the solar array + power split + compute efficiency - sourced or `[ESTIMATE]`,
   documented in mission/REFERENCES.md.
 
 Pure, deterministic, plain data; zero pimas imports (CLAUDE.md §7).
@@ -44,7 +44,7 @@ DEFAULT_ARRAY_AREA_M2: float = round(
     DEFAULT_ARRAY_POWER_AT_1AU_W / (SOLAR_CONSTANT_1AU_W_M2 * DEFAULT_ARRAY_EFFICIENCY)
 )
 
-# Compute hardware efficiency, FLOPS/W: [ESTIMATE] 1e11 (~100 GFLOP/W) — see
+# Compute hardware efficiency, FLOPS/W: [ESTIMATE] 1e11 (~100 GFLOP/W) - see
 # power-budget/REFERENCES.md. Affects the compute-headroom leg only.
 DEFAULT_COMPUTE_EFFICIENCY_FLOPS_PER_W: float = 1e11
 
@@ -56,12 +56,12 @@ DEFAULT_SPECIFIC_IMPULSE_S: float = 311.0
 # Falcon 9 (reusable) specific launch cost, ~$3000/kg to LEO (SpaceX list price).
 DEFAULT_COST_PER_KG_USD: float = 3000.0
 
-# Target installed factory mass — a scenario *design choice* (not a physical fact):
+# Target installed factory mass - a scenario *design choice* (not a physical fact):
 # grow a ~12 t seed into a 1000 t installation. The naive mass ratio is ~83x, but the
 # effective launch-mass leverage is ~24.5x once vitamins are counted (see REFERENCES.md).
 DEFAULT_TARGET_INSTALLED_MASS_KG: float = 1_000_000.0
 
-# Power split — scenario design choices (fractions of delivered power), not physics.
+# Power split - scenario design choices (fractions of delivered power), not physics.
 # Manufacturing gets the lion's share; compute is the autonomy budget; the rest is
 # housekeeping (thermal/comms/attitude). Must not sum to > 1 (PowerBudget enforces).
 DEFAULT_FRACTION_MANUFACTURING: float = 0.70

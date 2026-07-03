@@ -1,13 +1,13 @@
 """Experiment: what does light-speed-limited coordination cost the swarm?
 
-FRONTIER #1, slice 2. A paired A/B — for each policy, the SAME seeded galaxy is run
+FRONTIER #1, slice 2. A paired A/B - for each policy, the SAME seeded galaxy is run
 under `coordination="instant"` (the paper's perfect global info) and `"lightspeed"` (a
 probe knows a distant star is settled only after the news-light arrives). Because the two
 modes share the seed, the per-seed difference is attributable to information lag alone;
 we report the distribution across a seed ensemble (median + IQR), never a single run.
 
 The result (see the printed table): the penalty is NOT simply Λ = v_probe/c. Powered
-nearest-neighbour flight is nearly immune even when fast — a probe that loses a race just
+nearest-neighbour flight is nearly immune even when fast - a probe that loses a race just
 takes the star next door, a cheap recovery. The cost appears when probes make **long-range
 hops from stale views** (the slingshot regime): a wasted trip is then a long detour, so the
 field fills materially later. Light-speed coordination is a *long-hop / slingshot-era*
@@ -70,7 +70,7 @@ def _fmt_iqr(xs: list[float]) -> str:
 
 
 def main() -> None:
-    print(f"Light-speed coordination cost — {len(SEEDS)} seeds, N={N_STARS} stars, paired A/B\n")
+    print(f"Light-speed coordination cost - {len(SEEDS)} seeds, N={N_STARS} stars, paired A/B\n")
     print(f"{'policy':<20}{'Δt100 % (median [IQR])':<28}{'waste% inst→ls (median)':<26}{'fills 100%'}")
     print("-" * 84)
     for policy in ("powered", "slingshot_nearest", "slingshot_maxboost"):
@@ -81,7 +81,7 @@ def main() -> None:
         print(f"{policy:<20}{_fmt_iqr(c.dt100_pct):<28}{f'{wi:.0f}% → {wl:.0f}%':<26}{allfill}")
     print(
         "\nReading: powered flight pays ~no timescale penalty (local recovery); the slingshot\n"
-        "policies fill materially later under light-speed lag — the cost of long-range hops\n"
+        "policies fill materially later under light-speed lag - the cost of long-range hops\n"
         "made from stale views. A connected field still reaches 100% in every case (no Aurora\n"
         "plateau from lag alone). Λ ≈ v/c sets the scale, hop-nonlocality decides if it bites."
     )

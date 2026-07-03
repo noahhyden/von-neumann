@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mission"
 version = "0.1.0"
-description = "The end-to-end von Neumann probe mission: launch a seed, arrive at a heliocentric distance, split solar power between building and thinking, and replicate — one pure fold over the four sibling modules"
+description = "The end-to-end von Neumann probe mission: launch a seed, arrive at a heliocentric distance, split solar power between building and thinking, and replicate - one pure fold over the four sibling modules"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.6",

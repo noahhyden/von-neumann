@@ -5,11 +5,11 @@
 Imagine landing a single robotic factory on the Moon. It digs up local dirt, makes
 metal, and uses that metal to build a *second* factory just like itself. Then two
 become four, four become eight. This is the dream of "self-replicating" space
-manufacturing — and the reason people get excited about it is that, in principle,
+manufacturing - and the reason people get excited about it is that, in principle,
 you only have to launch *one* factory and let it multiply.
 
-The catch is that no factory can make *everything* it's built from. Some parts —
-above all **computer chips** — need a supply chain so vast (hundreds of factories,
+The catch is that no factory can make *everything* it's built from. Some parts -
+above all **computer chips** - need a supply chain so vast (hundreds of factories,
 ultra-pure materials, machines that cost hundreds of millions of dollars) that a
 lone factory in space has no hope of making them. Those parts have to keep coming
 from Earth. This tool calls them **"vitamins"** (a term from the original 1980 NASA
@@ -20,13 +20,13 @@ study): small but essential things you must keep shipping in.
 1. **How self-sufficient is it?** What fraction of its own weight can it make
    locally, and which parts are the vitamins?
 2. **How fast could it multiply?** Starting from one seed, does it grow explosively,
-   crawl along slowly, or stall out — and why?
+   crawl along slowly, or stall out - and why?
 3. **What if it could make its own chips?** The headline question: how much does
    being able to make electronics locally change everything?
 
 It prints clean tables in your terminal. No graphics, no internet, no setup beyond
 installing it. It's **module 1** of a larger project, deliberately kept small and
-well-tested. Every number is grounded in real research — see
+well-tested. Every number is grounded in real research - see
 [REFERENCES.md](REFERENCES.md).
 
 ---
@@ -43,7 +43,7 @@ Here's why closure is the whole game, in everyday terms:
   itself, as fast as its machines and power allow) and **vitamins** (which only
   arrive on the next rocket from Earth).
 - The local parts can grow *with* the factory: more factory means more machines
-  making more parts — this is the explosive, doubling-every-year kind of growth.
+  making more parts - this is the explosive, doubling-every-year kind of growth.
 - But the vitamins arrive at a **fixed trickle** from Earth, no matter how big the
   factory gets. So the vitamins become the bottleneck. The factory can only grow as
   fast as its slowest-arriving essential part.
@@ -54,7 +54,7 @@ forever rationed by the rocket schedule. A factory that's 99% closed is nearly
 unstoppable. That tipping point is what this tool lets you explore.
 
 > **A trap to watch for:** measuring closure by *weight* makes electronics look
-> trivial — chips might be 1% of the factory's mass. But that 1% can be the
+> trivial - chips might be 1% of the factory's mass. But that 1% can be the
 > difference between a factory that multiplies and one that's stuck. This tool
 > always shows you the vitamins *and* how badly they throttle growth, not just the
 > headline percentage.
@@ -116,29 +116,29 @@ closure-sim wall scenarios/lunar_regolith_seed.yaml --power 1000   # try 1 MW in
 
 ## The headline result: the electronics wall
 
-The `wall` command runs the scenario twice — once with electronics shipped from
-Earth, once pretending the factory can make its own chips — and compares them. The
+The `wall` command runs the scenario twice - once with electronics shipped from
+Earth, once pretending the factory can make its own chips - and compares them. The
 two example scenarios tell **opposite** stories, and together they capture the real
 dilemma:
 
-### Story 1 — the lunar seed: making chips locally *wins* (if you have the power)
+### Story 1 - the lunar seed: making chips locally *wins* (if you have the power)
 
 This factory is 97% self-sufficient; chips are just 1.25% of its weight. As long as
 chips are imported, the rocket schedule caps its growth and it takes **~29 years** to
 reach the target output. Give it the ability to make its own chips and that cap
-lifts — it gets there in **~17 years**, over a decade sooner.
+lifts - it gets there in **~17 years**, over a decade sooner.
 
 **But** there's a catch the tool makes visible: chips take *thousands* of times more
 energy to manufacture than metal. Making them locally only pays off if the factory
-has enormous power — about 4 megawatts in this scenario (a power plant that would
+has enormous power - about 4 megawatts in this scenario (a power plant that would
 itself weigh more than the factory). Run it with `--power 1000` and you'll see making
 chips locally actually *backfires*: the factory runs out of electricity before it
 runs out of parts.
 
-### Story 2 — the low-closure outpost: a trap from both sides
+### Story 2 - the low-closure outpost: a trap from both sides
 
 This factory is only 43% self-sufficient and stuffed with electronics. Shipping the
-chips in, it's permanently starved for resupply — a slow crawl. Trying to make the
+chips in, it's permanently starved for resupply - a slow crawl. Trying to make the
 chips locally is even worse: their colossal energy appetite collapses the factory's
 power budget. **Closure went up, but things got worse.** It's stuck either way.
 
@@ -152,7 +152,7 @@ energy-hungry. A factory only escapes the wall if it's already highly self-suffi
 ## Write your own factory
 
 A scenario is a plain text file (YAML). List the parts; mark anything the factory
-can't make locally with `producible_locally: false` — those become vitamins. Add a
+can't make locally with `producible_locally: false` - those become vitamins. Add a
 `replication:` block to enable the growth simulation.
 
 ```yaml
@@ -166,7 +166,7 @@ subsystems:
     processes: [casting, machining]
     energy_to_produce_kwh_per_kg: 5.0    # electricity to make 1 kg, on-site
 
-  - name: Computer chips           # a vitamin — can't be made locally
+  - name: Computer chips           # a vitamin - can't be made locally
     mass_kg: 80
     category: compute              # 'compute' & 'electronics' are what `wall` toggles
     producible_locally: false
@@ -219,6 +219,6 @@ REFERENCES.md      where every number comes from, with sources
 **Built to be extended.** Later modules (a detailed power-budget model, launch-cost
 economics) plug in at clean seams: power is already a single isolated input, and the
 seed mass / resupply figures are the natural cost hooks. This module deliberately
-does *not* model chemistry, nanoscale manufacturing, or anything with a screen — it
+does *not* model chemistry, nanoscale manufacturing, or anything with a screen - it
 does one thing: the closure-and-replication story, grounded and tested.
 ```

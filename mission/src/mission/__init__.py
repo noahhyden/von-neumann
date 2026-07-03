@@ -1,4 +1,4 @@
-"""mission — the end-to-end von Neumann probe mission as one pure fold.
+"""mission - the end-to-end von Neumann probe mission as one pure fold.
 
 Chains the four sibling modules (closure-sim, probe-sim, power-budget,
 launch-economics) into a single deterministic run: launch a seed, arrive at a

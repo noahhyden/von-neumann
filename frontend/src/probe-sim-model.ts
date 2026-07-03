@@ -1,5 +1,5 @@
 /**
- * The probe-sim model as a pimas reactive graph — the fourth surface.
+ * The probe-sim model as a pimas reactive graph - the fourth surface.
  *
  * Signals for the probe's array and where it is; a memo over the parity-tested TS
  * port (`probe-sim.ts`) for delivered power and the compute headroom that power

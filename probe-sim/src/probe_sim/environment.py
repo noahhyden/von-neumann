@@ -2,12 +2,12 @@
 
 The probe is solar-electric, so how far from the Sun it can work is set by how much
 power sunlight delivers there. Irradiance falls off as the inverse square of
-heliocentric distance — that is the physical fact that gates a solar probe's range
+heliocentric distance - that is the physical fact that gates a solar probe's range
 (Borgue & Hein 2020): ~1361 W/m^2 near Earth down to ~50 W/m^2 near Jupiter, beyond
 which a solar-electric design becomes impractical and the mission is constrained to
 the inner/mid solar system.
 
-All figures are sourced — see REFERENCES.md.
+All figures are sourced - see REFERENCES.md.
 """
 
 from __future__ import annotations

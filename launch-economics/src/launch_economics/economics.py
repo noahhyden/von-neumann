@@ -8,7 +8,7 @@ installation. This compares the two:
 - **replication**: launch only the seed plus the "vitamins" (parts that can't be made
   locally) delivered over the campaign.
 
-The ratio of those masses is the **launch-mass leverage** — how many kilograms of
+The ratio of those masses is the **launch-mass leverage** - how many kilograms of
 installed capability each launched kilogram ultimately yields. It ties straight to
 `closure-sim`: lower mass closure means more vitamins, means less leverage.
 
@@ -47,7 +47,7 @@ class ReplicationLaunchComparison(BaseModel):
 
     @property
     def mass_leverage(self) -> float:
-        """Installed kg per launched kg — the payoff multiplier of replicating in place."""
+        """Installed kg per launched kg - the payoff multiplier of replicating in place."""
         return self.target_installed_mass_kg / self.launched_mass_kg
 
     @property

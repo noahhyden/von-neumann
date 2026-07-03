@@ -1,9 +1,9 @@
 /**
- * The multi-probe model as a pimas reactive graph — the sixth surface, a live fleet.
+ * The multi-probe model as a pimas reactive graph - the sixth surface, a live fleet.
  *
  * Knob signals + a memo over the parity-tested TS port (`multi-probe.ts`) that reruns
  * the whole deterministic fold, plus a "day" scrubber signal that selects one snapshot
- * from the run's timeline — drag it to watch the fleet grow and disperse. The fold is
+ * from the run's timeline - drag it to watch the fleet grow and disperse. The fold is
  * cheap (tens of probes, a few hundred steps), so re-running on every knob change is
  * fine; no store/speculate needed (same lightweight shape as the other surfaces).
  */
@@ -15,7 +15,7 @@ import type { FleetResult, FleetStep } from "./multi-probe.js";
 import { LUNAR_REGOLITH_SEED } from "./scenarios.js";
 
 const DURATION_DAYS = 14600; // 40 years
-const DT_DAYS = 20; // 731 steps — fast to re-run, plenty of resolution for a ~582-day cadence
+const DT_DAYS = 20; // 731 steps - fast to re-run, plenty of resolution for a ~582-day cadence
 const SEED = 0x9e3779b9;
 
 export interface MultiProbeModel {

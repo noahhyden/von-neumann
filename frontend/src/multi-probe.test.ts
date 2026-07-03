@@ -1,7 +1,7 @@
 /**
  * Parity test: the TS multi-probe port must reproduce the Python `multi_probe.fleet`
  * exactly, including the seeded mulberry32 sequence (jitter case). Ground truth was
- * generated from the Python package. Pure — no pimas (Layer A). If the Python model
+ * generated from the Python package. Pure - no pimas (Layer A). If the Python model
  * changes, regenerate these numbers.
  */
 import { test } from "node:test";
@@ -67,7 +67,7 @@ const CASES: Case[] = [
     },
   },
   {
-    label: "far (30 AU) — spatial power wall",
+    label: "far (30 AU) - spatial power wall",
     overrides: { startDistanceAu: 30.0, maxProbes: 256 }, seed: 0x9e3779b9, durationDays: 3650, dtDays: 10,
     expect: {
       finalPopulation: 2, totalChildren: 1, doublingTimeDays: 2830, vitaminsConsumedKg: 350,

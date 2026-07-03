@@ -2,19 +2,19 @@
 
 Given a `MissionScenario`, this chains the whole story of launching a self-replicating
 probe operation, in six stages, each a call into an existing module's public API
-(CLAUDE.md §4) — no new physics, no new numbers:
+(CLAUDE.md §4) - no new physics, no new numbers:
 
-  0. LAUNCH      launch-economics — seed + vitamins launched at $/kg; the rocket
+  0. LAUNCH      launch-economics - seed + vitamins launched at $/kg; the rocket
                  equation's propellant fraction shows *why* that $/kg is what it is.
-  1. CLOSURE     closure-sim      — the factory's mass closure ratio.
-  2. ARRIVE      probe-sim        — solar power delivered at heliocentric distance d
+  1. CLOSURE     closure-sim      - the factory's mass closure ratio.
+  2. ARRIVE      probe-sim        - solar power delivered at heliocentric distance d
                                     (inverse-square).
-  3. SPLIT       power-budget     — divide that power into build / think / housekeeping.
-  4. REPLICATE   closure-sim      — feed the *manufacturing* share into the replication
+  3. SPLIT       power-budget     - divide that power into build / think / housekeeping.
+  4. REPLICATE   closure-sim      - feed the *manufacturing* share into the replication
                                     sim; does output ever reach target?
-  5. THINK       power-budget     — the compute the *compute* share buys (FLOPS,
+  5. THINK       power-budget     - the compute the *compute* share buys (FLOPS,
                                     brain-equivalents).
-  6. PAYOFF      launch-economics — launch-mass leverage and $ saved vs. launching the
+  6. PAYOFF      launch-economics - launch-mass leverage and $ saved vs. launching the
                                     finished installation, with vitamins set by closure.
 
 Pure, deterministic, plain data; zero pimas imports (CLAUDE.md §7). This is the ground
@@ -91,7 +91,7 @@ def run_mission(scenario: MissionScenario) -> MissionResult:
     # 1. CLOSURE
     closure_ratio = compute_closure(factory).closure_ratio
 
-    # 0 / 6. LAUNCH + PAYOFF — vitamins follow from closure; seed comes from the factory.
+    # 0 / 6. LAUNCH + PAYOFF - vitamins follow from closure; seed comes from the factory.
     comparison = comparison_from_closure(
         factory,
         target_installed_mass_kg=scenario.target_installed_mass_kg,
@@ -101,12 +101,12 @@ def run_mission(scenario: MissionScenario) -> MissionResult:
     v_e = exhaust_velocity_m_s(scenario.specific_impulse_s)
     prop_frac = propellant_fraction(scenario.delta_v_m_s, v_e)
 
-    # 2. ARRIVE — inverse-square solar power at the heliocentric distance.
+    # 2. ARRIVE - inverse-square solar power at the heliocentric distance.
     array = scenario.array
     delivered_w = array.power_w(scenario.distance_au)
     irradiance = solar_irradiance_w_m2(scenario.distance_au)
 
-    # 3. SPLIT — one power split, routed to the two consumers below (reconciles the
+    # 3. SPLIT - one power split, routed to the two consumers below (reconciles the
     # modules: probe-sim's range.py gives the factory 100% of power; here the factory
     # gets only its manufacturing share, and compute gets its own).
     budget = PowerBudget(
@@ -116,12 +116,12 @@ def run_mission(scenario: MissionScenario) -> MissionResult:
         fraction_housekeeping=scenario.fraction_housekeeping,
     )
 
-    # 5. THINK — the compute the compute-share buys.
+    # 5. THINK - the compute the compute-share buys.
     compute_flops = compute_capacity_flops(
         budget.compute_w, scenario.compute_efficiency_flops_per_w
     )
 
-    # 4. REPLICATE — feed the manufacturing share (kW) into the replication sim. If the
+    # 4. REPLICATE - feed the manufacturing share (kW) into the replication sim. If the
     # split leaves no manufacturing power, the factory cannot build: report a stall
     # rather than asking the sim to run at zero power (ReplicationParams requires > 0).
     manufacturing_kw = budget.manufacturing_w / 1000.0

@@ -1,5 +1,5 @@
 /**
- * TS port of `probe-sim` (environment + autonomy) — pure math, no pimas.
+ * TS port of `probe-sim` (environment + autonomy) - pure math, no pimas.
  *
  * The factory-free part of the probe model: solar power vs heliocentric distance,
  * and the compute headroom that power buys (reusing the power-budget port). The
@@ -8,11 +8,11 @@
  * A). Sources: ../../probe-sim/REFERENCES.md.
  *
  * Self-contained (like the other ports) so it runs under `node --test`: the two
- * compute helpers mirror the power-budget port — throughput = power × efficiency,
+ * compute helpers mirror the power-budget port - throughput = power × efficiency,
  * brain-equivalents against a ~1e18-FLOPS scale ([ESTIMATE], Sandberg & Bostrom 2008).
  */
 
-// [ESTIMATE] brain-equivalent compute, FLOPS — mirrors the power-budget module.
+// [ESTIMATE] brain-equivalent compute, FLOPS - mirrors the power-budget module.
 const BRAIN_COMPUTE_FLOPS_ESTIMATE = 1e18;
 
 // Total Solar Irradiance at 1 AU, W/m^2 (Kopp & Lean 2011).

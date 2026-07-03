@@ -3,7 +3,7 @@
 These assert on real numbers and the regimes that matter (CLAUDE.md §2): the chain
 reaches target near Earth, is power-starved far out, stalls when no power goes to
 manufacturing, obeys the inverse-square law, and prices the launch payoff from closure.
-Not "it ran" — what it computed.
+Not "it ran" - what it computed.
 """
 
 from __future__ import annotations
@@ -67,7 +67,7 @@ def test_inverse_square_power_falloff() -> None:
 
 def test_power_starved_far_from_sun_fails_to_replicate() -> None:
     # At Jupiter's distance the array delivers ~150 kW; the manufacturing share is too
-    # little for the factory to ever reach target — a real edge, not a crash.
+    # little for the factory to ever reach target - a real edge, not a crash.
     r = run_mission(default_mission_scenario(distance_au=5.203))
     assert r.delivered_power_w < 200_000.0
     assert r.reaches_target is False

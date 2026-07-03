@@ -2,12 +2,12 @@ name: pimas-canary
 
 # Detects VERIFIED pimas framework regressions from the frontend and files them in
 # the pimas repo. Attribution is by test layer (see frontend/README.md "pimas canary"):
-#   Layer A (npm test)          — pure model, no pimas. Green here => our model is fine.
-#   Layer B (npm run test:contract) — pimas primitives only. Red here (with A green) => pimas.
+#   Layer A (npm test)          - pure model, no pimas. Green here => our model is fine.
+#   Layer B (npm run test:contract) - pimas primitives only. Red here (with A green) => pimas.
 # Gate: A green AND B red => framework breakage => open/append an issue in pimas.
 #
 # pimas is linked via file:../../pimas as a symlink to its working tree, and dist/ is
-# gitignored with no prepare hook — so CI must check pimas out beside von-neumann and
+# gitignored with no prepare hook - so CI must check pimas out beside von-neumann and
 # `npm run build` it before the frontend can import it. pimas is v0.0.0 with no tags,
 # so the baseline is pinned by git SHA in frontend/.pimas-good-sha.
 
@@ -42,7 +42,7 @@ jobs:
         with:
           node-version: "24" # frontend tests run .ts directly via node --test
 
-      # dist/ is gitignored and pimas has no prepare hook — build before consuming.
+      # dist/ is gitignored and pimas has no prepare hook - build before consuming.
       - name: Build pimas
         working-directory: pimas
         run: |
@@ -53,18 +53,18 @@ jobs:
         working-directory: von-neumann/frontend
         run: npm ci
 
-      - name: Layer A — model parity (pure, no pimas)
+      - name: Layer A - model parity (pure, no pimas)
         id: parity
         working-directory: von-neumann/frontend
         run: npm test
 
-      - name: Layer B — pimas contract canary
+      - name: Layer B - pimas contract canary
         id: canary
         if: steps.parity.outcome == 'success'
         working-directory: von-neumann/frontend
         run: npm run test:contract
 
-      - name: Layer C — integration smoke (non-blocking context)
+      - name: Layer C - integration smoke (non-blocking context)
         id: smoke
         if: steps.parity.outcome == 'success'
         continue-on-error: true
@@ -88,7 +88,7 @@ jobs:
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           TITLE="pimas-canary: framework regression breaks von-neumann/frontend"
           BODY=$(cat <<EOF
-          Layer A (pure model parity) **passed**; Layer B (pimas contract canary) **failed** — attributed to **pimas**, not to frontend code.
+          Layer A (pure model parity) **passed**; Layer B (pimas contract canary) **failed** - attributed to **pimas**, not to frontend code.
 
           - Regression is in pimas between \`${GOOD}\` (last known-good) and \`${HEAD_SHA}\` (HEAD).
           - Failing contracts: see the run log.

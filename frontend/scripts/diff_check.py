@@ -75,7 +75,7 @@ def main() -> int:
     if failures:
         print(f"{failures} MISMATCHES")
         return 1
-    print("TS port matches Python on all random cases ✔")
+    print("TS port matches Python on all random cases: ok")
     return 0
 
 

@@ -1,6 +1,6 @@
 /**
  * Parity test: the TS port must reproduce the Python power-budget exactly.
- * Ground-truth mirrors power-budget/tests/*. Pure — no pimas (Layer A).
+ * Ground-truth mirrors power-budget/tests/*. Pure - no pimas (Layer A).
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";

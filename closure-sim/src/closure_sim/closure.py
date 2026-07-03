@@ -48,7 +48,7 @@ def compute_closure(factory: Factory) -> ClosureReport:
         )
         for s in factory.vitamins
     ]
-    # Heaviest vitamins first — that's the order an engineer wants to read.
+    # Heaviest vitamins first - that's the order an engineer wants to read.
     vitamins.sort(key=lambda v: v.mass_kg, reverse=True)
 
     total_energy = sum(s.build_energy_kwh for s in factory.subsystems)

@@ -3,11 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "The monorepo's central frontend surface — von-neumann's models run live in pimas. First surface: the electronics wall (drag the assumptions, speculate the wall, watch the real model recompute).",
+  "description": "The monorepo's central frontend surface - von-neumann's models run live in pimas. First surface: the electronics wall (drag the assumptions, speculate the wall, watch the real model recompute).",
   "scripts": {
     "build": "node build.mjs",
     "serve": "node --watch-path=src build.mjs",
-    "test": "node --test src/model.test.ts src/launch-economics.test.ts src/power-budget.test.ts src/probe-sim.test.ts src/mission.test.ts src/multi-probe.test.ts src/swarm.test.ts src/coordination.test.ts",
+    "test": "node --test src/model.test.ts src/launch-economics.test.ts src/power-budget.test.ts src/probe-sim.test.ts src/mission.test.ts src/multi-probe.test.ts src/swarm.test.ts src/coordination.test.ts src/sources.test.ts",
     "test:contract": "node --test src/pimas-contract.test.ts",
     "smoke": "esbuild src/smoke.ts --bundle --format=esm --platform=node --outfile=/tmp/frontend-smoke.mjs && node /tmp/frontend-smoke.mjs",
     "test:diff": "node scripts/gen-diff.mjs && cd ../closure-sim && uv run python ../frontend/scripts/diff_check.py"

@@ -93,7 +93,7 @@ class SwarmParams(BaseModel):
 class Probe:
     """One in-flight hop: heading to ``target`` star, arriving at ``arrive_year``.
 
-    ``speed_pc_yr`` is the probe's current galactic-frame speed — constant (= powered
+    ``speed_pc_yr`` is the probe's current galactic-frame speed - constant (= powered
     cruise) under the powered policy, but accumulated across slingshots otherwise.
     """
 
@@ -151,6 +151,6 @@ class SwarmResult:
     policy: str
     coordination: str = "instant"  # knowledge regime this run used
     total_arrivals: int = 0  # every probe arrival (settlements + wasted trips)
-    wasted_arrivals: int = 0  # arrivals at an already-settled star — the cost of stale info
+    wasted_arrivals: int = 0  # arrivals at an already-settled star - the cost of stale info
     retarget_count: int = 0  # total re-target events
     steps: list[SwarmStep] = field(default_factory=list)

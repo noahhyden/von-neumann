@@ -1,11 +1,11 @@
 /**
- * The swarm model as a pimas reactive graph — the seventh surface, a live settlement
+ * The swarm model as a pimas reactive graph - the seventh surface, a live settlement
  * front you can watch fill the galaxy.
  *
  * Knob signals + a memo over the parity-tested TS port (`swarm.ts`) that reruns the
  * deterministic fold, plus a "year" scrubber (and a play flag) that select a moment in
  * the run. The canvas draws the star field at the scrubbed year straight from the
- * result's per-star settlement years — no re-run while scrubbing (§7: rendering reads
+ * result's per-star settlement years - no re-run while scrubbing (§7: rendering reads
  * the fold's buffers). Re-running only happens when a knob changes.
  */
 import { createSignal, createMemo } from "pimas";
@@ -43,7 +43,7 @@ export interface SwarmModel {
    * graph scales with the one thing a human looks at, never with nStars. */
   hoverStar: Accessor<number | null>;
   setHoverStar: Setter<number | null>;
-  /** the decision timescale τ (years) in ρ = latency/τ — a knob, default 1 yr [ESTIMATE]. */
+  /** the decision timescale τ (years) in ρ = latency/τ - a knob, default 1 yr [ESTIMATE]. */
   decisionTimescale: Accessor<number>;
   setDecisionTimescale: Setter<number>;
   /** light-time / ρ / rung for the hovered star relative to the homeworld, or null. */
@@ -51,7 +51,7 @@ export interface SwarmModel {
   /** knowledge regime: "instant" (perfect global info) | "lightspeed" (news travels at c). */
   coordination: Accessor<Coordination>;
   setCoordination: Setter<Coordination>;
-  /** the perfect-info run at the same knobs — only when in lightspeed mode (else null), so
+  /** the perfect-info run at the same knobs - only when in lightspeed mode (else null), so
    * the surface can show the cost of lag as a delta. */
   instantBaseline: Accessor<SwarmResult | null>;
 }
@@ -117,7 +117,7 @@ export function createSwarmModel(): SwarmModel {
     return { count, frontPc: front };
   });
 
-  // The coordination readout for the hovered star — reads the fold's position buffers,
+  // The coordination readout for the hovered star - reads the fold's position buffers,
   // classifies the light-time to the homeworld into a rung. Recomputes only when the
   // hover, the run, or τ changes; independent of nStars (§7).
   const hoverInfo = createMemo<HoverInfo | null>(() => {

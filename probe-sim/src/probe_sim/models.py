@@ -6,7 +6,7 @@ electronics carried along and not replicated ("vitamins", closure-sim's framing)
 
 Only the sourced quantities live here (the module set, the replicated fraction).
 The per-module MASS breakdown is not published at the fidelity we need and is
-tracked as a [GAP] in REFERENCES.md — it is deliberately NOT invented.
+tracked as a [GAP] in REFERENCES.md - it is deliberately NOT invented.
 """
 
 from __future__ import annotations

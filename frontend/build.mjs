@@ -1,6 +1,6 @@
 /**
  * Build: bundle the client app (src/main.tsx) into dist/app.js with pimas bundled
- * in, and copy index.html beside it. One interactive page, one bundle — the
+ * in, and copy index.html beside it. One interactive page, one bundle - the
  * smallest honest pipeline. Reports the gzipped JS the page ships.
  */
 import { build as esbuild } from "esbuild";

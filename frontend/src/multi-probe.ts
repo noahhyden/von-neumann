@@ -1,14 +1,14 @@
 /**
- * TS port of the `multi-probe` module — a small, deterministic, seeded fleet fold.
+ * TS port of the `multi-probe` module - a small, deterministic, seeded fleet fold.
  *
  * Faithful port of the Python package (`multi_probe.fleet`): each probe builds copies
- * at `min(machinery rate, energy cap)` — closure-sim's regime logic for a fixed-size
- * probe, reusing probe-sim's 1/d² power — and spawns children that disperse outward
+ * at `min(machinery rate, energy cap)` - closure-sim's regime logic for a fixed-size
+ * probe, reusing probe-sim's 1/d² power - and spawns children that disperse outward
  * and consume imported vitamins. Two ceilings emerge: a finite vitamin pool (the
  * electronics wall at fleet scale) and a spatial power wall (~13.6 AU crossover).
  *
  * Randomness (optional transit jitter) is a seeded mulberry32 generator threaded
- * through the state (CLAUDE.md §7) — byte-identical to the Python and to
+ * through the state (CLAUDE.md §7) - byte-identical to the Python and to
  * scripts/gen-diff.mjs, so the fold replays bit-for-bit. Parity-tested against the
  * Python ground truth in `multi-probe.test.ts` (Layer A). Sibling ports imported with
  * `.ts` so this loads under `node --test` (see mission.ts for the why).
@@ -17,7 +17,7 @@ import { computeClosure } from "./model.ts";
 import type { Factory } from "./model.ts";
 import { solarArrayPowerW } from "./probe-sim.ts";
 
-// ── mulberry32, threaded (never ambient) — mirrors multi_probe/rng.py ──────────
+// ── mulberry32, threaded (never ambient) - mirrors multi_probe/rng.py ──────────
 export function nextFloat(state: number): [number, number] {
   const s = (state + 0x6d2b79f5) | 0;
   let t = Math.imul(s ^ (s >>> 15), 1 | s);
@@ -140,7 +140,7 @@ export function initialState(params: FleetParams, seed: number): FleetState {
   return { rng: seedState(seed), day: 0, probes, vitaminPoolKg: params.vitaminPoolKg, nextId: params.nSeedProbes };
 }
 
-/** Advance the whole fleet by dt days. Pure — returns a new state, input untouched. */
+/** Advance the whole fleet by dt days. Pure - returns a new state, input untouched. */
 export function step(state: FleetState, params: FleetParams, dt: number): FleetState {
   const localPerChild = params.closureRatio * params.seedMassKg;
   const vitaminsPerChild = (1 - params.closureRatio) * params.seedMassKg;

@@ -1,4 +1,4 @@
-"""A tiny seeded PRNG, threaded through the fold — never ambient (CLAUDE.md §7).
+"""A tiny seeded PRNG, threaded through the fold - never ambient (CLAUDE.md §7).
 
 `mulberry32`: 32-bit state, one multiply-xor-shift round per draw. We carry the state
 *in* the fleet state and return a new state on every draw, so the whole simulation is

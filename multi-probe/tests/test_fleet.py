@@ -3,7 +3,7 @@
 These assert on real numbers and the regimes that matter (CLAUDE.md §2): sourced
 params, seeded determinism, geometric growth near the Sun, the two emergent ceilings
 (vitamin pool = electronics wall; 1/d² power = spatial wall), mass balance, dispersal,
-and the fleet cap. Not "it ran" — what it computed.
+and the fleet cap. Not "it ran" - what it computed.
 """
 
 from __future__ import annotations
@@ -97,7 +97,7 @@ def test_fleet_cap_is_respected(factory) -> None:
 
 def test_spatial_power_wall_far_from_sun(factory) -> None:
     # Start the fleet at 30 AU: sunlight is ~1/900 of Earth's, build rate collapses, so
-    # a probe barely (or never) copies within the run — far fewer than near the Sun.
+    # a probe barely (or never) copies within the run - far fewer than near the Sun.
     near = simulate_fleet(params_from_factory(factory, max_probes=256), duration_days=3650)
     far = simulate_fleet(params_from_factory(factory, start_distance_au=30.0, max_probes=256), duration_days=3650)
     assert far.final_population < near.final_population

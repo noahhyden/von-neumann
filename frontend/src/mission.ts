@@ -1,17 +1,17 @@
 /**
- * TS port of the `mission` module — the end-to-end probe operation as one pure fold.
+ * TS port of the `mission` module - the end-to-end probe operation as one pure fold.
  *
  * It writes no new physics: it *composes* the four existing ports (model.ts,
  * probe-sim.ts, power-budget.ts, launch-economics.ts) exactly as the Python
  * `mission.run_mission` composes the four sibling packages. Parity-tested against the
- * Python ground truth in `mission.test.ts` (Layer A — no pimas). Sources live in
+ * Python ground truth in `mission.test.ts` (Layer A - no pimas). Sources live in
  * ../../mission/REFERENCES.md (which points at each sibling's REFERENCES.md).
  *
  * The six stages: launch → closure → arrive (solar power at distance) → split power →
  * replicate (manufacturing share) → think (compute share) → price the payoff.
  */
 // NOTE: sibling ports imported with explicit `.ts` so this composed port loads under
-// `node --test` (Layer A), which — unlike esbuild — does not rewrite .js→.ts. esbuild
+// `node --test` (Layer A), which - unlike esbuild - does not rewrite .js→.ts. esbuild
 // resolves .ts fine, so the build is unaffected.
 import { computeClosure, simulate } from "./model.ts";
 import type { Factory } from "./model.ts";
@@ -111,7 +111,7 @@ export interface MissionResult {
   bindingRegime: string | null;
 }
 
-/** Run the whole chain once — the pure fold the follow-along surface renders. */
+/** Run the whole chain once - the pure fold the follow-along surface renders. */
 export function runMission(s: MissionScenario): MissionResult {
   const rep = s.factory.replication;
   if (!rep) throw new RangeError("mission factory needs replication params");
@@ -120,7 +120,7 @@ export function runMission(s: MissionScenario): MissionResult {
   // 1. CLOSURE
   const closureRatio = computeClosure(s.factory).closure_ratio;
 
-  // 0 / 6. LAUNCH + PAYOFF — vitamins from closure; seed from the factory itself.
+  // 0 / 6. LAUNCH + PAYOFF - vitamins from closure; seed from the factory itself.
   const comparison = comparisonFromClosure({
     closureRatio,
     targetInstalledMassKg: s.targetInstalledMassKg,
@@ -129,12 +129,12 @@ export function runMission(s: MissionScenario): MissionResult {
   });
   const propFrac = propellantFraction(s.deltaVMs, exhaustVelocityMs(s.specificImpulseS));
 
-  // 2. ARRIVE — inverse-square solar power at the heliocentric distance.
+  // 2. ARRIVE - inverse-square solar power at the heliocentric distance.
   const array = { areaM2: s.arrayAreaM2, efficiency: s.arrayEfficiency };
   const deliveredPowerW = solarArrayPowerW(array, s.distanceAu);
   const irradianceWM2 = solarIrradianceWM2(s.distanceAu);
 
-  // 3. SPLIT — one split, routed to the two consumers below.
+  // 3. SPLIT - one split, routed to the two consumers below.
   const budget = allocate({
     totalW: deliveredPowerW,
     fractionManufacturing: s.fractionManufacturing,
@@ -142,10 +142,10 @@ export function runMission(s: MissionScenario): MissionResult {
     fractionHousekeeping: s.fractionHousekeeping,
   });
 
-  // 5. THINK — the compute the compute-share buys.
+  // 5. THINK - the compute the compute-share buys.
   const computeFlops = computeCapacityFlops(budget.computeW, s.computeEfficiencyFlopsPerW);
 
-  // 4. REPLICATE — feed the manufacturing share (kW) into the replication sim. No
+  // 4. REPLICATE - feed the manufacturing share (kW) into the replication sim. No
   // manufacturing power → the factory can't build; report a stall rather than
   // simulating at zero power (ReplicationParams requires available_power_kw > 0).
   const manufacturingKw = budget.manufacturingW / 1000;

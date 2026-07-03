@@ -2,7 +2,7 @@
  * Differential test, half 1 of 2: generate N random factories + replication
  * params, run them through the TS port, and dump {input, ts-results} to JSON.
  * `diff_check.py` then recomputes each with the real Python closure-sim and
- * asserts the two agree. This is the strongest correctness proof — it pins the
+ * asserts the two agree. This is the strongest correctness proof - it pins the
  * port against the reference across the whole input space, not just two scenarios.
  *
  *   node scripts/gen-diff.mjs && (cd ../closure-sim && uv run python ../frontend/scripts/diff_check.py)
@@ -84,7 +84,7 @@ for (let i = 0; i < N; i++) {
   });
 }
 
-// JSON can't carry Infinity/NaN (they become null) — encode as sentinels the
+// JSON can't carry Infinity/NaN (they become null) - encode as sentinels the
 // Python side decodes, so a genuine inf==inf comparison isn't lost in transport.
 const enc = (_k, v) =>
   typeof v === "number" && !Number.isFinite(v)

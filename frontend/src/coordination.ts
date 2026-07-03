@@ -1,16 +1,16 @@
 /**
- * Light-speed coordination limits — the pure, testable core (Layer A, no pimas).
+ * Light-speed coordination limits - the pure, testable core (Layer A, no pimas).
  *
  * A swarm coordinates by sharing state, and state travels no faster than light. What
  * matters is the ratio ρ = (round-trip latency) / (decision timescale), where the
  * latency is fixed by geometry: round-trip = 2·d/c. As ρ climbs, a swarm walks down a
- * *staircase* of coordination modes — real-time closed-loop → move-and-wait →
- * supervisory → delay-tolerant → fully independent colonies — and it does so in jumps,
+ * *staircase* of coordination modes - real-time closed-loop → move-and-wait →
+ * supervisory → delay-tolerant → fully independent colonies - and it does so in jumps,
  * not smoothly (the consensus-stability wall, Olfati-Saber & Murray 2004).
  *
  * This module turns an inter-node distance in parsecs into that classification. Every
  * number is sourced in swarm/REFERENCES.md ("Coordination-horizon visualization"). It is
- * framework-agnostic and imports no pimas — the reactive model (`swarm-model.ts`) and the
+ * framework-agnostic and imports no pimas - the reactive model (`swarm-model.ts`) and the
  * canvas (`main.tsx`) are the skin over it.
  *
  * The rung *transitions* are sourced from the teleoperation/networking literature; the
@@ -19,7 +19,7 @@
  */
 import { C_PC_PER_YEAR } from "./swarm.ts";
 
-/** Julian year in seconds — matches the value C_PC_PER_YEAR is derived from (swarm.ts). */
+/** Julian year in seconds - matches the value C_PC_PER_YEAR is derived from (swarm.ts). */
 export const SEC_PER_YEAR = 3.15576e7;
 
 /** One-way light-travel time (years) across a distance in parsecs. */
@@ -44,7 +44,7 @@ export function rho(distPc: number, decisionTimescaleYears: number): number {
 export interface Rung {
   /** stable machine key, low index = fast/tight coordination. */
   key: "realtime" | "movewait" | "supervisory" | "dtn" | "independent";
-  /** rung index 0..4 — monotonic in latency, handy for comparisons. */
+  /** rung index 0..4 - monotonic in latency, handy for comparisons. */
   index: number;
   /** the coordination mode this rung permits. */
   label: string;

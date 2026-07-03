@@ -1,13 +1,13 @@
 # Where the numbers come from
 
-The point of this tool isn't precise prediction — it's to show how the *pieces fit
+The point of this tool isn't precise prediction - it's to show how the *pieces fit
 together*. But the inputs are picked to match real research, not invented. Here's
 the grounding for each assumption, with sources, and an honest note on how solid
 each one is.
 
 ## The big idea (self-replicating factories & "closure")
 
-- **NASA CP-2255, "Advanced Automation for Space Missions" (1980)**, Ch. 5 — the
+- **NASA CP-2255, "Advanced Automation for Space Missions" (1980)**, Ch. 5 - the
   original self-replicating lunar factory study (Freitas, von Tiesenhausen et al.).
   - Coined the **"vitamins"** framing: build 90–95% of the factory locally and ship
     the last 5–10% (mostly electronics) from Earth.
@@ -16,12 +16,12 @@ each one is.
   - Power: **~1.7 MW** (solar) for its 100-tonne seed (design range 0.47–11.5 MW).
   - https://www.rfreitas.com/Astro/GrowingLunarFactory1981.htm ·
     https://ntrs.nasa.gov/citations/19830007081
-- **Freitas & Merkle, "Kinematic Self-Replicating Machines" (2004)** — the modern
+- **Freitas & Merkle, "Kinematic Self-Replicating Machines" (2004)** - the modern
   synthesis. Defines matter / energy / information closure and the key dynamic this
   tool models: below full closure you're stuck waiting on resupply; only near 100%
   closure does growth become self-sustaining and exponential.
   - http://www.molecularassembler.com/KSRM.htm
-- **"Guided Self-Replicating Factory" (arXiv 2110.15198, 2021)** — recent revival.
+- **"Guided Self-Replicating Factory" (arXiv 2110.15198, 2021)** - recent revival.
   Doubling time <1 year → large colony in ~two decades; near-term realistic closure
   ~70%; chips/solar/circuitry stay Earth-sourced.
   - https://arxiv.org/abs/2110.15198
@@ -34,8 +34,8 @@ each one is.
 
 | Assumption (this tool) | Real-world grounding | How solid |
 |---|---|---|
-| Seed mass 7–12 t | NASA strawman was **100 t**; modern thinking favors smaller seeds | A modeling choice. Lighter than canonical — labeled as "modern/optimistic." |
-| Power ~2–4 MW | NASA nominal **1.7 MW** (range 0.47–11.5 MW), solar | Matches the canon. **But** a multi-MW plant outmasses the seed — so power is treated as separate infrastructure, not part of the seed. |
+| Seed mass 7–12 t | NASA strawman was **100 t**; modern thinking favors smaller seeds | A modeling choice. Lighter than canonical - labeled as "modern/optimistic." |
+| Power ~2–4 MW | NASA nominal **1.7 MW** (range 0.47–11.5 MW), solar | Matches the canon. **But** a multi-MW plant outmasses the seed - so power is treated as separate infrastructure, not part of the seed. |
 | Build rate 15–20 kg/day | NASA implies **~27 kg/day** at equivalent productivity | Reasonable, slightly conservative. |
 | Doubling ~1 year | NASA & the 2021 paper both use **~1 year** | Best-supported number here. |
 
@@ -45,8 +45,8 @@ https://www.nasa.gov/centers-and-facilities/glenn/nasas-fission-surface-power-pr
 ## Energy to manufacture each part (kWh per kg)
 
 These are the **electricity the factory spends on-site** to make 1 kg of a part.
-The headline fact — chips cost thousands of kWh/kg, smelted metal costs single
-digits — is what makes the electronics wall real.
+The headline fact - chips cost thousands of kWh/kg, smelted metal costs single
+digits - is what makes the electronics wall real.
 
 | Part type (this tool) | Value used | Real range (sources below) | Verdict |
 |---|---|---|---|
@@ -70,9 +70,9 @@ energy-expensive thing in the factory by a wide margin.
 
 Sources:
 - Williams, Ayres & Heller, **"The 1.7 Kilogram Microchip"**, *Env. Sci. Technol.*
-  2002 — inputs to make a 2 g chip outweigh it ~600×. https://pubs.acs.org/doi/10.1021/es025643o
+  2002 - inputs to make a 2 g chip outweigh it ~600×. https://pubs.acs.org/doi/10.1021/es025643o
 - Nagapurkar & Das (Oak Ridge NL), IC manufacturing energy, *Sust. Mat. & Tech.*
-  2022 — **9–38 MJ/cm² of wafer**. https://www.osti.gov/servlets/purl/1884036
+  2022 - **9–38 MJ/cm² of wafer**. https://www.osti.gov/servlets/purl/1884036
 - Metals/solar embodied energy: Inventory of Carbon & Energy (ICE) coefficients
   https://www.wgtn.ac.nz/architecture/centres/cbpr/resources/pdfs/ee-coefficients.pdf ;
   Peng et al. 2013 PV life-cycle review
@@ -85,9 +85,9 @@ Sources:
 
 ## What's deliberately simplified
 
-- **Power is flat** (doesn't grow as the factory grows) — a v1 simplification that
+- **Power is flat** (doesn't grow as the factory grows) - a v1 simplification that
   makes the "energy wall" visible. A later module will let power scale.
-- **One number per part type** for manufacturing energy — real LCA depends on which
+- **One number per part type** for manufacturing energy - real LCA depends on which
   metal, recycled vs virgin, which chip node, etc. The README spells out the
   recycled-metal and packaged-chip assumptions baked in.
 - **Terrestrial energy figures** are used as stand-ins; an off-world factory running

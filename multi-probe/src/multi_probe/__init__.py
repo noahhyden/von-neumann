@@ -1,4 +1,4 @@
-"""multi-probe — a small, deterministic fleet of self-replicating probes.
+"""multi-probe - a small, deterministic fleet of self-replicating probes.
 
 The intermediate step between the single probe and the swarm (ROADMAP §3): a handful
 of probes (tens, not 10⁵), each an agent that builds copies of itself at a rate its

@@ -1,4 +1,4 @@
-"""launch-economics — the economics of not launching mass.
+"""launch-economics - the economics of not launching mass.
 
 Launch cost, the rocket-equation Δv penalty on delivering mass across the solar
 system, and the launch-mass leverage of shipping a self-replicating seed instead of

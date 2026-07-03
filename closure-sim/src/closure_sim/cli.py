@@ -18,7 +18,7 @@ from .scenarios import load_factory
 
 # Plain-language explanation of each growth bottleneck, for non-technical readers.
 REGIME_PLAIN = {
-    Regime.MATERIAL: "growing fast — limited only by its own size (good)",
+    Regime.MATERIAL: "growing fast - limited only by its own size (good)",
     Regime.ENERGY: "out of electricity to run its machines",
     Regime.RESUPPLY: "waiting on vitamins shipped from Earth",
 }
@@ -79,7 +79,7 @@ def _resolve_params(factory: Factory, overrides: dict) -> ReplicationParams:
 
 
 def _print_closure(report: ClosureReport) -> None:
-    table = Table(title=f"Closure — {report.factory_name}", title_style="bold cyan")
+    table = Table(title=f"Closure - {report.factory_name}", title_style="bold cyan")
     table.add_column("Metric")
     table.add_column("Value", justify="right")
     table.add_row("Total weight", f"{report.total_mass_kg:,.0f} kg")
@@ -96,7 +96,7 @@ def _print_closure(report: ClosureReport) -> None:
 
     if report.vitamins:
         vt = Table(
-            title="Vitamins — the parts it can't make (heaviest first)",
+            title="Vitamins - the parts it can't make (heaviest first)",
             title_style="bold yellow",
         )
         vt.add_column("Part")
@@ -117,7 +117,7 @@ def _print_closure(report: ClosureReport) -> None:
 
 def _print_sim(result: SimResult) -> None:
     table = Table(
-        title=f"Replication — {result.factory_name}", title_style="bold cyan"
+        title=f"Replication - {result.factory_name}", title_style="bold cyan"
     )
     table.add_column("Metric")
     table.add_column("Value", justify="right")
@@ -207,7 +207,7 @@ def wall(
 
 def _print_wall(report: ElectronicsWallReport) -> None:
     console.print(
-        f"[bold cyan]The electronics wall — {report.factory_name}[/bold cyan]\n"
+        f"[bold cyan]The electronics wall - {report.factory_name}[/bold cyan]\n"
         f"What if this factory could make its own electronics "
         f"({report.electronics_mass_kg:,.0f} kg, "
         f"{report.electronics_mass_share * 100:.2f}% of its weight)?"
@@ -252,20 +252,20 @@ def _print_wall(report: ElectronicsWallReport) -> None:
     if report.time_to_target_delta_days is not None:
         d = report.time_to_target_delta_days
         console.print(
-            f"\n[bold green]✓ Making its own chips gets the factory to the target "
+            f"\n[bold green]Making its own chips gets the factory to the target "
             f"{d:,.0f} days ({d / 365.25:.1f} years) sooner.[/bold green]"
         )
     elif report.before.time_to_target_days is None and report.after.time_to_target_days is not None:
         console.print(
-            "\n[bold green]✓ As shipped it never reaches the target; making its own "
+            "\n[bold green]As shipped it never reaches the target; making its own "
             "chips makes the target reachable.[/bold green]"
         )
     elif report.before.time_to_target_days is not None and report.after.time_to_target_days is None:
         console.print(
-            "\n[bold red]✗ Backfire: making its own chips makes things WORSE. Chips "
+            "\n[bold red]Backfire: making its own chips makes things WORSE. Chips "
             "take thousands of times more electricity to manufacture than metal, so "
             "the factory now runs out of power long before it runs out of parts. "
-            "More self-sufficient on paper, but stuck in practice — try a much higher "
+            "More self-sufficient on paper, but stuck in practice - try a much higher "
             "--power to see when it would finally pay off.[/bold red]"
         )
 

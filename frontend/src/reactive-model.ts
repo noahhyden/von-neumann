@@ -4,16 +4,16 @@
  * This is the whole point of the exercise: the factory's bill-of-materials is a
  * `createStore` (so a hypothetical "make the chips locally" edit is a copy-on-write
  * shadow write), the replication assumptions are signals (the sliders), and every
- * result — closure, doubling time, the binding regime, the growth trajectory — is
+ * result - closure, doubling time, the binding regime, the growth trajectory - is
  * a `createMemo` over the SAME pure functions the Python CLI runs. Given that, the
  * three agent-native powers fall out for free:
  *
- *   • SUBSCRIBE  — the DOM reads the memos directly; drag a slider, only the outputs
+ *   • SUBSCRIBE  - the DOM reads the memos directly; drag a slider, only the outputs
  *                  that actually depend on it re-render.
- *   • SPECULATE  — `previewChipsLocal()` runs the electronics-wall what-if against a
+ *   • SPECULATE  - `previewChipsLocal()` runs the electronics-wall what-if against a
  *                  SHADOW of the graph (`speculate`): the exact after-state, computed
  *                  by re-running the real model, with NOTHING committed. Free rollback.
- *   • EXPLAIN    — `explainRegime()` reads the live model to say WHY growth is capped
+ *   • EXPLAIN    - `explainRegime()` reads the live model to say WHY growth is capped
  *                  (which of the three ceilings binds), and the agent bridge records
  *                  the field-level causal chain of a committed action.
  */
@@ -39,7 +39,7 @@ export interface ParamSignal {
   label: string;
   unit: string;
   /** When true, the slider commits (fires `set`) only on release, not on every drag
-   * pixel — the thumb/readout still track live. For knobs whose `set` triggers an
+   * pixel - the thumb/readout still track live. For knobs whose `set` triggers an
    * expensive recompute (e.g. a full swarm re-simulation), this turns a drag from dozens
    * of synchronous re-runs into one. Omit for cheap knobs that should update live. */
   commitOnRelease?: boolean;
@@ -54,7 +54,7 @@ export interface WallModel {
   lateRegime: Accessor<RegimeT>;
   chipsAreLocal: Accessor<boolean>;
   electronicsMassShare: number;
-  /** L3: the electronics-wall what-if against a shadow graph — nothing commits. */
+  /** L3: the electronics-wall what-if against a shadow graph - nothing commits. */
   previewChipsLocal: () => { before: SimResult; after: SimResult };
   /** Commit the toggle for real (a store write the UI then re-renders from). */
   commitChipsLocal: () => void;
@@ -78,12 +78,12 @@ export function createWallModel(initialFactory: Factory): WallModel {
   const rep0 = initialFactory.replication;
   if (!rep0) throw new Error("scenario has no replication params");
 
-  // Bill of materials in a store — the copy-on-write speculation surface.
+  // Bill of materials in a store - the copy-on-write speculation surface.
   const [store, setStore] = createStore<{ subsystems: Subsystem[] }>({
     subsystems: initialFactory.subsystems.map((s) => ({ ...s, processes: [...s.processes] })),
   });
 
-  // Replication assumptions as signals — the sliders.
+  // Replication assumptions as signals - the sliders.
   const mk = (v: number): [Accessor<number>, Setter<number>] => createSignal(v);
   const [power, setPower] = mk(rep0.available_power_kw);
   const [buildRate, setBuildRate] = mk(rep0.local_build_rate_kg_per_day);
@@ -125,7 +125,7 @@ export function createWallModel(initialFactory: Factory): WallModel {
   const closureRatio = createMemo(() => closureMemo().closure_ratio);
   const lateRegime = createMemo(() => lateRegimeOf(sim()));
 
-  // Which subsystems are electronics (static — categories don't change).
+  // Which subsystems are electronics (static - categories don't change).
   const elecIndices = initialFactory.subsystems
     .map((s, i) => ({ s, i }))
     .filter(({ s }) => ELECTRONICS_CATEGORIES.has(s.category))
@@ -141,7 +141,7 @@ export function createWallModel(initialFactory: Factory): WallModel {
   const setChips = (local: boolean) =>
     elecIndices.forEach((i) => setStore("subsystems", i, "producible_locally", local));
 
-  // L3 — the electronics wall, run as a SHADOW what-if. `before` is the live
+  // L3 - the electronics wall, run as a SHADOW what-if. `before` is the live
   // committed model; `after` is computed by applying the toggle inside speculate
   // and re-reading the sim memo against the shadow graph. On return the real
   // store is untouched (chipsAreLocal() is still whatever it was).
@@ -171,18 +171,18 @@ export function createWallModel(initialFactory: Factory): WallModel {
     const regime = lateRegimeOf(s);
     const C = s.closure_ratio;
     if (regime === Regime.RESUPPLY) {
-      return `Resupply-limited. Vitamins arrive at a fixed trickle, so at ${(C * 100).toFixed(1)}% closure growth is capped at R/(1−C) = ${s.resupply_ceiling_kg_per_day.toFixed(0)} kg/day. Push closure toward 100% and this ceiling climbs toward infinity — that is the only escape.`;
+      return `Resupply-limited. Vitamins arrive at a fixed trickle, so at ${(C * 100).toFixed(1)}% closure growth is capped at R/(1−C) = ${s.resupply_ceiling_kg_per_day.toFixed(0)} kg/day. Push closure toward 100% and this ceiling climbs toward infinity - that is the only escape.`;
     }
     if (regime === Regime.ENERGY) {
-      return `Energy-limited. Making its own chips raised the energy cost per kg so far that ${s.energy_cap_kg_per_day.toFixed(0)} kg/day is all the available power can produce locally. The factory runs out of electricity before it runs out of parts — the backfire.`;
+      return `Energy-limited. Making its own chips raised the energy cost per kg so far that ${s.energy_cap_kg_per_day.toFixed(0)} kg/day is all the available power can produce locally. The factory runs out of electricity before it runs out of parts - the backfire.`;
     }
-    return `Material-limited (still exponential). Local production α·F is the binding path and hasn't yet hit a fixed ceiling — the factory is compounding. Doubling time ≈ ${s.empirical_doubling_time_days ? s.empirical_doubling_time_days.toFixed(0) + " days" : "n/a"}.`;
+    return `Material-limited (still exponential). Local production α·F is the binding path and hasn't yet hit a fixed ceiling - the factory is compounding. Doubling time ≈ ${s.empirical_doubling_time_days ? s.empirical_doubling_time_days.toFixed(0) + " days" : "n/a"}.`;
   };
 
   // The SAME model, projected as an agent-facing surface (the pivot's thesis made
   // literal): scalar outputs are exposed/subscribable, actions are callable, and
   // `bridge.speculate`/`bridge.explain` give an agent exact what-if + field-level
-  // causal provenance — with zero bespoke wiring beyond this block.
+  // causal provenance - with zero bespoke wiring beyond this block.
   const bridge = createAgentBridge(
     (r) => {
       r.expose("closure_ratio", () => sim().closure_ratio, { description: "mass fraction the factory can build locally" });

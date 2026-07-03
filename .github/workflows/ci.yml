@@ -112,7 +112,7 @@ jobs:
         with:
           node-version: "24"
 
-      # dist/ is gitignored and pimas has no prepare hook — build before consuming.
+      # dist/ is gitignored and pimas has no prepare hook - build before consuming.
       - name: Build pimas
         working-directory: pimas
         run: |
@@ -123,11 +123,11 @@ jobs:
         working-directory: von-neumann/frontend
         run: npm ci
 
-      - name: Layer A — model parity vs the Python CLI (no pimas)
+      - name: Layer A - model parity vs the Python CLI (no pimas)
         working-directory: von-neumann/frontend
         run: npm test
 
-      - name: Layer B — pimas contract (against the pinned pimas)
+      - name: Layer B - pimas contract (against the pinned pimas)
         working-directory: von-neumann/frontend
         run: npm run test:contract
 

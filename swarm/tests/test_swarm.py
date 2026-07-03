@@ -3,7 +3,7 @@
 Assert on real numbers and the regimes that matter (CLAUDE.md §2): seeded determinism,
 a physical exploration timescale, monotonic settlement, the settlement front never
 outrunning the box, and the expected dependence on offspring count and probe speed.
-Not "it ran" — what it computed.
+Not "it ran" - what it computed.
 """
 
 from __future__ import annotations
@@ -23,11 +23,11 @@ def test_light_speed_constant_is_physical() -> None:
 
 
 def test_baseline_regression() -> None:
-    # A fixed run — pins the deterministic output so a refactor can't silently change it.
+    # A fixed run - pins the deterministic output so a refactor can't silently change it.
     r = simulate_swarm(SwarmParams(n_stars=400), seed=BASE_SEED)
     assert r.final_settled == 400
     assert r.total_probes_launched == 797
-    # ~1.5 Myr to fill a 400-star, 1 star/pc^3 box at N&F's 3e-5c — Myr-scale, as in the paper.
+    # ~1.5 Myr to fill a 400-star, 1 star/pc^3 box at N&F's 3e-5c - Myr-scale, as in the paper.
     assert r.t50_years == 895_000.0
     assert r.t90_years == 1_170_000.0
     assert r.t100_years == 1_515_000.0
@@ -118,7 +118,7 @@ def test_powered_default_unchanged_by_slingshot_feature() -> None:
 def test_slingshots_far_outrun_powered_flight() -> None:
     # The paper's headline: slingshot probes accumulate speed from stellar motion and
     # explore far faster than powered flight. (Observed ratio is dt-limited; the true
-    # speedup is larger — see REFERENCES.md.)
+    # speedup is larger - see REFERENCES.md.)
     powered = simulate_swarm(SwarmParams(n_stars=400, policy="powered"), seed=BASE_SEED)
     sling = simulate_swarm(SwarmParams(n_stars=400, policy="slingshot_nearest"), seed=BASE_SEED)
     assert sling.t100_years is not None and powered.t100_years is not None
@@ -137,7 +137,7 @@ def test_nearest_slingshot_beats_max_boost_on_time() -> None:
 
 
 def test_boost_self_limits_below_cap() -> None:
-    # Eq. 4 falls off for fast probes, and speed_cap_c backstops — no runaway.
+    # Eq. 4 falls off for fast probes, and speed_cap_c backstops - no runaway.
     r = simulate_swarm(SwarmParams(n_stars=400, policy="slingshot_maxboost"), seed=BASE_SEED)
     cap_km_s = 0.05 * 299792.458
     assert r.max_probe_speed_km_s <= cap_km_s
@@ -171,7 +171,7 @@ def test_step_settles_only_at_or_after_arrival() -> None:
 
 def test_instant_mode_is_the_perfect_info_baseline() -> None:
     # "instant" is c→∞ by construction: the light-cone term drops out. It MUST reproduce the
-    # default (perfect-info) run bit-for-bit — the keystone reduction. (The whole existing
+    # default (perfect-info) run bit-for-bit - the keystone reduction. (The whole existing
     # suite already runs under the default "instant", so this pins the explicit form too.)
     explicit = simulate_swarm(SwarmParams(n_stars=300, coordination="instant", policy="slingshot_nearest"), seed=BASE_SEED)
     default = simulate_swarm(SwarmParams(n_stars=300, policy="slingshot_nearest"), seed=BASE_SEED)
@@ -194,7 +194,7 @@ def test_lightspeed_slows_slingshot_exploration() -> None:
     inst = simulate_swarm(SwarmParams(n_stars=300, coordination="instant", policy="slingshot_nearest"), seed=BASE_SEED)
     ls = simulate_swarm(SwarmParams(n_stars=300, coordination="lightspeed", policy="slingshot_nearest"), seed=BASE_SEED)
     assert inst.t100_years == 80_000.0
-    assert ls.t100_years == 110_000.0  # +37.5% — the cost of no coordination
+    assert ls.t100_years == 110_000.0  # +37.5% - the cost of no coordination
     assert ls.t100_years > inst.t100_years  # monotonic penalty: lag never speeds it up
 
 
@@ -210,7 +210,7 @@ def test_lightspeed_adds_wasted_trips() -> None:
 
 def test_lightspeed_penalty_grows_with_speed() -> None:
     # The scoping insight Λ ≈ v_probe/c: at N&F's powered cruise (3e-5 c) the lag is
-    # negligible — the timescale is unchanged; it only bites when probes move fast
+    # negligible - the timescale is unchanged; it only bites when probes move fast
     # (slingshots). Light-speed coordination is a slingshot-era phenomenon.
     for pol, expect_penalty in (("powered", False), ("slingshot_nearest", True)):
         inst = simulate_swarm(SwarmParams(n_stars=300, coordination="instant", policy=pol), seed=BASE_SEED)
@@ -237,7 +237,7 @@ def test_lightspeed_offspring_zero_is_a_noop() -> None:
 
 def test_max_retargets_zero_retires_losers() -> None:
     # With no re-aiming allowed, a probe that loses a race dies on the spot (retarget_count
-    # == 0) — bounding bounce chains. A connected field with offspring still fills (redundancy).
+    # == 0) - bounding bounce chains. A connected field with offspring still fills (redundancy).
     r = simulate_swarm(SwarmParams(n_stars=300, coordination="lightspeed", policy="slingshot_nearest", max_retargets=0), seed=BASE_SEED)
     assert r.retarget_count == 0
     assert r.wasted_arrivals > 0  # losers are still counted as wasted

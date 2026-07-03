@@ -6,7 +6,7 @@ Earth is light-minutes away), and housekeeping (thermal, comms, attitude). This
 module is the pure, one-shot accounting of that split, plus the conversion from
 compute-watts to compute throughput given a hardware efficiency.
 
-The efficiency (FLOPS per watt) is a per-scenario input, not a constant — a scenario
+The efficiency (FLOPS per watt) is a per-scenario input, not a constant - a scenario
 that fixes one must cite the specific hardware (see REFERENCES.md). Deterministic,
 plain data, zero pimas imports (CLAUDE.md §7).
 """

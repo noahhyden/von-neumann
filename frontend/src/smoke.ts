@@ -2,7 +2,7 @@
  * Headless integration smoke: the reactive model + `speculate` must (a) reproduce
  * the electronics-wall numbers through the pimas graph, and (b) leave the real
  * model UNTOUCHED after a preview (free rollback). Bundled with esbuild and run in
- * Node — no DOM. Also exercises the agent bridge's speculate + explain.
+ * Node - no DOM. Also exercises the agent bridge's speculate + explain.
  */
 import { createWallModel } from "./reactive-model.js";
 import { LUNAR_REGOLITH_SEED } from "./scenarios.js";
@@ -15,7 +15,7 @@ import { createSwarmModel } from "./swarm-model.js";
 
 let failures = 0;
 const ok = (cond: boolean, msg: string) => {
-  console.log(`${cond ? "✔" : "✗ FAIL"} ${msg}`);
+  console.log(`${cond ? "ok  " : "FAIL"} ${msg}`);
   if (!cond) failures++;
 };
 const near = (a: number | null, b: number, eps: number, msg: string) =>
@@ -29,7 +29,7 @@ near(m.sim().time_to_target_days, 10512.2892, 1e-1, "reactive time-to-target = 1
 ok(m.chipsAreLocal() === false, "chips start as imported vitamins");
 ok(m.lateRegime() === "resupply-limited", "baseline late regime is resupply-limited");
 
-// L3: speculate the electronics wall — exact after-state, nothing committed.
+// L3: speculate the electronics wall - exact after-state, nothing committed.
 const { before, after } = m.previewChipsLocal();
 near(before.time_to_target_days, 10512.2892, 1e-1, "preview.before = 10512d");
 near(after.time_to_target_days, 6350.4485, 1e-1, "preview.after = 6350d (chips local wins)");

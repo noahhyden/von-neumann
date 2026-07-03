@@ -1,4 +1,4 @@
-"""Compute headroom vs distance — the probe-sim × power-budget coupling."""
+"""Compute headroom vs distance - the probe-sim × power-budget coupling."""
 
 import pytest
 

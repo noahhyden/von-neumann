@@ -1,10 +1,10 @@
-# Toy "lunar regolith seed factory" — a fairly self-sufficient design (~97% of its
+# Toy "lunar regolith seed factory" - a fairly self-sufficient design (~97% of its
 # own mass made on the Moon). The bits it CAN'T make locally ("vitamins", shipped
 # from Earth) are the chips and power electronics, plus a few precision parts.
 #
 # energy_to_produce_kwh_per_kg = the ELECTRICITY the factory itself spends to make
 # 1 kg of that part on-site (not Earth factory-gate energy). Numbers are rounded,
-# research-backed order-of-magnitude figures — see REFERENCES.md for sources.
+# research-backed order-of-magnitude figures - see REFERENCES.md for sources.
 # Key point: chips cost thousands of kWh/kg; metal you smelt from regolith costs
 # single digits. That gap is the whole story.
 name: Lunar Regolith Seed Factory
@@ -89,7 +89,7 @@ replication:
   resupply_cadence_days: 30.0
   available_power_kw: 4000.0   # ~4 MW, delivered/built as SEPARATE power
                                # infrastructure (a multi-MW plant outmasses the
-                               # seed itself — that is the real cost of making chips)
+                               # seed itself - that is the real cost of making chips)
   target_output_kg_per_day: 1000.0
   duration_days: 14600         # 40 years
   dt_days: 1.0

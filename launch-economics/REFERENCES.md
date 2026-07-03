@@ -1,24 +1,24 @@
 # Where the numbers come from
 
 Every quantity traces to a source below, or is derived from ones that do. Units:
-m/s, kg, seconds, USD. Prices are list prices and change over time — they are
+m/s, kg, seconds, USD. Prices are list prices and change over time - they are
 scenario *inputs*, documented here, not baked into the model.
 
-## Physics (hardcoded — defined/first-principles only)
+## Physics (hardcoded - defined/first-principles only)
 
-- **`G0_M_S2 = 9.80665` m/s²** — standard gravity, *exact by definition* (BIPM/SI).
+- **`G0_M_S2 = 9.80665` m/s²** - standard gravity, *exact by definition* (BIPM/SI).
   Used only to convert specific impulse (s) to exhaust velocity.
-- **Tsiolkovsky rocket equation**, `m0/mf = exp(Δv / v_e)` — Tsiolkovsky (1903);
+- **Tsiolkovsky rocket equation**, `m0/mf = exp(Δv / v_e)` - Tsiolkovsky (1903);
   standard result (e.g. Curtis, *Orbital Mechanics for Engineering Students*, or
   Sutton & Biblarz, *Rocket Propulsion Elements*). Derived, not hardcoded.
 
-## Scenario inputs (representative sourced values — not constants)
+## Scenario inputs (representative sourced values - not constants)
 
 ### Specific launch cost ($/kg to LEO)
 
 - **Falcon 9 (reusable): ~$3,000/kg.** SpaceX list price ~$69.75M for ~22,800 kg to
   LEO → ~$3,060/kg. Source: SpaceX Capabilities & Services,
-  https://www.spacex.com/media/Capabilities&Services.pdf . *Reasonable* — a widely
+  https://www.spacex.com/media/Capabilities&Services.pdf . *Reasonable* - a widely
   cited ballpark; the marginal (internal, reused) cost is lower and not public.
 - **Falcon Heavy: ~$1,500/kg.** ~$97M for ~63,800 kg to LEO → ~$1,520/kg (same source).
 - **Starship (projected): `[ESTIMATE]`, ~$100–1,000/kg.** SpaceX targets are far

@@ -2,7 +2,7 @@
  * Parity test: the composed TS mission port must reproduce the Python
  * `mission.run_mission` exactly. Ground truth was generated from the Python package
  * (uv run python -c ... asdict(run_mission(default_mission_scenario(**overrides)))).
- * Pure — no pimas (Layer A). If the Python model changes, regenerate these numbers.
+ * Pure - no pimas (Layer A). If the Python model changes, regenerate these numbers.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -53,7 +53,7 @@ const CASES: Case[] = [
     },
   },
   {
-    label: "Jupiter (5.203 AU) — power-starved, never reaches target",
+    label: "Jupiter (5.203 AU) - power-starved, never reaches target",
     overrides: { distanceAu: 5.203 },
     expect: {
       closureRatio: 0.9708333333333333, vitaminMassKg: 28816.666666666675,
@@ -67,7 +67,7 @@ const CASES: Case[] = [
     },
   },
   {
-    label: "all power to compute — factory stalls, compute maxed",
+    label: "all power to compute - factory stalls, compute maxed",
     overrides: { fractionManufacturing: 0, fractionCompute: 1, fractionHousekeeping: 0 },
     expect: {
       closureRatio: 0.9708333333333333, vitaminMassKg: 28816.666666666675,

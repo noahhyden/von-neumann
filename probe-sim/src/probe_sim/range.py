@@ -7,11 +7,11 @@ reach its target output and replication is no longer viable. That crossover dist
 is the operational range.
 
 Because delivered power decreases monotonically with distance, viability is
-monotonic too — viable close in, not viable far out — so a single bisection finds
+monotonic too - viable close in, not viable far out - so a single bisection finds
 the crossover exactly.
 
 closure-sim is consumed through its public API (`Factory`, `ReplicationParams`,
-`simulate`) — no reaching into internals (CLAUDE.md §4). This module stays a pure,
+`simulate`) - no reaching into internals (CLAUDE.md §4). This module stays a pure,
 deterministic fold with zero pimas imports (§7).
 """
 

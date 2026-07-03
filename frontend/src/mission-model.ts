@@ -1,15 +1,15 @@
 /**
- * The mission model as a pimas reactive graph — the fifth surface, the end-to-end
+ * The mission model as a pimas reactive graph - the fifth surface, the end-to-end
  * follow-along.
  *
  * Signals for the five knobs a viewer drags; one memo over the parity-tested TS port
  * (`mission.ts`) that recomputes the whole chain. Same lightweight shape as the other
- * composed surfaces (signals + one memo) — no store/speculate needed; the fold is
+ * composed surfaces (signals + one memo) - no store/speculate needed; the fold is
  * pure and cheap to re-run on every drag.
  *
  * The power split is derived so it can never over-allocate: housekeeping is fixed at
  * 10%, a single "power to compute" slider takes 0–90%, and manufacturing gets the
- * rest. Dragging compute up literally starves the factory — the point of the surface.
+ * rest. Dragging compute up literally starves the factory - the point of the surface.
  */
 import { createSignal, createMemo } from "pimas";
 import type { Accessor } from "pimas";

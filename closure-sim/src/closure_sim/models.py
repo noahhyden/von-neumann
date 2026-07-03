@@ -21,7 +21,7 @@ class Subsystem(BaseModel):
     """One line item in a factory's bill of materials.
 
     A subsystem is a *vitamin* when it cannot be produced locally
-    (``producible_locally is False``) — it must be shipped from Earth.
+    (``producible_locally is False``) - it must be shipped from Earth.
     """
 
     name: str
@@ -47,7 +47,7 @@ class ReplicationParams(BaseModel):
     ``seed_mass_kg`` is the factory mass landed from Earth and ``local_build_rate_kg_per_day``
     is that seed's initial local-material output. Their ratio defines productivity
     (output per day per kg of installed factory), which is what makes capacity grow
-    with the factory — i.e. makes replication exponential rather than linear.
+    with the factory - i.e. makes replication exponential rather than linear.
     """
 
     seed_mass_kg: float = Field(gt=0)

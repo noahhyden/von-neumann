@@ -1,5 +1,5 @@
 /**
- * The launch-economics model as a pimas reactive graph — the second surface.
+ * The launch-economics model as a pimas reactive graph - the second surface.
  *
  * Sliders are signals; the launch comparison is a memo over the pure, parity-tested
  * TS port (`launch-economics.ts`). Same pattern as `reactive-model.ts`, minus the

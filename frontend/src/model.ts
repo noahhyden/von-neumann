@@ -1,5 +1,5 @@
 /**
- * A faithful TypeScript port of closure-sim's pure math — models.py + closure.py
+ * A faithful TypeScript port of closure-sim's pure math - models.py + closure.py
  * + replication.py, ported 1:1 so the live explainer runs the SAME model the
  * Python CLI does (verified against it in model.test.ts). Nothing here touches
  * pimas or the DOM: these are plain, deterministic functions of their inputs,
@@ -90,7 +90,7 @@ export function computeClosure(factory: Factory): ClosureReport {
       mass_share: total > 0 ? s.mass_kg / total : 0.0,
       processes: [...s.processes],
     }));
-  // Heaviest vitamins first — the order an engineer wants to read.
+  // Heaviest vitamins first - the order an engineer wants to read.
   vitamins.sort((a, b) => b.mass_kg - a.mass_kg);
 
   const totalEnergy = factory.subsystems.reduce((a, s) => a + buildEnergyKwh(s), 0);

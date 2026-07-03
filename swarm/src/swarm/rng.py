@@ -1,4 +1,4 @@
-"""A tiny seeded PRNG, threaded through the fold — never ambient (CLAUDE.md §7).
+"""A tiny seeded PRNG, threaded through the fold - never ambient (CLAUDE.md §7).
 
 mulberry32, identical to `multi_probe/rng.py` and `frontend/scripts/gen-diff.mjs`, so a
 future TypeScript SoA port of the swarm produces the same star fields and choices. Each

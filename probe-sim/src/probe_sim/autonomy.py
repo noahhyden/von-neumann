@@ -1,8 +1,8 @@
-"""Compute headroom vs. distance — how far the probe can think, not just build.
+"""Compute headroom vs. distance - how far the probe can think, not just build.
 
 An autonomous probe light-minutes from Earth has to run its own control and
 perception, and that compute is powered by the same solar array whose output falls
-as 1/d^2. So the compute the probe can afford — its autonomy budget — shrinks with
+as 1/d^2. So the compute the probe can afford - its autonomy budget - shrinks with
 heliocentric distance exactly as delivered power does.
 
 This couples two sibling modules through their public APIs (CLAUDE.md §4):
@@ -41,7 +41,7 @@ def compute_headroom_at(
 
     ``compute_fraction`` is the share of delivered power given to computation (the rest
     is manufacturing/housekeeping/margin); ``efficiency_flops_per_w`` is the compute
-    hardware efficiency (a sourced scenario input — see power-budget/REFERENCES.md).
+    hardware efficiency (a sourced scenario input - see power-budget/REFERENCES.md).
     """
     delivered = array.power_w(distance_au)
     budget = PowerBudget(total_w=delivered, fraction_compute=compute_fraction)

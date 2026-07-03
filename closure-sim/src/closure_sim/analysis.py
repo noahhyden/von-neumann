@@ -1,4 +1,4 @@
-"""The electronics-wall analysis — the headline insight.
+"""The electronics-wall analysis - the headline insight.
 
 Re-run a scenario with the electronics/compute subsystems toggled from vitamin to
 locally-producible, and report how closure, the resupply ceiling, doubling time,

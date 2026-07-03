@@ -1,16 +1,16 @@
 """The deterministic multi-probe fold: a small fleet that copies and disperses.
 
-`step(state, params, dt)` is a pure function — active probes build local structure at a
+`step(state, params, dt)` is a pure function - active probes build local structure at a
 rate their local sunlight allows (reusing probe-sim's inverse-square power), and when
 one has built a copy's worth of structure *and* the fleet still has imported vitamins,
 it spawns a child that travels outward and later becomes active. `simulate_fleet` folds
 `step` over time from a seed.
 
 Two ceilings emerge, both physical, neither hard-coded:
-  * the **electronics wall**, re-instantiated at fleet scale — children need imported,
+  * the **electronics wall**, re-instantiated at fleet scale - children need imported,
     non-replicable vitamins, so a finite vitamin pool caps the fleet (closure-sim's
     lesson, now spatial); and
-  * a **spatial power wall** — children disperse outward, sunlight falls as 1/d², so
+  * a **spatial power wall** - children disperse outward, sunlight falls as 1/d², so
     far-flung probes build too slowly to ever copy.
 
 Randomness (optional transit-time jitter) is a seeded generator threaded through the
@@ -69,10 +69,10 @@ def _build_rate_kg_per_day(params: FleetParams, distance_au: float) -> float:
 
     Exactly closure-sim's ``min(alpha*F, energy_cap)`` for a *fixed-size* probe: the
     machinery can build at most ``local_build_rate_kg_per_day`` (alpha*F for F ≈ seed
-    mass, which does not grow — a probe makes copies, it doesn't expand itself), and
+    mass, which does not grow - a probe makes copies, it doesn't expand itself), and
     the solar power sets a second ceiling. Near the Sun the machinery binds (a probe
     can't use all its power); far out, 1/d² power falls below the machinery rate and
-    the energy cap binds — the spatial power wall.
+    the energy cap binds - the spatial power wall.
     """
     array = SolarArray(area_m2=params.array_area_m2, efficiency=params.array_efficiency)
     manufacturing_w = array.power_w(distance_au) * params.manufacturing_fraction

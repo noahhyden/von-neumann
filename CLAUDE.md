@@ -1,4 +1,4 @@
-# von-neumann — operating rules
+# von-neumann - operating rules
 
 A modular, physics-heavy exploration of self-replicating space manufacturing. This
 file is binding for all work in this repo. Read it before changing anything.
@@ -6,18 +6,18 @@ file is binding for all work in this repo. Read it before changing anything.
 The work fails quietly: it is processes inside processes, many interacting parts,
 and real-world noise. A single unsourced number or unvalidated step compounds into
 confident nonsense. The rules below exist to stop that. They cost a little speed and
-buy correctness — that trade is always worth it here.
+buy correctness - that trade is always worth it here.
 
 ---
 
 ## 1. The cardinal rule: no number may be assumed
 
-**If a number has no source, the number is wrong** — not "rough," not "a reasonable
+**If a number has no source, the number is wrong** - not "rough," not "a reasonable
 placeholder." Wrong. This applies to every quantity: masses, energies, rates,
 efficiencies, durations, costs, fractions, thresholds.
 
 - **Every number traces to a citable source, or is derived by explicit math from
-  numbers that do.** Deriving is encouraged — show the formula and cite each input.
+  numbers that do.** Deriving is encouraged - show the formula and cite each input.
   (e.g. `energy_cap = power / e_local`, where `power` cites [X] and `e_local` is
   computed from per-part figures that each cite a source.)
 - **Never invent, guess, round-to-a-vibe, or "assume for now."** If you catch
@@ -39,7 +39,7 @@ make one up.
 - **Surface it explicitly.** Mark it `[GAP]` in `REFERENCES.md` and as an inline
   comment at the use site. Never let an estimate pass as a measured fact.
 - **Then find the best defensible estimate:** derive a bound, use a documented proxy
-  or analogous system, or interpolate from neighbours — and cite whatever partial
+  or analogous system, or interpolate from neighbours - and cite whatever partial
   evidence informs it. Tag the result `[ESTIMATE]` and write one line on the
   reasoning and its uncertainty.
 - A `[GAP]`/`[ESTIMATE]` is honest; an unmarked guess is not.
@@ -51,7 +51,7 @@ make one up.
 - **Define scope before writing.** For each step, state what it covers, what it
   explicitly does *not*, and how you'll know it's correct. If you can't state that,
   the step isn't ready.
-- **No new feature without a validation test.** Validation can be simple — a short
+- **No new feature without a validation test.** Validation can be simple - a short
   Python script that runs the flow **end to end** and asserts the result *behaves
   correctly*, not merely that it ran without error.
 - **Assert on behavior and edges, not execution.** Check real numbers and the
@@ -63,14 +63,14 @@ make one up.
 
 ---
 
-## 3. Ground everything in physics — but don't over-nest
+## 3. Ground everything in physics - but don't over-nest
 
 This is physics-heavy. Grounding is not optional.
 
 - **Respect conservation and realism.** Mass and energy balance; efficiencies,
   material properties, and process parameters must be physically plausible. A model
   that violates physics is wrong even when it runs and the tests pass.
-- **Include real-world messiness where it matters** — external factors and
+- **Include real-world messiness where it matters** - external factors and
   variability enter as *noise or parameters*. They must be present (the system is
   not frictionless) but must not become new subsystems.
 - **Do not nest processes within processes more deeply than the question needs.**
@@ -90,14 +90,14 @@ This is physics-heavy. Grounding is not optional.
 - Modules share concepts and data through **clean interfaces**, never by reaching
   into each other's internals. Leave seams for the modules still to come.
 - **`frontend` is the one shared surface, and it is pimas-only.** The repo's single
-  interactive/presentation layer lives in `frontend/` — a shell that hosts *one
+  interactive/presentation layer lives in `frontend/` - a shell that hosts *one
   surface per model* rather than fusing them (each model still owns its slice; the
   frontend just presents it). It, and any interactive code in this repo, must use
-  [pimas](../pimas) as its reactive framework — signals, memos, store, JSX (via
+  [pimas](../pimas) as its reactive framework - signals, memos, store, JSX (via
   `jsxImportSource: "pimas"`), flow control, and the agent bridge. Do **not**
   introduce React, SolidJS, Vue, Svelte, or any other reactive/UI framework. Plain
   DOM and build-only tooling (esbuild) are fine; a competing reactive runtime is not.
-- **Plain language.** This work is shared with non-specialists — explain the "why"
+- **Plain language.** This work is shared with non-specialists - explain the "why"
   in words, not only in code and equations.
 
 ---
@@ -106,6 +106,13 @@ This is physics-heavy. Grounding is not optional.
 
 - Python 3.12, typed (pydantic v2 / dataclasses), minimal dependencies.
 - `uv` for environments; `pytest` with real assertions.
+- **Typography: no em-dash (U+2014) and no emoji, anywhere in the repo.** Use a
+  plain ASCII hyphen `-` in place of any em-dash. This is binding for code,
+  comments, Markdown, `REFERENCES.md`, and every UI string on the public frontend
+  alike - it keeps text portable, diff-clean, and free of decorative noise in a
+  project whose output is meant to be read as research. Math and astronomy symbols
+  (Greek letters, `≈`, `≫`, `²`, `☉`, arrows) are not emoji and are fine where they
+  carry meaning.
 - **Git:** commit or push only when asked. The repo is **private** at
   `noahhyden/von-neumann`. **Never push to `Klarum-Software`** (or anywhere else).
 - New numbers in a change → update that module's `REFERENCES.md` in the same change.
@@ -115,41 +122,41 @@ This is physics-heavy. Grounding is not optional.
 ## 6. pimas is first-party and single-maintainer
 
 pimas (`https://github.com/noahhyden/pimas`, linked from `frontend/` via
-`file:../../pimas`) is our own reactive framework, built and — for the foreseeable
-future — solely maintained by the repo owner. It is a dependency we *control*, not a
+`file:../../pimas`) is our own reactive framework, built and - for the foreseeable
+future - solely maintained by the repo owner. It is a dependency we *control*, not a
 stable third-party package. Practical implications:
 
 - **Things may break or not work out-of-the-box.** If a frontend problem traces to
   **pimas itself** (a framework bug or missing capability), **do not build a
-  workaround around it** — stop and flag it so it gets fixed in the pimas repo. Only
+  workaround around it** - stop and flag it so it gets fixed in the pimas repo. Only
   work around issues that are genuinely in this repo's own code. When flagging,
   distinguish clearly: is the failure our code, or verified framework breakage?
 - **A cross-repo canary makes that distinction decidable.** `frontend`'s tests are
   layered by blame surface: **Layer A** (`npm test`) is the pure model with no pimas
-  — a failure is *our* logic; **Layer B** (`npm run test:contract`) exercises only
-  pimas primitives — with A green and our tree unchanged, a failure is **pimas**. On
+  - a failure is *our* logic; **Layer B** (`npm run test:contract`) exercises only
+  pimas primitives - with A green and our tree unchanged, a failure is **pimas**. On
   the A-green/B-red gate, `.github/workflows/pimas-canary.yml` files an issue in the
   pimas repo. The baseline is pinned by git SHA in `frontend/.pimas-good-sha` (pimas
   is `0.0.0` with no tags; its `dist/` is gitignored, so CI builds pimas first). When
-  Layer B fails against a new pimas, that's verified framework breakage — flag it in
+  Layer B fails against a new pimas, that's verified framework breakage - flag it in
   pimas, don't work around it here.
 
 ---
 
 ## 7. Architecture is binding: pure fold, reactive skin, speculate
 
-Every model has the same shape, and it is not optional — it is what makes
+Every model has the same shape, and it is not optional - it is what makes
 `speculate` exact, rollback free, and replay reproducible, and what keeps pimas' core
 tiny. See [ROADMAP.md](ROADMAP.md) for the full rationale.
 
 - **The model is a pure fold.** The math is a deterministic `step(state, dt, rng) →
   {state, rng}` (or a one-shot `simulate()`), in plain data, with **zero pimas
-  imports** — framework-agnostic, serializable, independently testable (Layer A). It
+  imports** - framework-agnostic, serializable, independently testable (Layer A). It
   does not know pimas, the DOM, or rendering exist.
 - **Randomness is seeded state, threaded through the fold.** Never `Math.random()`,
   never a wall clock. Use a small seeded generator carried in the state. Keep
   iteration order deterministic (ordered containers, not hash sets). This is the one
-  discipline that silently breaks everything downstream if ignored — a `Math.random()`
+  discipline that silently breaks everything downstream if ignored - a `Math.random()`
   in a fold *works* until someone asks it to reproduce or `speculate`.
 - **pimas is the skin, never the loop.** Signals for the knobs, memos for aggregates
   and selection, `speculate` + the agent bridge for what-if and provenance. **Never a
@@ -157,11 +164,11 @@ tiny. See [ROADMAP.md](ROADMAP.md) for the full rationale.
   per-tick loop.** The reactive graph scales with what a human or agent *looks at*,
   not with entity count.
 - **Rendering reads the fold's buffers; it never owns state.** At scale, one
-  `<canvas>` + a plain draw loop driven by a single effect — not a DOM node per
+  `<canvas>` + a plain draw loop driven by a single effect - not a DOM node per
   entity, not a reactive scene graph, not a canvas `RenderBackend`.
 - **Nothing simulation-shaped enters pimas itself.** The tick loop, clock, state
   storage, RNG, spatial index, persistence, and drawing live here. If a change seems
-  to need a pimas core feature, that's a §6 flag, not a local workaround — and the bar
+  to need a pimas core feature, that's a §6 flag, not a local workaround - and the bar
   is high (would noahhyden.com's static build pay for it?).
 
 ## The one-line test before you commit

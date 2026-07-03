@@ -1,4 +1,4 @@
-"""Launch-mass leverage as a function of closure — the launch-economics × closure-sim tie.
+"""Launch-mass leverage as a function of closure - the launch-economics × closure-sim tie.
 
 The imported "vitamin" mass a campaign needs isn't free to pick: it's set by the
 factory's mass closure. Adding a kilogram of factory at closure C requires importing
