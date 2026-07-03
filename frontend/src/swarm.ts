@@ -17,6 +17,10 @@ export const C_PC_PER_YEAR = (299792.458 * 3.15576e7) / 3.0856775814913673e13;
 export const KM_S_TO_PC_YR = (3.15576e7) / 3.0856775814913673e13; // 1 km/s in pc/yr
 
 export type Policy = "powered" | "slingshot_nearest" | "slingshot_maxboost";
+// Knowledge regime (FRONTIER #1). "instant" = perfect global info (bit-identical to the
+// perfect-info port). "lightspeed" = a decider at a star knows a distant star is settled
+// only once the news-light has arrived. See swarm/REFERENCES.md.
+export type Coordination = "instant" | "lightspeed";
 
 // ── mulberry32, threaded — mirrors swarm/rng.py ────────────────────────────────
 function nextFloat(state: number): [number, number] {
@@ -42,6 +46,9 @@ export interface SwarmParams {
   escapeVelocityKmS: number;
   maxBoostCandidates: number;
   speedCapC: number;
+  // light-speed-limited coordination (FRONTIER #1). Default "instant" = perfect info.
+  coordination: Coordination;
+  maxRetargets: number; // cap on re-target hops before a lost probe is retired [ESTIMATE]
 }
 
 export const SWARM_DEFAULTS: SwarmParams = {
@@ -58,6 +65,8 @@ export const SWARM_DEFAULTS: SwarmParams = {
   escapeVelocityKmS: 617.5, // solar sqrt(2GM/R), derived
   maxBoostCandidates: 30, // [ESTIMATE] max-boost scans this many nearest
   speedCapC: 0.05, // [ESTIMATE] sanity ceiling
+  coordination: "instant", // default = perfect info; keeps perfect-info baselines identical
+  maxRetargets: 8, // [ESTIMATE] bounds stale-view bounce chains
 };
 
 export const boxSidePc = (p: SwarmParams): number => Math.pow(p.nStars / p.densityStarsPerPc3, 1 / 3);
@@ -68,6 +77,7 @@ interface Probe {
   target: number;
   arriveYear: number;
   speedPcYr: number; // current galactic-frame speed (constant for powered; accumulates otherwise)
+  retargets: number; // times this probe has lost a race and re-aimed (capped by maxRetargets)
 }
 
 /**
@@ -101,6 +111,10 @@ export interface SwarmState {
   frontMaxPc: number; // farthest settled star from the origin, tracked incrementally
   starSpeedPcYr: number[]; // per-star speed magnitude (drives the slingshot boost)
   maxSpeedPcYr: number; // fastest probe launched so far
+  // coordination observability (0 unless probes race under stale info)
+  totalArrivals: number; // every probe arrival processed
+  wastedArrivals: number; // arrivals at an already-(truly-)settled star (redundant trips)
+  retargetCount: number; // total re-target events
 }
 
 function buildGrid(xs: number[], ys: number[], zs: number[], boxSide: number): Grid {
@@ -130,13 +144,25 @@ function removeFromGrid(s: SwarmState, i: number): void {
   if (at !== -1) cell[cell.length - 1] === i ? cell.pop() : (cell[at] = cell.pop()!);
 }
 
-/** Brute-force nearest unsettled star — the reference the grid must match exactly. */
-function bruteNearestUnsettled(s: SwarmState, frm: number, exclude: Set<number>): number | null {
+/**
+ * Does a decider AT star `frm` in year `s.year` know star `i` is settled? The light-cone
+ * gate (FRONTIER #1), mirroring the Python `_believes_settled`. A settled star is a beacon
+ * emitting at `settledYear[i]`; the news reaches `frm` only after `dist/c`. Under "instant"
+ * this collapses to `settledYear[i] >= 0` — bit-identical to the perfect-info port.
+ */
+function believesSettled(s: SwarmState, frm: number, i: number, p: SwarmParams): boolean {
+  if (s.settledYear[i] < 0) return false;
+  if (p.coordination === "instant") return true;
+  return s.settledYear[i] + dist(s, frm, i) / C_PC_PER_YEAR <= s.year;
+}
+
+/** Brute-force nearest *believed*-unsettled star — the reference the grid must match exactly. */
+function bruteNearestUnsettled(s: SwarmState, frm: number, exclude: Set<number>, p: SwarmParams): number | null {
   let best: number | null = null;
   let bestD2 = Infinity;
   const fx = s.xs[frm], fy = s.ys[frm], fz = s.zs[frm];
   for (let i = 0; i < s.xs.length; i++) {
-    if (s.settledYear[i] >= 0 || exclude.has(i)) continue;
+    if (exclude.has(i) || believesSettled(s, frm, i, p)) continue;
     const dx = s.xs[i] - fx, dy = s.ys[i] - fy, dz = s.zs[i] - fz;
     const d2 = dx * dx + dy * dy + dz * dz;
     if (d2 < bestD2) {
@@ -147,8 +173,8 @@ function bruteNearestUnsettled(s: SwarmState, frm: number, exclude: Set<number>)
   return best;
 }
 
-/** Grid-accelerated nearest unsettled star; returns the same result as brute force. */
-function gridNearestUnsettled(s: SwarmState, frm: number, exclude: Set<number>): number | null {
+/** Grid-accelerated nearest *believed*-unsettled star; returns the same result as brute force. */
+function gridNearestUnsettled(s: SwarmState, frm: number, exclude: Set<number>, p: SwarmParams): number | null {
   const g = s.grid;
   const dim = g.dim, cs = g.cellSize;
   const fx = s.xs[frm], fy = s.ys[frm], fz = s.zs[frm];
@@ -158,7 +184,7 @@ function gridNearestUnsettled(s: SwarmState, frm: number, exclude: Set<number>):
   let best: number | null = null;
   let bestD2 = Infinity;
   const consider = (i: number) => {
-    if (s.settledYear[i] >= 0 || exclude.has(i)) return;
+    if (exclude.has(i) || believesSettled(s, frm, i, p)) return;
     const dx = s.xs[i] - fx, dy = s.ys[i] - fy, dz = s.zs[i] - fz;
     const d2 = dx * dx + dy * dy + dz * dz;
     // strict <, or equal-distance tie broken by lowest index — matches brute force.
@@ -204,6 +230,10 @@ export interface SwarmResult {
   frontRadiusPc: number;
   maxProbeSpeedKmS: number;
   policy: Policy;
+  coordination: Coordination;
+  totalArrivals: number; // every arrival (settlements + wasted trips)
+  wastedArrivals: number; // arrivals at an already-settled star — the cost of stale info
+  retargetCount: number;
   steps: SwarmStep[];
   // final field, for the viz:
   xs: number[];
@@ -250,13 +280,13 @@ const nearestUnsettled = gridNearestUnsettled;
 // Exported so the tests can prove grid ≡ brute across many queries.
 export { bruteNearestUnsettled, gridNearestUnsettled };
 
-/** The k nearest unsettled stars to `frm`, ordered by (distance, index) — brute force,
- *  matching the Python (used only by the max-boost policy). */
-function nearestKUnsettled(s: SwarmState, frm: number, exclude: Set<number>, k: number): number[] {
+/** The k nearest *believed*-unsettled stars to `frm`, ordered by (distance, index) — brute
+ *  force, matching the Python (used only by the max-boost policy). */
+function nearestKUnsettled(s: SwarmState, frm: number, exclude: Set<number>, k: number, p: SwarmParams): number[] {
   const fx = s.xs[frm], fy = s.ys[frm], fz = s.zs[frm];
   const cands: [number, number][] = [];
   for (let i = 0; i < s.xs.length; i++) {
-    if (s.settledYear[i] >= 0 || exclude.has(i)) continue;
+    if (exclude.has(i) || believesSettled(s, frm, i, p)) continue;
     const dx = s.xs[i] - fx, dy = s.ys[i] - fy, dz = s.zs[i] - fz;
     cands.push([dx * dx + dy * dy + dz * dz, i]);
   }
@@ -264,16 +294,16 @@ function nearestKUnsettled(s: SwarmState, frm: number, exclude: Set<number>, k: 
   return cands.slice(0, k).map(([, i]) => i);
 }
 
-/** Next star per policy (mirrors the Python `_select_target`). */
+/** Next star per policy (mirrors the Python `_select_target`), reading the decider's belief. */
 function selectTarget(s: SwarmState, frm: number, exclude: Set<number>, p: SwarmParams): number | null {
   if (p.policy === "slingshot_maxboost") {
-    const cand = nearestKUnsettled(s, frm, exclude, p.maxBoostCandidates);
+    const cand = nearestKUnsettled(s, frm, exclude, p.maxBoostCandidates, p);
     if (cand.length === 0) return null;
     let best = cand[0];
     for (const i of cand) if (s.starSpeedPcYr[i] > s.starSpeedPcYr[best]) best = i;
     return best;
   }
-  return nearestUnsettled(s, frm, exclude);
+  return nearestUnsettled(s, frm, exclude, p);
 }
 
 /** Galactic-frame speed after a slingshot (N&F Eq. 4; mirrors the Python `_boosted_speed`). */
@@ -294,7 +324,7 @@ function launchFrom(s: SwarmState, star: number, p: SwarmParams, incomingSpeed: 
     if (target === null) break;
     chosen.add(target);
     const travel = dist(s, star, target) / departing;
-    s.probes.push({ id: s.nextProbeId, target, arriveYear: s.year + p.settleTimeYears + travel, speedPcYr: departing });
+    s.probes.push({ id: s.nextProbeId, target, arriveYear: s.year + p.settleTimeYears + travel, speedPcYr: departing, retargets: 0 });
     s.nextProbeId += 1;
     s.totalLaunched += 1;
   }
@@ -320,8 +350,11 @@ export function initialState(p: SwarmParams, seed: number): SwarmState {
   const s: SwarmState = {
     rng, year: 0, xs, ys, zs, settledYear, origin, probes: [], nextProbeId: 0, totalLaunched: 0,
     grid, settledCount: 1, frontMaxPc: 0, starSpeedPcYr: starSpeed, maxSpeedPcYr: vMax,
+    totalArrivals: 0, wastedArrivals: 0, retargetCount: 0,
   };
-  removeFromGrid(s, origin); // the homeworld is settled; take it out of the candidate set
+  // Under lightspeed, a settled star must stay in the grid — a distant probe may still
+  // (correctly, per its stale view) target it; belief is gated in the search instead.
+  if (p.coordination === "instant") removeFromGrid(s, origin);
   launchFrom(s, origin, p, vMax); // seed probes leave at powered cruise, taking the homeworld's slingshot
   return s;
 }
@@ -336,20 +369,28 @@ export function step(s: SwarmState, p: SwarmParams): SwarmState {
   const arrivedIds = new Set(arrivals.map((pr) => pr.id));
   s.probes = s.probes.filter((pr) => !arrivedIds.has(pr.id));
 
+  s.totalArrivals += arrivals.length;
   for (const pr of arrivals) {
+    // Physical arrival reads GROUND TRUTH, regardless of what the probe believed when it aimed.
     if (s.settledYear[pr.target] < 0) {
       s.settledYear[pr.target] = s.year;
-      removeFromGrid(s, pr.target);
+      if (p.coordination === "instant") removeFromGrid(s, pr.target);
       s.settledCount += 1;
       const d = dist(s, pr.target, s.origin);
       if (d > s.frontMaxPc) s.frontMaxPc = d;
       launchFrom(s, pr.target, p, pr.speedPcYr); // slingshot off it; offspring inherit the boost
     } else {
-      // Raced and lost: re-target (by policy), keeping this probe's current speed.
+      // Raced and lost: a wasted trip (the cost of stale info). Re-target from this star's
+      // belief, keeping the probe's speed — up to the cap.
+      s.wastedArrivals += 1;
+      // Cap bites only under lightspeed (stale-view bounce chains); instant re-targets
+      // unbounded to a truly-unsettled star, keeping the perfect-info baseline identical.
+      if (p.coordination === "lightspeed" && pr.retargets >= p.maxRetargets) continue;
       const target = selectTarget(s, pr.target, new Set(), p);
       if (target !== null) {
+        s.retargetCount += 1;
         const travel = dist(s, pr.target, target) / pr.speedPcYr;
-        s.probes.push({ id: pr.id, target, arriveYear: s.year + travel, speedPcYr: pr.speedPcYr });
+        s.probes.push({ id: pr.id, target, arriveYear: s.year + travel, speedPcYr: pr.speedPcYr, retargets: pr.retargets + 1 });
       }
     }
   }
@@ -390,6 +431,10 @@ export function simulateSwarm(params: SwarmParams, seed = 0x9e3779b9): SwarmResu
     frontRadiusPc: s.frontMaxPc,
     maxProbeSpeedKmS: s.maxSpeedPcYr / KM_S_TO_PC_YR,
     policy: params.policy,
+    coordination: params.coordination,
+    totalArrivals: s.totalArrivals,
+    wastedArrivals: s.wastedArrivals,
+    retargetCount: s.retargetCount,
     steps,
     xs: s.xs,
     ys: s.ys,

@@ -161,3 +161,93 @@ def test_step_settles_only_at_or_after_arrival() -> None:
     for i, yr in enumerate(s.settled_year):
         if yr >= 0.0 and i != s.origin:
             assert yr <= s.year
+
+
+# --- light-speed-limited coordination (FRONTIER #1) --------------------------------------
+# Probes decide against a light-delayed BELIEF of what's settled, not global truth, so they
+# race for the same star from stale views. "instant" is the perfect-info limit (c→∞), by
+# construction bit-identical to the paper's model; "lightspeed" is the novel extension.
+
+
+def test_instant_mode_is_the_perfect_info_baseline() -> None:
+    # "instant" is c→∞ by construction: the light-cone term drops out. It MUST reproduce the
+    # default (perfect-info) run bit-for-bit — the keystone reduction. (The whole existing
+    # suite already runs under the default "instant", so this pins the explicit form too.)
+    explicit = simulate_swarm(SwarmParams(n_stars=300, coordination="instant", policy="slingshot_nearest"), seed=BASE_SEED)
+    default = simulate_swarm(SwarmParams(n_stars=300, policy="slingshot_nearest"), seed=BASE_SEED)
+    assert [s.n_settled for s in explicit.steps] == [s.n_settled for s in default.steps]
+    assert explicit.t100_years == default.t100_years
+    assert explicit.wasted_arrivals == default.wasted_arrivals
+
+
+def test_lightspeed_still_fills_the_connected_field() -> None:
+    # Lag slows exploration but doesn't strand a connected field: re-targeting guarantees
+    # every star is eventually reached (no spurious Aurora plateau from lag alone).
+    r = simulate_swarm(SwarmParams(n_stars=300, coordination="lightspeed", policy="slingshot_nearest"), seed=BASE_SEED)
+    assert r.final_settled == r.n_stars == 300
+    assert r.t100_years is not None
+
+
+def test_lightspeed_slows_slingshot_exploration() -> None:
+    # The finding: in the fast (slingshot) regime, stale views make probes waste trips, so
+    # the field fills LATER than with perfect info. Pinned deterministic numbers.
+    inst = simulate_swarm(SwarmParams(n_stars=300, coordination="instant", policy="slingshot_nearest"), seed=BASE_SEED)
+    ls = simulate_swarm(SwarmParams(n_stars=300, coordination="lightspeed", policy="slingshot_nearest"), seed=BASE_SEED)
+    assert inst.t100_years == 80_000.0
+    assert ls.t100_years == 110_000.0  # +37.5% — the cost of no coordination
+    assert ls.t100_years > inst.t100_years  # monotonic penalty: lag never speeds it up
+
+
+def test_lightspeed_adds_wasted_trips() -> None:
+    # Wasted arrivals (landing on an already-settled star) are the direct cost of stale info;
+    # perfect-info racing is the floor, lag only adds.
+    inst = simulate_swarm(SwarmParams(n_stars=300, coordination="instant", policy="slingshot_nearest"), seed=BASE_SEED)
+    ls = simulate_swarm(SwarmParams(n_stars=300, coordination="lightspeed", policy="slingshot_nearest"), seed=BASE_SEED)
+    assert inst.wasted_arrivals == 1705
+    assert ls.wasted_arrivals == 2042
+    assert ls.wasted_arrivals > inst.wasted_arrivals
+
+
+def test_lightspeed_penalty_grows_with_speed() -> None:
+    # The scoping insight Λ ≈ v_probe/c: at N&F's powered cruise (3e-5 c) the lag is
+    # negligible — the timescale is unchanged; it only bites when probes move fast
+    # (slingshots). Light-speed coordination is a slingshot-era phenomenon.
+    for pol, expect_penalty in (("powered", False), ("slingshot_nearest", True)):
+        inst = simulate_swarm(SwarmParams(n_stars=300, coordination="instant", policy=pol), seed=BASE_SEED)
+        ls = simulate_swarm(SwarmParams(n_stars=300, coordination="lightspeed", policy=pol), seed=BASE_SEED)
+        if expect_penalty:
+            assert ls.t100_years > inst.t100_years
+        else:
+            assert ls.t100_years == inst.t100_years  # powered: negligible, timescale unchanged
+
+
+def test_lightspeed_is_deterministic() -> None:
+    p = SwarmParams(n_stars=300, coordination="lightspeed", policy="slingshot_nearest")
+    a = simulate_swarm(p, seed=7)
+    b = simulate_swarm(p, seed=7)
+    assert [s.n_settled for s in a.steps] == [s.n_settled for s in b.steps]
+    assert a.t100_years == b.t100_years and a.wasted_arrivals == b.wasted_arrivals
+
+
+def test_lightspeed_offspring_zero_is_a_noop() -> None:
+    # With no offspring there are no races to lose; lag changes nothing.
+    r = simulate_swarm(SwarmParams(n_stars=250, coordination="lightspeed", offspring_per_settlement=0))
+    assert r.final_settled == 1 and r.t100_years is None and r.total_probes_launched == 0
+
+
+def test_max_retargets_zero_retires_losers() -> None:
+    # With no re-aiming allowed, a probe that loses a race dies on the spot (retarget_count
+    # == 0) — bounding bounce chains. A connected field with offspring still fills (redundancy).
+    r = simulate_swarm(SwarmParams(n_stars=300, coordination="lightspeed", policy="slingshot_nearest", max_retargets=0), seed=BASE_SEED)
+    assert r.retarget_count == 0
+    assert r.wasted_arrivals > 0  # losers are still counted as wasted
+    assert r.final_settled == r.n_stars  # offspring redundancy still fills it
+
+
+def test_wasted_arrival_counters_are_consistent() -> None:
+    r = simulate_swarm(SwarmParams(n_stars=300, coordination="lightspeed", policy="slingshot_nearest"), seed=BASE_SEED)
+    assert r.wasted_arrivals >= 0
+    assert r.total_arrivals >= r.wasted_arrivals  # wasted is a subset of arrivals
+    # every settled star except the homeworld required a (winning) arrival
+    assert r.total_arrivals - r.wasted_arrivals >= r.final_settled - 1
+    assert r.coordination == "lightspeed"

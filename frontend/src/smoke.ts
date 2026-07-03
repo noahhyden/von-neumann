@@ -147,6 +147,23 @@ ok(sw.hoverInfo()!.rung.key === "independent", "τ changes ρ but not the (laten
 sw.setHoverStar(null);
 sw.setDecisionTimescale(1);
 
+// Coordination regime (FRONTIER #1): light-speed lag slows the slingshot fill vs the
+// perfect-info baseline, and surfaces wasted trips. (Small field to keep the smoke quick.)
+sw.params[0].set(400); // nStars 1200 -> 400
+sw.setPolicy("slingshot_nearest");
+sw.setCoordination("instant");
+const instT100 = sw.result().t100Years!;
+ok(sw.instantBaseline() === null, "no baseline computed in instant mode (it would duplicate result)");
+sw.setCoordination("lightspeed");
+ok(sw.result().coordination === "lightspeed", "coordination flips to lightspeed (reactive)");
+ok(sw.instantBaseline() !== null, "instant baseline is computed for the delta in lightspeed");
+ok(sw.result().t100Years! > instT100, "light-speed lag slows the slingshot fill (reactive)");
+ok(sw.result().wastedArrivals > 0, "wasted trips are recorded under lag");
+ok(sw.result().finalSettled === sw.result().nStars, "a connected field still fills to 100% under lag");
+sw.setCoordination("instant");
+sw.setPolicy("powered");
+sw.params[0].set(1200);
+
 sw.params[1].set(0); // offspring 2 -> 0
 ok(sw.result().finalSettled === 1 && sw.result().t100Years === null, "zero offspring settles only the homeworld (reactive)");
 

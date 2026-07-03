@@ -81,7 +81,7 @@ between modules (seed mass from the factory; power split decided once). A live *
 mission" surface** follows the chain stage by stage. Uses the lunar-regolith factory as
 a stand-in (the probe-BOM `[GAP]` above persists here too).
 
-### 4. The swarm — slices 1–3 done, two forks parked 🚧 (`swarm/`)
+### 4. The swarm — core + slingshots + light-speed coordination done 🚧 (`swarm/`)
 
 **Source:** Nicholson & Forgan (2013), *Slingshot Dynamics for Self-Replicating
 Probes and the Effect on Exploration Timescales*,
@@ -113,19 +113,35 @@ original plan) that turns each link's light-lag into a coordination "rung" (ρ =
 latency ÷ decision timescale). Hover a star → its distance, light-time, ρ, and mode
 (real-time → move-and-wait → supervisory → delay-tolerant → independent colonies).
 Sourced (Olfati-Saber & Murray 2004; Ferrell 1965; RFC 4838). This is the *visualization*
-of the coordination problem; the *simulation* of it is the parked FRONTIER fork below.
+of the coordination problem; the *simulation* of it is the next slice.
 
-**Two forks remain, both parked (need an explicit go, not ordinary backlog):**
+**Built (slice — light-speed-limited coordination) ✅ ([FRONTIER issue #1](https://github.com/noahhyden/von-neumann/issues/1)):**
+the paper's explicit *future work*, now implemented. A `coordination: "instant" | "lightspeed"`
+param and a light-cone belief predicate — a decider at a star knows a distant star is settled
+only once the news-light has arrived (`settled_year + dist/c ≤ now`). Target selection reads
+*belief*, physical arrival reads *truth*, so probes race for the same star from stale views and
+waste trips. `"instant"` collapses to perfect info, bit-identical to the slices above (the c→∞
+keystone). Python + parity-tested TS port + a live "Perfect info | Light-speed lag" toggle with a
+"Slowdown vs perfect info" readout. **Finding** (32-seed paired ensemble,
+`swarm/experiments/lightspeed_coordination.py`): lag costs a median **~30% (nearest-slingshot),
+~50% (max-boost), ~0% (powered)** of the exploration timescale — `Λ ≈ v/c` sets the scale, hop
+non-locality decides whether it bites. A connected field still fills to 100% (no Aurora plateau
+from lag alone). See swarm/REFERENCES.md.
+
+**Remaining — one parked fork + deferred siblings (need an explicit go, not ordinary backlog):**
 
 1. **200k-star scale — the render engine.** The spatial-hash algorithm already scales;
    what's missing is drawing 10⁵ stars at 60 fps. Canvas 2D tops out ~10⁴, so this is a
    canvas→**WebGL instanced-draw** fork (typed-array SoA → vertex buffer). A design
-   decision, deferred until wanted.
-2. **Light-speed-limited coordination — the simulation** ([FRONTIER issue #1](https://github.com/noahhyden/von-neumann/issues/1)).
-   Probes deciding from stale, propagation-delayed local views, then reconciling — the
-   paper's explicit *future work*, genuinely new. The design is below.
+   decision, deferred until wanted. (The 860M iGPU is confirmed capable; at 200k the *sim*
+   becomes the bottleneck before rendering.)
+2. **Coordination siblings** (deferred, built on the light-speed slice above): probe-to-probe
+   **gossip relay** + mid-flight learning (v1 uses decision-site knowledge only, a conservative
+   bound); a settlement **death term** → the Aurora steady-state `X_eq = 1 − T_l/T_s < 1`; and a
+   **min-heap** arrival index for the 200k scale.
 
-The rest of this section is the design for those two forks.
+The rest of this section is the original design notes for the coordination simulation (now built)
+and the WebGL fork.
 
 Agent-based Monte-Carlo over up to **200,000 stars**: per-probe next-star policies
 (nearest powered / nearest slingshot / max-boost), gravitational slingshots,

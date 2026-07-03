@@ -63,17 +63,40 @@ def _dist(s: SwarmState, a: int, b: int) -> float:
     return (dx * dx + dy * dy + dz * dz) ** 0.5
 
 
-def _nearest_unsettled(s: SwarmState, frm: int, exclude: set[int]) -> int | None:
-    """Index of the nearest unsettled star to ``frm`` not in ``exclude``.
+def _believes_settled(s: SwarmState, frm: int, i: int, params: SwarmParams) -> bool:
+    """Does a decider AT star ``frm`` in year ``s.year`` know star ``i`` is settled?
 
-    O(N) scan; deterministic tie-break by lowest index. (Spatial hashing to make this
-    O(1)-ish is the scale slice; at slice-1 sizes the linear scan is fine.)
+    The light-speed-limited coordination gate (FRONTIER #1). A settled star is a beacon
+    emitting "I'm settled" at ``settled_year[i]``; the news reaches ``frm`` only after the
+    light-travel time ``dist/c``. So under ``coordination="lightspeed"`` a decider believes
+    ``i`` settled iff the beacon has had time to arrive. Under ``"instant"`` (the paper's
+    perfect-global-info assumption) this collapses to ``settled_year[i] >= 0`` — bit-identical
+    to slices 1-3. This is a pure function of state already present (positions + settled_year
+    + year + the sourced ``C_PC_PER_YEAR``); it adds no RNG and can't desync from truth.
+
+    Observer is the decision star ``frm`` (decisions happen only at stars), so news a probe
+    passes THROUGH mid-flight is ignored — a conservative simplification that undercounts
+    knowledge (documented in REFERENCES.md); mobile-relay gossip is a deferred sibling.
+    """
+    if s.settled_year[i] < 0.0:
+        return False
+    if params.coordination == "instant":
+        return True
+    return s.settled_year[i] + _dist(s, frm, i) / C_PC_PER_YEAR <= s.year
+
+
+def _nearest_unsettled(s: SwarmState, frm: int, exclude: set[int], params: SwarmParams) -> int | None:
+    """Index of the nearest *believed*-unsettled star to ``frm`` not in ``exclude``.
+
+    O(N) scan; deterministic tie-break by lowest index. "Believed" = the light-speed gate
+    (`_believes_settled`); under ``coordination="instant"`` this is exactly the old nearest-
+    unsettled. (Spatial hashing to make this O(1)-ish is the scale slice.)
     """
     best: int | None = None
     best_d2 = float("inf")
     fx, fy, fz = s.xs[frm], s.ys[frm], s.zs[frm]
     for i in range(len(s.xs)):
-        if s.settled_year[i] >= 0.0 or i in exclude:
+        if i in exclude or _believes_settled(s, frm, i, params):
             continue
         dx = s.xs[i] - fx
         dy = s.ys[i] - fy
@@ -85,12 +108,12 @@ def _nearest_unsettled(s: SwarmState, frm: int, exclude: set[int]) -> int | None
     return best
 
 
-def _nearest_k_unsettled(s: SwarmState, frm: int, exclude: set[int], k: int) -> list[int]:
-    """The ``k`` nearest unsettled stars to ``frm`` (deterministic order by (distance, index))."""
+def _nearest_k_unsettled(s: SwarmState, frm: int, exclude: set[int], k: int, params: SwarmParams) -> list[int]:
+    """The ``k`` nearest *believed*-unsettled stars to ``frm`` (deterministic order by (distance, index))."""
     fx, fy, fz = s.xs[frm], s.ys[frm], s.zs[frm]
     cands: list[tuple[float, int]] = []
     for i in range(len(s.xs)):
-        if s.settled_year[i] >= 0.0 or i in exclude:
+        if i in exclude or _believes_settled(s, frm, i, params):
             continue
         dx = s.xs[i] - fx
         dy = s.ys[i] - fy
@@ -101,17 +124,17 @@ def _nearest_k_unsettled(s: SwarmState, frm: int, exclude: set[int], k: int) -> 
 
 
 def _select_target(s: SwarmState, frm: int, exclude: set[int], params: SwarmParams) -> int | None:
-    """Pick the next star per policy.
+    """Pick the next star per policy, reading the decider's *belief* of what's unsettled.
 
-    powered / slingshot_nearest → nearest unsettled star. slingshot_maxboost → among the
-    nearest ``max_boost_candidates`` unsettled stars, the one whose slingshot gives the
-    largest boost. In this scalar model the boost grows with the destination star's speed,
-    so max-boost = highest star speed among the candidates (tie-break lowest index). We
-    scan only the nearest K (not the whole field) so a max-boost probe doesn't fly across
-    the galaxy for a marginally bigger kick — a documented [ESTIMATE] bound.
+    powered / slingshot_nearest → nearest believed-unsettled star. slingshot_maxboost → among
+    the nearest ``max_boost_candidates`` believed-unsettled stars, the one whose slingshot
+    gives the largest boost. In this scalar model the boost grows with the destination star's
+    speed, so max-boost = highest star speed among the candidates (tie-break lowest index). We
+    scan only the nearest K (not the whole field) so a max-boost probe doesn't fly across the
+    galaxy for a marginally bigger kick — a documented [ESTIMATE] bound.
     """
     if params.policy == "slingshot_maxboost":
-        cand = _nearest_k_unsettled(s, frm, exclude, params.max_boost_candidates)
+        cand = _nearest_k_unsettled(s, frm, exclude, params.max_boost_candidates, params)
         if not cand:
             return None
         best = cand[0]
@@ -119,7 +142,7 @@ def _select_target(s: SwarmState, frm: int, exclude: set[int], params: SwarmPara
             if s.star_speed_pc_yr[i] > s.star_speed_pc_yr[best]:
                 best = i
         return best
-    return _nearest_unsettled(s, frm, exclude)
+    return _nearest_unsettled(s, frm, exclude, params)
 
 
 def _boosted_speed(current_pc_yr: float, star_speed_pc_yr: float, params: SwarmParams) -> float:
@@ -211,18 +234,32 @@ def step(state: SwarmState, params: SwarmParams) -> SwarmState:
     # Keep non-arrived probes; launches and re-targets append into this same list.
     state.probes = [p for p in state.probes if p.id not in arrived_ids]
 
+    state.total_arrivals += len(arrivals)
     for p in arrivals:
+        # Physical arrival reads GROUND TRUTH — the star's real status is what the probe
+        # finds when it gets there, regardless of what it believed when it aimed.
         if state.settled_year[p.target] < 0.0:
             # First to arrive: settle it and spread (slingshot off it, boosting offspring).
             state.settled_year[p.target] = state.year
             _launch_from(state, p.target, params, p.speed_pc_yr)
         else:
-            # Raced and lost: re-target (by policy), keeping this probe's current speed.
+            # Raced and lost: a wasted trip (the cost of stale info). Re-target (by policy,
+            # from this arrival star's belief), keeping this probe's speed — up to the cap.
+            state.wasted_arrivals += 1
+            # The retarget cap only bites under lightspeed, where stale views cause bounce
+            # chains; instant races resolve to a truly-unsettled star, so re-targeting is
+            # unbounded there — keeping the perfect-info baseline bit-identical.
+            if params.coordination == "lightspeed" and p.retargets >= params.max_retargets:
+                continue  # bounce chain exhausted → retire the probe as wasted
             target = _select_target(state, p.target, set(), params)
             if target is not None:
+                state.retarget_count += 1
                 travel = _dist(state, p.target, target) / p.speed_pc_yr
                 state.probes.append(
-                    Probe(id=p.id, target=target, arrive_year=state.year + travel, speed_pc_yr=p.speed_pc_yr)
+                    Probe(
+                        id=p.id, target=target, arrive_year=state.year + travel,
+                        speed_pc_yr=p.speed_pc_yr, retargets=p.retargets + 1,
+                    )
                 )
 
     return state
@@ -278,5 +315,9 @@ def simulate_swarm(params: SwarmParams, *, seed: int = 0x9E3779B9) -> SwarmResul
         front_radius_pc=_front_radius(state),
         max_probe_speed_km_s=state.max_speed_pc_yr / KM_S_TO_PC_YR,
         policy=params.policy,
+        coordination=params.coordination,
+        total_arrivals=state.total_arrivals,
+        wasted_arrivals=state.wasted_arrivals,
+        retarget_count=state.retarget_count,
         steps=steps,
     )

@@ -25,6 +25,12 @@ KM_S_TO_PC_YR: float = 3.15576e7 / 3.0856775814913673e13
 # Target-selection / travel policies (Nicholson & Forgan 2013, their three scenarios).
 Policy = Literal["powered", "slingshot_nearest", "slingshot_maxboost"]
 
+# Coordination regime (FRONTIER #1). "instant" = the paper's assumption of perfect global
+# knowledge (bit-identical to slices 1-3). "lightspeed" = a probe deciding at a star only
+# knows a distant star is settled once the news-light has arrived (settled_year + dist/c ≤
+# now), so probes race for the same star from stale views. See REFERENCES.md.
+Coordination = Literal["instant", "lightspeed"]
+
 
 class SwarmParams(BaseModel):
     """Inputs to one settlement-front run. Physical numbers sourced in REFERENCES.md."""
@@ -65,6 +71,14 @@ class SwarmParams(BaseModel):
         gt=0, le=1, default=0.05, description="[ESTIMATE] sanity ceiling on accumulated probe speed"
     )
 
+    # --- light-speed-limited coordination (FRONTIER #1). Default 'instant' = perfect info. ---
+    coordination: Coordination = Field(
+        default="instant", description="knowledge regime: instant (perfect global info) | lightspeed (news travels at c)"
+    )
+    max_retargets: int = Field(
+        ge=0, default=8, description="[ESTIMATE] cap on re-target hops before a probe is retired as wasted (bounds stale-view bounce chains)"
+    )
+
     @property
     def probe_speed_pc_per_year(self) -> float:
         return self.probe_speed_c * C_PC_PER_YEAR
@@ -87,6 +101,7 @@ class Probe:
     target: int
     arrive_year: float
     speed_pc_yr: float
+    retargets: int = 0  # how many times this probe has lost a race and re-aimed (capped by max_retargets)
 
 
 @dataclass
@@ -105,6 +120,10 @@ class SwarmState:
     next_probe_id: int
     total_launched: int
     max_speed_pc_yr: float  # fastest probe launched so far (shows accumulated boost)
+    # --- coordination observability (the cost of no-coordination; 0 unless probes race) ---
+    total_arrivals: int = 0  # every probe arrival processed
+    wasted_arrivals: int = 0  # arrivals landing on an already-(truly-)settled star (redundant trips)
+    retarget_count: int = 0  # total re-target events (a lost race that re-aimed)
 
     def n_settled(self) -> int:
         return sum(1 for y in self.settled_year if y >= 0.0)
@@ -130,4 +149,8 @@ class SwarmResult:
     front_radius_pc: float
     max_probe_speed_km_s: float  # peak accumulated probe speed (powered = the cruise speed)
     policy: str
+    coordination: str = "instant"  # knowledge regime this run used
+    total_arrivals: int = 0  # every probe arrival (settlements + wasted trips)
+    wasted_arrivals: int = 0  # arrivals at an already-settled star — the cost of stale info
+    retarget_count: int = 0  # total re-target events
     steps: list[SwarmStep] = field(default_factory=list)

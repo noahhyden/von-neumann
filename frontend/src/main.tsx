@@ -968,6 +968,14 @@ function SwarmSurface(props: { model: SwarmModel }) {
     m.setPlaying(!m.playing());
   };
   const pct = () => (m.result().nStars ? (m.settledAt().count / m.result().nStars) * 100 : 0);
+  // % slowdown of the fill-100% timescale vs the perfect-info baseline (only in lightspeed).
+  const slowdownPct = (): number | null => {
+    const b = m.instantBaseline();
+    const r = m.result();
+    if (!b || !b.t100Years || !r.t100Years) return null;
+    return ((r.t100Years - b.t100Years) / b.t100Years) * 100;
+  };
+  const wastedPct = () => { const r = m.result(); return r.totalArrivals ? (r.wastedArrivals / r.totalArrivals) * 100 : 0; };
 
   return (
     <div>
@@ -1019,6 +1027,17 @@ function SwarmSurface(props: { model: SwarmModel }) {
               )}
             </For>
           </div>
+          <div class="btnrow" style="align-items:center;gap:8px;margin-top:4px">
+            <span class="note" style="align-self:center;margin-right:4px">coordination:</span>
+            <For each={() => ["instant", "lightspeed"] as const}>
+              {(mode: "instant" | "lightspeed") => (
+                <button
+                  class={() => `act ${m.coordination() === mode ? "primary" : "ghost"}`}
+                  onClick={() => { m.setCoordination(mode); m.setPlaying(false); m.setScrubYear(m.maxYear()); }}
+                >{mode === "instant" ? "Perfect info" : "Light-speed lag"}</button>
+              )}
+            </For>
+          </div>
         </div>
       </section>
 
@@ -1039,6 +1058,8 @@ function SwarmSurface(props: { model: SwarmModel }) {
               <StatRow what="Fill 100%" value={() => (m.result().t100Years === null ? "never" : `${fmtNum(m.result().t100Years!)} yr`)} cls={() => (m.result().t100Years === null ? "bad" : "good")} />
               <StatRow what="Probes launched" value={() => fmtNum(m.result().totalProbesLaunched)} />
               <StatRow what="Peak probe speed" sub="powered = the cruise; slingshots accumulate" value={() => `${fmtNum(m.result().maxProbeSpeedKmS)} km/s`} cls={() => (m.result().policy === "powered" ? "" : "good")} />
+              <StatRow what="Wasted trips" sub="arrivals at an already-settled star" value={() => `${fmtNum(m.result().wastedArrivals)} (${wastedPct().toFixed(0)}%)`} cls={() => (m.coordination() === "lightspeed" ? "chip" : "")} />
+              <StatRow what="Slowdown vs perfect info" sub="the cost of light-speed lag" value={() => (slowdownPct() === null ? "—" : `+${slowdownPct()!.toFixed(0)}%`)} cls={() => { const s = slowdownPct(); return s === null ? "" : s > 5 ? "bad" : "good"; }} />
               <p class="explain" style="margin-top:18px">{() => explainSwarm(m)}</p>
             </div>
           </div>

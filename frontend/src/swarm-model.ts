@@ -12,7 +12,7 @@ import { createSignal, createMemo } from "pimas";
 import type { Accessor, Setter } from "pimas";
 import type { ParamSignal } from "./reactive-model.js";
 import { simulateSwarm, SWARM_DEFAULTS } from "./swarm.js";
-import type { SwarmResult, Policy } from "./swarm.js";
+import type { SwarmResult, Policy, Coordination } from "./swarm.js";
 import { lightTimeYears, roundTripYears, rho, classifyRung } from "./coordination.js";
 import type { Rung } from "./coordination.js";
 
@@ -48,6 +48,12 @@ export interface SwarmModel {
   setDecisionTimescale: Setter<number>;
   /** light-time / ρ / rung for the hovered star relative to the homeworld, or null. */
   hoverInfo: Accessor<HoverInfo | null>;
+  /** knowledge regime: "instant" (perfect global info) | "lightspeed" (news travels at c). */
+  coordination: Accessor<Coordination>;
+  setCoordination: Setter<Coordination>;
+  /** the perfect-info run at the same knobs — only when in lightspeed mode (else null), so
+   * the surface can show the cost of lag as a delta. */
+  instantBaseline: Accessor<SwarmResult | null>;
 }
 
 export function createSwarmModel(): SwarmModel {
@@ -60,6 +66,7 @@ export function createSwarmModel(): SwarmModel {
   const [policy, setPolicy] = createSignal<Policy>("powered");
   const [hoverStar, setHoverStar] = createSignal<number | null>(null);
   const [decisionTimescale, setDecisionTimescale] = createSignal(1); // yr, [ESTIMATE] knob
+  const [coordination, setCoordination] = createSignal<Coordination>("instant");
 
   // All four feed the `result` memo → each `set` re-runs the whole simulateSwarm fold.
   // commitOnRelease: a drag then triggers one re-sim on release, not one per pixel.
@@ -71,11 +78,20 @@ export function createSwarmModel(): SwarmModel {
   ];
 
   const KM_S_TO_C = 1 / 299792.458;
-  const result = createMemo<SwarmResult>(() =>
-    simulateSwarm(
-      { ...SWARM_DEFAULTS, nStars: nStars(), offspringPerSettlement: offspring(), probeSpeedC: probeSpeedKmS() * KM_S_TO_C, policy: policy() },
-      seed(),
-    ),
+  const paramsFor = (coord: Coordination) => ({
+    ...SWARM_DEFAULTS,
+    nStars: nStars(),
+    offspringPerSettlement: offspring(),
+    probeSpeedC: probeSpeedKmS() * KM_S_TO_C,
+    policy: policy(),
+    coordination: coord,
+  });
+  const result = createMemo<SwarmResult>(() => simulateSwarm(paramsFor(coordination()), seed()));
+
+  // The perfect-info run at the same knobs, so the surface can show lag as a delta. Only
+  // computed in lightspeed mode (in instant it would just duplicate `result`).
+  const instantBaseline = createMemo<SwarmResult | null>(() =>
+    coordination() === "lightspeed" ? simulateSwarm(paramsFor("instant"), seed()) : null,
   );
 
   const maxYear = createMemo<number>(() => {
@@ -128,5 +144,6 @@ export function createSwarmModel(): SwarmModel {
   return {
     params, result, maxYear, scrubYear, setScrubYear, playing, setPlaying, policy, setPolicy, settledAt,
     hoverStar, setHoverStar, decisionTimescale, setDecisionTimescale, hoverInfo,
+    coordination, setCoordination, instantBaseline,
   };
 }

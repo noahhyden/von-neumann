@@ -115,8 +115,8 @@ test("spatial-hash nearest search is bit-identical to brute force (prove small)"
     let checked = 0;
     for (let frm = 0; frm < n; frm += 7) {
       const exclude = new Set<number>([(frm + 3) % n, (frm + 11) % n]);
-      const g = gridNearestUnsettled(s, frm, exclude);
-      const b = bruteNearestUnsettled(s, frm, exclude);
+      const g = gridNearestUnsettled(s, frm, exclude, SWARM_DEFAULTS);
+      const b = bruteNearestUnsettled(s, frm, exclude, SWARM_DEFAULTS);
       assert.equal(g, b, `n=${n} seed=${seed} frm=${frm}: grid ${g} != brute ${b}`);
       checked++;
     }
@@ -129,6 +129,75 @@ test("grid scales to a large field and still fills it (build large)", () => {
   const r = simulateSwarm({ ...SWARM_DEFAULTS, nStars: 8000 }, 123);
   assert.equal(r.finalSettled, 8000);
   assert.ok(r.t100Years !== null && r.t100Years > 0);
+});
+
+test("lightspeed coordination reproduces Python ground truth (belief gate + counters)", () => {
+  // Ground truth from the Python swarm (n=300, seed 0x9e3779b9, coordination="lightspeed").
+  // Verifies the light-cone belief gate, the grid-no-remove path, and the wasted-trip counters
+  // match bit-for-bit — including the slingshot regime where the effect lives.
+  const cases: { policy: Policy; e: { settled: number; launched: number; t100: number; maxSpd: number; front: number; nsteps: number; totalArr: number; wasted: number; retarget: number; samples: [number, number][] } }[] = [
+    {
+      policy: "slingshot_nearest",
+      e: { settled: 300, launched: 598, t100: 110000, maxSpd: 3807.375281, front: 5.70727, nsteps: 24,
+           totalArr: 2341, wasted: 2042, retarget: 1743, samples: [[0, 1], [6, 36], [12, 124], [18, 262], [23, 300]] },
+    },
+    {
+      policy: "powered",
+      e: { settled: 300, launched: 597, t100: 1610000, maxSpd: 8.993774, front: 5.70727, nsteps: 531,
+           totalArr: 1754, wasted: 1455, retarget: 1157, samples: [[0, 1], [132, 77], [265, 279], [398, 300], [530, 300]] },
+    },
+  ];
+  for (const { policy, e } of cases) {
+    const r = simulateSwarm({ ...SWARM_DEFAULTS, nStars: 300, policy, coordination: "lightspeed" }, 0x9e3779b9);
+    assert.equal(r.finalSettled, e.settled, `${policy}: settled`);
+    assert.equal(r.totalProbesLaunched, e.launched, `${policy}: launched`);
+    assert.equal(r.t100Years, e.t100, `${policy}: t100`);
+    near(r.maxProbeSpeedKmS, e.maxSpd, 1e-6);
+    near(r.frontRadiusPc, e.front, 1e-4);
+    assert.equal(r.steps.length, e.nsteps, `${policy}: nsteps`);
+    assert.equal(r.totalArrivals, e.totalArr, `${policy}: totalArrivals`);
+    assert.equal(r.wastedArrivals, e.wasted, `${policy}: wastedArrivals`);
+    assert.equal(r.retargetCount, e.retarget, `${policy}: retargetCount`);
+    assert.equal(r.coordination, "lightspeed");
+    for (const [i, pop] of e.samples) assert.equal(r.steps[i].nSettled, pop, `${policy}: pop@${i}`);
+  }
+});
+
+test("lightspeed slows slingshots but leaves powered's timescale unchanged (the finding)", () => {
+  const mk = (policy: Policy, coordination: "instant" | "lightspeed") =>
+    simulateSwarm({ ...SWARM_DEFAULTS, nStars: 300, policy, coordination }, 0x9e3779b9);
+  const si = mk("slingshot_nearest", "instant"), sl = mk("slingshot_nearest", "lightspeed");
+  assert.ok(sl.t100Years! > si.t100Years!, "lightspeed slows the slingshot fill");
+  assert.ok(sl.wastedArrivals > si.wastedArrivals, "and adds wasted trips");
+  const pi = mk("powered", "instant"), pl = mk("powered", "lightspeed");
+  assert.equal(pl.t100Years, pi.t100Years, "powered nearest-neighbour fill is immune (local recovery)");
+  assert.equal(sl.finalSettled, 300, "a connected field still fills to 100% under lag");
+});
+
+test("instant mode is bit-identical to the default (c→∞ reduction)", () => {
+  // The keystone: "instant" drops the light-cone term, so it must reproduce the perfect-info
+  // run exactly. (SWARM_DEFAULTS is already coordination:"instant", so this pins the explicit form.)
+  const explicit = simulateSwarm({ ...SWARM_DEFAULTS, nStars: 300, policy: "slingshot_nearest", coordination: "instant" }, 0x9e3779b9);
+  const dflt = simulateSwarm({ ...SWARM_DEFAULTS, nStars: 300, policy: "slingshot_nearest" }, 0x9e3779b9);
+  assert.deepEqual(explicit.steps.map((s) => s.nSettled), dflt.steps.map((s) => s.nSettled));
+  assert.equal(explicit.t100Years, dflt.t100Years);
+});
+
+test("grid ≡ brute under the lightspeed belief gate", () => {
+  // The belief gate is a pure per-star predicate, so grid and brute must still agree — now
+  // with settled stars kept in the grid (not removed) and news partially propagated.
+  const p = { ...SWARM_DEFAULTS, nStars: 800, coordination: "lightspeed" as const };
+  const s = initialState(p, 7);
+  s.year = 4.0; // let some settlement news have propagated (dist/c ~ a few yr at 1 pc)
+  for (let i = 0; i < 800; i++) if ((i * 2654435761) % 5 < 2) s.settledYear[i] = (i % 7) * 0.6;
+  let checked = 0;
+  for (let frm = 0; frm < 800; frm += 13) {
+    const g = gridNearestUnsettled(s, frm, new Set(), p);
+    const b = bruteNearestUnsettled(s, frm, new Set(), p);
+    assert.equal(g, b, `frm=${frm}: grid ${g} != brute ${b}`);
+    checked++;
+  }
+  assert.ok(checked > 10);
 });
 
 test("same seed is bit-identical; a connected field always fills", () => {

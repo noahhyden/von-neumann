@@ -141,6 +141,52 @@ the real-world analog distances below.
     the sim already sits in** (mean hop ~1 pc → round-trip ~6.5 yr). That collapse is the
     lesson, not a rendering bug: at galactic scale the four faster rungs are sub-pixel.
 
+## Light-speed-limited coordination (the `lightspeed` regime, FRONTIER #1)
+
+Nicholson & Forgan grant every probe **perfect, instantaneous global knowledge** of which
+stars are settled; finite light-speed is their explicit future work. The `coordination`
+param adds it: under `"lightspeed"`, a probe deciding *at* star `frm` in year `Y` treats a
+distant star `i` as settled only once the news has arrived —
+`settled_year[i] + dist(frm,i)/c ≤ Y`. Under `"instant"` (default) this collapses to
+`settled_year[i] ≥ 0`, bit-identical to the perfect-info slices.
+
+- **Signal speed = c** — the news travels at lightspeed (an EM beacon is the physical upper
+  bound on information). Reuses the already-derived `C_PC_PER_YEAR` (above); **no new
+  constant.** A slower signal is a trivial future knob, not needed for the core question.
+- **`Λ ≈ v_probe / c` `[ESTIMATE]`** — the dimensionless ratio (info-lag-per-hop ÷
+  travel-time-per-hop = (d/c)/(d/v) = v/c) that governs how much the lag matters. At the
+  paper's powered speed (3×10⁻⁵ c) `Λ ≈ 3×10⁻⁵` → the effect is **negligible**; it only bites
+  in the fast/slingshot regime (boosted probes ~10³ km/s, or `probe_speed_c` swept toward
+  0.1 c — Carroll-Nellenback's range, [arXiv:1902.04450](https://arxiv.org/abs/1902.04450)).
+  Derived here from hop geometry; the constant of proportionality depends on the hop-length
+  distribution, hence `[ESTIMATE]`.
+- **`max_retargets = 8` `[ESTIMATE]`** — a **bookkeeping** cap, not a physical number: a probe
+  that loses this many races in a row is retired as wasted, bounding pathological bounce
+  chains late in the fill. No literature source; results must be shown insensitive to it (sweep).
+
+**Modelling assumptions (stated as assumptions, not measured facts — §1):**
+- **A settled star is an omnidirectional beacon emitting at year `settled_year[i]`.** No relay,
+  no directionality.
+- **Decision-site knowledge only.** Belief is evaluated at the decision star at decision time,
+  so news a probe's worldline passes *through* mid-flight is ignored. This **undercounts**
+  knowledge → probes are slightly pessimistic → a **conservative upper bound** on redundant
+  effort. Mid-flight learning (two-endpoint cone) and true probe-to-probe **gossip relay** are
+  the deferred sibling slice.
+- **Pure lag still fills a connected field to 100%** (re-targeting guarantees it), just slower.
+  A steady-state settled fraction `X_eq = 1 − T_launch/T_settle < 1` (Carroll-Nellenback's
+  "Aurora effect") requires a settlement *death* term — a separate sibling, not lag alone.
+
+**Finding (32-seed paired ensemble, `experiments/lightspeed_coordination.py`):** on the same
+seeded galaxies (N=300), light-speed lag slows the fill-100% timescale by a median of **~0%
+(powered), ~30% (slingshot-nearest, IQR +20…+38%), ~50% (slingshot-maxboost, IQR +46…+54%)** —
+every case still reaches 100%. So the penalty is **not** simply `Λ = v/c`: powered
+nearest-neighbour flight is nearly immune even when fast, because a probe that loses a race
+just takes the star next door (cheap local recovery). The cost appears only with **long-range
+hops made from stale views** (the slingshot regime), where a wasted trip is a long detour.
+`Λ ≈ v/c` sets the *scale* of the lag; **hop non-locality decides whether it bites.** This
+refines Nicholson & Forgan's perfect-info picture: their slingshot speed-up is real, but under
+finite light-speed a meaningful fraction of it is eaten by uncoordinated long-range collisions.
+
 ## Simplifications still deferred to later slices
 
 - **Uniform cube star field**, not a galactic disk with a density gradient.
