@@ -878,7 +878,8 @@ const POLICY_LABELS: Record<string, string> = {
 
 const explainSwarm = (m: SwarmModel): string => {
   const r = m.result();
-  const myr = (y: number) => fmtNum(y / 1e6);
+  // Myr with adaptive precision — slingshot fills are sub-Myr and rounded to "0" at 0 dp.
+  const myr = (y: number) => { const m = y / 1e6; return fmtNum(m, m >= 10 ? 0 : m >= 1 ? 1 : m >= 0.01 ? 2 : 3); };
   if (r.t100Years === null) {
     return `With ${m.params[1].get()} offspring per settlement the front can't fill the field — raise it above zero and the reachable galaxy fills exponentially.`;
   }
