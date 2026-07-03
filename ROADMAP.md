@@ -27,8 +27,11 @@ First surface: the electronics wall, live.
 **Started:** `probe-sim/` has the solar environment (inverse-square delivered power
 vs heliocentric distance) and the operational-range computation (delivered power →
 `closure-sim` replication → the distance where the probe stops reaching target
-output), exercised on a synthetic fixture. **Remaining:** instantiate the real
-per-module probe factory (blocked on the mass `[GAP]`), then a `frontend` surface.
+output), exercised on a synthetic fixture. A live **"Single probe" frontend surface**
+already shows delivered power falling as 1/d² and the compute it affords. **Remaining
+(blocked on external data):** instantiate the real per-module probe factory — this
+needs real per-module probe masses, which are an unsourceable `[GAP]`; finishing it
+with a guessed mass would violate §1, so it waits on a source, not on effort.
 
 **Source:** Borgue & Hein (2020), *Near-Term Self-replicating Probes — A Concept
 Design*, [arXiv:2005.12303](https://arxiv.org/abs/2005.12303) (*Acta Astronautica*
@@ -68,25 +71,61 @@ to `gen-diff.mjs`); jitter = 0 is deterministic and seed-independent. 11 behavio
 port with the mulberry32 RNG matching the Python bit-for-bit. **Remaining:** swapping in
 a probe-specific BOM once the mass `[GAP]` is closed.
 
-### 4. The swarm — slice 1 done 🚧 (`swarm/`)
+### 3b. `mission` — the whole operation, end to end (done ✅)
+
+Not a planned module — an **integration** that emerged once 0–3 existed. One pure fold
+(`run_mission`) composes launch-economics → closure-sim → probe-sim → replication →
+payoff: launch a seed, arrive at a heliocentric distance, split solar power between
+building and thinking, replicate, price the launch-mass leverage. Reconciles the seams
+between modules (seed mass from the factory; power split decided once). A live **"Full
+mission" surface** follows the chain stage by stage. Uses the lunar-regolith factory as
+a stand-in (the probe-BOM `[GAP]` above persists here too).
+
+### 4. The swarm — slices 1–3 done, two forks parked 🚧 (`swarm/`)
 
 **Source:** Nicholson & Forgan (2013), *Slingshot Dynamics for Self-Replicating
 Probes and the Effect on Exploration Timescales*,
 [arXiv:1307.1648](https://arxiv.org/abs/1307.1648) (*Int. J. Astrobiology* 2013).
 
-**Built (slice 1):** `swarm/` — the pure, seeded, fixed-step algorithm core. Probes
-spread star-to-star through a seeded field (density from a sourced local stellar
-density), settling the nearest unsettled star at the paper's powered speed (3e-5c ≈ 9 km/s) and launching offspring; reports
-the exploration timescale (50/90/100%) and the settlement-front radius. The front
-advances at ~40% of probe speed (nearest-hop zig-zag + settling). SoA-style state,
-mulberry32 RNG (byte-identical to the other modules), 13 behavior tests. A live
-**"Swarm" frontend surface** now renders the front on a `<canvas>` (play/scrub the fill,
-reseed the galaxy) — one canvas + a single effect reading the fold's buffers, no
-node-per-star (§7); parity-tested TS port. **Slices remaining:** (1) scale + spatial
-hashing (200k stars) → typed-array SoA + WebGL instanced draw; (2) slingshot dynamics +
-the paper's nearest-powered/slingshot/max-boost policies + replicate-in-transit; (3) the
-novel **light-speed-limited coordination** extension. The rest of this section is the
-design for those slices.
+**Built (slice 1 — the fold + surface) ✅:** `swarm/` — the pure, seeded, fixed-step
+algorithm core. Probes spread star-to-star through a seeded field (uniform 1 star/pc³,
+the paper's density), settling the nearest unsettled star at the paper's powered speed
+(3e-5c ≈ 9 km/s) and launching offspring; reports the exploration timescale (50/90/100%)
+and the settlement-front radius. The front advances at ~40% of probe speed (nearest-hop
+zig-zag + settling). SoA-style state, mulberry32 RNG (byte-identical to the other
+modules). A live **"Swarm" frontend surface** renders the front on a `<canvas>`
+(play/scrub the fill, reseed) — one canvas + a single effect reading the fold's buffers,
+no node-per-star (§7); parity-tested TS port.
+
+**Built (slice 2 — slingshots) ✅:** the paper's three next-star policies — **powered**,
+**slingshot-nearest**, **slingshot-max-boost** — with the gravitational boost from
+N&F Eq. 4 (u_esc ≈ 617.5 km/s solar, derived) and per-star galactic velocities
+([ESTIMATE], the paper defers these). Reproduces the paper's findings: slingshots ≫
+powered, and **nearest-star beats max-boost on time**. Live 3-way policy toggle +
+peak-speed readout on the surface; parity-tested.
+
+**Built (slice — the spatial hash) ✅:** a uniform-grid nearest-unsettled search, proven
+**bit-identical to brute force** and scaling the fill to 8k+ stars. (This is half of the
+original "scale" slice — the algorithm side. The 200k render side is the WebGL fork below.)
+
+**Built (bonus — the coordination-horizon viz) ✅:** a teaching overlay (not in the
+original plan) that turns each link's light-lag into a coordination "rung" (ρ = round-trip
+latency ÷ decision timescale). Hover a star → its distance, light-time, ρ, and mode
+(real-time → move-and-wait → supervisory → delay-tolerant → independent colonies).
+Sourced (Olfati-Saber & Murray 2004; Ferrell 1965; RFC 4838). This is the *visualization*
+of the coordination problem; the *simulation* of it is the parked FRONTIER fork below.
+
+**Two forks remain, both parked (need an explicit go, not ordinary backlog):**
+
+1. **200k-star scale — the render engine.** The spatial-hash algorithm already scales;
+   what's missing is drawing 10⁵ stars at 60 fps. Canvas 2D tops out ~10⁴, so this is a
+   canvas→**WebGL instanced-draw** fork (typed-array SoA → vertex buffer). A design
+   decision, deferred until wanted.
+2. **Light-speed-limited coordination — the simulation** ([FRONTIER issue #1](https://github.com/noahhyden/von-neumann/issues/1)).
+   Probes deciding from stale, propagation-delayed local views, then reconciling — the
+   paper's explicit *future work*, genuinely new. The design is below.
+
+The rest of this section is the design for those two forks.
 
 Agent-based Monte-Carlo over up to **200,000 stars**: per-probe next-star policies
 (nearest powered / nearest slingshot / max-boost), gravitational slingshots,
