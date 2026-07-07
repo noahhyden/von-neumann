@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spine"
+version = "0.1.0"
+description = "The cross-scale integrator - threads one closure-sim factory through the single-factory, fleet, and galaxy folds so their cadences are derived, not independently assumed"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.6",
+    "closure-sim",
+    "multi-probe",
+    "swarm",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+# Sibling modules in this monorepo, consumed only through their public APIs (CLAUDE.md
+# §4). spine adds no new physics; it routes numbers each of these already documents.
+[tool.uv.sources]
+closure-sim = { path = "../closure-sim", editable = true }
+multi-probe = { path = "../multi-probe", editable = true }
+swarm = { path = "../swarm", editable = true }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

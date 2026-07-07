@@ -64,7 +64,7 @@ def params_from_factory(factory: Factory, **overrides: float | int) -> FleetPara
     return FleetParams(**base)
 
 
-def _build_rate_kg_per_day(params: FleetParams, distance_au: float) -> float:
+def build_rate_kg_per_day(params: FleetParams, distance_au: float) -> float:
     """Local build rate at a distance = min(machinery throughput, energy cap).
 
     Exactly closure-sim's ``min(alpha*F, energy_cap)`` for a *fixed-size* probe: the
@@ -79,6 +79,23 @@ def _build_rate_kg_per_day(params: FleetParams, distance_au: float) -> float:
     manufacturing_kwh_per_day = manufacturing_w / 1000.0 * 24.0
     energy_cap = manufacturing_kwh_per_day / params.e_local_kwh_per_kg
     return min(params.local_build_rate_kg_per_day, energy_cap)
+
+
+def time_to_build_one_copy_days(params: FleetParams, distance_au: float) -> float:
+    """Days for one probe to build one copy's worth of *local* structure at a distance.
+
+    ``= local_per_child / build_rate``, where ``local_per_child = closure_ratio *
+    seed_mass_kg`` (the locally-produced mass in one copy) and ``build_rate`` is the
+    regime-limited rate above. This is the fleet's fundamental replication cadence - the
+    time between a probe's copies - and, evaluated at 1 AU, it is the swarm's per-star
+    *manufacturing dwell* (``settle_time_years``): the time a freshly settled probe spends
+    building offspring before they depart. It is the same closure-sim physics, re-used at a
+    third scale; it introduces no new number. Returns ``inf`` if the local build rate is
+    zero (the probe can never copy - the spatial power wall at that distance).
+    """
+    local_per_child = params.closure_ratio * params.seed_mass_kg
+    rate = build_rate_kg_per_day(params, distance_au)
+    return local_per_child / rate if rate > 0.0 else float("inf")
 
 
 def initial_state(params: FleetParams, *, seed: int) -> FleetState:
@@ -124,7 +141,7 @@ def step(state: FleetState, params: FleetParams, dt: float) -> FleetState:
             updated.append(p)  # traveling probes just wait (arrival handled below)
             continue
 
-        built = p.built_kg + _build_rate_kg_per_day(params, p.distance_au) * dt
+        built = p.built_kg + build_rate_kg_per_day(params, p.distance_au) * dt
         children = p.children
 
         while built >= local_per_child and count < params.max_probes and pool >= vitamins_per_child:
@@ -209,7 +226,7 @@ def simulate_fleet(
     cap_limited = len(state.probes) >= params.max_probes
     local_per_child = params.closure_ratio * params.seed_mass_kg
     power_limited = any(
-        _build_rate_kg_per_day(params, p.distance_au) * duration_days < local_per_child
+        build_rate_kg_per_day(params, p.distance_au) * duration_days < local_per_child
         for p in state.active()
     )
 

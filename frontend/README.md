@@ -55,6 +55,20 @@ light-delayed views and race for the same star, with a live "slowdown vs perfect
 readout), and hover any star to read its coordination lag from home. Parity-tested TS
 port of `swarm`; the one remaining slice is the 200k-star WebGL render engine.
 
+### Across scales (`spine`) - live
+
+The cross-scale surface. Where "Full mission" composes the single-probe modules, this
+threads **one** factory through all three *scales* - the single factory, the local fleet,
+and the galaxy - so a number that was guessed at one scale is **derived** instead. Its
+headline: the galaxy model's per-star manufacturing dwell (time to build offspring before
+they leave) used to be an unsourced **zero** (instant replication); here it is derived from
+the same factory build physics the fleet uses, and shown to be a negligible tax on galactic
+exploration. Drag the star count and offspring, toggle the travel policy, and read the same
+build cadence weighed at each scale: it *is* the fleet's doubling clock (transit is days),
+yet is a rounding error against a multi-million-year galactic fill (transit dwarfs it). For
+the fast slingshot policies a live A/B measures the dwell's cost directly (~0.4%); for
+powered it shows the analytic fraction (~1e-6). Parity-tested TS port of `spine`.
+
 ### The fleet (`multi-probe`) - live
 
 A small, **deterministic, seeded** fleet running live: one probe copies itself, the
@@ -125,6 +139,8 @@ src/
   scenarios.ts           the two example factories, transcribed from closure-sim/scenarios/*.yaml
   sources.ts             the project-wide bibliography (pure data); sources.test.ts guards its integrity
   coordination.ts        the light-speed coordination-rung logic (pure); coordination.test.ts covers it
+  spine.ts               the cross-scale integrator (pure); spine.test.ts parity-guards it vs spine/run.py
+  spine-model.ts         the spine as a pimas graph: signals + memos over the three-scale fold
   reactive-model.ts      the model as a pimas graph: store + signals + memos + speculate + agent bridge
   chart.tsx              the growth chart, driven by the real sim output
   main.tsx               the page

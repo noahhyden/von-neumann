@@ -10,10 +10,12 @@ wall (a finite vitamin pool) and a spatial power wall (1/d² sunlight vs dispers
 """
 
 from multi_probe.fleet import (
+    build_rate_kg_per_day,
     initial_state,
     params_from_factory,
     simulate_fleet,
     step,
+    time_to_build_one_copy_days,
 )
 from multi_probe.models import (
     FleetParams,
@@ -30,6 +32,8 @@ __all__ = [
     "step",
     "initial_state",
     "params_from_factory",
+    "build_rate_kg_per_day",
+    "time_to_build_one_copy_days",
     "FleetParams",
     "FleetResult",
     "FleetState",

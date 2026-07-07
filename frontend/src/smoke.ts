@@ -12,6 +12,7 @@ import { createProbeModel } from "./probe-sim-model.js";
 import { createMissionModel } from "./mission-model.js";
 import { createMultiProbeModel } from "./multi-probe-model.js";
 import { createSwarmModel } from "./swarm-model.js";
+import { runSpine, measureDwellTax, scenarioFrom } from "./spine.js";
 
 let failures = 0;
 const ok = (cond: boolean, msg: string) => {
@@ -166,6 +167,17 @@ sw.params[0].set(1200);
 
 sw.params[1].set(0); // offspring 2 -> 0
 ok(sw.result().finalSettled === 1 && sw.result().t100Years === null, "zero offspring settles only the homeworld (reactive)");
+
+// Spine surface: one factory drives all three scales; the galactic dwell is derived
+// (nonzero) and a vanishing fraction of the powered fill; a fast policy pays a small,
+// measurable, still-tiny tax.
+const sp = runSpine(scenarioFrom(LUNAR_REGOLITH_SEED));
+near(sp.closureRatio, 0.970833, 1e-4, "spine closure = 0.9708 (shared factory)");
+near(sp.copyTimeDays, 582.5, 1e-1, "spine derived copy time = 582.5 d");
+ok(sp.settleTimeYears > 0, "spine derives a real (nonzero) galactic dwell, not the old 0");
+ok(sp.dwellFractionOfT100 !== null && sp.dwellFractionOfT100 < 1e-5, "powered: derived dwell is negligible vs the multi-Myr fill");
+const spTax = measureDwellTax(scenarioFrom(LUNAR_REGOLITH_SEED, { policy: "slingshot_nearest" }));
+ok(spTax.taxFraction !== null && spTax.taxFraction > 0 && spTax.taxFraction < 0.01, "slingshot dwell tax is small, positive, and resolvable");
 
 console.log(failures === 0 ? "\nALL SMOKE CHECKS PASS" : `\n${failures} FAILURES`);
 if (failures > 0) process.exit(1);

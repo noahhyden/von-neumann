@@ -26,11 +26,13 @@ import { createMultiProbeModel } from "./multi-probe-model.js";
 import type { MultiProbeModel } from "./multi-probe-model.js";
 import { createSwarmModel } from "./swarm-model.js";
 import type { SwarmModel } from "./swarm-model.js";
+import { createSpineModel } from "./spine-model.js";
+import type { SpineModel } from "./spine-model.js";
 import { RUNGS } from "./coordination.js";
 import { SOURCES, sourceById, sourceNumber, sourceCategories, STRENGTH_LABEL } from "./sources.js";
 import type { Source } from "./sources.js";
 
-type Surface = "overview" | "wall" | "mission" | "fleet" | "swarm" | "launch" | "power" | "probe" | "sources";
+type Surface = "overview" | "wall" | "mission" | "fleet" | "swarm" | "spine" | "launch" | "power" | "probe" | "sources";
 
 /**
  * An inline citation marker: a superscript [n] (the source's stable bibliography number)
@@ -1154,6 +1156,95 @@ function SwarmSurface(props: { model: SwarmModel }) {
   );
 }
 
+// ── the spine surface: one factory threaded through all three scales ─────────
+function SpineSurface(props: { model: SpineModel }) {
+  const m = props.model;
+  const r = () => m.result();
+  // The dwell's galactic cost, in words: measured A/B for the fast policies, the analytic
+  // fraction for powered (where a brute-force A/B is infeasible - itself the finding).
+  const taxLabel = () => {
+    const t = m.dwellTax();
+    if (t && t.taxFraction !== null && t.t100ZeroDwell !== null && t.t100WithDwell !== null)
+      return `+${(t.taxFraction * 100).toFixed(2)}% (${fmtNum(t.t100ZeroDwell)} → ${fmtNum(t.t100WithDwell)} yr)`;
+    const f = r().dwellFractionOfT100;
+    return f === null ? "-" : `~${f.toExponential(1)} of the fill (negligible)`;
+  };
+  return (
+    <div>
+      <section class="hero">
+        <div class="wrap">
+          <p class="eyebrow">The whole project · across scale · one derived number</p>
+          <h1>One factory. Three scales. The same build time, weighed at each.</h1>
+          <p class="lede">
+            The project models self-replication at three scales - a <strong>single factory</strong>, a <strong>local fleet</strong>, and a <strong>galaxy</strong> - each its own model. This surface threads <strong>one</strong> factory through all three, so a number that was guessed at one scale is <strong>derived</strong> instead: the galaxy model's per-star build-and-launch dwell used to be an unsourced <em>zero</em> (instant replication). Here it is derived from the very same factory build physics the fleet uses - and shown to be a negligible tax on galactic exploration, because interstellar travel dwarfs it.
+          </p>
+          <div class="card" style="margin-top:8px">
+            <p class="panel-head" style="margin-bottom:8px">The cross-scale reading</p>
+            <p class="explain" style="margin:0;font-size:1.05rem">{() => r().verdict}</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <p class="marker"><b>◆</b> &nbsp;/&nbsp; The knobs</p>
+          <div class="lab">
+            <div class="card controls">
+              <p class="panel-head">The galaxy</p>
+              <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
+              <div class="btnrow" style="align-items:center;gap:8px;margin-top:12px">
+                <span class="note" style="align-self:center;margin-right:4px">travel policy:</span>
+                <For each={() => ["powered", "slingshot_nearest", "slingshot_maxboost"] as const}>
+                  {(pol: "powered" | "slingshot_nearest" | "slingshot_maxboost") => (
+                    <button class={() => `act ${m.policy() === pol ? "primary" : "ghost"}`} onClick={() => m.setPolicy(pol)}>{POLICY_LABELS[pol]}</button>
+                  )}
+                </For>
+              </div>
+              <p class="note" style="margin-top:10px">The dwell tax is measured directly (a fine-step A/B of the derived dwell versus zero) only for the slingshot policies; for powered, resolving a roughly one-year dwell against hundred-thousand-year hops by brute force is impractical - so the analytic fraction is shown instead. That gap <em>is</em> the finding.</p>
+            </div>
+            <div class="card readouts">
+              <p class="panel-head">The shared factory, and what it derives</p>
+              <StatRow what="Closure ratio" cite="nasa-cp-2255-1980" sub="one factory, read once, used by every scale" value={() => `${(r().closureRatio * 100).toFixed(1)}%`} cls={() => "metal"} />
+              <StatRow what="Time to build one copy" cite="borgue-hein-2020" sub="derived at 1 AU · the cross-scale handoff" value={() => `${fmtDays(r().copyTimeDays)} (${r().settleTimeYears.toFixed(2)} yr)`} cls={() => "chip"} />
+              <StatRow what="Galactic dwell (was)" sub="the old unsourced estimate" value={() => "0 yr (instant)"} cls={() => "bad"} />
+              <StatRow what="Galactic dwell (now)" sub="derived, not guessed" value={() => `${r().settleTimeYears.toFixed(2)} yr`} cls={() => "good"} />
+              <StatRow what="Manufacturing tax on the fill" cite="nicholson-forgan-2013" sub="cost of a real dwell vs. instant" value={taxLabel} cls={() => (m.policy() === "powered" ? "" : "chip")} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <p class="marker"><b>▶</b> &nbsp;/&nbsp; The same build time, at three scales</p>
+          <MissionStage n="01" title="One factory - the build cadence is set"
+            value={() => `${fmtDays(r().copyTimeDays)} per copy`}
+            cls={() => "chip"}
+            note={() => `The seed factory is ${(r().closureRatio * 100).toFixed(1)}% closed and reaches full output in ${fmtDays(r().singleFactoryTimeToTargetDays)}. The number that travels up the scales is simpler: the time to build one copy's worth of local structure at 1 AU, ${fmtDays(r().copyTimeDays)}. Every scale below reuses this exact figure - no scale invents its own.`} />
+          <MissionStage n="02" title="Local fleet - here the build time IS the clock"
+            value={() => `doubles in ${fmtDays(r().fleetDoublingDays)}`}
+            cls={() => "chip"}
+            note={() => `Across AU distances transit is days, so replication time dominates: the fleet's first doubling lands at ~${fmtDays(r().fleetDoublingDays)} - essentially the ${fmtDays(r().copyTimeDays)} copy time above. It grows to ${fmtNum(r().fleetFinalPopulation)} probes and ends ${r().fleetBinding}.`} />
+          <MissionStage n="03" title="Galaxy - the same dwell all but vanishes"
+            value={() => (r().swarmT100Years === null ? "never fills" : `fills in ${fmtNum(r().swarmT100Years!)} yr`)}
+            cls={() => (r().swarmT100Years === null ? "bad" : "good")}
+            note={() => (r().swarmT100Years === null
+              ? `With these knobs the front cannot spread (no offspring), so the field never fills and the dwell is moot.`
+              : `The front reaches all ${fmtNum(r().nStars)} stars in ${fmtNum(r().swarmT100Years!)} yr under the ${POLICY_LABELS[r().policy]} policy. The same ${r().settleTimeYears.toFixed(2)} yr dwell that governs the fleet is only ${taxLabel()} of that - interstellar transit dominates by orders of magnitude, so the manufacturing cadence that is the clock for a fleet is a rounding error for a galaxy.`)} />
+        </div>
+      </section>
+
+      <footer>
+        <div class="wrap">
+          <p>
+            A pure, deterministic fold over the <strong style="color:var(--text)">spine</strong> module - the cross-scale integrator - live in pimas, composing the parity-tested TS ports of closure-sim, multi-probe, and swarm. It adds <em>no new numbers</em>: the galactic dwell is derived from the factory's 1-AU copy time (closure and machinery from NASA CP-2255 (1980)<Cite ids="nasa-cp-2255-1980" /> and Borgue &amp; Hein (2020)<Cite ids="borgue-hein-2020" />; the exploration timescale from Nicholson &amp; Forgan (2013)<Cite ids="nicholson-forgan-2013" />). It replaces one honest gap - the swarm's old zero dwell - by grounding it. See spine/REFERENCES.md.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
 // ── the overview surface: what the project is, and where it is ───────────────
 type ModuleRow = { name: string; surface: Surface; status: string; statusCls: string; cite: string; desc: string };
 const MODULE_STATUS: ModuleRow[] = [
@@ -1171,6 +1262,8 @@ const MODULE_STATUS: ModuleRow[] = [
     desc: "Models a single solar-electric probe after Borgue and Hein (2020). The solar-power and range math is live; the full replication model waits on a per-module mass breakdown that does not exist in the literature yet." },
   { name: "swarm", surface: "swarm", status: "In progress", statusCls: "chip", cite: "nicholson-forgan-2013",
     desc: "Models how fast a probe could fill the galaxy star to star, after Nicholson and Forgan (2013): the core, all three slingshot policies, a coordination-lag overlay, and a light-speed-limited coordination simulation. A WebGL renderer for 200,000 stars is the one parked fork." },
+  { name: "spine", surface: "spine", status: "Done", statusCls: "good", cite: "nicholson-forgan-2013",
+    desc: "The cross-scale integrator: threads one factory through all three scales so their replication cadences are derived from one source, not assumed. It replaces the galaxy model's old unsourced zero dwell with a figure derived from the same factory build physics the fleet uses - and shows it is a negligible tax on galactic exploration." },
 ];
 
 function OverviewSurface() {
@@ -1350,6 +1443,7 @@ function Nav(props: { surface: Surface }) {
       <button class={`act ${props.surface === "mission" ? "primary" : "ghost"}`} onClick={() => mount("mission")}>Full mission</button>
       <button class={`act ${props.surface === "fleet" ? "primary" : "ghost"}`} onClick={() => mount("fleet")}>Fleet</button>
       <button class={`act ${props.surface === "swarm" ? "primary" : "ghost"}`} onClick={() => mount("swarm")}>Swarm</button>
+      <button class={`act ${props.surface === "spine" ? "primary" : "ghost"}`} onClick={() => mount("spine")}>Across scales</button>
       <button class={`act ${props.surface === "wall" ? "primary" : "ghost"}`} onClick={() => mount("wall")}>Electronics wall</button>
       <button class={`act ${props.surface === "probe" ? "primary" : "ghost"}`} onClick={() => mount("probe")}>Single probe</button>
       <button class={`act ${props.surface === "launch" ? "primary" : "ghost"}`} onClick={() => mount("launch")}>Launch economics</button>
@@ -1435,6 +1529,17 @@ function mount(surface: Surface, scenarioKey = "lunar") {
         <div>
           <Nav surface="swarm" />
           <SwarmSurface model={sm} />
+        </div>
+      ),
+      appEl,
+    );
+  } else if (surface === "spine") {
+    const spm = createSpineModel();
+    disposeRender = render(
+      () => (
+        <div>
+          <Nav surface="spine" />
+          <SpineSurface model={spm} />
         </div>
       ),
       appEl,

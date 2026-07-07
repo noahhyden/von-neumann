@@ -132,6 +132,17 @@ export function buildRateKgPerDay(params: FleetParams, distanceAu: number): numb
   return Math.min(params.localBuildRateKgPerDay, energyCap);
 }
 
+/**
+ * Days for one probe to build one copy's worth of local structure at a distance:
+ * local_per_child / build_rate. The fleet's fundamental replication cadence, and (at
+ * 1 AU) the swarm's per-star manufacturing dwell. Mirrors multi_probe.fleet.
+ */
+export function timeToBuildOneCopyDays(params: FleetParams, distanceAu: number): number {
+  const localPerChild = params.closureRatio * params.seedMassKg;
+  const rate = buildRateKgPerDay(params, distanceAu);
+  return rate > 0 ? localPerChild / rate : Infinity;
+}
+
 export function initialState(params: FleetParams, seed: number): FleetState {
   const probes: Probe[] = [];
   for (let i = 0; i < params.nSeedProbes; i++) {

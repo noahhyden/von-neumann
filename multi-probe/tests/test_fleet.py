@@ -15,7 +15,12 @@ import pytest
 from closure_sim.scenarios import load_factory
 
 from multi_probe import FleetParams, params_from_factory, simulate_fleet
-from multi_probe.fleet import _build_rate_kg_per_day, initial_state, step
+from multi_probe.fleet import (
+    build_rate_kg_per_day,
+    initial_state,
+    step,
+    time_to_build_one_copy_days,
+)
 
 _ROOT = pathlib.Path(closure_sim.__file__).resolve().parents[2]
 
@@ -50,12 +55,21 @@ def test_params_are_sourced_from_the_factory(params: FleetParams) -> None:
 def test_build_rate_is_machinery_limited_near_sun_energy_limited_far(params: FleetParams) -> None:
     # Near the Sun the machinery binds (can't use all the power); far out 1/d² power
     # binds. The crossover for this scenario is ~13.6 AU.
-    assert _build_rate_kg_per_day(params, 1.0) == pytest.approx(params.local_build_rate_kg_per_day)
-    assert _build_rate_kg_per_day(params, 5.203) == pytest.approx(params.local_build_rate_kg_per_day)
-    far = _build_rate_kg_per_day(params, 30.0)
+    assert build_rate_kg_per_day(params, 1.0) == pytest.approx(params.local_build_rate_kg_per_day)
+    assert build_rate_kg_per_day(params, 5.203) == pytest.approx(params.local_build_rate_kg_per_day)
+    far = build_rate_kg_per_day(params, 30.0)
     assert far < params.local_build_rate_kg_per_day
     # Beyond the crossover the rate is the energy cap ∝ 1/d²: doubling distance quarters it.
-    assert _build_rate_kg_per_day(params, 20.0) / _build_rate_kg_per_day(params, 40.0) == pytest.approx(4.0, rel=1e-9)
+    assert build_rate_kg_per_day(params, 20.0) / build_rate_kg_per_day(params, 40.0) == pytest.approx(4.0, rel=1e-9)
+
+
+def test_time_to_build_one_copy_is_local_over_rate(params: FleetParams) -> None:
+    # The fleet's fundamental cadence (and, at 1 AU, the swarm's per-star dwell): the
+    # local mass in one copy divided by the regime-limited build rate.
+    t = time_to_build_one_copy_days(params, 1.0)
+    assert t == pytest.approx(local_per_child(params) / build_rate_kg_per_day(params, 1.0))
+    # Far out, 1/d² power slows the build, so one copy takes strictly longer.
+    assert time_to_build_one_copy_days(params, 30.0) > t
 
 
 def test_seeded_run_is_reproducible_with_jitter(factory) -> None:

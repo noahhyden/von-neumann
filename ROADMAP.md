@@ -81,6 +81,24 @@ between modules (seed mass from the factory; power split decided once). A live *
 mission" surface** follows the chain stage by stage. Uses the lunar-regolith factory as
 a stand-in (the probe-BOM `[GAP]` above persists here too).
 
+### 3c. `spine` - one factory across all three scales (done)
+
+Where `mission` composes the *single-probe* modules, `spine` composes across **scale**:
+it threads one `closure-sim` factory through the single-factory fold, the local fleet
+(`multi-probe`), and the galaxy (`swarm`), so their replication cadences are **derived
+from one source** rather than assumed independently at each scale. Its headline
+contribution closes a real seam: the swarm's per-star **manufacturing dwell**
+(`settle_time_years` - time to build offspring before they depart) was an ungrounded
+`[ESTIMATE]` defaulted to **0.0** (instantaneous replication). `spine` *derives* it from
+the same build physics the fleet uses (`multi_probe.time_to_build_one_copy_days` at 1 AU)
+- no new number, just a quantity the factory already fixes, routed to the scale that was
+guessing it. **Finding:** the derived copy time (~582 d for the lunar seed) *is* the
+fleet's doubling clock, yet is ~8e-7 of a ~2e6-yr powered galactic fill - interstellar
+transit dominates, so the manufacturing cadence that governs a local fleet is a negligible
+tax on exploration (measured A/B: ~0.4% for fast slingshots, ordered by probe speed). This
+is the cross-scale answer to *which constraint binds at which scale*, which no single
+module could give. Pure fold, zero pimas imports; adds no new physics (`spine/REFERENCES.md`).
+
 ### 4. The swarm - core + slingshots + light-speed coordination done (`swarm/`)
 
 **Source:** Nicholson & Forgan (2013), *Slingshot Dynamics for Self-Replicating
