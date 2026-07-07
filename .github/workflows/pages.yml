@@ -58,6 +58,35 @@ jobs:
           npm ci
           npm run build
 
+      # Papers: generate the .bib from sources.ts (the single bibliography source of
+      # truth), typeset each paper with the IEEE LaTeX template, and publish the PDFs
+      # beside the site at /papers/<slug>.pdf. The LaTeX step is best-effort: a broken
+      # paper must never block the site deploy (ci.yml gates paper correctness on PRs).
+      - name: Generate the paper bibliography from sources.ts
+        working-directory: von-neumann/papers
+        run: node scripts/gen-bib.mjs
+
+      - name: Typeset the papers (LaTeX)
+        uses: xu-cheng/latex-action@v4
+        continue-on-error: true
+        with:
+          working_directory: von-neumann/papers/electronics-wall
+          root_file: main.tex
+
+      - name: Publish paper PDFs into the site
+        run: |
+          mkdir -p von-neumann/frontend/dist/papers
+          for d in von-neumann/papers/*/; do
+            [ -f "${d}main.tex" ] || continue
+            slug=$(basename "$d")
+            if [ -f "${d}main.pdf" ]; then
+              cp "${d}main.pdf" "von-neumann/frontend/dist/papers/${slug}.pdf"
+              echo "published ${slug}.pdf"
+            else
+              echo "WARNING: no PDF for ${slug} (LaTeX compile failed); site deploys without it"
+            fi
+          done
+
       - name: Upload the built site as the Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

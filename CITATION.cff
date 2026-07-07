@@ -5,6 +5,11 @@ type: software
 authors:
   - family-names: Hyden
     given-names: Noah
+    affiliation: "Independent researcher"
+    # Add your ORCID iD (https://orcid.org/register) and uncomment:
+    # orcid: "https://orcid.org/0000-0000-0000-0000"
+# After the first Zenodo release (see .zenodo.json), add the concept DOI here:
+# doi: "10.5281/zenodo.XXXXXXX"
 repository-code: "https://github.com/noahhyden/von-neumann"
 url: "https://vn.noahhyden.com"
 abstract: >-

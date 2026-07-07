@@ -1,0 +1,35 @@
+{
+  "title": "The Arithmetic of Self-Replication",
+  "upload_type": "software",
+  "description": "A modular, source-checked set of physics models of self-replicating space manufacturing: bill-of-materials closure and the electronics wall, solar-limited compute, launch-mass leverage, single-probe operational range, a small deterministic fleet, and a galaxy-filling settlement swarm with light-speed-limited coordination. Every number traces to a citable source or an explicit derivation. This metadata drives the DOI that Zenodo mints on each GitHub release.",
+  "access_right": "open",
+  "license": "PolyForm-Strict-1.0.0",
+  "creators": [
+    {
+      "name": "Hyden, Noah",
+      "affiliation": "Independent researcher"
+    }
+  ],
+  "keywords": [
+    "self-replication",
+    "von Neumann probe",
+    "space manufacturing",
+    "in-situ resource utilization",
+    "material closure",
+    "embodied energy",
+    "Fermi paradox",
+    "physics simulation"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/noahhyden/von-neumann",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://vn.noahhyden.com",
+      "relation": "isIdenticalTo",
+      "scheme": "url"
+    }
+  ]
+}
