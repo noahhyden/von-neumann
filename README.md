@@ -6,6 +6,7 @@
 [![docs license: CC BY-NC-ND 4.0](https://img.shields.io/badge/docs-CC%20BY--NC--ND%204.0-lightgrey)](LICENSE-DOCS)
 [![CI](https://github.com/noahhyden/von-neumann/actions/workflows/ci.yml/badge.svg)](https://github.com/noahhyden/von-neumann/actions/workflows/ci.yml)
 [![live site](https://img.shields.io/badge/live-vn.noahhyden.com-brightgreen)](https://vn.noahhyden.com)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21249296.svg)](https://doi.org/10.5281/zenodo.21249296)
 
 A long-term, modular exploration of **self-replicating space manufacturing** - the
 idea that you could land a single factory on the Moon (or an asteroid, or Mars) and

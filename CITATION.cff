@@ -7,8 +7,8 @@ authors:
     given-names: Noah
     affiliation: "Independent researcher"
     orcid: "https://orcid.org/0009-0003-4523-0467"
-# After the first Zenodo release (see .zenodo.json), add the concept DOI here:
-# doi: "10.5281/zenodo.XXXXXXX"
+# Zenodo concept DOI: resolves to the latest archived release.
+doi: "10.5281/zenodo.21249296"
 repository-code: "https://github.com/noahhyden/von-neumann"
 url: "https://vn.noahhyden.com"
 abstract: >-
