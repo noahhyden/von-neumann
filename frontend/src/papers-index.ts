@@ -32,7 +32,7 @@ export const PAPERS: PaperMeta[] = [
     "title": "The Electronics Wall: Why a Self-Replicating Space Factory Cannot Close on Its Own Chips",
     "authors": [
       {
-        "name": "Noah Hyden",
+        "name": "Noah Hydén",
         "affiliation": "Independent researcher",
         "orcid": "0009-0003-4523-0467"
       }

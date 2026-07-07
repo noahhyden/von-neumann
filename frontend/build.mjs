@@ -24,7 +24,7 @@ const result = await esbuild({
   outfile: join(OUT, "app.js"),
   // A legal banner (/*! ... */) is preserved through minification: the bundle embeds
   // pimas (MIT), so the distributed artifact carries its notice. See THIRD_PARTY_NOTICES.
-  banner: { js: "/*! The Arithmetic of Self-Replication - (c) 2026 Noah Hyden. Code: PolyForm Strict 1.0.0. Bundles pimas (MIT, (c) 2026 Noah Hyden). See THIRD_PARTY_NOTICES. */" },
+  banner: { js: "/*! The Arithmetic of Self-Replication - (c) 2026 Noah Hydén. Code: PolyForm Strict 1.0.0. Bundles pimas (MIT, (c) 2026 Noah Hydén). See THIRD_PARTY_NOTICES. */" },
   minify: true,
   legalComments: "none",
   metafile: true,
