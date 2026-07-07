@@ -1454,7 +1454,7 @@ function SourcesSurface() {
                     </div>
                     <div class="src-meta">
                       <span class={`src-strength st-${s.strength}`} title={STRENGTH_NOTE[s.strength]}>{STRENGTH_LABEL[s.strength]}</span>
-                      <span class="src-mods">used in: {s.modules.join(", ")}</span>
+                      <span class="src-mods">relevant to: {s.modules.join(", ")}</span>
                     </div>
                     <p class="src-grounds">{s.grounds}</p>
                     {s.url
