@@ -23,6 +23,7 @@ const KNOWN_MODULES = new Set([
   "mission",
   "multi-probe",
   "swarm",
+  "spine",
   "frontend",
 ]);
 const KNOWN_STRENGTHS: SourceStrength[] = ["primary", "reference", "grey", "vendor", "wiki"];
@@ -56,6 +57,53 @@ test("every URL is either null or a real http(s) link (no fabricated/relative li
   for (const s of SOURCES) {
     if (s.url === null) continue;
     assert.match(s.url, /^https?:\/\/\S+$/, `${s.id}: malformed url ${s.url}`);
+  }
+});
+
+test("arXiv links and titles reference a consistent arXiv id", () => {
+  // A title may name its arXiv id, e.g. "(arXiv:2005.12303)"; when it does and the url
+  // is an arxiv.org/abs link, the two must match. This catches the class of error where
+  // a real link is pasted under the wrong paper's title/authors (as happened with the
+  // 2105.02082 entry, which had a valid link under the wrong "Chasing Carbon" title).
+  const idIn = (s: string) => s.match(/arxiv[.:/]+(?:abs\/)?(\d{4}\.\d{4,5})/i)?.[1];
+  for (const s of SOURCES) {
+    const titleId = idIn(s.title);
+    const urlId = s.url ? idIn(s.url) : undefined;
+    if (titleId && urlId) {
+      assert.equal(titleId, urlId, `${s.id}: title arXiv id ${titleId} != url arXiv id ${urlId}`);
+    }
+  }
+});
+
+// Provenance verified by hand against the primary source (2026-07-07): each entry pins
+// the author surname and a distinctive title token confirmed at the cited work. A unit
+// test cannot reach the live web, so this locks what a human already checked - a later
+// careless edit that reintroduces a wrong attribution (as had happened with 2110.15198
+// = Shubov, and 2105.02082 = Pirson & Bol) fails here instead of shipping green. Extend
+// this table only after re-verifying the entry against its actual source.
+const VERIFIED: Record<string, { author: string; titleToken: string }> = {
+  "guided-self-replicating-factory-2021": { author: "Shubov", titleToken: "Colonization of Solar System" },
+  "sensor-embodied-2021": { author: "Pirson", titleToken: "IoT edge devices" },
+  "nagapurkar-das-2022": { author: "Nagapurkar", titleToken: "integrated circuit manufacturing" },
+  "power-electronics-lca": { author: "Spejo", titleToken: "Silicon Carbide MOSFET" },
+  "williams-ayres-heller-2002": { author: "Williams", titleToken: "1.7 Kilogram Microchip" },
+  "borgue-hein-2020": { author: "Borgue", titleToken: "Near-Term Self-replicating Probes" },
+  "nicholson-forgan-2013": { author: "Nicholson", titleToken: "Slingshot Dynamics" },
+  "landauer-1961": { author: "Landauer", titleToken: "Irreversibility" },
+};
+
+test("hand-verified provenance is locked (author + title token match the cited source)", () => {
+  for (const [id, exp] of Object.entries(VERIFIED)) {
+    const s = sourceById(id);
+    assert.ok(s, `verified source ${id} is missing`);
+    assert.ok(
+      s!.authors.includes(exp.author),
+      `${id}: authors "${s!.authors}" lost the verified surname ${exp.author}`,
+    );
+    assert.ok(
+      s!.title.includes(exp.titleToken),
+      `${id}: title "${s!.title}" lost the verified token "${exp.titleToken}"`,
+    );
   }
 });
 

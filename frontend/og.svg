@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M28 0H0V28" fill="none" stroke="rgba(232,226,214,0.10)" stroke-width="1"/>
+    </pattern>
+    <radialGradient id="glow" cx="82%" cy="30%" r="55%">
+      <stop offset="0%" stop-color="#E8A33D" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#E8A33D" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="#1B2230"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+
+  <!-- the replication / settlement-front motif: an amber seed, expanding cyan rings -->
+  <g transform="translate(940 300)">
+    <circle r="150" fill="none" stroke="#58C7D6" stroke-opacity="0.18" stroke-width="2"/>
+    <circle r="100" fill="none" stroke="#58C7D6" stroke-opacity="0.32" stroke-width="2"/>
+    <circle r="54" fill="none" stroke="#58C7D6" stroke-opacity="0.6" stroke-width="2.5"/>
+    <circle r="13" fill="#E8A33D"/>
+  </g>
+
+  <text x="90" y="150" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="26" letter-spacing="6" fill="#58C7D6">SELF-REPLICATING SPACE MANUFACTURING</text>
+
+  <text x="86" y="290" font-family="ui-monospace, Menlo, Consolas, monospace" font-weight="600" font-size="92" fill="#E8E2D6">von-neumann</text>
+
+  <text x="90" y="380" font-family="Georgia, 'Times New Roman', serif" font-size="34" fill="#E8E2D6">What if you launched one factory,</text>
+  <text x="90" y="428" font-family="Georgia, 'Times New Roman', serif" font-size="34" fill="#E8E2D6">and it built the rest?</text>
+
+  <text x="90" y="546" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="23" fill="#98A2B3">Small, live, source-checked models - every number traced to research.</text>
+</svg>

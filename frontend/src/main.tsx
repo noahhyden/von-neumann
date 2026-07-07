@@ -101,6 +101,7 @@ function Slider(props: { p: ParamSignal }) {
       </div>
       <input
         type="range"
+        aria-label={p.unit ? `${p.label} (${p.unit})` : p.label}
         min={p.min}
         max={p.max}
         step={p.step}
@@ -1046,6 +1047,7 @@ function SwarmSurface(props: { model: SwarmModel }) {
             <button class="act primary" onClick={togglePlay}>{() => (m.playing() ? "⏸ pause" : "▶ play")}</button>
             <input
               type="range"
+              aria-label="Mission year (scrub the settlement front)"
               min={0}
               max={() => m.maxYear()}
               step={() => Math.max(1, m.maxYear() / 400)}
@@ -1121,6 +1123,7 @@ function SwarmSurface(props: { model: SwarmModel }) {
                 </div>
                 <input
                   type="range"
+                  aria-label="Decision timescale (years)"
                   min={0.01}
                   max={100}
                   step={0.01}
@@ -1266,6 +1269,40 @@ const MODULE_STATUS: ModuleRow[] = [
     desc: "The cross-scale integrator: threads one factory through all three scales so their replication cadences are derived from one source, not assumed. It replaces the galaxy model's old unsourced zero dwell with a figure derived from the same factory build physics the fleet uses - and shows it is a negligible tax on galactic exploration." },
 ];
 
+// The project's stated research conclusions, each backed by a source and a live surface.
+// Kept here (not in a repo doc) because the site is standalone: this is the public
+// findings page. Numbers trace to the modules' REFERENCES.md and FINDINGS.md.
+type FindingRow = { headline: string; surface: Surface; cite: string | string[]; detail: string };
+const FINDINGS: FindingRow[] = [
+  { headline: "Chips are the wall - made of energy as much as supply chain", surface: "wall",
+    cite: ["williams-ayres-heller-2002", "nagapurkar-das-2022"],
+    detail: "Compute logic costs roughly 8,000 kWh/kg to make against about 5 for smelted metal. A factory escapes the wall only if it is both highly self-sufficient and swimming in power: the lunar seed reaches its target in ~17 years instead of ~29 by making its own chips, but only when fed ~4 MW; at ~1 MW that backfires." },
+  { headline: "The realistic factory never closes on chips", surface: "wall",
+    cite: ["guided-self-replicating-factory-2021", "nasa-cp-2255-1980"],
+    detail: "Achievable mass closure is about 70 to 96 percent, and chasing 100 percent is not worth it, so imported electronics are a permanent design feature rather than a temporary compromise." },
+  { headline: "Thinking is thermodynamically cheap but practically expensive", surface: "power",
+    cite: "landauer-1961",
+    detail: "The Landauer floor sits some 9 to 11 orders of magnitude below real hardware, so a probe's onboard intelligence is limited by hardware efficiency and waste heat, not by physics. The ~20 W human brain is the scale marker." },
+  { headline: "Launch-mass leverage is the whole case, and scales as 1/(1-closure)", surface: "launch",
+    cite: "tsiolkovsky-1903",
+    detail: "Mass balance forces (1-C) kg imported per kg built, so installed-per-launched mass is about 3x at 67 percent closure and about 33x at 97 percent - and the rocket equation makes the cost of shipping instead exponential in the distance." },
+  { headline: "A solar probe's reach is set by the inverse-square law", surface: "probe",
+    cite: ["kopp-lean-2011", "borgue-hein-2020"],
+    detail: "Delivered power falls from ~1361 W/m2 at Earth to ~50 at Jupiter: twice the distance, a quarter the power and a quarter the compute. Replication stalls where the power budget drops below the build demand." },
+  { headline: "At fleet scale, two ceilings emerge on their own", surface: "fleet",
+    cite: "borgue-hein-2020",
+    detail: "The finite vitamin pool caps how many copies can ever exist (the electronics wall made spatial), and a spatial power wall stops expansion around 13.6 AU for the default scenario - not for lack of parts, but distance from the Sun." },
+  { headline: "Filling the galaxy: slingshots dominate, nearest beats max-boost", surface: "swarm",
+    cite: "nicholson-forgan-2013",
+    detail: "A powered front advances at only ~40 percent of a probe's cruise speed. Gravitational slingshots reach ~1000 km/s and are far faster - and targeting the nearest star beats chasing the biggest boost on total time." },
+  { headline: "Light-speed coordination is a real, policy-dependent tax", surface: "swarm",
+    cite: ["nicholson-forgan-2013", "olfati-saber-murray-2004"],
+    detail: "Deciding against a light-delayed belief of what is already settled costs a median ~30 percent of the exploration timescale for nearest-slingshot, ~50 for max-boost, and ~0 for powered flight. A connected field still fills completely - lag alone makes no permanent plateau." },
+  { headline: "Which constraint binds at which scale", surface: "spine",
+    cite: "nicholson-forgan-2013",
+    detail: "The factory's own build physics fixes a ~582-day copy time, which is the local fleet's doubling clock - yet only ~8e-7 of a ~2-million-year galactic fill (about 0.4 percent of exploration time even for fast slingshots). The cadence that rules a fleet is a rounding error against interstellar transit." },
+];
+
 function OverviewSurface() {
   return (
     <div>
@@ -1299,17 +1336,41 @@ function OverviewSurface() {
             The rule that separates this from a fun demo is simple: <strong>no number is assumed</strong>. Every mass, energy, rate, and cost either traces to a citable published source or is derived by explicit math from numbers that do<Cite ids={["nasa-cp-2255-1980", "kopp-lean-2011", "landauer-1961"]} />. Where the literature genuinely has no value, the gap is marked as a gap rather than filled with an invented figure, and any best-defensible estimate is labelled as an estimate with its reasoning. The models themselves are pure and deterministic - the same inputs and the same random seed always produce the same result - so the interactive what-if features are exact and every run reproduces.
           </p>
           <p class="note" style="margin-top:6px">
-            Every figure on this site carries a marker like this<Cite ids="borgue-hein-2020" /> - hover or tab to it for the exact paper and what it grounds. The full list is on the <a href="#" onClick={(e: Event) => { e.preventDefault(); mount("sources"); }}>Sources</a> page.
+            Every figure on this site carries a marker like this<Cite ids="borgue-hein-2020" /> - hover or tab to it for the exact paper and what it grounds. The full list is on the <a href="#/sources" onClick={(e: Event) => { e.preventDefault(); mount("sources"); }}>Sources</a> page.
           </p>
         </div>
       </section>
 
       <section>
         <div class="wrap">
-          <p class="marker"><b>02</b> &nbsp;/&nbsp; Where the project is</p>
-          <h2>Seven modules. Five complete, two in progress.</h2>
+          <p class="marker"><b>02</b> &nbsp;/&nbsp; What we have learned</p>
+          <h2>One argument, told at every scale.</h2>
           <p>
-            The project is planned as upwards of ten interacting modules over time. Seven exist today. Here is where each one stands - click any row to open its live surface.
+            Read together, the models trace a single line: self-replication buys enormous launch-mass leverage, but physical walls reappear at every scale and decide how far the idea holds. Each result below is live in a surface you can drive - click to open it.
+          </p>
+          <div class="card" style="padding:6px 20px;margin-top:8px">
+            <For each={() => FINDINGS}>
+              {(f: FindingRow) => (
+                <div class="mod-row" onClick={() => mount(f.surface)} tabindex="0" role="button"
+                  onKeyDown={(e: KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); mount(f.surface); } }}>
+                  <div class="mod-head">
+                    <span class="mod-name">{f.headline}</span>
+                    <Cite ids={f.cite} />
+                  </div>
+                  <p class="mod-desc">{f.detail}</p>
+                </div>
+              )}
+            </For>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="wrap">
+          <p class="marker"><b>03</b> &nbsp;/&nbsp; Where the project is</p>
+          <h2>Eight modules. Six complete, two in progress.</h2>
+          <p>
+            The project is planned as upwards of ten interacting modules over time. Eight exist today. Here is where each one stands - click any row to open its live surface.
           </p>
           <div class="card" style="padding:6px 20px;margin-top:8px">
             <For each={() => MODULE_STATUS}>
@@ -1331,9 +1392,9 @@ function OverviewSurface() {
 
       <section>
         <div class="wrap">
-          <p class="marker"><b>03</b> &nbsp;/&nbsp; The honest gaps</p>
+          <p class="marker"><b>04</b> &nbsp;/&nbsp; The honest gaps</p>
           <p>
-            Five of the seven modules are complete and running live (closure-sim, power-budget, launch-economics, mission, multi-probe), and the end-to-end mission chain composes them. The two in progress are at very different stages: <strong>swarm</strong> is substantially built and interactive, with only a parked rendering fork and some deferred coordination features left; <strong>probe-sim</strong>'s full replication model is deliberately on hold behind a real data gap. The main known open gaps, all stated openly in the modules themselves:
+            Six of the eight modules are complete and running live (closure-sim, power-budget, launch-economics, mission, multi-probe, and the spine that ties them together across scales), and the end-to-end mission chain composes them. The two in progress are at very different stages: <strong>swarm</strong> is substantially built and interactive, with only a parked rendering fork and some deferred coordination features left; <strong>probe-sim</strong>'s full replication model is deliberately on hold behind a real data gap. The main known open gaps, all stated openly in the modules themselves:
           </p>
           <ul class="gaps">
             <li><strong>The probe bill-of-materials.</strong> There is no sourced per-module mass breakdown for the Borgue and Hein probe<Cite ids="borgue-hein-2020" />, which blocks probe-sim and forces the mission surface to use a real, sourced lunar-regolith factory as a stand-in rather than a probe-specific one. No masses are invented to fill it.</li>
@@ -1346,7 +1407,7 @@ function OverviewSurface() {
       <footer>
         <div class="wrap">
           <p>
-            Explore the models directly - each is a live surface you can drive: move the assumptions, preview a what-if before committing to it, and watch the model explain which limit is binding and why. Nothing here asks you to take a number on trust: every figure is backed by a source on the <a href="#" onClick={(e: Event) => { e.preventDefault(); mount("sources"); }}>Sources</a> page, and every honest gap is marked as a gap. Built on <strong style="color:var(--text)">pimas</strong>, a from-scratch reactive framework.
+            Explore the models directly - each is a live surface you can drive: move the assumptions, preview a what-if before committing to it, and watch the model explain which limit is binding and why. Nothing here asks you to take a number on trust: every figure is backed by a source on the <a href="#/sources" onClick={(e: Event) => { e.preventDefault(); mount("sources"); }}>Sources</a> page, and every honest gap is marked as a gap. Built on <strong style="color:var(--text)">pimas</strong>, a from-scratch reactive framework.
           </p>
         </div>
       </footer>
@@ -1426,7 +1487,7 @@ function SourcesSurface() {
       <footer>
         <div class="wrap">
           <p>
-            A mis-attributed number is treated as worse than an admitted gap. If you find a figure on this site that does not match its cited source, that is a bug - the whole project is meant to be checked against these references. Back to the <a href="#" onClick={(e: Event) => { e.preventDefault(); mount("overview"); }}>overview</a>.
+            A mis-attributed number is treated as worse than an admitted gap. If you find a figure on this site that does not match its cited source, that is a bug - the whole project is meant to be checked against these references. Back to the <a href="#/" onClick={(e: Event) => { e.preventDefault(); mount("overview"); }}>overview</a>.
           </p>
         </div>
       </footer>
@@ -1453,12 +1514,50 @@ function Nav(props: { surface: Surface }) {
   );
 }
 
-// ── mount: a shell hosting one surface per model, swapped by re-render ───────
+// ── mount + routing: a shell hosting one surface per model, swapped by re-render ─
+// The surface lives in the URL hash (#/swarm, #/wall/low_closure) so every surface is
+// shareable, the browser Back/Forward buttons work, and a refresh restores where you
+// were. mount() is the single navigation entry point (every onClick calls it); it
+// renders, sets the title, and syncs the hash. A hashchange listener drives mount()
+// back for external changes (Back/Forward, a pasted deep link), guarded so the two
+// never loop. Kept here in the skin, not in pimas (7): routing is app plumbing.
 const appEl = document.getElementById("app")!;
 let disposeRender: (() => void) | null = null;
 let model: WallModel | null = null;
 
-function mount(surface: Surface, scenarioKey = "lunar") {
+const VALID_SURFACES: Surface[] = [
+  "overview", "mission", "fleet", "swarm", "spine", "wall", "probe", "launch", "power", "sources",
+];
+const SURFACE_TITLE: Record<Surface, string> = {
+  overview: "von-neumann - self-replicating space manufacturing",
+  mission: "Full mission - von-neumann",
+  fleet: "Fleet - von-neumann",
+  swarm: "Swarm - von-neumann",
+  spine: "Across scales - von-neumann",
+  wall: "Electronics wall - von-neumann",
+  probe: "Single probe - von-neumann",
+  launch: "Launch economics - von-neumann",
+  power: "Power budget - von-neumann",
+  sources: "Sources - von-neumann",
+};
+
+function surfaceToHash(surface: Surface, scenarioKey: string): string {
+  if (surface === "overview") return "#/";
+  if (surface === "wall" && scenarioKey && scenarioKey !== "lunar") return `#/wall/${scenarioKey}`;
+  return `#/${surface}`;
+}
+function parseHash(): { surface: Surface; scenarioKey: string } {
+  const raw = location.hash.replace(/^#\/?/, "");
+  const [s, scen] = raw.split("/");
+  const surface = (VALID_SURFACES as string[]).includes(s) ? (s as Surface) : "overview";
+  const scenarioKey = surface === "wall" && scen && SCENARIOS[scen] ? scen : "lunar";
+  return { surface, scenarioKey };
+}
+
+// True while we are the ones writing the hash, so our own hashchange is ignored.
+let suppressHash = false;
+
+function mount(surface: Surface, scenarioKey = "lunar", updateUrl = true) {
   disposeRender?.();
   model?.dispose();
   model = null;
@@ -1556,6 +1655,28 @@ function mount(surface: Surface, scenarioKey = "lunar") {
       appEl,
     );
   }
+
+  document.title = SURFACE_TITLE[surface];
+  if (updateUrl) {
+    const hash = surfaceToHash(surface, scenarioKey);
+    if (location.hash !== hash) {
+      suppressHash = true; // our own write; the listener below will skip it
+      location.hash = hash;
+    }
+  }
 }
 
-mount("overview");
+// Back/Forward, or a pasted deep link: re-mount from the hash (without re-writing it).
+window.addEventListener("hashchange", () => {
+  if (suppressHash) { suppressHash = false; return; }
+  const { surface, scenarioKey } = parseHash();
+  mount(surface, scenarioKey, false);
+});
+
+// Initial load: honor a deep link, and normalize the bar without adding a history entry.
+{
+  const { surface, scenarioKey } = parseHash();
+  const hash = surfaceToHash(surface, scenarioKey);
+  if (location.hash !== hash) history.replaceState(null, "", hash);
+  mount(surface, scenarioKey, false);
+}

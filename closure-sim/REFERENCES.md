@@ -21,9 +21,10 @@ each one is.
   tool models: below full closure you're stuck waiting on resupply; only near 100%
   closure does growth become self-sustaining and exponential.
   - http://www.molecularassembler.com/KSRM.htm
-- **"Guided Self-Replicating Factory" (arXiv 2110.15198, 2021)** - recent revival.
-  Doubling time <1 year → large colony in ~two decades; near-term realistic closure
-  ~70%; chips/solar/circuitry stay Earth-sourced.
+- **M. V. Shubov, "Guided Self-Replicating Factory for Colonization of Solar System"
+  (arXiv 2110.15198, 2021)** - recent revival. Doubling time <1 year → large colony
+  in ~two decades; near-term realistic closure ~70%; chips/solar/circuitry stay
+  Earth-sourced.
   - https://arxiv.org/abs/2110.15198
 
 **Honesty note:** there is *no* validated modern end-to-end seed-factory design. The
@@ -79,7 +80,9 @@ Sources:
   https://krichlab.ca/wp-content/uploads/2014/06/Peng2013_Review-LCA-EPBTGHG-SolarPV.pdf ;
   Marspedia embodied energy https://marspedia.org/Embodied_energy
 - Power-electronics LCA (Si IGBT vs SiC): https://www.sciencedirect.com/science/article/pii/S2772370423000184
-- Sensor/edge-device embodied footprint: https://arxiv.org/abs/2105.02082
+- Pirson & Bol, "Assessing the embodied carbon footprint of IoT edge devices with a
+  bottom-up life-cycle approach" (arXiv 2105.02082, 2021) - sensor/edge-device
+  embodied footprint: https://arxiv.org/abs/2105.02082
 - Why the chip supply chain is the deepest on Earth (400+ steps, 9N-pure materials,
   EUV monopoly): CSIS https://www.csis.org/analysis/mapping-semiconductor-supply-chain-critical-role-indo-pacific-region
 

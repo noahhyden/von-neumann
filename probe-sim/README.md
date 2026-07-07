@@ -31,6 +31,17 @@ This module starts from exactly that gate.
   mass fraction. (Per-module masses are an open `[GAP]` - see REFERENCES.md - and are
   not invented.)
 
+## What it found (so far)
+
+A solar probe's reach is set by the inverse-square law. Delivered power falls as 1/d^2,
+from ~1361 W/m^2 at 1 AU to ~50 W/m^2 at Jupiter: at twice the distance, a quarter of
+the power - and, because the same array runs the compute, a quarter of the autonomy.
+Replication stays viable only out to the heliocentric distance where the falling power
+budget drops below the probe's build demand; beyond it the probe cannot reproduce.
+The *shape* of this result is solid; the probe-specific magnitude waits on the mass
+`[GAP]` below (the range machinery currently runs on a synthetic fixture, not invented
+masses).
+
 ## What's next (see [`../ROADMAP.md`](../ROADMAP.md))
 
 Instantiate the real Borgue & Hein probe factory once the per-module mass `[GAP]` is

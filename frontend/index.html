@@ -5,6 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>von-neumann: self-replicating space manufacturing, modelled live</title>
 <meta name="description" content="A set of small, live, source-checked models of self-replicating space manufacturing - closure, power, launch economics, and a galaxy-filling swarm - with every number traced to published research. Built on pimas." />
+
+<!-- Favicon: inline SVG (no extra request) - the amber seed + expanding cyan front motif. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231B2230'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%2358C7D6' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='3.4' fill='%23E8A33D'/%3E%3C/svg%3E" />
+
+<!-- Social link-unfurl cards. og:image is relative (resolved against the page URL by
+     Slack/Discord/iMessage); when a stable public origin exists, set an absolute
+     og:url and og:image there so every scraper, including X and Facebook, resolves it. -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="von-neumann" />
+<meta property="og:title" content="von-neumann: self-replicating space manufacturing, modelled live" />
+<meta property="og:description" content="Small, live, source-checked models of self-replicating space manufacturing - from the electronics wall to a galaxy-filling swarm. Every number traced to published research." />
+<meta property="og:image" content="og.svg" />
+<meta property="og:image:alt" content="von-neumann - what if you launched one factory, and it built the rest?" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="von-neumann: self-replicating space manufacturing, modelled live" />
+<meta name="twitter:description" content="Small, live, source-checked models - from the electronics wall to a galaxy-filling swarm. Every number traced to published research." />
+<meta name="twitter:image" content="og.svg" />
 <style>
   :root {
     --ground: #1B2230;
@@ -167,6 +184,14 @@
 </head>
 <body>
   <div id="app"></div>
+  <noscript>
+    <div style="max-width:720px;margin:12vh auto;padding:0 24px;font-family:Georgia,serif;color:#E8E2D6">
+      <p style="font-family:ui-monospace,Menlo,monospace;font-size:0.72rem;letter-spacing:0.22em;text-transform:uppercase;color:#58C7D6">Self-replicating space manufacturing, modelled live</p>
+      <h1 style="font-family:ui-monospace,Menlo,monospace;font-weight:600;font-size:2rem">von-neumann</h1>
+      <p>These are small, live, source-checked models of self-replicating space manufacturing - the idea that one factory could land on the Moon or an asteroid and build copies of itself from local material. Every number traces to published research.</p>
+      <p><strong>The models run in your browser and need JavaScript.</strong> Enable it to drive the interactive surfaces (the electronics wall, the full mission, and a galaxy-filling swarm). The written findings are in FINDINGS.md in the source repository.</p>
+    </div>
+  </noscript>
   <script type="module" src="./app.js"></script>
 </body>
 </html>

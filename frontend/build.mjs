@@ -28,6 +28,8 @@ const result = await esbuild({
 });
 
 await cp(join(ROOT, "index.html"), join(OUT, "index.html"));
+// Static assets referenced by index.html (the social-card image for link unfurls).
+await cp(join(ROOT, "og.svg"), join(OUT, "og.svg"));
 
 // Report shipped size.
 const js = await readFile(join(OUT, "app.js"));

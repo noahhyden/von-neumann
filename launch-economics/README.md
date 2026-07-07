@@ -24,6 +24,15 @@ Launch prices, Δv budgets, and Isp are scenario *inputs* (they vary by vehicle 
 year); representative sourced values are in [`REFERENCES.md`](REFERENCES.md). Only
 defined physical constants (standard gravity) are hardcoded.
 
+## What it found
+
+Launch-mass leverage is the whole economic case, and it scales as **1/(1 - C)**. Because
+mass balance forces (1 - C) kg of vitamins to be imported per kg the factory builds,
+installed-mass-per-launched-mass is about **3x at 67% closure** and about **33x at 97%**.
+The rocket equation makes the cost of *not* replicating (shipping the finished mass)
+grow exponentially with the Δv to the destination - which is exactly why the leverage is
+worth chasing despite the electronics you still have to bring.
+
 ## What's next (see [`../ROADMAP.md`](../ROADMAP.md))
 
 A `frontend` surface to trade closure against launch cost interactively - drag the

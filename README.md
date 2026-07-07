@@ -11,6 +11,10 @@ independently runnable and tested, and models one slice of the problem. They sha
 concepts (and, over time, data) but not a single giant simulation - the whole point
 is to keep each piece small, honest, and verifiable.
 
+**New here?** [FINDINGS.md](FINDINGS.md) collects what the models have concluded so far -
+nine sourced results, from the electronics wall to the light-speed coordination tax -
+as one read. The same findings are live and interactive on the frontend's overview.
+
 ## Modules
 
 | Module | Status | What it does |
@@ -22,7 +26,8 @@ is to keep each piece small, honest, and verifiable.
 | [`launch-economics`](launch-economics/) | live | **The economics of not launching mass.** Launch cost, the rocket-equation Δv penalty, and the launch-mass leverage of shipping a self-replicating seed instead of the finished installation. |
 | [`mission`](mission/) | live | **The whole operation, end to end.** One pure fold that composes all four modules above: launch a seed, arrive at a heliocentric distance, split its solar power between building and thinking, replicate, and price the launch-mass payoff. The frontend's "Full mission" surface follows the chain stage by stage. |
 | [`multi-probe`](multi-probe/) | live | **A small, deterministic fleet.** Tens of self-replicating probes, each an agent that builds copies at a rate its local sunlight allows and disperses children outward. Seeded and pure, so `speculate` stays exact. Re-instantiates two ceilings: the electronics wall (a finite vitamin pool) and a spatial power wall (1/d² sunlight vs dispersal). The frontend's "Fleet" surface scrubs the 40-year mission live. The intermediate step before the swarm. |
-| [`swarm`](swarm/) | slices 1–3 + live surface | **How fast a probe fills the galaxy.** A deterministic, seeded settlement front: probes spread star-to-star through a field, settling and re-launching, filling the reachable galaxy outward from one homeworld (the exploration-timescale question of Nicholson & Forgan 2013). The pure algorithm core, plus **three travel policies** - powered flight and two **gravitational-slingshot** policies that steal speed from stellar motion (Nicholson & Forgan's headline: slingshots ≫ powered, and nearest-star beats max-boost on time). A live canvas "Swarm" surface plays/scrubs the fill, toggles the policy, and - hover any star - reads its **light-speed coordination lag** from home (every interstellar hop is years of latency: the "independent colonies" regime). A proven spatial hash keeps the fill fast. It also **simulates light-speed-limited coordination** ([FRONTIER #1](https://github.com/noahhyden/von-neumann/issues/1)): probes decide against a light-delayed *belief* of what's settled, so they race for the same star from stale views - costing a median ~30–50% of the exploration timescale in the slingshot regime (but ~0% for powered flight), a live-toggle finding that refines Nicholson & Forgan. The one parked fork left is the **200k-star WebGL** render engine. |
+| [`swarm`](swarm/) | core done + live surface | **How fast a probe fills the galaxy.** A deterministic, seeded settlement front: probes spread star-to-star through a field, settling and re-launching, filling the reachable galaxy outward from one homeworld (the exploration-timescale question of Nicholson & Forgan 2013). The pure algorithm core, plus **three travel policies** - powered flight and two **gravitational-slingshot** policies that steal speed from stellar motion (Nicholson & Forgan's headline: slingshots ≫ powered, and nearest-star beats max-boost on time). A live canvas "Swarm" surface plays/scrubs the fill, toggles the policy, and - hover any star - reads its **light-speed coordination lag** from home (every interstellar hop is years of latency: the "independent colonies" regime). A proven spatial hash keeps the fill fast. It also **simulates light-speed-limited coordination** ([FRONTIER #1](https://github.com/noahhyden/von-neumann/issues/1)): probes decide against a light-delayed *belief* of what's settled, so they race for the same star from stale views - costing a median ~30–50% of the exploration timescale in the slingshot regime (but ~0% for powered flight), a live-toggle finding that refines Nicholson & Forgan. The one parked fork left is the **200k-star WebGL** render engine. |
+| [`spine`](spine/) | done | **One factory across all three scales.** The cross-scale integrator: threads one `closure-sim` factory through the single-factory fold, the local fleet (`multi-probe`), and the galaxy (`swarm`), so their replication cadences are *derived from one source* instead of assumed independently. It adds no new numbers - it replaces the swarm's old unsourced zero manufacturing dwell with a figure derived from the same build physics the fleet uses, and shows that dwell is a negligible tax on galactic exploration. The frontend's "Across scales" surface follows it. |
 | _more to come_ | | The plan is upwards of ten interacting projects over the coming year - see [ROADMAP.md](ROADMAP.md). |
 
 ## Working in here
@@ -36,6 +41,34 @@ uv venv --python 3.12 .venv
 uv pip install -e ".[dev]"
 .venv/bin/pytest
 ```
+
+## Reproducing all results
+
+Every result in this repo is meant to be reproducible from a clone. The eight Python
+modules use [`uv`](https://docs.astral.sh/uv/) and stand alone. The **frontend** is the
+one prerequisite worth knowing: it is built on [pimas](https://github.com/noahhyden/pimas),
+a separate first-party repo, and consumes it through `frontend/package.json`'s
+`"pimas": "file:../../pimas"`. So pimas must be cloned as a **sibling of this repo** and
+built first (pimas ships no `dist/`, and the frontend is pinned to a known-good pimas
+commit in [`frontend/.pimas-good-sha`](frontend/.pimas-good-sha)):
+
+```bash
+# from the directory that contains von-neumann/
+git clone https://github.com/noahhyden/pimas
+git -C pimas checkout "$(cat von-neumann/frontend/.pimas-good-sha)"   # the pinned, reproducible build
+(cd pimas && npm ci && npm run build)
+```
+
+Then run everything - all eight module suites plus the frontend's two test layers and
+build - with one command from the repo root:
+
+```bash
+./scripts/test-all.sh
+```
+
+It exits nonzero if any suite fails, and reports the frontend as skipped (rather than
+failing hard) if the pimas sibling is missing, so the Python results still reproduce on
+their own.
 
 ## Conventions
 

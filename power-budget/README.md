@@ -23,6 +23,15 @@ It's anchored at both ends by hard references:
   housekeeping fractions, validated and conserved) and `compute_capacity_flops(power,
   efficiency)`.
 
+## What it found
+
+Thinking is thermodynamically cheap but practically expensive. The Landauer floor
+(~2.9e-21 J per erased bit at 300 K) sits roughly 9 to 11 orders of magnitude below
+what real hardware spends per operation, so the binding constraint on a probe's onboard
+intelligence is hardware efficiency and waste-heat rejection, **not** thermodynamics.
+Read against the ~20 W human brain, the takeaway is that autonomy far from Earth is a
+power-and-cooling problem, not a physics one.
+
 ## What's next (see [`../ROADMAP.md`](../ROADMAP.md))
 
 Couple it to `probe-sim`/`closure-sim`: the delivered solar power *is* the total this
