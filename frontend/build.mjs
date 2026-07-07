@@ -30,6 +30,8 @@ const result = await esbuild({
 await cp(join(ROOT, "index.html"), join(OUT, "index.html"));
 // Static assets referenced by index.html (the social-card image for link unfurls).
 await cp(join(ROOT, "og.svg"), join(OUT, "og.svg"));
+// GitHub Pages custom domain: the CNAME must live in the published artifact.
+await cp(join(ROOT, "CNAME"), join(OUT, "CNAME"));
 
 // Report shipped size.
 const js = await readFile(join(OUT, "app.js"));

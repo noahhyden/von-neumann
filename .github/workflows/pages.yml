@@ -1,0 +1,75 @@
+name: deploy-pages
+
+# Build and publish the frontend to GitHub Pages (vn.noahhyden.com). The site is a
+# build artifact: frontend/dist/ is gitignored and produced by esbuild after pimas is
+# built, so this workflow builds pimas at the pinned SHA (frontend/.pimas-good-sha),
+# builds the frontend, and deploys dist/. Mirrors the frontend job in ci.yml; pimas is
+# public, so the default GITHUB_TOKEN can check it out (no PAT needed).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; let an in-flight one finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out von-neumann
+        uses: actions/checkout@v4
+        with:
+          path: von-neumann
+
+      - name: Resolve pinned pimas SHA
+        id: pin
+        run: echo "sha=$(cat von-neumann/frontend/.pimas-good-sha)" >> "$GITHUB_OUTPUT"
+
+      - name: Check out pimas at the pinned SHA
+        uses: actions/checkout@v4
+        with:
+          repository: noahhyden/pimas
+          ref: ${{ steps.pin.outputs.sha }}
+          path: pimas
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      # dist/ is gitignored and pimas has no prepare hook - build pimas before consuming.
+      - name: Build pimas (pinned)
+        working-directory: pimas
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install + build the frontend
+        working-directory: von-neumann/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload the built site as the Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: von-neumann/frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
