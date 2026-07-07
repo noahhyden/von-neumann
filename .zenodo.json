@@ -3,7 +3,7 @@
   "upload_type": "software",
   "description": "A modular, source-checked set of physics models of self-replicating space manufacturing: bill-of-materials closure and the electronics wall, solar-limited compute, launch-mass leverage, single-probe operational range, a small deterministic fleet, and a galaxy-filling settlement swarm with light-speed-limited coordination. Every number traces to a citable source or an explicit derivation. This metadata drives the DOI that Zenodo mints on each GitHub release.",
   "access_right": "open",
-  "license": "PolyForm-Strict-1.0.0",
+  "license": "cc-by-nc-nd-4.0",
   "creators": [
     {
       "name": "Hydén, Noah",
