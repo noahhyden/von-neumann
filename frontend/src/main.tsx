@@ -1499,7 +1499,7 @@ function SourcesSurface() {
 function Nav(props: { surface: Surface }) {
   return (
     <div class="wrap" style="padding-top:18px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <button class="nav-brand" onClick={() => mount("overview")} title="Project overview">von-neumann</button>
+      <button class="nav-brand" onClick={() => mount("overview")} title="Project overview">The Arithmetic of Self-Replication</button>
       <button class={`act ${props.surface === "overview" ? "primary" : "ghost"}`} onClick={() => mount("overview")}>Overview</button>
       <button class={`act ${props.surface === "mission" ? "primary" : "ghost"}`} onClick={() => mount("mission")}>Full mission</button>
       <button class={`act ${props.surface === "fleet" ? "primary" : "ghost"}`} onClick={() => mount("fleet")}>Fleet</button>
@@ -1529,16 +1529,16 @@ const VALID_SURFACES: Surface[] = [
   "overview", "mission", "fleet", "swarm", "spine", "wall", "probe", "launch", "power", "sources",
 ];
 const SURFACE_TITLE: Record<Surface, string> = {
-  overview: "von-neumann - self-replicating space manufacturing",
-  mission: "Full mission - von-neumann",
-  fleet: "Fleet - von-neumann",
-  swarm: "Swarm - von-neumann",
-  spine: "Across scales - von-neumann",
-  wall: "Electronics wall - von-neumann",
-  probe: "Single probe - von-neumann",
-  launch: "Launch economics - von-neumann",
-  power: "Power budget - von-neumann",
-  sources: "Sources - von-neumann",
+  overview: "The Arithmetic of Self-Replication",
+  mission: "Full mission - The Arithmetic of Self-Replication",
+  fleet: "Fleet - The Arithmetic of Self-Replication",
+  swarm: "Swarm - The Arithmetic of Self-Replication",
+  spine: "Across scales - The Arithmetic of Self-Replication",
+  wall: "Electronics wall - The Arithmetic of Self-Replication",
+  probe: "Single probe - The Arithmetic of Self-Replication",
+  launch: "Launch economics - The Arithmetic of Self-Replication",
+  power: "Power budget - The Arithmetic of Self-Replication",
+  sources: "Sources - The Arithmetic of Self-Replication",
 };
 
 function surfaceToHash(surface: Surface, scenarioKey: string): string {

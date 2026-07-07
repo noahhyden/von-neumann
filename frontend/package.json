@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "The monorepo's central frontend surface - von-neumann's models run live in pimas. First surface: the electronics wall (drag the assumptions, speculate the wall, watch the real model recompute).",
+  "description": "The monorepo's central frontend surface - the project's models run live in pimas. First surface: the electronics wall (drag the assumptions, speculate the wall, watch the real model recompute).",
   "scripts": {
     "build": "node build.mjs",
     "serve": "node --watch-path=src build.mjs",
