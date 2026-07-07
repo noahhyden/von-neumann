@@ -64,11 +64,11 @@ export interface Rung {
  * swarm/REFERENCES.md.
  */
 export const RUNGS: Rung[] = [
-  { key: "realtime",    index: 0, label: "Real-time closed-loop", analog: "LEO",           who: "central controller, in the loop", color: "#4ade80", maxRoundTripSec: 1 },
-  { key: "movewait",    index: 1, label: "Move-and-wait",         analog: "Earth–Moon",    who: "central, but degraded",           color: "#88c7d6", maxRoundTripSec: 60 },
-  { key: "supervisory", index: 2, label: "Supervisory",           analog: "Mars",          who: "home sets goals; node executes",  color: "#e8a33d", maxRoundTripSec: 3600 },
-  { key: "dtn",         index: 3, label: "Delay-tolerant",        analog: "Saturn / 10+ AU", who: "node; network reconciles late", color: "#e07b39", maxRoundTripSec: SEC_PER_YEAR },
-  { key: "independent", index: 4, label: "Independent colonies",  analog: "Proxima +",     who: "node only; priors set pre-launch", color: "#e0555f", maxRoundTripSec: Infinity },
+  { key: "realtime",    index: 0, label: "Real-time closed-loop", analog: "LEO",           who: "central controller, in the loop", color: "#8cb395", maxRoundTripSec: 1 },
+  { key: "movewait",    index: 1, label: "Move-and-wait",         analog: "Earth–Moon",    who: "central, but degraded",           color: "#7fa9b5", maxRoundTripSec: 60 },
+  { key: "supervisory", index: 2, label: "Supervisory",           analog: "Mars",          who: "home sets goals; node executes",  color: "#c79a5b", maxRoundTripSec: 3600 },
+  { key: "dtn",         index: 3, label: "Delay-tolerant",        analog: "Saturn / 10+ AU", who: "node; network reconciles late", color: "#be8a5a", maxRoundTripSec: SEC_PER_YEAR },
+  { key: "independent", index: 4, label: "Independent colonies",  analog: "Proxima +",     who: "node only; priors set pre-launch", color: "#c68278", maxRoundTripSec: Infinity },
 ];
 
 /** Classify a round-trip latency (years) into its coordination rung. */

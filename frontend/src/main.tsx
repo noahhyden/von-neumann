@@ -228,7 +228,7 @@ function App(props: { model: WallModel; scenarioKey: string; onScenario: (k: str
           </p>
           <div class="card chartcard">
             <GrowthChart model={m} preview={preview} />
-            <p class="chartcap">FIG.1 - factory output vs time, straight from the model. Cyan: as built. Amber (when previewing): if it made its own chips.</p>
+            <p class="chartcap">FIG.1 - factory output vs time, straight from the model. Teal: as built. Bronze (when previewing): if it made its own chips.</p>
           </div>
         </div>
       </section>
@@ -741,7 +741,7 @@ function MultiProbeSurface(props: { model: MultiProbeModel }) {
           </p>
           <div class="card chartcard">
             <FleetChart model={m} />
-            <p class="chartcap">FIG.1 - fleet size (cyan) and how far the farthest probe has spread (amber) over 40 years. The dashed line is the day you're scrubbed to.</p>
+            <p class="chartcap">FIG.1 - fleet size (teal) and how far the farthest probe has spread (bronze) over 40 years. The dashed line is the day you're scrubbed to.</p>
           </div>
         </div>
       </section>
@@ -818,7 +818,7 @@ function drawSwarm(cv: HTMLCanvasElement, m: SwarmModel): void {
 
   // Stars, drawn additively so settled clusters bloom into a glowing front. Settled
   // stars flash white when the scrub has just crossed their settlement year, then cool
-  // from cyan to teal with age; unsettled stars are a dim dust.
+  // from slate-teal to deep teal with age; unsettled stars are a dim dust.
   const flash = Math.max(1, m.maxYear() * 0.03);
   const coolSpan = Math.max(1, m.maxYear() * 0.6);
   ctx.globalCompositeOperation = "lighter";
@@ -828,10 +828,10 @@ function drawSwarm(cv: HTMLCanvasElement, m: SwarmModel): void {
     if (sy >= 0 && sy <= year) {
       const age = year - sy;
       if (age < flash) {
-        ctx.fillStyle = "rgba(240,245,255,0.95)"; // just settled - a white flash
+        ctx.fillStyle = "rgba(232,236,240,0.92)"; // just settled - a soft flash
       } else {
-        const t = Math.min(1, age / coolSpan); // cyan (88,199,214) → teal (36,116,150)
-        ctx.fillStyle = `rgba(${Math.round(88 - 52 * t)},${Math.round(199 - 83 * t)},${Math.round(214 - 64 * t)},0.8)`;
+        const t = Math.min(1, age / coolSpan); // slate-teal (127,169,181) → deep teal (56,92,100)
+        ctx.fillStyle = `rgba(${Math.round(127 - 71 * t)},${Math.round(169 - 77 * t)},${Math.round(181 - 81 * t)},0.8)`;
       }
       ctx.beginPath();
       ctx.arc(x, y, age < flash ? 2.8 : 2.0, 0, Math.PI * 2);
@@ -848,21 +848,21 @@ function drawSwarm(cv: HTMLCanvasElement, m: SwarmModel): void {
   // The wavefront: a ring at the current front radius, centred on the homeworld.
   const front = m.settledAt().frontPc;
   const ox = px(r.xs[r.origin]), oy = py(r.ys[r.origin]);
-  ctx.strokeStyle = "rgba(232,163,61,0.5)";
+  ctx.strokeStyle = "rgba(199,154,91,0.5)";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.arc(ox, oy, front * s, 0, Math.PI * 2);
   ctx.stroke();
 
-  // The homeworld - a bright amber core with a soft halo.
+  // The homeworld - a warm bronze core with a soft halo.
   const halo = ctx.createRadialGradient(ox, oy, 0, ox, oy, 12);
-  halo.addColorStop(0, "rgba(232,163,61,0.9)");
-  halo.addColorStop(1, "rgba(232,163,61,0)");
+  halo.addColorStop(0, "rgba(199,154,91,0.85)");
+  halo.addColorStop(1, "rgba(199,154,91,0)");
   ctx.fillStyle = halo;
   ctx.beginPath();
   ctx.arc(ox, oy, 12, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#f4c46a";
+  ctx.fillStyle = "#d3ab72";
   ctx.beginPath();
   ctx.arc(ox, oy, 4, 0, Math.PI * 2);
   ctx.fill();
@@ -1041,7 +1041,7 @@ function SwarmSurface(props: { model: SwarmModel }) {
               }}
               onMouseLeave={() => m.setHoverStar(null)}
             />
-            <p class="chartcap">FIG.1 - the star field. Amber: the homeworld. Cyan: settled by the scrubbed year (white = just settled). Grey: not yet reached. The amber ring is the settlement wavefront. <b>Hover any star</b> to read its light-speed coordination lag from home.</p>
+            <p class="chartcap">FIG.1 - the star field. Bronze: the homeworld. Teal: settled by the scrubbed year (pale flash = just settled). Grey: not yet reached. The bronze ring is the settlement wavefront. <b>Hover any star</b> to read its light-speed coordination lag from home.</p>
           </div>
           <div class="btnrow" style="align-items:center;gap:12px">
             <button class="act primary" onClick={togglePlay}>{() => (m.playing() ? "⏸ pause" : "▶ play")}</button>
