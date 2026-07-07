@@ -1529,7 +1529,12 @@ function PapersSurface() {
                 <p class="marker"><b>{p.date}</b> &nbsp;/&nbsp; paper</p>
                 <h2>{p.title}</h2>
                 <p class="note">
-                  {p.authors.map((a) => (a.affiliation ? `${a.name} (${a.affiliation})` : a.name)).join(", ")}
+                  {() => p.authors.map((a, i) => {
+                    const label = a.affiliation ? `${a.name} (${a.affiliation})` : a.name;
+                    return a.orcid
+                      ? <span>{i > 0 ? ", " : ""}{label} <a href={`https://orcid.org/${a.orcid}`} target="_blank" rel="noopener noreferrer">ORCID {a.orcid}</a></span>
+                      : <span>{i > 0 ? ", " : ""}{label}</span>;
+                  })}
                 </p>
                 <p>{p.abstract}</p>
                 <p class="legend" style="margin:0 0 16px">{() => p.keywords.join("  .  ")}</p>

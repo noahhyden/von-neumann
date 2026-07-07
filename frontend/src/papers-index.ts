@@ -34,7 +34,7 @@ export const PAPERS: PaperMeta[] = [
       {
         "name": "Noah Hyden",
         "affiliation": "Independent researcher",
-        "orcid": ""
+        "orcid": "0009-0003-4523-0467"
       }
     ],
     "abstract": "A self-replicating space factory lands with a fixed cargo and builds copies of itself from local material. Its promise is leverage: the fraction of its own mass it can remake locally, its closure, sets how much installed capacity each launched kilogram becomes, exactly 1/(1-C). We show why that fraction stops short of one at a wall built of chips. The wall is twofold. Chips sit at the end of the deepest supply chain on Earth, and they are staggeringly energy-hungry to make, with an embodied energy roughly three orders of magnitude above smelted metal. Modern seed-factory studies converge on achievable closure near 70 to 96 percent and agree that chasing 100 percent is not worthwhile, so imported electronics are a permanent design feature rather than a temporary compromise. Letting a highly closed seed make its own chips pays off only when it is also swimming in power; starved of power it backfires. Imported electronics, and the launch-mass leverage they cap, are therefore intrinsic to the concept.",
