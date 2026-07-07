@@ -2,7 +2,7 @@
  * The growth chart - driven by the REAL model output (sim().steps), not a faked
  * curve. Plots output (kg/day) against years, with the target line and the day
  * each curve crosses it. When a speculation is active, the hypothetical "chips
- * local" trajectory is overlaid (amber, dashed) beside the committed one (cyan) -
+ * local" trajectory is overlaid (bronze, dashed) beside the committed one (teal) -
  * a before/after you can see, computed without committing.
  */
 import { createMemo } from "pimas";
@@ -101,15 +101,15 @@ export function GrowthChart(props: {
     els.push(<text x={W - PADR + 6} y={g.targetY + 4} fill="var(--muted)" style="font:11px var(--mono)">goal</text>);
 
     // time-to-target markers
-    if (g.tttPreviewX !== null) els.push(<line x1={g.tttPreviewX} y1={PADT} x2={g.tttPreviewX} y2={H - PADB} stroke="rgba(232,163,61,0.4)" stroke-width="1" stroke-dasharray="3 3" />);
-    if (g.tttCommittedX !== null) els.push(<line x1={g.tttCommittedX} y1={PADT} x2={g.tttCommittedX} y2={H - PADB} stroke="rgba(88,199,214,0.5)" stroke-width="1" stroke-dasharray="3 3" />);
+    if (g.tttPreviewX !== null) els.push(<line x1={g.tttPreviewX} y1={PADT} x2={g.tttPreviewX} y2={H - PADB} stroke="rgba(199,154,91,0.45)" stroke-width="1" stroke-dasharray="3 3" />);
+    if (g.tttCommittedX !== null) els.push(<line x1={g.tttCommittedX} y1={PADT} x2={g.tttCommittedX} y2={H - PADB} stroke="rgba(127,169,181,0.55)" stroke-width="1" stroke-dasharray="3 3" />);
 
-    // preview curve (amber dashed) under committed
+    // preview curve (bronze dashed) under committed
     if (g.preview) {
       els.push(<polyline points={g.preview} fill="none" stroke="var(--metal)" stroke-width="2.5" stroke-dasharray="7 5" stroke-linejoin="round" />);
       if (g.endPreview) els.push(<text x={g.endPreview.x - 6} y={g.endPreview.y - 8} text-anchor="end" fill="var(--metal)" style="font:11px var(--mono)">chips local</text>);
     }
-    // committed curve (cyan solid)
+    // committed curve (teal solid)
     els.push(<polyline points={g.committed} fill="none" stroke="var(--chip)" stroke-width="2.5" stroke-linejoin="round" />);
     if (g.endCommitted) els.push(<text x={g.endCommitted.x - 6} y={g.endCommitted.y + 16} text-anchor="end" fill="var(--chip)" style="font:11px var(--mono)">as built</text>);
 
