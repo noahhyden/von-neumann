@@ -4,9 +4,11 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-No numbered release has been cut yet; everything to date is under `[Unreleased]`.
-
 ## [Unreleased]
+
+## [0.1.0] - 2026-07-07
+
+The first public release.
 
 ### Added
 - Eight physics modules, each a pure, seeded, deterministic fold with its own tests and
@@ -22,4 +24,5 @@ No numbered release has been cut yet; everything to date is under `[Unreleased]`
   for the written research, third-party notices for the bundled MIT-licensed pimas, and
   a `CITATION.cff`.
 
-[Unreleased]: https://github.com/noahhyden/von-neumann/commits/main
+[Unreleased]: https://github.com/noahhyden/von-neumann/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/noahhyden/von-neumann/releases/tag/v0.1.0
