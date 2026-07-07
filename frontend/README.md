@@ -1,9 +1,16 @@
 # frontend - von-neumann's interactive surface
 
-This is the monorepo's **central frontend**: the place where von-neumann's models
-run live in the browser, built entirely on [**pimas**](../../pimas) (the repo rule
-is pimas-only - no other reactive framework; see [`../CLAUDE.md`](../CLAUDE.md)).
+This is the monorepo's **central frontend**: the place where the project's models
+run live in the browser, built entirely on [**pimas**](https://github.com/noahhyden/pimas)
+(the repo rule is pimas-only - no other reactive framework; see [`../CLAUDE.md`](../CLAUDE.md)).
 The reactive core runs the model *and* renders the page.
+
+> **Building locally:** the frontend consumes pimas as a sibling checkout
+> (`"pimas": "file:../../pimas"`) and pimas ships no `dist/`, so `npm ci` here will
+> fail unless pimas is cloned next to this repo and built first. Clone
+> `https://github.com/noahhyden/pimas` as a sibling, check out the SHA in
+> [`.pimas-good-sha`](.pimas-good-sha), and `npm run build` it. Full steps are in the
+> repo root README under "Reproducing all results".
 
 It is organized as a **shell that hosts one surface per model**, so each module
 keeps its own slice - the frontend just presents them. As `power-budget`,
@@ -16,7 +23,7 @@ fuse into one giant simulation.
 
 The landing surface: a plain-language explanation of what the project is, its
 methodology (every number sourced, gaps marked not guessed), and a live per-module
-roadmap status (which of the seven modules are done, which are in progress, and the
+roadmap status (which of the eight modules are done, which are in progress, and the
 known open gaps). Click any module row to open its surface.
 
 ### Sources - the bibliography

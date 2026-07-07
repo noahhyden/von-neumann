@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: "The Arithmetic of Self-Replication"
+message: "If you reference this work, please cite it as below."
+type: software
+authors:
+  - family-names: Hyden
+    given-names: Noah
+repository-code: "https://github.com/noahhyden/von-neumann"
+url: "https://vn.noahhyden.com"
+abstract: >-
+  A modular, source-checked set of physics models of self-replicating space
+  manufacturing: bill-of-materials closure and the electronics wall, solar-limited
+  compute, launch-mass leverage, single-probe operational range, a small deterministic
+  fleet, and a galaxy-filling settlement swarm with light-speed-limited coordination.
+  Every number traces to a citable source or an explicit derivation.
+keywords:
+  - self-replication
+  - von Neumann probe
+  - space manufacturing
+  - physics simulation
+  - closure
+license: PolyForm-Strict-1.0.0
+date-released: "2026-07-07"

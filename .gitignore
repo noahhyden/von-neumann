@@ -21,3 +21,6 @@ htmlcov/
 *.swp
 .idea/
 .vscode/
+
+# Agent tooling (never commit local settings, paths, or scheduled-task state)
+.claude/

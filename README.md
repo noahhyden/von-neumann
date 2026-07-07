@@ -1,5 +1,12 @@
 # The Arithmetic of Self-Replication
 
+> **One factory lands on the Moon or an asteroid and builds copies of itself from local material.** How far that idea actually holds, and where the physics stops it - modelled in small, live pieces, with every number traced to a source.
+
+[![code license: PolyForm Strict 1.0.0](https://img.shields.io/badge/code-PolyForm%20Strict%201.0.0-blue)](LICENSE)
+[![docs license: CC BY-NC-ND 4.0](https://img.shields.io/badge/docs-CC%20BY--NC--ND%204.0-lightgrey)](LICENSE-DOCS)
+[![CI](https://github.com/noahhyden/von-neumann/actions/workflows/ci.yml/badge.svg)](https://github.com/noahhyden/von-neumann/actions/workflows/ci.yml)
+[![live site](https://img.shields.io/badge/live-vn.noahhyden.com-brightgreen)](https://vn.noahhyden.com)
+
 A long-term, modular exploration of **self-replicating space manufacturing** - the
 idea that you could land a single factory on the Moon (or an asteroid, or Mars) and
 let it build copies of itself from local material, growing an entire industry from
@@ -20,7 +27,7 @@ as one read. The same findings are live and interactive on the frontend's overvi
 | Module | Status | What it does |
 |---|---|---|
 | [`closure-sim`](closure-sim/) | v1 | **Closure & replication.** Define a factory as a bill of materials; compute how much of itself it can build locally ("closure"), simulate how a seed multiplies over time, and analyze the "electronics wall" - why chips are the part that can't be made in space. |
-| [`frontend`](frontend/) | live | **The monorepo's central interactive surface.** The project's models run live in the browser, built entirely on [pimas](../pimas). A shell that hosts one surface per model; the first is the interactive electronics wall (drag the assumptions, speculate "make its own chips" before committing, watch the model explain which ceiling binds). |
+| [`frontend`](frontend/) | live | **The monorepo's central interactive surface.** The project's models run live in the browser, built entirely on [pimas](https://github.com/noahhyden/pimas). A shell that hosts one surface per model; the first is the interactive electronics wall (drag the assumptions, speculate "make its own chips" before committing, watch the model explain which ceiling binds). |
 | [`probe-sim`](probe-sim/) | in progress | **A single self-replicating probe** (after Borgue & Hein 2020). Solar-electric power vs heliocentric distance, and the operational range it gates - feeds delivered power into `closure-sim`'s replication to find where a probe stops being able to reproduce. |
 | [`power-budget`](power-budget/) | live | **Making vs. thinking, per watt.** Split a solar-limited power budget among manufacturing, compute, and housekeeping; convert compute-watts to throughput - floored by the Landauer limit and anchored to the ~20 W human brain. |
 | [`launch-economics`](launch-economics/) | live | **The economics of not launching mass.** Launch cost, the rocket-equation Δv penalty, and the launch-mass leverage of shipping a self-replicating seed instead of the finished installation. |
@@ -74,12 +81,40 @@ their own.
 
 - **One module = one directory** with its own README, dependencies, and tests.
 - **`frontend` is the one shared surface.** It's the single interactive/presentation
-  layer, built on [pimas](frontend/) and pimas only. It hosts *one surface per model*
-  rather than fusing them - each model still owns its slice; the frontend just
-  presents it.
+  layer, built on [pimas](https://github.com/noahhyden/pimas) and pimas only. It hosts
+  *one surface per model* rather than fusing them - each model still owns its slice;
+  the frontend just presents it.
 - **Real tests, real numbers.** Assertions check that the math behaves correctly,
   not just that code runs.
 - **Grounded inputs.** Assumptions trace to real research; modules document their
   sources (see, e.g., [`closure-sim/REFERENCES.md`](closure-sim/REFERENCES.md)).
 - **Plain language.** This work gets shared with non-specialists; explanations are
   written to be read by people who aren't engineers.
+
+## License
+
+This repository is split by intent, because it holds two different kinds of work:
+
+- **Source code, tests, build scripts, and data** (the scenario YAML) are under the
+  **PolyForm Strict License 1.0.0** - see [LICENSE](LICENSE). You may read and run it
+  for noncommercial purposes; you may not redistribute it, modify it, build on it, or
+  use it commercially.
+- **The written research** - all Markdown prose, including this README, `FINDINGS.md`,
+  `ROADMAP.md`, the module READMEs, and the `REFERENCES.md` files - is under
+  **Creative Commons Attribution-NonCommercial-NoDerivatives 4.0** (CC BY-NC-ND 4.0) -
+  see [LICENSE-DOCS](LICENSE-DOCS). Read it and cite it with attribution; no commercial
+  use, and no derivative or altered versions.
+
+The bundled frontend build embeds [pimas](https://github.com/noahhyden/pimas)
+(MIT-licensed) - see [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES). To cite this project,
+use [CITATION.cff](CITATION.cff).
+
+## Contributing
+
+This is a solo research project. The most useful contribution is an issue flagging a
+sourcing or factual error; code pull requests are generally not accepted. See
+[CONTRIBUTING.md](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md).
+
+## Security
+
+Report security issues privately - see [SECURITY.md](SECURITY.md).
