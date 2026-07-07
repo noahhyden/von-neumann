@@ -1,0 +1,12 @@
+{
+  "name": "papers",
+  "private": true,
+  "type": "module",
+  "description": "IEEE-LaTeX paper pipeline whose bibliography is generated from frontend/src/sources.ts.",
+  "scripts": {
+    "gen:bib": "node scripts/gen-bib.mjs",
+    "gen:index": "node scripts/gen-index.mjs",
+    "gen": "node scripts/gen-bib.mjs && node scripts/gen-index.mjs",
+    "build": "latexmk -pdf -cd electronics-wall/main.tex || echo 'latexmk not installed; CI builds the PDF'"
+  }
+}

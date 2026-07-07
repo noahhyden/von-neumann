@@ -1,0 +1,48 @@
+% main.tex - the electronics-wall paper. Hand-written; gen-tex.mjs leaves it alone.
+% Bibliography is generated: ../refs.bib comes from frontend/src/sources.ts.
+\documentclass[conference]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{cite}
+\usepackage{url}
+\usepackage{amsmath}
+
+\title{The Electronics Wall: Why a Self-Replicating Space Factory Cannot Close on Its Own Chips}
+
+\author{
+\IEEEauthorblockN{Noah Hyd\'en}
+\IEEEauthorblockA{Independent researcher \\ ORCID: 0009-0003-4523-0467}
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+A self-replicating space factory lands with a fixed cargo and builds copies of
+itself from local material. Its promise is leverage: the fraction of its own mass
+it can remake locally, its closure, sets how much installed capacity each launched
+kilogram becomes, exactly $1/(1-C)$. We show why that fraction stops short of one at
+a wall built of chips. The wall is twofold. Chips sit at the end of the deepest
+supply chain on Earth, and they are staggeringly energy-hungry to make, with an
+embodied energy roughly three orders of magnitude above smelted metal. Modern
+seed-factory studies converge on achievable closure near 70 to 96 percent and agree
+that chasing 100 percent is not worthwhile, so imported electronics are a permanent
+design feature rather than a temporary compromise. Letting a highly closed seed make
+its own chips pays off only when it is also swimming in power; starved of power it
+backfires. Imported electronics, and the launch-mass leverage they cap, are
+therefore intrinsic to the concept.
+\end{abstract}
+
+\begin{IEEEkeywords}
+self-replication, in-situ manufacturing, material closure, embodied energy, space systems
+\end{IEEEkeywords}
+
+\input{body/introduction}
+\input{body/the-closure-model}
+\input{body/the-electronics-wall}
+\input{body/launch-mass-leverage}
+\input{body/discussion}
+
+\bibliographystyle{IEEEtran}
+\bibliography{../refs}
+
+\end{document}

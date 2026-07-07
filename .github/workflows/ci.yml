@@ -100,6 +100,29 @@ jobs:
         working-directory: spine
         run: uv run --extra dev pytest -q
 
+  papers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      # gen-bib/gen-index import frontend/src/sources.ts directly (Node native TS),
+      # so no install step is needed. gen-index validates that every id a paper cites
+      # resolves in the bibliography, and exits nonzero if not.
+      - name: Generate refs.bib and refresh the papers index
+        working-directory: papers
+        run: |
+          node scripts/gen-bib.mjs
+          node scripts/gen-index.mjs
+      - name: The committed papers index must match the generator output
+        run: git diff --exit-code frontend/src/papers-index.ts
+      - name: Typeset the paper (LaTeX) - a broken .tex fails the PR
+        uses: xu-cheng/latex-action@v4
+        with:
+          working_directory: papers/electronics-wall
+          root_file: main.tex
+
   frontend:
     runs-on: ubuntu-latest
     steps:

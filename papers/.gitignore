@@ -1,0 +1,13 @@
+# Generated bibliography (built from frontend/src/sources.ts by gen-bib.mjs).
+refs.bib
+**/refs.bib
+
+# LaTeX build artifacts.
+**/build/
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.pdf
+**/*.pdf
