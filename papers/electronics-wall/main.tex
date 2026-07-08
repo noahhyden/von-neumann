@@ -1,7 +1,11 @@
 % main.tex - the electronics-wall paper. Hand-written; gen-tex.mjs leaves it alone.
 % Bibliography is generated: ../refs.bib comes from frontend/src/sources.ts.
+% Figures are generated (gitignored vector PDFs): the closure-sim module writes
+% fig_leverage.pdf, fig_embodied_energy.pdf, and fig_chip_crossover.pdf here via
+% `uv run --extra dev python -m closure_sim.paper_figures`.
 \documentclass[conference]{IEEEtran}
 \usepackage{graphicx}
+\usepackage{booktabs}
 \usepackage{cite}
 \usepackage{url}
 \usepackage{amsmath}
@@ -41,6 +45,7 @@ self-replication, in-situ manufacturing, material closure, embodied energy, spac
 \input{body/the-electronics-wall}
 \input{body/launch-mass-leverage}
 \input{body/discussion}
+\input{body/conclusion}
 
 \bibliographystyle{IEEEtran}
 \bibliography{../refs}

@@ -107,9 +107,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
       # gen-bib/gen-index import frontend/src/sources.ts directly (Node native TS),
-      # so no install step is needed. gen-index validates that every id a paper cites
-      # resolves in the bibliography, and exits nonzero if not.
+      # so no install step is needed. gen-index enforces the paper rules
+      # (papers/RULES.md): every cited id resolves in the bibliography, prose cites
+      # and declared cites match exactly, and the main.tex abstract matches
+      # paper.json. It exits nonzero on any violation.
       - name: Generate refs.bib and refresh the papers index
         working-directory: papers
         run: |
@@ -117,6 +122,18 @@ jobs:
           node scripts/gen-index.mjs
       - name: The committed papers index must match the generator output
         run: git diff --exit-code frontend/src/papers-index.ts
+      - name: Typography rules - no em-dash, no en-dash, no emoji (papers/RULES.md)
+        working-directory: papers
+        run: node scripts/check-typography.mjs
+      # Figures are generated (gitignored vector PDFs) from the validated source
+      # modules, so the paper restates only their real output (papers/RULES.md R1, P4).
+      # A figure-build failure fails the PR, since the typeset below needs them.
+      - name: Generate coordination-tax figures (swarm)
+        working-directory: swarm
+        run: uv run --extra dev python -m experiments.paper_figures
+      - name: Generate electronics-wall figures (closure-sim)
+        working-directory: closure-sim
+        run: uv run --extra dev python -m closure_sim.paper_figures
       - name: Typeset every paper (LaTeX) - a broken .tex fails the PR
         uses: xu-cheng/latex-action@v4
         with:

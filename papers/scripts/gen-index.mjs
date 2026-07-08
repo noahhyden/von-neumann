@@ -10,8 +10,36 @@
 // ASCII only, no em-dash (CLAUDE.md 5).
 
 import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+
+/** Every \cite{id} (and \cite{a,b}) id used in a compiled document. */
+function citesInTex(tex) {
+  const ids = new Set();
+  for (const m of tex.matchAll(/\\cite\{([^}]*)\}/g)) {
+    for (const id of m[1].split(",").map((s) => s.trim()).filter(Boolean)) ids.add(id);
+  }
+  return ids;
+}
+
+/**
+ * Canonicalize an abstract so the LaTeX copy (main.tex) and the plain-text copy
+ * (paper.json, shown on the site) compare equal when they say the same thing.
+ * Unwraps simple markup, drops inline-math delimiters, and folds "N percent" and
+ * "N\%" to a single "%" form (the one legitimate LaTeX-vs-plaintext difference).
+ */
+function normAbstract(s) {
+  return String(s)
+    .replace(/\\(?:emph|textbf|textit|texttt|mbox)\{([^}]*)\}/g, "$1")
+    .replace(/\\%/g, "%")
+    .replace(/\$/g, "")
+    .replace(/~/g, " ")
+    .replace(/\bper\s?cent\b/gi, "%")
+    .replace(/\s*%/g, "%")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
 
 // sources.ts has no runtime imports, so Node imports the TypeScript directly (native
 // type stripping). Paths resolve relative to this file, so cwd does not matter.
@@ -38,6 +66,54 @@ for (const path of entries) {
       invalid = true;
     }
   }
+
+  // Prose- and abstract-level rules only apply once a paper is a real document
+  // (main.tex exists). A paper.json alone (pre-scaffold) is only checked for
+  // resolvable cite ids above.
+  const paperDir = dirname(path);
+  const mainTexPath = join(paperDir, "main.tex");
+  if (existsSync(mainTexPath)) {
+    const mainTex = readFileSync(mainTexPath, "utf8");
+
+    // Rule: the declared cites (paper.json, shown on the site) and the cites the
+    // compiled paper actually uses (main.tex + body/*.tex) must match exactly.
+    // refs.bib carries every source, so nothing stops prose from citing an
+    // undeclared source or declaring one it never uses; this makes the site's
+    // reference list an exact manifest of the paper.
+    const proseCites = citesInTex(mainTex);
+    const bodyDir = join(paperDir, "body");
+    if (existsSync(bodyDir)) {
+      for (const f of readdirSync(bodyDir)) {
+        if (f.endsWith(".tex")) for (const id of citesInTex(readFileSync(join(bodyDir, f), "utf8"))) proseCites.add(id);
+      }
+    }
+    const declared = new Set(cites);
+    for (const id of proseCites) {
+      if (!declared.has(id)) {
+        console.error(`gen-index: ${path}: prose cites "${id}" but paper.json does not declare it`);
+        invalid = true;
+      }
+    }
+    for (const id of declared) {
+      if (!proseCites.has(id)) {
+        console.error(`gen-index: ${path}: paper.json declares "${id}" but no section cites it`);
+        invalid = true;
+      }
+    }
+
+    // Rule: the LaTeX abstract must match paper.json.abstract (after folding the
+    // one legitimate LaTeX-vs-plaintext difference), so the site and the PDF
+    // present the same summary.
+    const m = mainTex.match(/\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}/);
+    if (!m) {
+      console.error(`gen-index: ${path}: main.tex has no \\begin{abstract}...\\end{abstract} block`);
+      invalid = true;
+    } else if (normAbstract(m[1]) !== normAbstract(paper.abstract || "")) {
+      console.error(`gen-index: ${path}: main.tex abstract does not match paper.json abstract`);
+      invalid = true;
+    }
+  }
+
   papers.push({
     slug: paper.slug,
     title: paper.title,

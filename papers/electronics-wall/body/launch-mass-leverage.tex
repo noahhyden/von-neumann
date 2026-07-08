@@ -1,21 +1,38 @@
 \section{Launch-mass leverage}
 
-The reason the closure cap matters economically is leverage. Because mass balance
-forces $1-C$ kilograms of vitamins to be imported per kilogram the factory builds, the
-installed mass per launched mass is exactly $1/(1-C)$. The function is unforgiving near
-one: at 67\% closure each launched kilogram becomes about $3\times$ its mass in
-installed capacity, while at 97\% closure it becomes about $33\times$
-\cite{tsiolkovsky-1903}. The last few points of closure buy most of the leverage,
-which is precisely why the electronics wall - by holding closure below one - caps the
-payoff of the whole scheme.
+The reason the closure cap matters economically is leverage. Because mass balance forces
+$1-C$ kilograms of vitamins to be imported per kilogram the factory builds, the installed
+mass per launched mass is exactly
+\begin{equation}
+L(C) \;=\; \frac{1}{1-C}. \label{eq:leverage}
+\end{equation}
+The function is unforgiving near one, as Fig.~\ref{fig:leverage} shows: at 67\% closure
+each launched kilogram becomes about $3\times$ its mass in installed capacity, while at
+97\% closure it becomes about $33\times$. The last few points of closure buy most of the
+leverage, which is precisely why the electronics wall, by holding closure below one, caps
+the payoff of the whole scheme.
 
-The alternative to building in place is shipping a finished installation, and the
-rocket equation makes that alternative exponentially expensive. The propellant mass
-ratio grows as $\exp(\Delta v / v_e)$, so the cost of delivering finished mass to a
-destination rises exponentially with the mission's delta-v \cite{tsiolkovsky-1903}.
-That exponential is the entire economic case for self-replication: it is far cheaper to
-send a small, high-closure seed and let $1/(1-C)$ leverage do the rest than to launch
-the installed capacity directly. The electronics wall does not overturn this case; it
-bounds it. The imported electronics that hold $C$ below one are exactly the mass that
-must still be flown, at the rocket equation's exponential price, for every generation
-the factory builds.
+\begin{figure}[!t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_leverage.pdf}
+  \caption{Launch-mass leverage $1/(1-C)$ as a function of material closure $C$. Each
+    kilogram launched becomes $1/(1-C)$ kilograms of installed factory, so closure of 0.67
+    yields about $3\times$ while 0.97 yields about $33\times$, and the curve steepens
+    sharply as $C$ approaches one, where the imported electronics hold it back.}
+  \label{fig:leverage}
+\end{figure}
+
+The alternative to building in place is shipping a finished installation, and the rocket
+equation makes that alternative exponentially expensive. The propellant mass ratio grows as
+$\exp(\Delta v / v_e)$, so the cost of delivering finished mass to a destination rises
+exponentially with the mission's delta-v \cite{tsiolkovsky-1903,sutton-biblarz-2016}. For
+the representative budgets of an interplanetary mission, several kilometres per second of
+delta-v against exhaust velocities of a few, the mass ratio is large
+\cite{curtis-2020}, and even at modern launch prices the cost per delivered kilogram is
+high \cite{jones-2018-launch-cost}. That exponential is the entire economic case for
+self-replication: it is far cheaper to send a small, high-closure seed and let
+(\ref{eq:leverage}) do the rest than to launch the installed capacity directly, the same
+bootstrapping logic behind tonne-to-kilotonne space-industry studies
+\cite{metzger-2013}. The electronics wall does not overturn this case; it bounds it. The
+imported electronics that hold $C$ below one are exactly the mass that must still be flown,
+at the rocket equation's exponential price, for every generation the factory builds.

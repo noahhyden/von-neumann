@@ -37,8 +37,8 @@ export const PAPERS: PaperMeta[] = [
         "orcid": "0009-0003-4523-0467"
       }
     ],
-    "abstract": "A swarm of self-replicating probes fills a stellar field star by star, each settling a star and launching copies. The standard exploration-timescale model grants every probe perfect, instantaneous knowledge of which stars are already settled; finite light-speed is its stated future work. We add that light-speed limit: a probe deciding at a star treats a distant star as settled only once the news, travelling at c, has arrived, so probes race for the same target from stale views and waste trips. Over a 32-seed paired ensemble on identical galaxies, the delay slows the time to fill the field by a median of about 0 percent for powered nearest-neighbour flight, about 30 percent for nearest-star slingshot flight, and about 50 percent for maximum-boost slingshot flight; every case still reaches 100 percent, so lag alone produces no permanent unsettled fraction. The lag scale is set by the dimensionless ratio of information-delay to travel-time per hop, which equals the probe speed in units of c; whether it actually bites is decided by how non-local each hop is. Fast but local flight is nearly immune, because a probe that loses a race simply takes the star next door; the cost falls on long-range hops made from stale views. This refines the perfect-information picture: the slingshot speed-up is real, but under finite light-speed a meaningful fraction of it is eaten by uncoordinated long-range collisions.",
-    "date": "2026-07-08",
+    "abstract": "A swarm of self-replicating probes fills a stellar field star by star, each probe settling a star and launching copies. The standard exploration-timescale model grants every probe perfect, instantaneous knowledge of which stars are already settled, and names finite light-speed as its own future work. We add that light-speed limit: a probe deciding at a star treats a distant star as settled only once the news, travelling at the speed of light, has arrived, so probes race for the same target from stale views and waste trips. Over a 32-seed paired ensemble on identical galaxies, the delay slows the time to fill the field by a median of about 0 percent for powered nearest-neighbour flight, about 30 percent for nearest-star slingshot flight, and about 50 percent for maximum-boost slingshot flight; every case still reaches full coverage, so lag alone leaves no permanent unsettled fraction. The scale of the lag is set by a single dimensionless ratio, the information delay across a hop divided by the travel time across it, which equals the probe speed in units of the speed of light; whether it actually bites is decided by how non-local each hop is. Fast but local flight is nearly immune, because a probe that loses a race simply takes the star next door, while the cost falls on long-range hops made from stale views. Under finite light-speed the slingshot speed-up is real, but a meaningful fraction of it is eaten by uncoordinated long-range collisions.",
+    "date": "2026-07-09",
     "keywords": [
       "self-replication",
       "interstellar exploration",
@@ -47,11 +47,29 @@ export const PAPERS: PaperMeta[] = [
       "swarm dynamics"
     ],
     "cites": [
-      "nicholson-forgan-2013",
+      "hart-1975",
+      "tipler-1980",
+      "freitas-1980-interstellar-probe",
+      "newman-sagan-1981",
+      "jones-1981",
+      "bjork-2007",
+      "cotta-morales-2009",
+      "forgan-2009",
       "forgan-papadog-kitching-2013",
+      "nicholson-forgan-2013",
+      "lubin-2016",
+      "carroll-nellenback-2019",
+      "lamport-1978",
+      "recons-census",
       "olfati-saber-murray-2004",
+      "olfati-saber-fax-murray-2007",
+      "flp-1985",
+      "gilbert-lynch-2002",
       "ferrell-1965",
-      "rfc-4838"
+      "sheridan-1993",
+      "burleigh-2003",
+      "rfc-4838",
+      "rfc-9171"
     ],
     "pdf": "papers/coordination-tax.pdf"
   },
@@ -66,7 +84,7 @@ export const PAPERS: PaperMeta[] = [
       }
     ],
     "abstract": "A self-replicating space factory lands with a fixed cargo and builds copies of itself from local material. Its promise is leverage: the fraction of its own mass it can remake locally, its closure, sets how much installed capacity each launched kilogram becomes, exactly 1/(1-C). We show why that fraction stops short of one at a wall built of chips. The wall is twofold. Chips sit at the end of the deepest supply chain on Earth, and they are staggeringly energy-hungry to make, with an embodied energy roughly three orders of magnitude above smelted metal. Modern seed-factory studies converge on achievable closure near 70 to 96 percent and agree that chasing 100 percent is not worthwhile, so imported electronics are a permanent design feature rather than a temporary compromise. Letting a highly closed seed make its own chips pays off only when it is also swimming in power; starved of power it backfires. Imported electronics, and the launch-mass leverage they cap, are therefore intrinsic to the concept.",
-    "date": "2026-07-07",
+    "date": "2026-07-09",
     "keywords": [
       "self-replication",
       "in-situ manufacturing",
@@ -75,13 +93,32 @@ export const PAPERS: PaperMeta[] = [
       "space systems"
     ],
     "cites": [
+      "von-neumann-burks-1966",
       "nasa-cp-2255-1980",
-      "williams-ayres-heller-2002",
-      "nagapurkar-das-2022",
       "freitas-merkle-2004",
+      "chirikjian-2004-niac",
+      "moses-chirikjian-2020",
+      "zykov-lipson-2005",
+      "reprap-jones-2011",
+      "borgue-hein-2020",
+      "metzger-2013",
       "guided-self-replicating-factory-2021",
       "csis-semiconductor-supply-chain",
-      "tsiolkovsky-1903"
+      "williams-ayres-heller-2002",
+      "nagapurkar-das-2022",
+      "gutowski-2009",
+      "boyd-2012",
+      "murphy-2003",
+      "ice-coefficients",
+      "ashby-2012",
+      "peng-2013-pv-lca",
+      "power-electronics-lca",
+      "sensor-embodied-2021",
+      "guerrero-zabel-2023",
+      "tsiolkovsky-1903",
+      "sutton-biblarz-2016",
+      "curtis-2020",
+      "jones-2018-launch-cost"
     ],
     "pdf": "papers/electronics-wall.pdf"
   }

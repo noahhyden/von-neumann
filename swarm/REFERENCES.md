@@ -187,6 +187,17 @@ hops made from stale views** (the slingshot regime), where a wasted trip is a lo
 refines Nicholson & Forgan's perfect-info picture: their slingshot speed-up is real, but under
 finite light-speed a meaningful fraction of it is eaten by uncoordinated long-range collisions.
 
+**Paper figures (`experiments/paper_figures.py`, for `papers/coordination-tax/`).** The
+figures and the results table in the coordination-tax paper restate this experiment's
+deterministic output; no new numbers. `fig_slowdown_by_policy.pdf` plots the per-seed
+`dt100_pct` distribution for the three policies, whose medians and IQRs this run computes as
+**+0.0% [0.0, 0.0] (powered), +30.3% [20.0, 38.5] (slingshot-nearest), +51.4% [46.0, 54.0]
+(slingshot-maxboost)** - the precise form of the `~0 / ~30 / ~50%` finding above.
+`fig_settlement_curves.pdf` plots `fraction_settled` vs `year` for `slingshot_nearest` on a
+single seed (`SEEDS[0]`), where `simulate_swarm` gives `t100 = 80,000 yr` under
+`coordination="instant"` and `110,000 yr` under `"lightspeed"` (a right-shift consistent with
+the ensemble median). Both regenerate via `uv run --extra dev python -m experiments.paper_figures`.
+
 ## Simplifications still deferred to later slices
 
 - **Uniform cube star field**, not a galactic disk with a density gradient.
