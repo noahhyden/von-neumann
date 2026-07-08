@@ -28,6 +28,34 @@ export interface PaperMeta {
 
 export const PAPERS: PaperMeta[] = [
   {
+    "slug": "coordination-tax",
+    "title": "The Coordination Tax: Light-Speed Delay in a Self-Replicating Probe Swarm Bites Only When Hops Are Long",
+    "authors": [
+      {
+        "name": "Noah Hydén",
+        "affiliation": "Independent researcher",
+        "orcid": "0009-0003-4523-0467"
+      }
+    ],
+    "abstract": "A swarm of self-replicating probes fills a stellar field star by star, each settling a star and launching copies. The standard exploration-timescale model grants every probe perfect, instantaneous knowledge of which stars are already settled; finite light-speed is its stated future work. We add that light-speed limit: a probe deciding at a star treats a distant star as settled only once the news, travelling at c, has arrived, so probes race for the same target from stale views and waste trips. Over a 32-seed paired ensemble on identical galaxies, the delay slows the time to fill the field by a median of about 0 percent for powered nearest-neighbour flight, about 30 percent for nearest-star slingshot flight, and about 50 percent for maximum-boost slingshot flight; every case still reaches 100 percent, so lag alone produces no permanent unsettled fraction. The lag scale is set by the dimensionless ratio of information-delay to travel-time per hop, which equals the probe speed in units of c; whether it actually bites is decided by how non-local each hop is. Fast but local flight is nearly immune, because a probe that loses a race simply takes the star next door; the cost falls on long-range hops made from stale views. This refines the perfect-information picture: the slingshot speed-up is real, but under finite light-speed a meaningful fraction of it is eaten by uncoordinated long-range collisions.",
+    "date": "2026-07-08",
+    "keywords": [
+      "self-replication",
+      "interstellar exploration",
+      "light-speed delay",
+      "multi-agent coordination",
+      "swarm dynamics"
+    ],
+    "cites": [
+      "nicholson-forgan-2013",
+      "forgan-papadog-kitching-2013",
+      "olfati-saber-murray-2004",
+      "ferrell-1965",
+      "rfc-4838"
+    ],
+    "pdf": "papers/coordination-tax.pdf"
+  },
+  {
     "slug": "electronics-wall",
     "title": "The Electronics Wall: Why a Self-Replicating Space Factory Cannot Close on Its Own Chips",
     "authors": [

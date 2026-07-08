@@ -7,6 +7,6 @@
     "gen:bib": "node scripts/gen-bib.mjs",
     "gen:index": "node scripts/gen-index.mjs",
     "gen": "node scripts/gen-bib.mjs && node scripts/gen-index.mjs",
-    "build": "latexmk -pdf -cd electronics-wall/main.tex || echo 'latexmk not installed; CI builds the PDF'"
+    "build": "for d in */main.tex; do latexmk -pdf -cd \"$d\" || echo \"latexmk not installed or build failed for $d\"; done"
   }
 }

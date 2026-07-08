@@ -1,0 +1,51 @@
+% main.tex - the coordination-tax paper. Hand-written; gen-tex.mjs leaves it alone.
+% Bibliography is generated: ../refs.bib comes from frontend/src/sources.ts.
+\documentclass[conference]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{cite}
+\usepackage{url}
+\usepackage{amsmath}
+
+\title{The Coordination Tax: Light-Speed Delay in a Self-Replicating Probe Swarm Bites Only When Hops Are Long}
+
+\author{
+\IEEEauthorblockN{Noah Hyd\'en}
+\IEEEauthorblockA{Independent researcher \\ ORCID: 0009-0003-4523-0467}
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+A swarm of self-replicating probes fills a stellar field star by star, each settling
+a star and launching copies. The standard exploration-timescale model grants every
+probe perfect, instantaneous knowledge of which stars are already settled; finite
+light-speed is its stated future work. We add that light-speed limit: a probe deciding
+at a star treats a distant star as settled only once the news, travelling at $c$, has
+arrived, so probes race for the same target from stale views and waste trips. Over a
+32-seed paired ensemble on identical galaxies, the delay slows the time to fill the
+field by a median of about 0\% for powered nearest-neighbour flight, about 30\% for
+nearest-star slingshot flight, and about 50\% for maximum-boost slingshot flight; every
+case still reaches 100\%, so lag alone produces no permanent unsettled fraction. The
+lag scale is set by the dimensionless ratio of information-delay to travel-time per
+hop, which equals the probe speed in units of $c$; whether it actually bites is decided
+by how non-local each hop is. Fast but local flight is nearly immune, because a probe
+that loses a race simply takes the star next door; the cost falls on long-range hops
+made from stale views. This refines the perfect-information picture: the slingshot
+speed-up is real, but under finite light-speed a meaningful fraction of it is eaten by
+uncoordinated long-range collisions.
+\end{abstract}
+
+\begin{IEEEkeywords}
+self-replication, interstellar exploration, light-speed delay, multi-agent coordination, swarm dynamics
+\end{IEEEkeywords}
+
+\input{body/introduction}
+\input{body/the-light-delayed-belief-model}
+\input{body/the-coordination-tax}
+\input{body/discussion}
+
+\bibliographystyle{IEEEtran}
+\bibliography{../refs}
+
+\end{document}
