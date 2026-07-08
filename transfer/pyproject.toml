@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "transfer"
+version = "0.1.0"
+description = "Interplanetary transfer: Hohmann/impulsive Δv and time, synodic launch windows, and low-thrust solar-electric (Edelbaum) trip time - retires multi-probe's hand-set transit time"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.6",
+    "launch-economics",
+    "probe-sim",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+# Sibling modules in this monorepo, consumed through their public APIs.
+[tool.uv.sources]
+launch-economics = { path = "../launch-economics", editable = true }
+probe-sim = { path = "../probe-sim", editable = true }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

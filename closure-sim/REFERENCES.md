@@ -86,6 +86,39 @@ Sources:
 - Why the chip supply chain is the deepest on Earth (400+ steps, 9N-pure materials,
   EUV monopoly): CSIS https://www.csis.org/analysis/mapping-semiconductor-supply-chain-critical-role-indo-pacific-region
 
+## Structural strength (the `structures` decision - `structures.py`)
+
+`ROADMAP-PROPOSAL.md` weighed making `structures` its own module vs a parameter here. The
+default was to demote it to a mass-penalty parameter unless the k=1.0 regression showed
+the physics moved real closure numbers. It was demoted; `structures.py` is that parameter.
+
+- **Sintered lunar-regolith compressive strength: ~2.49-355 MPa, a >100x span by
+  technique.** `SINTERED_REGOLITH_STRENGTH_MPA` (representative points): solar-3D/PBF
+  ~4.2 MPa, microwave-sintered ~37 MPa (KLS-1), sintered ~98 MPa (air) / ~152 MPa
+  (vacuum), dense traditional ~232 MPa, glass-ceramic (800 C) ~355 MPa. Sources: "Solar
+  3D printing of lunar regolith", Acta Astronautica 152:800 (2018),
+  https://www.sciencedirect.com/science/article/pii/S0094576518303874 ; microwave
+  sintering of KLS-1, https://www.researchgate.net/publication/351670581 ; glass-ceramic
+  from regolith simulant,
+  https://www.sciencedirect.com/science/article/abs/pii/S0022309326000517 . Verdict:
+  sourced; carried as a band, never a point (the >100x span is the whole reason strength
+  can't be a single number).
+- **Mass penalty** `k = required_strength / material_strength` (clamped >= 1): a weaker
+  material needs a heavier part for the same load. **Derived, shown.**
+
+### Why it stays a parameter, not a module (the decision)
+
+- **k = 1.0 reproduces closure exactly** (regression test): with no penalty,
+  `closure_with_structural_penalty` returns `compute_closure`'s ratio bit-for-bit.
+- **A mass penalty raises closure, it does not lower it.** Heavier local structure is
+  still *local* mass against fixed imports, so weak material costs *throughput and energy*
+  (more mass to build), not closure. A realistic k (microwave regolith, ~1.08) moves
+  closure <1 point.
+- **Only a hard strength threshold moves closure** - a part that cannot meet a
+  non-scalable requirement flips to an import (vitamin), which closure-sim already models
+  via `producible_locally`. So the strength physics needs no new module: the mass penalty
+  is a parameter, and the threshold is the existing boolean. That is the recorded verdict.
+
 ## What's deliberately simplified
 
 - **Power is flat** (doesn't grow as the factory grows) - a v1 simplification that

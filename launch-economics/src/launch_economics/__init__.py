@@ -19,6 +19,14 @@ from launch_economics.launch import (
     propellant_fraction,
     rocket_equation_mass_ratio,
 )
+from launch_economics.value import (
+    PLATINUM_ANNUAL_PRODUCTION_T,
+    PLATINUM_MARKET_ANNUAL_USD,
+    PSYCHE_QUOTED_VALUE_USD,
+    market_absorption_years,
+    output_value_launch_avoided_usd,
+    realizable_value_ceiling_usd,
+)
 
 __all__ = [
     "ReplicationLaunchComparison",
@@ -29,4 +37,10 @@ __all__ = [
     "launch_cost_usd",
     "propellant_fraction",
     "rocket_equation_mass_ratio",
+    "PLATINUM_ANNUAL_PRODUCTION_T",
+    "PLATINUM_MARKET_ANNUAL_USD",
+    "PSYCHE_QUOTED_VALUE_USD",
+    "market_absorption_years",
+    "output_value_launch_avoided_usd",
+    "realizable_value_ceiling_usd",
 ]

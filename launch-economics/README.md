@@ -19,6 +19,15 @@ quantifies the payoff.
   derives the imported-vitamin mass from a real factory's closure ratio (mass balance:
   (1 − C) kg imported per kg built), so leverage becomes a function of closure -
   C → 1 launches only the seed, C → 0 launches everything.
+- **`value.py`** - the output side of the case (the `value` proposal candidate, folded in
+  here rather than built as a module). `output_value_launch_avoided_usd(mass, $/kg)` is
+  the one defensible return: a kilogram built in place is a kilogram nobody launched, so
+  its value is `mass × $/kg-in-orbit` - no new unsourced number. Plus the honesty
+  backbone: `market_absorption_years` / `realizable_value_ceiling_usd` show the "$10
+  quintillion asteroid" headlines are arithmetic fictions - one asteroid's metal, valued
+  at spot price, dwarfs the entire ~$7.25B/yr platinum market and would take >1 billion
+  years to sell. Realized commodity/settlement/data value stays `[ESTIMATE]`/`[GAP]`, not
+  claimed as return.
 
 Launch prices, Δv budgets, and Isp are scenario *inputs* (they vary by vehicle and
 year); representative sourced values are in [`REFERENCES.md`](REFERENCES.md). Only

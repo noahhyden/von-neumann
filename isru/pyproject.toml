@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "isru"
+version = "0.1.0"
+description = "In-situ feedstock processing: the electrical energy to make oxygen and metal from regolith (retires closure-sim's ~5 kWh/kg), and the closure ceiling set by what elements a body actually has"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

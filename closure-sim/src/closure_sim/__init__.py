@@ -10,6 +10,13 @@ from .models import (
 )
 from .replication import Regime, SimResult, simulate
 from .scenarios import load_factory
+from .structures import (
+    SINTERED_REGOLITH_STRENGTH_BAND_MPA,
+    SINTERED_REGOLITH_STRENGTH_MPA,
+    closure_with_structural_penalty,
+    is_producible_locally,
+    mass_penalty_k,
+)
 
 __all__ = [
     "ELECTRONICS_CATEGORIES",
@@ -24,4 +31,9 @@ __all__ = [
     "electronics_wall",
     "load_factory",
     "simulate",
+    "SINTERED_REGOLITH_STRENGTH_BAND_MPA",
+    "SINTERED_REGOLITH_STRENGTH_MPA",
+    "closure_with_structural_penalty",
+    "is_producible_locally",
+    "mass_penalty_k",
 ]

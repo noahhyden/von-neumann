@@ -44,6 +44,44 @@ budget it uses.
 - Source: Sutton & Biblarz, *Rocket Propulsion Elements*; manufacturer data. Inputs,
   not constants.
 
+## Value (value.py - the output side of the case)
+
+The `value` candidate from `ROADMAP-PROPOSAL.md` is folded in here rather than built as a
+module, because only one output survives the iron rule.
+
+### The defensible output (no new numbers)
+
+- **Launch-cost-avoided value** = `local_mass_produced_kg × cost_per_kg_usd`. Definitional
+  arithmetic over the specific launch cost already sourced above (`output_value_launch_avoided_usd`);
+  it is the same computation as `launch_cost_usd`, read as value *returned* rather than
+  *paid*. No new number is introduced.
+
+### The honesty backbone (sourced anchors, used only to debunk the headlines)
+
+These numbers exist to show the "$X quintillion asteroid" figures are arithmetic fictions;
+they are NOT modelled as returns (PGM/settlement/$-per-bit value are `[ESTIMATE]`/`[GAP]`).
+
+- **`PLATINUM_MARKET_ANNUAL_USD = 7.25e9`** - the entire global platinum market was worth
+  ~USD 7.25 billion in 2024. Source: Statista global platinum industry,
+  https://www.statista.com/topics/3039/platinum/ ; market-report figures (~$7.25B 2024).
+  Verdict: sourced.
+- **`PLATINUM_ANNUAL_PRODUCTION_T = 175`** - world platinum mine production ~170-179 t/yr
+  (2024-2025). Source: Statista global platinum mine production,
+  https://www.statista.com/statistics/1170691/mine-production-of-platinum-worldwide/ .
+  Verdict: sourced.
+- **`PSYCHE_QUOTED_VALUE_USD = 1.0e19`** - the widely-quoted "$10 quintillion" value of
+  asteroid 16 Psyche's metal at spot prices. Sources: Newsweek,
+  https://www.newsweek.com/psyche-asteroid-mission-10-quintillion-valuable-metals-nasa-1989659 ;
+  HowStuffWorks, https://science.howstuffworks.com/psyche-16-asteroid.htm (which itself
+  notes the value is meaningless because that much metal "would immediately render metals
+  valueless on the markets"). Verdict: sourced (the headline to debunk, not an endorsed
+  value).
+- **Derived debunk:** `market_absorption_years(1e19) = 1e19 / 7.25e9 = 1.4e9 years` - it
+  would take over a billion years to sell 16 Psyche's metal at the current market's annual
+  turnover. `realizable_value_ceiling_usd(years) = years × market` caps what any commodity
+  can actually realize far below the raw spot-price-times-tonnage figure. The point: value
+  is bounded by what a market can absorb, not by tonnage.
+
 ## Notes
 
 - The **launch-mass leverage** (`target / (seed + vitamins)`) links directly to

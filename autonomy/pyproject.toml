@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autonomy"
+version = "0.1.0"
+description = "Onboard compute DEMAND (vs probe-sim's 1/d^2 supply) and the autonomy wall; the insect-brain-to-self-driving-car band that retires the 0.70 manuf/compute split"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.6",
+    "power-budget",
+    "probe-sim",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+# Sibling modules in this monorepo, consumed through their public APIs.
+[tool.uv.sources]
+power-budget = { path = "../power-budget", editable = true }
+probe-sim = { path = "../probe-sim", editable = true }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "propellant"
+version = "0.1.0"
+description = "Reaction-mass demand (Tsiolkovsky, fed by transfer's Delta-v), in-situ propellant production energy, and propellant closure vs the noble-gas import wall"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.6",
+    "launch-economics",
+    "transfer",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+# Sibling modules in this monorepo, consumed through their public APIs.
+[tool.uv.sources]
+launch-economics = { path = "../launch-economics", editable = true }
+transfer = { path = "../transfer", editable = true }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
