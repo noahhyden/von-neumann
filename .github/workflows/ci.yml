@@ -117,11 +117,12 @@ jobs:
           node scripts/gen-index.mjs
       - name: The committed papers index must match the generator output
         run: git diff --exit-code frontend/src/papers-index.ts
-      - name: Typeset the paper (LaTeX) - a broken .tex fails the PR
+      - name: Typeset every paper (LaTeX) - a broken .tex fails the PR
         uses: xu-cheng/latex-action@v4
         with:
-          working_directory: papers/electronics-wall
-          root_file: main.tex
+          working_directory: papers
+          root_file: "*/main.tex"
+          work_in_root_file_dir: true
 
   frontend:
     runs-on: ubuntu-latest

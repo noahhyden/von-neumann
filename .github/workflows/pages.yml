@@ -70,8 +70,9 @@ jobs:
         uses: xu-cheng/latex-action@v4
         continue-on-error: true
         with:
-          working_directory: von-neumann/papers/electronics-wall
-          root_file: main.tex
+          working_directory: von-neumann/papers
+          root_file: "*/main.tex"
+          work_in_root_file_dir: true
 
       - name: Publish paper PDFs into the site
         run: |
