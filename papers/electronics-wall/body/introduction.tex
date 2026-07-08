@@ -1,20 +1,35 @@
 \section{Introduction}
 
-The idea of a self-replicating space factory is old and simple to state: land one
-factory on the Moon, an asteroid, or Mars, and let it build copies of itself from
-local material, so that an entire industry grows from a single rocket's worth of
-cargo. The canonical study is NASA's seed-factory design, which framed the concept in
-terms of ``vitamins'': the factory makes almost all of itself locally and imports
-only the parts it cannot make \cite{nasa-cp-2255-1980}. The modern synthesis restated
-the same idea as \emph{closure} - the degree to which a machine can reproduce its own
-matter, energy, and information - and identified the dynamic that matters most: below
-full closure the factory waits on resupply, and only near full closure does its
-growth become self-sustaining \cite{freitas-merkle-2004}.
+\IEEEPARstart{T}{he} idea of a self-replicating space factory is old and simple to state:
+land one factory on the Moon, an asteroid, or Mars, and let it build copies of itself from
+local material, so that an entire industry grows from a single rocket's worth of cargo. It
+begins with von Neumann, who proved that a machine can build a copy of itself if it carries
+both a description of its construction and a way to copy that description
+\cite{von-neumann-burks-1966}. The canonical engineering study is NASA's seed-factory
+design, which framed the concept in terms of ``vitamins'': the factory makes almost all of
+itself locally and imports only the parts it cannot make \cite{nasa-cp-2255-1980}. The
+modern synthesis restated the same idea as \emph{closure}, the degree to which a machine
+can reproduce its own matter, energy, and information, and identified the dynamic that
+matters most: below full closure the factory waits on resupply, and only near full closure
+does its growth become self-sustaining \cite{freitas-merkle-2004}.
 
-This paper isolates one question inside that framing. If closure is the whole game,
-what stops it from reaching one? The answer, consistently, is chips. A lone factory
-can smelt metal, cast structure, and assemble mechanisms, but it cannot make its own
-electronics. We argue that this is not an incidental gap to be closed later but a wall
-with two independent foundations - supply-chain depth and embodied energy - and that
-the wall is exactly what bounds the launch-mass leverage that motivates
-self-replication in the first place.
+The concept is neither purely theoretical nor purely futuristic. Concrete lunar-factory
+architectures decompose the machine into mining, refining, parts fabrication, and assembly
+subsystems \cite{chirikjian-2004-niac,moses-chirikjian-2020}; physical prototypes have
+demonstrated mechanical self-reproduction from supplied modules \cite{zykov-lipson-2005};
+and the open-source RepRap 3D printer prints a large fraction of its own parts while
+importing its motors, rods, and electronics \cite{reprap-jones-2011}, a terrestrial echo of
+the wall this paper is about. Recent quantitative studies of space manufacturing continue
+the pattern: a tonne-scale landed seed bootstrapping to thousands of tonnes of industrial
+assets over about two decades \cite{metzger-2013}, a self-replicating interstellar probe
+whose replicated mass fraction is about 70 percent with electronics imported
+\cite{borgue-hein-2020}, and a colony-scale factory that likewise keeps chips and circuitry
+Earth-sourced \cite{guided-self-replicating-factory-2021}. Across every one of these, the
+same part is left off the list of what the machine can make.
+
+This paper isolates one question inside that framing. If closure is the whole game, what
+stops it from reaching one? The answer, consistently, is chips. A lone factory can smelt
+metal, cast structure, and assemble mechanisms, but it cannot make its own electronics. We
+argue that this is not an incidental gap to be closed later but a wall with two independent
+foundations, supply-chain depth and embodied energy, and that the wall is exactly what
+bounds the launch-mass leverage that motivates self-replication in the first place.

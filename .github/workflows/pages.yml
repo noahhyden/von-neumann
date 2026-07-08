@@ -45,6 +45,10 @@ jobs:
         with:
           node-version: "24"
 
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
       # dist/ is gitignored and pimas has no prepare hook - build pimas before consuming.
       - name: Build pimas (pinned)
         working-directory: pimas
@@ -65,6 +69,19 @@ jobs:
       - name: Generate the paper bibliography from sources.ts
         working-directory: von-neumann/papers
         run: node scripts/gen-bib.mjs
+
+      # Figures are gitignored vector PDFs generated from the source modules. Best-effort,
+      # like the LaTeX step: if a figure build fails, the paper simply typesets without it
+      # (or is skipped below) and the site still deploys. ci.yml gates this on PRs.
+      - name: Generate coordination-tax figures (swarm)
+        continue-on-error: true
+        working-directory: von-neumann/swarm
+        run: uv run --extra dev python -m experiments.paper_figures
+
+      - name: Generate electronics-wall figures (closure-sim)
+        continue-on-error: true
+        working-directory: von-neumann/closure-sim
+        run: uv run --extra dev python -m closure_sim.paper_figures
 
       - name: Typeset the papers (LaTeX)
         uses: xu-cheng/latex-action@v4

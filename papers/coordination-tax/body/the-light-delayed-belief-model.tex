@@ -1,37 +1,57 @@
 \section{The light-delayed belief model}
 
+\subsection{The knowledge gate}
 The change to the model is one gate on knowledge. A settled star is treated as an
 omnidirectional beacon that begins emitting in the year it is settled. A probe deciding
 its next target at star $f$ in year $Y$ believes a distant star $i$ is settled only once
 that beacon's light has had time to arrive:
 \begin{equation}
-\text{settled}(i) + \frac{\mathrm{dist}(f, i)}{c} \le Y .
+\text{settled}(i) + \frac{\mathrm{dist}(f, i)}{c} \le Y . \label{eq:gate}
 \end{equation}
-Under the perfect-information assumption this gate collapses to ``settled at any
-non-negative year,'' and the model reproduces the earlier results bit-for-bit; the
-light-speed term is what introduces stale views. When two probes both believe an
-unsettled star is the best target, they both fly to it; the loser arrives to find it
-taken, its trip wasted, and must re-target from the even more stale picture it holds on
-arrival.
+Under the perfect-information assumption of the source model, (\ref{eq:gate}) collapses to
+``settled at any non-negative year,'' and the model reproduces the earlier results
+bit-for-bit; the light-speed term is what introduces stale views. When two probes both
+believe an unsettled star is the best target they both fly to it; the loser arrives to
+find it taken, its trip wasted, and must re-target from the even more stale picture it
+holds on arrival. This is availability chosen over consistency: rather than wait for a
+single agreed map that finite light-speed makes impossible, each probe acts now on its
+local view \cite{lamport-1978}.
 
-How much this matters is governed by a single dimensionless ratio: the information delay
-across a hop divided by the travel time across the same hop. For a hop of length $d$ the
-delay is $d/c$ and the travel time is $d/v$, so the ratio is
+\subsection{The three flight policies}
+We carry three named policies, following the slingshot studies we extend
+\cite{forgan-papadog-kitching-2013,nicholson-forgan-2013}. \emph{Powered
+nearest-neighbour} flight moves under the probe's own power at a cruise speed of
+$3\times10^{-5}\,c$ to the nearest unsettled star. \emph{Nearest-star slingshot} flight
+takes the same nearest target but gains speed from gravitational slingshots off the stars
+it passes. \emph{Maximum-boost slingshot} flight instead selects the target that yields
+the largest velocity gain, deliberately reaching past near neighbours to distant stars.
+The three span the axis that matters here: powered flight is slow and local, nearest-star
+slingshot is fast and local, and maximum-boost slingshot is fast and far.
+
+\subsection{The lag ratio}
+How much the gate matters is governed by a single dimensionless ratio: the information
+delay across a hop divided by the travel time across the same hop. For a hop of length $d$
+the delay is $d/c$ and the travel time is $d/v$, so the ratio is
 \begin{equation}
-\Lambda \;=\; \frac{d/c}{d/v} \;=\; \frac{v}{c},
+\Lambda \;=\; \frac{d/c}{d/v} \;=\; \frac{v}{c}, \label{eq:lambda}
 \end{equation}
-the probe's speed in units of $c$. A slow probe ($\Lambda \ll 1$) outpaces its own
-ignorance only trivially - by the time it crosses a hop, the news of that hop has long
-since propagated - so stale views barely arise. A fast probe carries a large $\Lambda$
-and routinely decides before the relevant news can reach it. At the powered cruise speed
-of the source model, $3\times10^{-5}\,c$, $\Lambda$ is negligible; the effect can only
-appear once probes are fast, which is precisely the slingshot regime.
+the probe's speed in units of $c$, independent of the hop length. A slow probe
+($\Lambda \ll 1$) outpaces its own ignorance only trivially: by the time it crosses a hop
+the news of that hop has long since propagated, so stale views barely arise. A fast probe
+carries a large $\Lambda$ and routinely decides before the relevant news can reach it. At
+the powered cruise speed, $\Lambda \approx 3\times10^{-5}$ is negligible; the effect can
+only appear once probes are fast, which is precisely the slingshot regime.
 
-Two properties keep the experiment honest. First, knowledge is evaluated only at the
-decision star at the moment of decision; news a probe's path happens to cross in mid-flight
-is ignored. This deliberately undercounts what a probe could know, so the measured waste is
-a conservative upper bound on the true penalty. Second, the whole simulation is a pure,
-seeded, fixed-step fold: fixing the seed fixes the star field, every arrival, and every
-target choice, so a run with the light-speed gate and a run without it can be compared on
-the \emph{identical} galaxy. That is what makes a paired measurement of the delay's cost
-possible at all.
+\subsection{Experimental design}
+The field is a box of stars at a uniform density of one star per cubic parsec, the
+convention of the source model; the real solar neighbourhood is sparser, near
+$0.14$ stars per cubic parsec \cite{recons-census}, which lengthens hops and thus the
+absolute timescales but not the relative penalties reported here. Two properties keep the
+measurement honest. First, knowledge is evaluated only at the decision star at the moment
+of decision; news a probe's path happens to cross in mid-flight is ignored. This
+deliberately undercounts what a probe could know, so the measured waste is a conservative
+upper bound on the true penalty. Second, the whole simulation is a pure, seeded,
+fixed-step fold: fixing the seed fixes the star field, every arrival, and every target
+choice, so a run with the light-speed gate and a run without it can be compared on the
+\emph{identical} galaxy. That paired design is what lets us attribute a difference in
+fill-time to the delay alone rather than to the luck of the star layout.

@@ -1,25 +1,85 @@
 \section{The electronics wall}
 
-Chips are the part a lone factory cannot make, and the reason is twofold. The first
-foundation is supply-chain depth. Semiconductors sit at the end of the deepest supply
-chain on Earth: more than 400 process steps, materials purified to nine-nines purity,
-and a global monopoly on the extreme-ultraviolet lithography that patterns the
-smallest features \cite{csis-semiconductor-supply-chain}. No single factory,
-however well closed on structure, reproduces that pipeline from local rock.
+Chips are the part a lone factory cannot make, and the reason is twofold.
 
-The second foundation is energy, and it is the one that turns a supply-chain argument
-into a physical wall. The embodied energy of compute logic is on the order of
-8,000~kWh/kg, against roughly 5~kWh/kg for smelted metal - a gap of about three orders
-of magnitude \cite{williams-ayres-heller-2002,nagapurkar-das-2022}. A factory that
-would make its own chips must therefore pour vastly more electricity into a kilogram
-of logic than into a kilogram of the structure that houses it.
+\subsection{Supply-chain depth}
+The first foundation is supply-chain depth. Semiconductors sit at the end of the deepest
+supply chain on Earth: more than 400 process steps, materials purified to nine-nines
+purity, and a global monopoly on the extreme-ultraviolet lithography that patterns the
+smallest features \cite{csis-semiconductor-supply-chain}. No single factory, however well
+closed on structure, reproduces that pipeline from local rock.
 
-These two foundations combine into a single conditional. A factory escapes the
-electronics wall only if it is both highly self-sufficient \emph{and} swimming in
-power, and the coupling is sharp. For a highly closed lunar seed at 97\% closure,
-letting it make its own chips locally cuts the time to reach a target scale from about
-29 years to about 17 years, but only when it is fed on the order of 4~MW; at about
-1~MW, making chips locally backfires, and the factory runs out of electricity before
-it runs out of parts \cite{nasa-cp-2255-1980}. Power is not a free knob. The energy
-cost of the chips is what decides whether local production helps or hurts, and only a
-factory already swimming in power comes out ahead.
+\subsection{Embodied energy}
+The second foundation is energy, and it is the one that turns a supply-chain argument into
+a physical wall. The embodied energy of finished compute logic is on the order of
+8{,}000~kWh/kg, against roughly 5~kWh/kg for structural metal smelted from regolith, a gap
+of about three orders of magnitude \cite{williams-ayres-heller-2002,nagapurkar-das-2022}.
+The gap is not an artifact of one study: an exergy analysis across twenty manufacturing
+processes finds electricity per kilogram rising by orders of magnitude from conventional
+metal shaping to vapor-phase semiconductor processing \cite{gutowski-2009}, and
+process-level life-cycle assessments of CMOS logic across technology generations anchor the
+finished-chip figure independently \cite{boyd-2012}. Table~\ref{tab:embodied} collects the
+per-class figures with their sources and ranges, and Fig.~\ref{fig:embodied} shows the same
+data across the seed factory's own subsystems. The measurement basis is what makes the
+chip figure appear to move: a bare wafer is nearer 1{,}800~kWh/kg while a finished packaged
+part runs to thousands \cite{murphy-2003}, so we fix the basis at the finished packaged
+part throughout. Structural metals sit at the cheap end on independent datasheets
+\cite{ice-coefficients,ashby-2012}, and in-situ regolith processing keeps them there off
+Earth \cite{guerrero-zabel-2023}. Between the extremes lie the other electronics a factory
+would rather not make: silicon photovoltaics near 40 to 120~kWh/kg \cite{peng-2013-pv-lca},
+power electronics near 1{,}000 to 3{,}000~kWh/kg \cite{power-electronics-lca}, and sensors
+near 2{,}000 to 8{,}000~kWh/kg \cite{sensor-embodied-2021}.
+
+\begin{table}[!t]
+  \centering
+  \caption{Embodied electrical energy to manufacture one kilogram of a finished part, by
+    class. Chips are about three orders of magnitude above structural metal.}
+  \label{tab:embodied}
+  \begin{tabular}{lcl}
+    \toprule
+    Material class & Embodied energy (kWh/kg) & Source \\
+    \midrule
+    Structural metal (smelted) & $\approx 5$    & \cite{ice-coefficients,ashby-2012} \\
+    Silicon PV array           & 40-120         & \cite{peng-2013-pv-lca} \\
+    Power electronics          & 1{,}000-3{,}000 & \cite{power-electronics-lca} \\
+    Electronic sensors         & 2{,}000-8{,}000 & \cite{sensor-embodied-2021} \\
+    Compute logic chips        & $\approx 8{,}000$ & \cite{williams-ayres-heller-2002,nagapurkar-das-2022,boyd-2012} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{The power conditional}
+These two foundations combine into a single conditional. A factory escapes the electronics
+wall only if it is both highly self-sufficient \emph{and} swimming in power, and the
+coupling is sharp. For a highly closed lunar seed at 97\% closure, letting it make its own
+chips locally cuts the time to reach a target scale from about 29 years to about 17 years,
+but only when it is fed on the order of 4~MW; at about 1~MW, making chips locally
+backfires, and the factory runs out of electricity before it runs out of parts
+\cite{nasa-cp-2255-1980}. Fig.~\ref{fig:crossover} shows the crossover: importing chips is
+resupply-limited and stays near 29 years regardless of power, while making them locally is
+energy-limited, beating the import time only above a threshold power and never completing
+below it. Power is not a free knob. The energy cost of the chips is what decides whether
+local production helps or hurts, and only a factory already swimming in power comes out
+ahead.
+
+\begin{figure}[!t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_embodied_energy.pdf}
+  \caption{Embodied electrical energy to manufacture one kilogram of each seed-factory
+    subsystem on-site (log scale). Chips and power electronics cost roughly 2{,}500 to
+    8{,}000~kWh/kg, about three orders of magnitude more than the 3 to 7~kWh/kg of
+    structural metal smelted from regolith, which is why electronics are the part a lone
+    factory cannot afford to make.}
+  \label{fig:embodied}
+\end{figure}
+
+\begin{figure}[!t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_chip_crossover.pdf}
+  \caption{Time to reach the target factory scale versus available power for the 97\%-closed
+    lunar seed. Importing chips (solid) is resupply-limited and stays near 29 years
+    regardless of power; making chips locally (dashed) is energy-limited, reaching the
+    target in about 17 years at 4~MW but diverging and never completing as power falls
+    toward 1~MW.}
+  \label{fig:crossover}
+\end{figure}

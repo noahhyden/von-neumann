@@ -7,6 +7,8 @@
     "gen:bib": "node scripts/gen-bib.mjs",
     "gen:index": "node scripts/gen-index.mjs",
     "gen": "node scripts/gen-bib.mjs && node scripts/gen-index.mjs",
+    "check:typography": "node scripts/check-typography.mjs",
+    "check": "node scripts/gen-index.mjs && node scripts/check-typography.mjs",
     "build": "for d in */main.tex; do latexmk -pdf -cd \"$d\" || echo \"latexmk not installed or build failed for $d\"; done"
   }
 }

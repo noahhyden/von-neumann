@@ -1,27 +1,47 @@
 \section{Introduction}
 
-A self-replicating probe does not explore a galaxy alone. It settles a star, builds
-copies of itself, and sends them on to further stars, so a single launch grows into a
-front that sweeps outward and fills the reachable field. How long that takes is the
-exploration-timescale question, and the sharpest treatment of it for self-replicators is
-Nicholson and Forgan's slingshot study \cite{nicholson-forgan-2013}: probes that steal
-energy from the motion of the stars they pass (a gravitational slingshot, following the
-single-probe analysis of Forgan, Papadogiannakis and Kitching
-\cite{forgan-papadog-kitching-2013}) can explore roughly two orders of magnitude faster
-than probes under their own power.
+\IEEEPARstart{A}{self-replicating} probe does not explore a galaxy alone. It settles a
+star, builds copies of itself from local material, and sends them on to further stars,
+so a single launch grows into a front that sweeps outward and fills the reachable field.
+That a machine can build a copy of itself at all is von Neumann's result, and a probe of
+this kind saturating the Galaxy in a few million years is the sharpest form of the Fermi
+question: if interstellar settlement is possible it should already be complete, so the
+observed silence is a paradox \cite{hart-1975,tipler-1980}. How long the filling takes is
+the exploration-timescale question, and it has a long modelling lineage. Early work framed
+each interstellar probe as an independent agent acting on priors fixed before launch
+\cite{freitas-1980-interstellar-probe}, and treated settlement as a front: a
+density-dependent diffusion with a travelling-wave solution \cite{newman-sagan-1981}, or a
+Monte Carlo migration filling the Galaxy in tens of millions of years \cite{jones-1981}.
+Later simulations made the field concrete, sending probes and subprobes through a defined
+stellar volume to measure fill times directly \cite{bjork-2007,cotta-morales-2009}, and
+established the seeded Monte Carlo methodology that situates an exploration timescale
+within a distribution of realizations rather than a single number \cite{forgan-2009}.
 
-That result rests on one convenient assumption, which its authors name as a limitation
-and leave for future work: every probe is granted perfect, instantaneous knowledge of
-which stars are already settled. No probe ever flies to a star another probe has just
-claimed, because it always knows. In a real galaxy no such oracle exists. News that a
-star has been settled can travel no faster than light, so a probe choosing its next
-target is acting on a picture of the field that is, for distant stars, years or
-centuries out of date.
+The sharpest treatment for self-replicators is the slingshot line. Forgan,
+Papadogiannakis and Kitching showed that a single probe stealing energy from the motion of
+the stars it passes, a gravitational slingshot, explores up to two orders of magnitude
+faster than a probe under its own power \cite{forgan-papadog-kitching-2013}. Nicholson and
+Forgan extended that manoeuvre to self-replicating probes and confirmed the speed-up
+survives replication, with the surprising result that aiming for the nearest star can beat
+aiming for the largest boost \cite{nicholson-forgan-2013}. The probe speeds that make this
+regime interesting, from the powered cruise of $3\times10^{-5}\,c$ up toward the $0.1$ to
+$0.2\,c$ of directed-energy or high-velocity concepts
+\cite{lubin-2016,carroll-nellenback-2019}, are exactly where the next assumption starts to
+hurt.
 
-This paper adds that light-speed limit to the model and measures what it costs. The
-question is not merely academic bookkeeping: it decides whether the celebrated slingshot
-speed-up survives contact with the finite speed of information, or whether a swarm racing
-outward on stale maps wastes much of the advantage colliding with itself. The answer,
-built from a controlled paired-ensemble experiment, is that the tax is real but sharply
-selective - it is set in scale by the probe's speed and in bite by how far each hop
-reaches.
+That assumption, which Nicholson and Forgan name as a limitation and leave for future
+work, is that every probe is granted perfect, instantaneous knowledge of which stars are
+already settled. No probe ever flies to a star another has just claimed, because it always
+knows. In a real galaxy no such oracle exists: news that a star has been settled can
+travel no faster than light, so a probe choosing its next target acts on a picture of the
+field that is, for distant stars, years or centuries out of date. This is the elementary
+consequence of a finite signal speed, that events have only a partial ordering and a
+remote event is unknowable until its signal arrives \cite{lamport-1978}.
+
+This paper adds that light-speed limit to the self-replicating slingshot model and
+measures what it costs. The question is not bookkeeping: it decides whether the celebrated
+slingshot speed-up survives contact with the finite speed of information, or whether a
+swarm racing outward on stale maps wastes much of the advantage colliding with itself. The
+answer, built from a controlled paired-ensemble experiment, is that the tax is real but
+sharply selective: its scale is set by the probe's speed and its bite by how far each hop
+reaches. Fast-but-local flight escapes almost untouched; fast-and-far flight pays.

@@ -1,23 +1,36 @@
 \section{Discussion}
 
-The picture that emerges is consistent across every part of the argument. Closure
-drives the economics through $1/(1-C)$ leverage \cite{tsiolkovsky-1903}; closure stops
-short of one at the electronics wall; and the wall stands on two independent
-foundations, a supply chain too deep to reproduce locally
-\cite{csis-semiconductor-supply-chain} and an embodied energy some three orders of
-magnitude above ordinary structure \cite{williams-ayres-heller-2002,nagapurkar-das-2022}.
-Because both foundations are physical rather than a matter of engineering maturity,
-imported electronics are best treated as a permanent line item. Modern seed-factory
-designs already do so, placing achievable closure between about 70\% and \mbox{90-96\%}
-and declining to chase the rest
+The picture that emerges is consistent across every part of the argument. Closure drives
+the economics through the $1/(1-C)$ leverage of (\ref{eq:leverage}); closure stops short of
+one at the electronics wall; and the wall stands on two independent foundations, a supply
+chain too deep to reproduce locally \cite{csis-semiconductor-supply-chain} and an embodied
+energy some three orders of magnitude above ordinary structure
+\cite{williams-ayres-heller-2002,gutowski-2009}. Because both foundations are physical
+rather than a matter of engineering maturity, imported electronics are best treated as a
+permanent line item. Modern seed-factory designs already do so, placing achievable closure
+between about 70\% and \mbox{90-96\%} and declining to chase the rest
 \cite{nasa-cp-2255-1980,guided-self-replicating-factory-2021,freitas-merkle-2004}.
 
-The one escape - having the factory make its own chips - is real but narrow. It helps
-only for a factory that is both highly closed and richly powered, and it can actively
-hurt an otherwise capable seed that is power-starved
-\cite{nasa-cp-2255-1980}. The practical conclusion is not that self-replication fails,
-but that its design target is a factory closed on nearly everything except chips, fed
-by imported vitamins, and sized so that its power budget never tempts it into making the
-one part it cannot afford to make. The leverage of self-replication is real; the
-electronics wall is what bounds it, and knowing where the wall stands is what lets a
-seed be designed to live with it rather than break against it.
+\subsection{Limitations}
+The energy side of the wall carries a measurement-basis caveat rather than a large
+uncertainty. The chip figure is a finished-packaged-part basis; on a bare-wafer basis it
+falls toward 1{,}800~kWh/kg and on an active-die basis it rises well above
+\cite{murphy-2003,boyd-2012}, so the three-orders-of-magnitude gap is robust to the basis
+but the exact multiple is not. The structural-metal end likewise uses terrestrial smelting
+energy as a stand-in; in-situ regolith processing gives comparable single-digit-to-tens
+figures but with its own plant mass and losses \cite{guerrero-zabel-2023}. The power-crossover
+result is specific to one 97\%-closed lunar scenario and one replication model; the
+qualitative conditional (local chip-making helps only when both closure and power are high)
+is general, but the 4~MW threshold and the 29-to-17-year figures are scenario-dependent, in
+the neighbourhood of the roughly 1.7~MW nominal seed power of the canonical study
+\cite{nasa-cp-2255-1980}. Finally, the analysis is a mass-and-energy accounting, not a
+manufacturability model: it says a lone seed cannot afford chips, not that a much larger,
+richly powered industrial base never could.
+
+\subsection{The narrow escape}
+The one escape, having the factory make its own chips, is real but narrow. It helps only
+for a factory that is both highly closed and richly powered, and it can actively hurt an
+otherwise capable seed that is power-starved \cite{nasa-cp-2255-1980}. The practical
+conclusion is not that self-replication fails, but that its design target is a factory
+closed on nearly everything except chips, fed by imported vitamins, and sized so that its
+power budget never tempts it into making the one part it cannot afford to make.

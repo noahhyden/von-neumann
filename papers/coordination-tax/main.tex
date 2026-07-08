@@ -1,7 +1,11 @@
 % main.tex - the coordination-tax paper. Hand-written; gen-tex.mjs leaves it alone.
 % Bibliography is generated: ../refs.bib comes from frontend/src/sources.ts.
+% Figures are generated (gitignored vector PDFs): the swarm module writes
+% fig_slowdown_by_policy.pdf and fig_settlement_curves.pdf here via
+% `uv run --extra dev python -m experiments.paper_figures`.
 \documentclass[conference]{IEEEtran}
 \usepackage{graphicx}
+\usepackage{booktabs}
 \usepackage{cite}
 \usepackage{url}
 \usepackage{amsmath}
@@ -17,23 +21,23 @@
 \maketitle
 
 \begin{abstract}
-A swarm of self-replicating probes fills a stellar field star by star, each settling
-a star and launching copies. The standard exploration-timescale model grants every
-probe perfect, instantaneous knowledge of which stars are already settled; finite
-light-speed is its stated future work. We add that light-speed limit: a probe deciding
-at a star treats a distant star as settled only once the news, travelling at $c$, has
-arrived, so probes race for the same target from stale views and waste trips. Over a
-32-seed paired ensemble on identical galaxies, the delay slows the time to fill the
-field by a median of about 0\% for powered nearest-neighbour flight, about 30\% for
-nearest-star slingshot flight, and about 50\% for maximum-boost slingshot flight; every
-case still reaches 100\%, so lag alone produces no permanent unsettled fraction. The
-lag scale is set by the dimensionless ratio of information-delay to travel-time per
-hop, which equals the probe speed in units of $c$; whether it actually bites is decided
-by how non-local each hop is. Fast but local flight is nearly immune, because a probe
-that loses a race simply takes the star next door; the cost falls on long-range hops
-made from stale views. This refines the perfect-information picture: the slingshot
-speed-up is real, but under finite light-speed a meaningful fraction of it is eaten by
-uncoordinated long-range collisions.
+A swarm of self-replicating probes fills a stellar field star by star, each probe
+settling a star and launching copies. The standard exploration-timescale model grants
+every probe perfect, instantaneous knowledge of which stars are already settled, and
+names finite light-speed as its own future work. We add that light-speed limit: a probe
+deciding at a star treats a distant star as settled only once the news, travelling at
+the speed of light, has arrived, so probes race for the same target from stale views and
+waste trips. Over a 32-seed paired ensemble on identical galaxies, the delay slows the
+time to fill the field by a median of about 0 percent for powered nearest-neighbour
+flight, about 30 percent for nearest-star slingshot flight, and about 50 percent for
+maximum-boost slingshot flight; every case still reaches full coverage, so lag alone
+leaves no permanent unsettled fraction. The scale of the lag is set by a single
+dimensionless ratio, the information delay across a hop divided by the travel time across
+it, which equals the probe speed in units of the speed of light; whether it actually
+bites is decided by how non-local each hop is. Fast but local flight is nearly immune,
+because a probe that loses a race simply takes the star next door, while the cost falls
+on long-range hops made from stale views. Under finite light-speed the slingshot speed-up
+is real, but a meaningful fraction of it is eaten by uncoordinated long-range collisions.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -44,6 +48,7 @@ self-replication, interstellar exploration, light-speed delay, multi-agent coord
 \input{body/the-light-delayed-belief-model}
 \input{body/the-coordination-tax}
 \input{body/discussion}
+\input{body/conclusion}
 
 \bibliographystyle{IEEEtran}
 \bibliography{../refs}

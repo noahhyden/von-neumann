@@ -11,6 +11,11 @@ This is a module like any other (CLAUDE.md 4): one directory, its own README,
 `REFERENCES.md`, and scripts, independently runnable. It adds no new numbers of its
 own (see [`REFERENCES.md`](REFERENCES.md)).
 
+**The binding rules for a paper live in [`RULES.md`](RULES.md)** - the cardinal
+"no new numbers," the one bibliography source of truth, the cite/abstract/typography
+checks and how each is enforced. This README is the how-to; `RULES.md` is the what and
+the why. Read it before authoring.
+
 ## Layout
 
 ```
@@ -49,12 +54,11 @@ papers/
    does not. If a number you want to state has no source there, do not state it
    (CLAUDE.md 1).
 
-2. **Run the generators** (from inside `papers/`):
+2. **Scaffold** (from inside `papers/`):
 
    ```bash
-   npm run gen:bib                 # writes refs.bib from sources.ts
-   node scripts/gen-tex.mjs my-paper   # scaffolds main.tex + body/*.tex stubs
-   npm run gen:index              # writes ../frontend/src/papers-index.ts (validates cites)
+   npm run gen:bib                    # writes refs.bib from sources.ts
+   node scripts/gen-tex.mjs my-paper  # scaffolds main.tex + body/*.tex stubs
    ```
 
    `gen-tex.mjs` only ever creates files that are missing - it never overwrites your
@@ -62,12 +66,16 @@ papers/
    the skeleton, then edit freely.
 
 3. **Edit `body/*.tex`.** Write the prose. Use `\cite{<id>}` for every quantitative
-   claim, with the id of a source in `sources.ts`. Keep the typography plain: ASCII
-   hyphen only, no em-dash, no emoji (CLAUDE.md 5); LaTeX numeric ranges use a single
-   hyphen, e.g. `90-96\%`.
+   claim, with the id of a source in `sources.ts`. Keep the declared `cites` in
+   `paper.json` and the ids you actually cite in exact agreement (RULES.md R3). Keep
+   the typography plain: ASCII hyphen only, no em-dash, no emoji (CLAUDE.md 5); LaTeX
+   numeric ranges use a single hyphen, e.g. `90-96\%`.
 
-4. **Re-run `npm run gen:index`** whenever a `paper.json` changes, so the frontend's
-   `papers-index.ts` stays in sync.
+4. **Validate and index.** Once the prose is written, run `npm run check` - it
+   validates the cites (R3), the abstract (R4), and the typography (R5), and refreshes
+   `../frontend/src/papers-index.ts`. Run it after every `paper.json` change so the
+   index stays in sync. (It runs `gen:index` after the prose exists, because R3
+   requires the declared and used cites to match.)
 
 ## The generator workflow, in one line
 

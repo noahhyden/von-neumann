@@ -69,6 +69,17 @@ finished packaged chip, and 100,000+ kWh/kg if you count only the active silicon
 We use a finished-packaged-chip basis (8,000). On any basis, chips are the most
 energy-expensive thing in the factory by a wide margin.
 
+**Paper figures (`src/closure_sim/paper_figures.py`, for `papers/electronics-wall/`).**
+The three figures in the electronics-wall paper restate this module's deterministic output
+and pure derivations; no new numbers. `fig_leverage.pdf` plots `1/(1-C)` (mass balance),
+marked at `C=0.67 -> 3.0x` and `C=0.97 -> 33.3x`. `fig_embodied_energy.pdf` plots the
+per-subsystem `energy_to_produce_kwh_per_kg` values in the table above, read from the
+loaded factory. `fig_chip_crossover.pdf` sweeps `electronics_wall(...)` over available
+power for the lunar seed (closure 97.08%): importing chips is resupply-limited at ~28.8 yr
+(10,512 d), making them locally is energy-limited at ~17.4 yr (6,350 d) at 4 MW and never
+completes near 1 MW. Regenerate via `uv run --extra dev python -m closure_sim.paper_figures`
+(days converted at 365.25 d/yr).
+
 Sources:
 - Williams, Ayres & Heller, **"The 1.7 Kilogram Microchip"**, *Env. Sci. Technol.*
   2002 - inputs to make a 2 g chip outweigh it ~600×. https://pubs.acs.org/doi/10.1021/es025643o
