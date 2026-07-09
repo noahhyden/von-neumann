@@ -942,6 +942,34 @@ export const SOURCES: Source[] = [
     grounds:
       "The real solar-neighborhood stellar density (~0.14 stars/pc3, the contrast to the paper's uniform 1/pc3) and the Proxima Centauri distance (1.301 pc) used as a coordination-lag anchor.",
   },
+  {
+    id: "kerr-lynden-bell-1986",
+    short: "Kerr & Lynden-Bell 1986",
+    authors: "F. J. Kerr & D. Lynden-Bell",
+    year: "1986",
+    title: "Review of galactic constants",
+    venue: "Monthly Notices of the Royal Astronomical Society 221:1023-1038",
+    url: "https://ui.adsabs.harvard.edu/abs/1986MNRAS.221.1023K/abstract",
+    category: "Swarm dynamics and slingshots",
+    strength: "reference",
+    modules: ["swarm"],
+    grounds:
+      "The IAU-standard local circular speed (Theta0 ~220 km/s at R0 = 8.5 kpc) that grounds the ~220 km/s mean stellar speed the slingshot boost draws on and the fixed-star proper-motion caveat (a star sweeps ~225 pc per Myr).",
+  },
+  {
+    id: "nordstrom-2004-gcs",
+    short: "Nordstrom et al. 2004",
+    authors: "B. Nordstrom, M. Mayor, J. Andersen and others",
+    year: "2004",
+    title: "The Geneva-Copenhagen survey of the solar neighbourhood",
+    venue: "Astronomy & Astrophysics 418:989-1019",
+    url: "https://arxiv.org/abs/astro-ph/0405198",
+    category: "Swarm dynamics and slingshots",
+    strength: "reference",
+    modules: ["swarm"],
+    grounds:
+      "The local thin-disc velocity dispersion (sigma_U,V,W ~33/23/18 km/s, ~40 km/s in 3D) grounding the ~30-40 km/s peculiar-velocity spread used for the star-speed dispersion and the proper-motion limitation.",
+  },
 
   {
     id: "forgan-papadog-kitching-2013",
