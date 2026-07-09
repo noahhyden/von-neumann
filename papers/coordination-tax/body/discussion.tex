@@ -8,28 +8,27 @@ motion: probes flying to stars that others have already claimed. That redundant 
 coordination tax, it is governed by the probe's speed in units of $c$, and it matters only once
 a swarm flies fast enough for a decision to outrun its own news.
 
-\subsection{Why the cost is fuel, and larger than it looks}
+\subsection{Why the cost is fuel}
 Because the field always fills and each settlement launches a fixed number of offspring, the two
 coordination regimes build essentially the same number of probes, differing by well under a
 percent; the delay changes almost nothing about how much is manufactured, only how far it is
-flown. The tax is therefore a travel cost, and we have measured
-it as a count of wasted journeys. In energy terms it is larger than that count suggests, and
-increasingly so with speed: the kinetic cost of a hop scales with $v^2$, so a wasted journey at
-$0.2\,c$ squanders far more than one at slingshot speed, on top of there being proportionally
-more of them. A coordination tax that is a fifth of journeys at directed-energy speed is a
-heavier fraction of the energy budget still. This is the sense in which the tax ``scales with how
-fast the swarm flies'': both the rate of wasted trips and the cost of each rise with $v$.
+flown. The tax is therefore a travel cost. In energy terms it is heavier than the journey count
+suggests, and increasingly so with speed, since the kinetic cost of a hop scales with $v^2$;
+Section~\ref{sec:energy} makes this quantitative and finds that for the slingshot policies the
+energy-weighted tax is several times the count tax, and can be large even where the count tax is
+near zero. This is the sense in which the tax ``scales with how fast the swarm flies'': both the
+rate of wasted trips and the cost of each rise with $v$.
 
 \subsection{Limitations}
 \label{sec:limitations}
-The measurement is a conservative upper bound in two senses, and both point to future work.
-Probes here learn only at their decision stars, ignoring news their paths cross in flight, so a
-two-endpoint knowledge model would recover some wasted trips; and probes share nothing directly,
-so probe-to-probe relay of the settled map would let a swarm partially coordinate rather than
-merely collide. Both lower the tax without erasing it, since the floor -- that no probe can
-know a distant star is taken until its light arrives -- is set by physics, not protocol; we
-measure how far that floor sits below the decision-site bound directly in
-Section~\ref{sec:floor}, rather than leaving it to assertion.
+The decision-site headline is a conservative upper bound: probes here learn only at their decision
+stars, ignoring news their paths cross in flight. We relax exactly that assumption in
+Section~\ref{sec:floor}, where a probe that listens in flight recovers essentially all of the
+wasted-arrival tax, so the headline is an upper bound rather than a floor. A true probe-to-probe
+relay of the settled map, which we do not implement, would sit between the beacon-only in-flight
+bound and the decision-site one and is the natural next step. The floor beneath all of them -- that
+no probe can know a distant star is taken until its light arrives -- is set by physics, not
+protocol.
 
 A further, inherited idealization concerns the stars themselves. They carry the velocity vectors
 that power each slingshot but are held fixed in position, exactly as in the two source models,

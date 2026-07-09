@@ -70,19 +70,23 @@ monotonically -- it is the right parameter, for the right cost.
 
 \subsection{Experimental design and parameters}
 The field is a box of stars at a uniform density of one star per cubic parsec, the convention of
-the source model. Each settled star launches two offspring (the replication branching factor);
-branching is what makes two probes ever contend for a star, so it is a precondition for any
-coordination effect at all, and the field fills exponentially rather than as a single roving
-chain. Three properties keep the measurement honest. First, knowledge is evaluated only at the
-decision star at the moment of decision; news a probe's path happens to cross in mid-flight is
-ignored, which deliberately undercounts what a probe could know and so makes the measured waste
-a conservative upper bound. Second, a probe that loses a race re-targets, but only up to a fixed
+the source model. Each settled star launches offspring (the replication branching factor):
+branching is what makes two probes ever contend for a star, so it is the precondition for any
+coordination effect at all and the parameter most likely to change the answer, so we take two
+offspring as the default and sweep it explicitly (Section~\ref{sec:branching}). Three properties
+keep the measurement honest. First, knowledge is evaluated only at the decision star at the moment
+of decision; news a probe's path happens to cross in mid-flight is ignored, which deliberately
+undercounts what a probe could know and so makes the measured waste a conservative upper bound --
+we measure the opposite, optimistic bound (a probe that listens in flight) separately in
+Section~\ref{sec:floor}. Second, a probe that loses a race re-targets, but only up to a fixed
 number of times before it is retired; this cap is applied identically under both coordination
-regimes, so the paired comparison is fair, and the results are insensitive to its value.
-Third, the whole simulation is a pure, seeded, event-driven fold: fixing the seed fixes the
-star field, every arrival, and every target choice, so a run with the light-speed gate and a run
-without it can be compared on the \emph{identical} galaxy. That paired design attributes a
-difference to the delay alone rather than to the luck of the star layout.
+regimes, so the paired comparison is fair, and the measured tax converges as the cap is raised
+(rising while the cap still truncates live bounce chains, then saturating), so the near-converged
+default is a mild lower bound rather than a free knob. Third, the whole simulation is a pure,
+seeded, event-driven fold: fixing the seed fixes the star field, every arrival, and every target
+choice, so a run with the light-speed gate and a run without it can be compared on the
+\emph{identical} galaxy. That paired design attributes a difference to the delay alone rather than
+to the luck of the star layout.
 
 Two dependencies are worth stating because they are easy to over-read. Changing the value of the
 uniform density rescales every inter-star distance by a common factor, multiplying travel time
