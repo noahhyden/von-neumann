@@ -8,10 +8,10 @@ test (``tests/test_measure_results.py``) re-runs a tiny slice to prove the JSON 
 the fold. Regenerating the numbers is ``python -m experiments.measure`` (see that module).
 
 Figures (vector PDF, IEEE single-column geometry, serif fonts):
-  fig_fuel_tax_vs_lambda.pdf - headline: redundant-travel (fuel) and fill-time tax vs Lambda=v/c
+  fig_fuel_tax_vs_lambda.pdf - headline: fuel + fill-time tax vs Lambda=v/c, with the derived
+                               law tax=Lambda overlaid (the data sit on it)
   fig_fuel_tax_by_seed.pdf   - per-seed fuel tax at slingshot vs directed-energy speed (spread)
   fig_time_tax_vs_dt.pdf     - the fill-time tax collapsing to ~0 as the fixed timestep resolves
-  fig_energy_tax.pdf         - count tax vs (1/2)v^2 energy-weighted tax per policy (1x-2x band)
   fig_branching.pdf          - fuel tax vs the replication branching factor (offspring 2/3/4)
   fig_floor_bracket.pdf      - instant/inflight/lightspeed: how much survives in-flight relay
   fig_concurrency.pdf        - probes in flight vs coverage: why a loser is off the critical path
@@ -80,10 +80,17 @@ def fig_fuel_tax_vs_lambda() -> Path:
     fmed = [s["median"] for s in fuel]
     tmed = [s["median"] for s in time]
     fig, ax = plt.subplots(figsize=(COLW, COLW * 0.8))
+    # Derived law: the wasted-journey fraction equals Lambda (see the theory subsection), i.e.
+    # tax% = 100*Lambda. Drawn on a fine log-spaced grid (NOT two points: a 2-point line renders
+    # straight in pixel space on a log axis and misrepresents the curve) so the data sit on it.
+    lo, hi = min(lam) * 0.8, max(lam) * 1.15
+    grid = [lo * (hi / lo) ** (i / 60.0) for i in range(61)]
+    ax.plot(grid, [100 * g for g in grid], color="0.5", linestyle="-", linewidth=0.9,
+            zorder=1, label=r"derived: tax $=\Lambda$")
     ax.errorbar(lam, fmed, yerr=_err(fuel), marker="o", markersize=3.5, color="0.0",
-                capsize=2, linewidth=1.0, label="fuel (wasted journeys)")
+                capsize=2, linewidth=0, elinewidth=1.0, zorder=3, label="fuel (wasted journeys)")
     ax.errorbar(lam, tmed, yerr=_err(time), marker="s", markersize=3.5, color="0.55",
-                linestyle="--", capsize=2, linewidth=1.0, label="fill time")
+                linestyle="--", capsize=2, linewidth=1.0, zorder=2, label="fill time")
     ax.set_xscale("log")
     ax.set_xlabel(r"probe speed $\Lambda = v/c$")
     ax.set_ylabel("coordination tax (% over perfect info)")
@@ -138,31 +145,6 @@ def fig_time_tax_vs_dt() -> Path:
     ax.legend(loc="upper left", frameon=False)
     fig.tight_layout()
     return _save(fig, "fig_time_tax_vs_dt.pdf")
-
-
-def fig_energy_tax() -> Path:
-    d = load("energy_tax")
-    pols = d["config"]["policies"]
-    names = {"powered": "powered", "slingshot_nearest": "slingshot\nnearest", "slingshot_maxboost": "slingshot\nmaxboost"}
-    count = [d["data"][p]["fuel_pct"]["median"] for p in pols]
-    e1 = [d["data"][p]["energy_pct_1x"]["median"] for p in pols]
-    e2 = [d["data"][p]["energy_pct_2x"]["median"] for p in pols]
-    x = list(range(len(pols)))
-    fig, ax = plt.subplots(figsize=(COLW, COLW * 0.8))
-    w = 0.35
-    ax.bar([xi - w / 2 for xi in x], count, w, color="0.6", label="count (wasted journeys)")
-    # energy tax as a 1x-2x band drawn as a bar to the 1x with a cap up to 2x
-    ax.bar([xi + w / 2 for xi in x], e1, w, color="0.15", label="energy, flyby (1x)")
-    ax.errorbar([xi + w / 2 for xi in x], e1, yerr=[[0] * len(x), [b - a for a, b in zip(e1, e2)]],
-                fmt="none", ecolor="0.0", capsize=3, linewidth=1.0)
-    ax.plot([], [], color="0.0", linewidth=1.0, label="to rendezvous (2x)")
-    ax.set_xticks(x)
-    ax.set_xticklabels([names[p] for p in pols])
-    ax.set_ylabel("coordination tax (% over perfect info)")
-    ax.axhline(0.0, color="0.6", linewidth=0.6, linestyle=":", zorder=0)
-    ax.legend(loc="upper left", frameon=False, fontsize=7)
-    fig.tight_layout()
-    return _save(fig, "fig_energy_tax.pdf")
 
 
 def fig_branching() -> Path:
@@ -243,7 +225,6 @@ FIGURES = {
     "fig_fuel_tax_vs_lambda": fig_fuel_tax_vs_lambda,
     "fig_fuel_tax_by_seed": fig_fuel_tax_by_seed,
     "fig_time_tax_vs_dt": fig_time_tax_vs_dt,
-    "fig_energy_tax": fig_energy_tax,
     "fig_branching": fig_branching,
     "fig_floor_bracket": fig_floor_bracket,
     "fig_concurrency": fig_concurrency,

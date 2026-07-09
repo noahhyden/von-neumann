@@ -8,16 +8,24 @@ motion: probes flying to stars that others have already claimed. That redundant 
 coordination tax, it is governed by the probe's speed in units of $c$, and it matters only once
 a swarm flies fast enough for a decision to outrun its own news.
 
-\subsection{Why the cost is fuel}
+\subsection{What the tax is denominated in}
 Because the field always fills and each settlement launches a fixed number of offspring, the two
 coordination regimes build essentially the same number of probes, differing by well under a
 percent; the delay changes almost nothing about how much is manufactured, only how far it is
-flown. The tax is therefore a travel cost. In energy terms it is heavier than the journey count
-suggests, and increasingly so with speed, since the kinetic cost of a hop scales with $v^2$;
-Section~\ref{sec:energy} makes this quantitative and finds that for the slingshot policies the
-energy-weighted tax is several times the count tax, and can be large even where the count tax is
-near zero. This is the sense in which the tax ``scales with how fast the swarm flies'': both the
-rate of wasted trips and the cost of each rise with $v$.
+flown. The tax is therefore a travel cost, and we deliberately denominate it in journeys rather
+than energy, because translating journeys into energy is mission-dependent in a way our model does
+not fix. A wasted journey's kinetic energy is not straightforwardly a fuel cost: under the
+slingshot policies most of that energy was extracted gravitationally from stellar motion rather
+than spent as propellant, and a probe that re-targets on arrival keeps its speed and pays nothing
+further. The genuine energy penalty of a wasted trip is whatever a rendezvous at the doomed star
+would have cost -- braking to rest and re-accelerating -- which scales with $v^2$ for a fuel-braked
+craft but is near zero for a flyby or a gravitationally-braked one. We therefore do not headline an
+energy figure; the honest statement is that the journey tax becomes an energy tax only to the
+extent a mission must brake, and then it grows with $v^2$. A caveat cuts the other way, too: even as
+a travel cost the tax is denominated in journeys, not in the swarm's total resource budget, which
+is dominated by building the probes -- a cost we hold fixed and identical across regimes and do not
+model. As a fraction of total mission resources the coordination tax is smaller than its share of
+journeys.
 
 \subsection{Limitations}
 \label{sec:limitations}

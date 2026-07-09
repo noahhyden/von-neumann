@@ -1,24 +1,24 @@
 \section{Conclusion}
 
 Adding a finite speed of information to the self-replicating slingshot model turns a convenient
-assumption into a measurable cost, but not the cost a coarse model reports. Once the dynamics
-are resolved so that each probe decides at its true arrival time, light-speed lag does not
-measurably slow the fill of the field, and the slingshot speed-up survives intact, reproducing
-Nicholson and Forgan quantitatively; the tens-of-percent fill-time penalty seen in a
-fixed-timestep model is a discretization artifact. The genuine cost is redundant travel. Every
-star is still settled, with a negligible change in the number of probes built, but stale views
-send probes to stars other probes have already claimed, and that waste is governed cleanly by the
-probe's speed in units of
-the speed of light, $\Lambda = v/c$: negligible for a powered cruise, about a percent of journeys
-at slingshot speeds, and roughly a fifth at the directed-energy speeds beamed propulsion targets.
-Weighted by the kinetic energy each wasted hop cost it is heavier still, and for the fast slingshot
-policies it is large even where the raw journey count barely moves; it also grows with the
-replication branching factor before saturating. The coordination tax a perfect-information model
-hides is paid in fuel, not time, and it scales with how fast the swarm flies. It is not a hard
-floor: a probe that listens in flight, one of the two extensions the model invites, recovers
-essentially all of the wasted-arrival tax at a small cost in fill time, while a full probe-to-probe
-relay of the settled map remains open. Neither can remove the physical floor beneath the tax, and
-how much either can buy back is itself bounded by the finite speed of light.
+assumption into a measurable cost, but not the cost a coarse model reports. Once the dynamics are
+resolved so that each probe decides at its true arrival time, the tens-of-percent fill-time penalty
+seen in a fixed-timestep model collapses -- it was a discretization artifact -- and the slingshot
+speed-up survives intact, reproducing Nicholson and Forgan quantitatively. The genuine cost is
+redundant travel: every star is still settled, with a negligible change in the number of probes
+built, but stale views send probes to stars others have already claimed. That waste follows a
+simple law we both derive and measure -- the wasted-journey fraction equals the probe's speed in
+units of light, $\Lambda = v/c$ -- from negligible at the powered cruise, through about a percent at
+slingshot speeds, to a fifth at the directed-energy speeds beamed propulsion targets. It grows with
+the replication branching factor before saturating, and whether it also costs energy is
+mission-dependent: only a rendezvous that must brake pays for a wasted trip's kinetic energy, which
+for the fast policies was largely gravitationally sourced rather than fuelled. The cost is dominated
+by fuel and effort; a secondary fill-time penalty of a few percent rides alongside it, but only in
+the fast directed-energy regime and never at slingshot speeds. It is not a hard floor: a probe that
+listens in flight, one of the two extensions the model invites, recovers essentially all of the
+wasted-arrival tax at a small cost in fill time, while a full probe-to-probe relay of the settled
+map remains open. Neither can remove the physical floor beneath the tax, and how much either can buy
+back is itself bounded by the finite speed of light.
 
 \section*{Data Availability}
 The model is a deterministic, seeded, event-driven fold; every figure, table, and reported

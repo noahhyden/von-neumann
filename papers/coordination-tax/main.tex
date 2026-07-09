@@ -10,7 +10,7 @@
 \usepackage{url}
 \usepackage{amsmath}
 
-\title{The Coordination Tax Is Paid in Fuel, Not Time: Light-Speed Delay in a Self-Replicating Probe Swarm}
+\title{The Coordination Cost of Light-Speed Delay in a Self-Replicating Probe Swarm Scales as v/c}
 
 \author{
 \IEEEauthorblockN{Noah Hyd\'en}
@@ -27,20 +27,21 @@ instantaneous knowledge of which stars are already settled, and names finite lig
 future work. We add that light-speed limit and measure its cost. The first finding is a caution: a
 model advanced in a timestep coarser than the interval between probe launches makes many probes
 decide from the same stale snapshot at once, and the resulting collisions appear to slow the fill by
-tens of percent. They do not. Resolved so that each probe decides at its true arrival time,
-light-speed lag does not measurably delay the fill -- a large in-flight population keeps any single
-wasted trip off the critical path -- and the gravitational-slingshot speed-up survives, reproducing
-the source model quantitatively at about 166 times powered flight. The real cost is redundant
-travel: with essentially the same number of probes built, stale views send probes to stars others
-have already claimed, a tax in fuel and effort, not time. It is governed by the probe's speed in
-units of light, from under a percent of journeys at slingshot speeds to about a fifth at the
-directed-energy speeds beamed propulsion targets; weighted by kinetic energy it is heavier still,
-several times the journey count for the fast slingshot policies and large even where the count tax
-is near zero. The tax grows with the replication branching factor and then saturates. It is not a
-hard floor: a probe that listens in flight, rather than only at its decision stars, recovers
-essentially all of the wasted-arrival tax at a small cost in fill time, so the finite speed of light
-sets how much coordination can ever buy back. The coordination cost a perfect-information model
-hides is paid in fuel, not time, and it scales with how fast the swarm flies.
+tens of percent. That number is a discretization artifact. Resolved so that each probe decides at
+its true arrival time, the tens-of-percent slowdown collapses -- to a few percent at directed-energy
+speeds and to nothing at slingshot speeds -- and the gravitational-slingshot speed-up survives,
+reproducing the source model quantitatively at about 166 times powered flight. The dominant cost is
+redundant travel: with essentially the same number of probes built, stale views send probes to stars
+others have already claimed. We show, and derive from a short collision argument, that this
+wasted-journey fraction equals the probe's speed in units of light, v/c -- negligible for a powered
+cruise, about a percent at slingshot speeds, and a fifth at the directed-energy speeds beamed
+propulsion targets. The tax grows with the replication branching factor before saturating, does not
+grow with system size over the range we test, and is not a hard floor: a probe that listens in
+flight, rather than only at its decision stars, recovers essentially all of it at a small cost in
+fill time. Whether the wasted travel also costs energy is mission-dependent, since a slingshot
+probe's kinetic energy is largely gravitationally sourced, so we denominate the tax in journeys. The
+coordination cost a perfect-information model hides is dominated by fuel and effort and scales,
+cleanly, as v/c.
 \end{abstract}
 
 \begin{IEEEkeywords}

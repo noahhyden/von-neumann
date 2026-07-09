@@ -63,10 +63,34 @@ travel time is $d/v$, so the ratio is
 the probe's speed in units of $c$, independent of the hop length. A slow probe
 ($\Lambda \ll 1$) outpaces its own ignorance only trivially, so stale views barely arise; a
 fast probe carries a large $\Lambda$ and routinely decides before the relevant news can reach
-it. At the powered cruise speed $\Lambda \approx 3\times10^{-5}$ is negligible. As we show
-below, once the dynamics are resolved $\Lambda$ does not predict a fill-time penalty (there is
-essentially none), but it \emph{does} govern the redundant-travel penalty cleanly and
-monotonically -- it is the right parameter, for the right cost.
+it. At the powered cruise speed $\Lambda \approx 3\times10^{-5}$ is negligible.
+
+\subsection{A collision model: why the tax should equal $\Lambda$}
+\label{sec:theory}
+The same ratio predicts the size of the redundant-travel tax, not just its trend, from a short
+exposure argument. Fix a probe that has committed to a target star at distance $d$. Under perfect
+information it chose a truly unsettled star, so it is wasted only if some other probe claims that
+star during its flight -- an exposure window equal to the travel time $d/v$. Under the light-speed
+gate the probe carries an \emph{additional} blindness: the target may already have been claimed up
+to a light-time $d/c$ before launch, with the beacon not yet arrived, and the probe would have
+launched anyway. Its total exposure to an unseen claim is therefore $d/v + d/c$. If claims of a
+given candidate arrive at some roughly steady local rate, the probability of a wasted trip is
+proportional to the exposure window, so the ratio of wasted trips with and without the gate is
+\begin{equation}
+\frac{p_{\text{lag}}}{p_{\text{perfect}}} \;\approx\; \frac{d/v + d/c}{d/v} \;=\; 1 + \frac{v}{c}
+\;=\; 1 + \Lambda,
+\label{eq:tax}
+\end{equation}
+and the coordination tax -- the extra wasted trips as a fraction of the perfect-information
+baseline -- is just $p_{\text{lag}}/p_{\text{perfect}} - 1 \approx \Lambda$. Two features of
+(\ref{eq:tax}) are worth stating because the simulation independently reproduces both: the hop
+length $d$ cancels, so the tax cannot depend on how far apart the stars are, and the local claim
+rate cancels, so it cannot depend on the stellar density. This is a leading-order estimate -- it
+assumes claims of a candidate are independent and locally uniform in time, and it ignores the
+geometry of which stars are in contention -- so it predicts the coefficient of proportionality is
+one, not its small corrections. Section~\ref{sec:results} shows the measured tax follows
+$\Lambda$ with a fitted slope of $0.96$, confirming the law and its near-unit coefficient, and
+confirms the $d$- and density-independence directly.
 
 \subsection{Experimental design and parameters}
 The field is a box of stars at a uniform density of one star per cubic parsec, the convention of

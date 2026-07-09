@@ -216,7 +216,9 @@ def m_finite_size() -> None:
     Seeds are scaled down as N grows (event-mode cost is ~O(N^2) at high Lambda). This is the
     honest lever arm for the scale discussion: a 16x span, NOT an extrapolation to 1e11 stars.
     """
-    n_seeds_by_n = [(300, 24), (600, 24), (1200, 16), (2400, 8), (4800, 4)]
+    # Many seeds even at large N (per-seed cost ~42 s at N=2400, ~198 s at N=4800): this is a
+    # dedicated high-seed sweep to resolve whether the large-N tax decline is real or scatter.
+    n_seeds_by_n = [(300, 48), (600, 48), (1200, 48), (2400, 48), (4800, 32)]
     data = {}
     for n, k in n_seeds_by_n:
         print(f"    N={n} ({k} seeds)", flush=True)
@@ -239,7 +241,9 @@ def m_concurrency() -> None:
     seeds = SEEDS[:16]
     n_stars = 500
     lam = 0.2
-    bins = [i / 20 for i in range(1, 20)]  # coverage fractions 0.05..0.95
+    # coverage fractions to 0.90 in steps of 0.05, then fine tail bins into the final few percent
+    # (referee: the last-star metric lives at 99%+, where the in-flight population thins).
+    bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
     series = {"instant": {b: [] for b in bins}, "lightspeed": {b: [] for b in bins}}
     peak = {"instant": [], "lightspeed": []}
     for i, s in enumerate(seeds):
