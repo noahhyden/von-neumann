@@ -1,76 +1,149 @@
 \section{Results: the coordination tax}
+\label{sec:results}
 
 We measured the cost as a paired ensemble: 32 seeded galaxies of 300 stars each, every one
 filled twice, once with perfect information and once with the light-speed gate of
 (\ref{eq:gate}), so that the only difference between the two runs of a pair is the delay.
-The quantity of interest is the relative slowdown in the time to settle the entire field,
-$t_{100}$, per seed. Reporting the distribution across the ensemble rather than a single
-run follows the seeded Monte Carlo practice of the field \cite{forgan-2009}.
+The primary quantity is the relative slowdown in the time to settle the entire field,
+$t_{100}$, per seed; because $t_{100}$ is a tail statistic dominated by the last few stars,
+we also report the penalty at earlier coverage fractions and across a range of field sizes.
+Reporting the distribution across the ensemble rather than a single run follows the seeded
+Monte Carlo practice of the field \cite{forgan-2009}.
 
 \begin{table}[!t]
   \centering
-  \caption{Median fill-time penalty from light-speed lag, over the 32-seed paired
-    ensemble at 300 stars. The penalty tracks hop locality, not raw speed.}
+  \caption{Fill-100\% penalty from light-speed lag over the 32-seed paired ensemble at
+    300 stars: median, interquartile range, and a seeded percentile-bootstrap 95\%
+    confidence interval on the median. The last column is a two-sided sign test over the
+    paired seeds; the slingshot penalty is positive in all 32, while powered is null
+    (positive in only 6 of the 11 seeds that differ at all).}
   \label{tab:penalty}
-  \begin{tabular}{lcc}
+  \begin{tabular}{lcccc}
     \toprule
-    Flight policy & Median penalty (\%) & IQR (\%) \\
+    Flight policy & Median (\%) & IQR (\%) & 95\% CI (\%) & $p$ \\
     \midrule
-    Powered nearest-neighbour   & 0.0  & [0.0, 0.0]   \\
-    Nearest-star slingshot      & 30.3 & [20.0, 38.5] \\
-    Maximum-boost slingshot     & 51.4 & [46.0, 54.0] \\
+    Powered nearest-neighbour & 0.0  & [0.0, 0.0]   & [0.0, 0.0]   & 1.0 \\
+    Nearest-star slingshot    & 30.3 & [20.0, 38.5] & [23.5, 37.5] & $<10^{-9}$ \\
+    Maximum-boost slingshot   & 51.4 & [46.0, 54.0] & [47.2, 53.7] & $<10^{-9}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[!t]
+  \centering
+  \caption{The mechanism, as medians over the 32 light-speed runs. Effective speed is the
+    mean speed at which probes are launched; $\Lambda_{\text{eff}} = v_{\text{eff}}/c$. Hop
+    length is the mean distance of a wasted (lost-race) trip and of a winning (settling)
+    trip. The two slingshot policies differ in $\Lambda_{\text{eff}}$ by about
+    $1.4\times$ but in wasted-hop length by about $1.85\times$, and the penalty in
+    Table~\ref{tab:penalty} tracks the latter.}
+  \label{tab:mech}
+  \begin{tabular}{lcccc}
+    \toprule
+    Flight policy & $v_{\text{eff}}$ (km/s) & $\Lambda_{\text{eff}}$ & Wasted (pc) & Settled (pc) \\
+    \midrule
+    Powered nearest-neighbour & 9     & $3.0\times10^{-5}$ & 1.62 & 0.83 \\
+    Nearest-star slingshot    & 2{,}734 & $9.1\times10^{-3}$ & 1.44 & 0.83 \\
+    Maximum-boost slingshot   & 3{,}897 & $1.3\times10^{-2}$ & 2.67 & 2.36 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 The medians and their spread are given in Table~\ref{tab:penalty} and shown per seed in
 Fig.~\ref{fig:slowdown}. Powered flight pays essentially nothing; nearest-star slingshot
-loses about a third of its time; maximum-boost slingshot loses about half. Two facts stand
-out.
+loses about a third of its time; maximum-boost slingshot loses about half. The two slingshot
+penalties are not marginal: each is positive in all 32 seeds, and the bootstrap confidence
+intervals on the medians (Table~\ref{tab:penalty}) are well clear of zero and of each other.
 
-The first is that the penalty is \emph{not} simply $\Lambda = v/c$ from (\ref{eq:lambda}).
-Powered flight is nearly untouched even though it is the slowest regime, and the two fast
-slingshot regimes differ from each other by nearly a factor of two despite comparable
-speeds. If $\Lambda$ alone set the cost, the fastest probes would pay the most in a smooth
-progression; instead the cost tracks hop locality. A probe flying to the \emph{nearest}
-star that loses a race has lost almost nothing: the next-nearest unsettled star is right
-beside it, so the wasted trip and the recovery are both short. A probe chasing the
-\emph{biggest boost} deliberately reaches past its neighbours to a distant star; when it
-loses that race, both the wasted trip and the re-targeting detour are long. So
-$\Lambda \approx v/c$ sets the \emph{scale} of the lag, but the \emph{non-locality of each
-hop decides whether it bites}. Fig.~\ref{fig:settlement} shows the effect on a single
-representative galaxy for the nearest-star policy: the light-speed run reaches full
-settlement at about 110{,}000 years against 80{,}000 for the perfect-information run on the
-same seed, a right-shift of roughly a third that is visible as a lag in the settlement
-curve, not a change in its final height.
+The central finding is that the penalty is \emph{not} governed by $\Lambda = v/c$ from
+(\ref{eq:lambda}). Table~\ref{tab:mech} makes the case directly. The two slingshot policies
+reach comparable effective speeds, $2{,}734$ against $3{,}897$ km/s, so their
+$\Lambda_{\text{eff}}$ differ by only about $1.4\times$; yet their penalties differ by about
+$1.7\times$. If $\Lambda$ set the cost, the faster policy would pay in that same $1.4$-to-$1$
+proportion, and the powered policy, though slowest, would still pay something. Neither holds.
+What does track the penalty is hop non-locality. A probe flying to the \emph{nearest} star
+that loses a race has lost almost nothing: the next unsettled star is right beside it, so the
+wasted trip and the recovery are both short. A probe chasing the \emph{biggest boost}
+deliberately reaches past its neighbours to a distant star, so when it loses that race both
+the wasted trip and the re-targeting detour are long. The simulation confirms the mechanism
+in the hop lengths themselves: the mean wasted trip is $2.67$ pc for maximum-boost against
+$1.44$ pc for nearest-star, and its winning trips are nearly three times longer too
+(Table~\ref{tab:mech}). So $\Lambda$ decides only \emph{whether} lag can bite: powered flight,
+with $\Lambda \approx 3\times10^{-5}$, is immune not because its wasted hops are short (they
+are not, at $1.62$ pc) but because it is far too slow for any race to matter. Given that a
+policy is fast enough for lag to bite, the \emph{non-locality of its hops} sets how hard.
+Fig.~\ref{fig:settlement} shows the effect on a single representative galaxy for the
+nearest-star policy: the light-speed run reaches full settlement at about 110{,}000 years
+against 80{,}000 for the perfect-information run on the same seed, a right-shift of roughly a
+third visible as a lag in the settlement curve, not a change in its final height.
 
-The second fact is what does \emph{not} happen: every case still fills the field to full
-coverage. Light-speed lag makes the swarm slower and more wasteful, but it never leaves a
-permanent unsettled remainder. Re-targeting guarantees that a probe which loses a race
-simply picks another star, and eventually the field is closed. A permanent settled
-fraction below one, a steady state in which some region stays forever empty, would require
-settled sites to \emph{die}, adding a loss term to the dynamics; delay by itself supplies
-no such term. Lag is a tax on speed, not a barrier to completion.
+The penalty is not an artifact of the fragile $t_{100}$ tail. Fig.~\ref{fig:coverage} reports
+the median penalty at coverage fractions from $t_{25}$ to $t_{100}$: for nearest-star flight
+it rises steadily from about 14\% at quarter-coverage to about 30\% at full coverage, and for
+maximum-boost it is already about 26\% at quarter-coverage and stays near or above 50\%
+thereafter. The shift is present throughout the fill, and grows as the front reaches farther
+from the origin, exactly as the locality mechanism predicts; it is not a single unlucky last
+star. Powered flight stays at zero at every fraction.
+
+Nor is it an artifact of the small $300$-star box, the concern that matters most for
+extrapolating toward galactic saturation. Fig.~\ref{fig:finitesize} sweeps the system size
+across a four-fold range: the powered penalty stays near zero, the nearest-star penalty stays
+near a third, and the maximum-boost penalty holds near or slightly above a half, firming up
+rather than washing out as the field grows and hops lengthen. The maximum-boost policy scans
+its nearest neighbours at every launch and so costs $O(N^2)$, which bounds the range we sweep;
+within that range the penalties are stable, and the trend is toward more penalty at larger
+scale, not less.
+
+Finally, what does \emph{not} happen: every case still fills the field to full coverage. This
+is a property of the model, not a result to be discovered. Re-targeting guarantees that a
+probe which loses a race simply picks another star, and with no loss term the reachable field
+must eventually close; light-speed lag makes the swarm slower and more wasteful but leaves no
+permanent unsettled remainder. It is worth stating precisely because it marks the boundary of
+what delay alone can do: a permanent settled fraction below one, an ``Aurora'' steady state in
+which some region stays forever empty \cite{carroll-nellenback-2019}, would require settled
+sites to \emph{die}, and delay supplies no such term. Lag is a tax on speed, not a barrier to
+completion.
 
 \begin{figure}[!t]
   \centering
   \includegraphics[width=\columnwidth]{fig_slowdown_by_policy.pdf}
-  \caption{Distribution of the per-seed fill-time penalty imposed by light-speed-limited
-    coordination, over the fixed 32-seed ensemble at 300 stars, for the three flight
-    policies (box: interquartile range and median; points: individual seeds). Powered
-    nearest-neighbour flight pays essentially no penalty, because a lost race is recovered
-    at the star next door, while the long-range maximum-boost policy fills the field
-    materially later, because wasted trips launched from stale views become long detours.}
+  \caption{Distribution of the per-seed fill-100\% penalty imposed by light-speed-limited
+    coordination, over the fixed 32-seed ensemble at 300 stars, for the three flight policies
+    (box: interquartile range and median; points: all 32 individual seeds). Powered
+    nearest-neighbour flight pays essentially no penalty, because a lost race is recovered at
+    the star next door, while the long-range maximum-boost policy fills the field materially
+    later, because wasted trips launched from stale views become long detours.}
   \label{fig:slowdown}
 \end{figure}
 
 \begin{figure}[!t]
   \centering
+  \includegraphics[width=\columnwidth]{fig_penalty_by_coverage.pdf}
+  \caption{Median fill-time penalty at coverage fractions from $t_{25}$ to $t_{100}$, over the
+    32-seed ensemble, for the three policies. The slowdown is present across the whole fill,
+    not only in the $t_{100}$ tail, and grows as the front reaches farther from the origin;
+    powered flight stays at zero throughout.}
+  \label{fig:coverage}
+\end{figure}
+
+\begin{figure}[!t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_finite_size.pdf}
+  \caption{Median fill-100\% penalty versus system size for the three policies (line: median;
+    shaded band: interquartile range over 8 seeds per point). Across a four-fold increase in
+    the number of stars the penalties are stable, holding near 0\%, a third, and a half
+    respectively, and firm up rather than wash out. The $O(N^2)$ cost of the maximum-boost
+    scan bounds the range swept.}
+  \label{fig:finitesize}
+\end{figure}
+
+\begin{figure}[!t]
+  \centering
   \includegraphics[width=\columnwidth]{fig_settlement_curves.pdf}
-  \caption{Fraction of the reachable field settled versus year for the nearest-star
-    slingshot policy on a single representative galaxy, under perfect global information
-    (solid) and under light-speed-limited coordination (dashed). The light-speed curve is
-    shifted later, reaching full settlement at about 110{,}000 years versus 80{,}000, a
-    delay attributable to information lag alone; both curves reach the same final height.}
+  \caption{Fraction of the reachable field settled versus year for the nearest-star slingshot
+    policy on a single representative galaxy, under perfect global information (solid) and
+    under light-speed-limited coordination (dashed). The light-speed curve is shifted later,
+    reaching full settlement at about 110{,}000 years versus 80{,}000, a delay attributable to
+    information lag alone; both curves reach the same final height.}
   \label{fig:settlement}
 \end{figure}

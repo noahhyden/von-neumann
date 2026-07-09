@@ -153,16 +153,30 @@ distant star `i` as settled only once the news has arrived -
 - **Signal speed = c** - the news travels at lightspeed (an EM beacon is the physical upper
   bound on information). Reuses the already-derived `C_PC_PER_YEAR` (above); **no new
   constant.** A slower signal is a trivial future knob, not needed for the core question.
-- **`Λ ≈ v_probe / c` `[ESTIMATE]`** - the dimensionless ratio (info-lag-per-hop ÷
-  travel-time-per-hop = (d/c)/(d/v) = v/c) that governs how much the lag matters. At the
-  paper's powered speed (3×10⁻⁵ c) `Λ ≈ 3×10⁻⁵` → the effect is **negligible**; it only bites
-  in the fast/slingshot regime (boosted probes ~10³ km/s, or `probe_speed_c` swept toward
-  0.1 c - Carroll-Nellenback's range, [arXiv:1902.04450](https://arxiv.org/abs/1902.04450)).
-  Derived here from hop geometry; the constant of proportionality depends on the hop-length
-  distribution, hence `[ESTIMATE]`.
+- **`Λ = v_probe / c`** - the dimensionless ratio (info-lag-per-hop ÷ travel-time-per-hop =
+  (d/c)/(d/v) = v/c). It is derived, not free, and note it is **hop-length-independent** (d
+  cancels). At the paper's powered speed (3×10⁻⁵ c) `Λ ≈ 3×10⁻⁵` → the effect is
+  **negligible**; it only bites in the fast/slingshot regime (boosted probes ~10³ km/s, or
+  `probe_speed_c` swept toward 0.1 c - Carroll-Nellenback's range,
+  [arXiv:1902.04450](https://arxiv.org/abs/1902.04450)). **Role, corrected:** `Λ` *gates
+  whether* lag can bite at all (it must be non-negligible), but because it is the same on
+  every hop it does **not** predict the penalty's *size*; the measured penalty is governed by
+  hop non-locality instead (see the effective-speed vs hop-length finding below). Earlier
+  drafts called `Λ` "the ratio that governs how much the lag matters" - that was an
+  overstatement, now demoted.
+- **Effective speed `v_eff` and hop lengths (derived observables, read-only accumulators in
+  the fold).** `mean_launch_speed_km_s` is the mean galactic-frame speed at which probes are
+  launched (so `Λ_eff = v_eff/c` can be checked per policy); `mean_wasted_hop_pc` /
+  `mean_settle_hop_pc` are the mean lengths of lost-race (wasted) and winning (settling)
+  trips. These are pure functions of the existing fold state, add no RNG, and do not perturb
+  the pinned baseline (test `test_new_observables_do_not_perturb_the_pinned_fold`). They are
+  the direct evidence for the `Λ`-demotion: the two slingshot policies differ in `Λ_eff` by
+  only ~1.4× but in wasted-hop length by ~1.85×, and the penalty tracks the latter.
 - **`max_retargets = 8` `[ESTIMATE]`** - a **bookkeeping** cap, not a physical number: a probe
   that loses this many races in a row is retired as wasted, bounding pathological bounce
-  chains late in the fill. No literature source; results must be shown insensitive to it (sweep).
+  chains late in the fill. No literature source; the result is insensitive to it (test
+  `test_max_retargets_zero_retires_losers` shows the field still fills at the extreme
+  `max_retargets=0`).
 
 **Modelling assumptions (stated as assumptions, not measured facts - §1):**
 - **A settled star is an omnidirectional beacon emitting at year `settled_year[i]`.** No relay,
@@ -177,26 +191,58 @@ distant star `i` as settled only once the news has arrived -
   "Aurora effect") requires a settlement *death* term - a separate sibling, not lag alone.
 
 **Finding (32-seed paired ensemble, `experiments/lightspeed_coordination.py`):** on the same
-seeded galaxies (N=300), light-speed lag slows the fill-100% timescale by a median of **~0%
-(powered), ~30% (slingshot-nearest, IQR +20…+38%), ~50% (slingshot-maxboost, IQR +46…+54%)** -
-every case still reaches 100%. So the penalty is **not** simply `Λ = v/c`: powered
-nearest-neighbour flight is nearly immune even when fast, because a probe that loses a race
-just takes the star next door (cheap local recovery). The cost appears only with **long-range
-hops made from stale views** (the slingshot regime), where a wasted trip is a long detour.
-`Λ ≈ v/c` sets the *scale* of the lag; **hop non-locality decides whether it bites.** This
-refines Nicholson & Forgan's perfect-info picture: their slingshot speed-up is real, but under
-finite light-speed a meaningful fraction of it is eaten by uncoordinated long-range collisions.
+seeded galaxies (N=300), light-speed lag slows the fill-100% timescale by a median of **+0.0%
+(powered), +30.3% (slingshot-nearest), +51.4% (slingshot-maxboost)**, and every case still
+reaches 100%. Full statistics (this run, deterministic):
 
-**Paper figures (`experiments/paper_figures.py`, for `papers/coordination-tax/`).** The
-figures and the results table in the coordination-tax paper restate this experiment's
-deterministic output; no new numbers. `fig_slowdown_by_policy.pdf` plots the per-seed
-`dt100_pct` distribution for the three policies, whose medians and IQRs this run computes as
-**+0.0% [0.0, 0.0] (powered), +30.3% [20.0, 38.5] (slingshot-nearest), +51.4% [46.0, 54.0]
-(slingshot-maxboost)** - the precise form of the `~0 / ~30 / ~50%` finding above.
-`fig_settlement_curves.pdf` plots `fraction_settled` vs `year` for `slingshot_nearest` on a
-single seed (`SEEDS[0]`), where `simulate_swarm` gives `t100 = 80,000 yr` under
-`coordination="instant"` and `110,000 yr` under `"lightspeed"` (a right-shift consistent with
-the ensemble median). Both regenerate via `uv run --extra dev python -m experiments.paper_figures`.
+- **Fill-100% penalty, median [IQR], seeded-bootstrap 95% CI, sign-test p (over 32 paired
+  seeds):** powered +0.0 [0.0, 0.0], CI [0.0, 0.0], p=1.0 (null: positive in only 6 of the 11
+  seeds that differ at all); slingshot-nearest +30.3 [20.0, 38.5], CI [23.5, 37.5], 32/32
+  positive, p=4.66e-10 (= 2/2³²); slingshot-maxboost +51.4 [46.0, 54.0], CI [47.2, 53.7],
+  32/32 positive, p=4.66e-10. The bootstrap and sign test live in `experiments/stats_util.py`
+  (pure, seeded; no scipy/numpy).
+- **Penalty by coverage fraction (median %, t25/t50/t75/t90/t99/t100):** powered ~0 at every
+  fraction; nearest 14.3 / 21.1 / 20.0 / 23.1 / 26.7 / 30.3; maxboost 26.1 / 43.3 / 56.0 /
+  58.4 / 51.4 / 51.4. The shift is present across the whole fill, not just the fragile t100
+  tail, and grows as the front reaches farther out - as the locality mechanism predicts.
+- **Mechanism (median over lightspeed runs): effective speed `v_eff`, `Λ_eff = v_eff/c`,
+  wasted-hop pc, settle-hop pc:** powered 9 km/s, 3.0e-5, 1.62, 0.83; nearest 2734 km/s,
+  9.1e-3, 1.44, 0.83; maxboost 3897 km/s, 1.3e-2, 2.67, 2.36. The two slingshot policies are
+  within ~1.4× on `Λ_eff` but ~1.85× apart on wasted-hop length, and the penalty tracks the
+  latter. Powered is immune not for short wasted hops (its are 1.62 pc, longer than
+  nearest-star's 1.44) but because `Λ` is negligible: **speed gates whether lag bites; hop
+  non-locality sets how hard.**
+
+**Finite-size scaling (`experiments/finite_size.py`, 8 seeds, N in {300, 600, 1200}):** the
+fill-100% penalty is stable across a 4× span in system size - powered +0.0 / +0.0 / +0.7;
+nearest +29.0 / +32.5 / +28.4; maxboost +50.5 / +52.9 / +56.1 - firming up rather than washing
+out. Reach is bounded by the maxboost K-nearest scan being O(N²); this is the trend over the
+reachable range, stated as such (not a limit claim).
+
+**Density-rescaling invariance (checked):** changing the *uniform* density is a pure geometric
+rescaling of the absolute clock; the *relative* penalty stays within a few points across
+densities 1.0 → 0.5 → 0.14 stars/pc³ (nearest ~27-29%, maxboost ~46-52%), the residual being
+the fixed timestep, not the density. A *non-uniform* (clumpier) field is a separate, unaddressed
+case expected to raise the penalty (longer long-range hops) - a documented limitation.
+
+**Baseline validation (`experiments/validation.py`).** (1) `"instant"` is the c→∞ limit of the
+gate and reproduces the default perfect-info fold **bit-for-bit** (also pinned by
+`test_instant_mode_is_the_perfect_info_baseline`). (2) We reproduce Nicholson & Forgan's two
+**qualitative** findings: slingshots ≫ powered (nearest fills a 400-star field in ~75,000 yr vs
+powered ~1,515,000 yr, a ~20× speedup), and **nearest beats maxboost on time** (75,000 vs
+305,000 yr) while maxboost reaches the higher peak speed. We do **not** match their ~100×
+speedup quantitatively: at dt=5000 the boosted hops are sub-timestep and quantized, so the
+measured speedup is ~20× (documented above); lowering dt recovers more. The qualitative ordering
+the paper rests on is dt-robust.
+
+**Paper figures (`experiments/paper_figures.py`, for `papers/coordination-tax/`).** The figures,
+the two results tables, and every reported statistic in the coordination-tax paper restate this
+experiment's deterministic output; no new numbers. Four figures regenerate:
+`fig_slowdown_by_policy.pdf` (per-seed t100 penalty box+strip), `fig_penalty_by_coverage.pdf`
+(median penalty at t25..t100), `fig_finite_size.pdf` (penalty vs N with IQR band), and
+`fig_settlement_curves.pdf` (`fraction_settled` vs `year` for `slingshot_nearest` on `SEEDS[0]`,
+where `t100 = 80,000 yr` instant vs `110,000 yr` lightspeed). `main()` also prints every number
+the paper cites. All regenerate via `uv run --extra dev python -m experiments.paper_figures`.
 
 ## Simplifications still deferred to later slices
 

@@ -22,15 +22,49 @@ function esc(s) {
 }
 
 /**
- * Convert an author string using "&", ",", or ";" separators into BibTeX's
- * "A and B and C" form. Applied before esc(), so any "&" is already gone.
+ * Convert an author DISPLAY string into BibTeX's "A and B and C" form.
+ *
+ * The display strings in sources.ts intentionally carry affiliations, "(eds.)",
+ * "et al.", and name suffixes ("Jr.", "III"). BibTeX's own name parser mangles
+ * all of these (it reads "Jr." as a surname, splits "(Los Alamos ...)" into fake
+ * initials, etc.). So we do NOT let BibTeX parse names: we strip the parts that
+ * must never enter the author field, then brace-wrap each remaining author token
+ * as a single opaque literal so BibTeX prints it verbatim, in order, with no
+ * initial-abbreviation or surname reordering.
+ *
+ * Applied before esc(), so any "&" here is still a literal separator; after the
+ * split there are no "&" left in the output.
  */
 function authorsToBib(authors) {
-  return String(authors)
-    .replace(/\s*&\s*/g, " and ")
-    .replace(/\s*;\s*/g, " and ")
-    .replace(/\s*,\s*/g, " and ")
+  // 1. Strip parenthetical groups (affiliations, "(eds.)", "(ed.)") and collapse
+  //    the whitespace they leave behind. These must never enter the author field.
+  let s = String(authors)
+    .replace(/\s*\([^)]*\)/g, "")
+    .replace(/\s+/g, " ")
     .trim();
+
+  // 2. Detect a trailing "et al." (now that parentheticals are gone). Remove it
+  //    and remember to append BibTeX's "and others", which IEEEtran renders as
+  //    "et al.".
+  let hasEtAl = false;
+  const etAl = s.replace(/\s*\bet al\.?\s*$/i, "");
+  if (etAl !== s) {
+    hasEtAl = true;
+    s = etAl.trim();
+  }
+
+  // 3. Split on the existing separators into individual author tokens.
+  // 4. Brace-wrap each non-empty token so BibTeX treats it as one literal and
+  //    prints it verbatim. Drop empty tokens (e.g. a trailing separator).
+  const tokens = s
+    .split(/\s*[&;,]\s*/)
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0)
+    .map((t) => `{${t}}`);
+
+  // 5. Join with " and ", appending " and others" when the et al. flag fired.
+  if (hasEtAl) tokens.push("others");
+  return tokens.join(" and ");
 }
 
 /**

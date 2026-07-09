@@ -251,3 +251,41 @@ def test_wasted_arrival_counters_are_consistent() -> None:
     # every settled star except the homeworld required a (winning) arrival
     assert r.total_arrivals - r.wasted_arrivals >= r.final_settled - 1
     assert r.coordination == "lightspeed"
+
+
+# --- coverage fractions, effective speed, hop locality (referee-driven observables) ------
+
+
+def test_coverage_fractions_are_ordered() -> None:
+    # t25 <= t50 <= t75 <= t90 <= t99 <= t100: reporting the penalty at earlier, more
+    # robust coverage fractions than the fragile t100 tail requires them to be monotone.
+    r = simulate_swarm(SwarmParams(n_stars=400, policy="slingshot_nearest"), seed=BASE_SEED)
+    ts = [r.t25_years, r.t50_years, r.t75_years, r.t90_years, r.t99_years, r.t100_years]
+    assert all(t is not None for t in ts)
+    assert all(a <= b for a, b in zip(ts, ts[1:]))
+
+
+def test_effective_launch_speed_matches_the_regime() -> None:
+    # The mean launch speed is the speed probes actually depart at (so Lambda_eff = v/c can
+    # be checked). Powered = the 9 km/s cruise; slingshots accumulate far past it.
+    powered = simulate_swarm(SwarmParams(n_stars=300, policy="powered"), seed=BASE_SEED)
+    sling = simulate_swarm(SwarmParams(n_stars=300, policy="slingshot_nearest"), seed=BASE_SEED)
+    assert powered.mean_launch_speed_km_s == pytest.approx(8.99, abs=0.05)  # = 3e-5 c cruise
+    assert sling.mean_launch_speed_km_s > 100 * powered.mean_launch_speed_km_s
+
+
+def test_maxboost_wasted_hops_are_longer_than_nearest() -> None:
+    # The mechanism behind the tax: max-boost reaches past its neighbours, so BOTH its
+    # winning and its wasted trips are longer than nearest-star's. This is the "hop
+    # non-locality" that the penalty tracks (not raw speed).
+    near = simulate_swarm(SwarmParams(n_stars=300, coordination="lightspeed", policy="slingshot_nearest"), seed=BASE_SEED)
+    maxb = simulate_swarm(SwarmParams(n_stars=300, coordination="lightspeed", policy="slingshot_maxboost"), seed=BASE_SEED)
+    assert maxb.mean_wasted_hop_pc > near.mean_wasted_hop_pc
+    assert maxb.mean_settle_hop_pc > near.mean_settle_hop_pc
+    assert near.mean_wasted_hop_pc > 0.0  # some races are lost under lag
+
+
+def test_new_observables_do_not_perturb_the_pinned_fold() -> None:
+    # The read-only accumulators must not have changed the fold: the pinned baseline holds.
+    r = simulate_swarm(SwarmParams(n_stars=400), seed=BASE_SEED)
+    assert r.final_settled == 400 and r.t100_years == 1_515_000.0  # test_baseline_regression values
