@@ -292,21 +292,23 @@ relative penalty) is unchanged - a pure geometric rescaling of the absolute cloc
 the printed digit across 0.14 → 5 stars/pc³. A *non-uniform* (clumpier) field is a separate,
 unaddressed case expected to lengthen long-range hops - a documented limitation.
 
-**Baseline validation (`experiments/validation.py`, event).** (1) `"instant"` is the c→∞ limit
-of the gate and reproduces the plain perfect-info fold **bit-for-bit** (pinned by
+**Baseline validation (`experiments/measure.py::validation`, event).** (1) `"instant"` is the c→∞
+limit of the gate and reproduces the plain perfect-info fold **bit-for-bit** (pinned by
 `test_instant_mode_is_the_perfect_info_baseline`). (2) We reproduce Nicholson & Forgan
 **quantitatively** at the resolved timestep: slingshots ≫ powered (nearest fills a 400-star field
 ~166× sooner than powered - their ~two orders of magnitude, where the coarse dt=5000 fold gave
 only ~20×), and **nearest beats maxboost on time** while maxboost reaches the higher peak speed.
 
-**Paper figures (`experiments/paper_figures.py`, for `papers/coordination-tax/`).** The figures,
-two results tables, and every reported statistic in the paper restate this deterministic output;
-no new numbers. Four figures regenerate (all event mode): `fig_fuel_tax_vs_lambda.pdf` (the
-headline scaling law: fuel + time tax vs `Λ`), `fig_time_tax_vs_dt.pdf` (the fill-time tax
-collapsing to ~0 as the step resolves - the artifact), `fig_fuel_tax_by_seed.pdf` (per-seed fuel
-tax at `Λ`=0.01/0.1/0.2), and `fig_fuel_tax_vs_n.pdf` (scale-stable fraction). `main()` also
-prints every number the paper cites. Regenerate via
-`uv run --extra dev python -m experiments.paper_figures`.
+**The measurement/figure pipeline (heavy compute stays local; §2, §4).** The full ensemble runs in
+`experiments/measure.py`, which writes deterministic seeded JSON to `experiments/results/*.json`
+(committed). That heavy driver is **kept out of CI** - it is minutes-to-hours of compute. The paper
+figures are then RENDERED from the committed JSON by `experiments/paper_figures.py` (no simulation),
+which CI runs in a few seconds; `tests/test_measure_results.py` re-runs a tiny slice of each
+measurement and asserts it still matches the committed JSON, so the artifacts cannot drift from the
+fold. Eight figures regenerate: `fig_fuel_tax_vs_lambda`, `fig_fuel_tax_by_seed`, `fig_time_tax_vs_dt`,
+`fig_concurrency` (mechanism), `fig_energy_tax`, `fig_branching`, `fig_floor_bracket`, and
+`fig_fuel_tax_vs_n` (scale). Regenerate the numbers via `uv run --extra dev python -m experiments.measure`
+and the figures via `uv run --extra dev python -m experiments.paper_figures`.
 
 ## Simplifications still deferred to later slices
 
