@@ -203,7 +203,8 @@ def test_lightspeed_adds_wasted_trips() -> None:
     # perfect-info racing is the floor, lag only adds.
     inst = simulate_swarm(SwarmParams(n_stars=300, coordination="instant", policy="slingshot_nearest"), seed=BASE_SEED)
     ls = simulate_swarm(SwarmParams(n_stars=300, coordination="lightspeed", policy="slingshot_nearest"), seed=BASE_SEED)
-    assert inst.wasted_arrivals == 1705
+    # Both modes share the symmetric max_retargets cap, so instant is not artificially inflated.
+    assert inst.wasted_arrivals == 1637
     assert ls.wasted_arrivals == 2042
     assert ls.wasted_arrivals > inst.wasted_arrivals
 
@@ -328,3 +329,30 @@ def test_event_mode_penalty_is_far_smaller_than_coarse_dt_penalty() -> None:
     assert coarse > 25.0
     assert abs(resolved) < 10.0
     assert resolved < coarse  # resolving the timestep shrinks the apparent tax
+
+
+def test_fuel_tax_grows_with_speed_at_event_mode() -> None:
+    # The headline finding: at the resolved timestep the coordination cost is redundant TRAVEL
+    # (extra wasted journeys to stars already claimed), and it scales with Lambda = v/c. A fast
+    # (directed-energy, Lambda=0.2) powered swarm pays a larger fuel tax than a slow one
+    # (Lambda=0.01), and pays it in almost every seed. Probes-built is identical, so it is fuel.
+    import statistics
+    seeds = [0x9E3779B9 + 2654435761 * k for k in range(6)]
+
+    def fuel_deltas(v: float) -> list[int]:
+        ds = []
+        for s in seeds:
+            common = dict(n_stars=300, policy="powered", probe_speed_c=v,
+                          speed_cap_c=max(0.05, 2 * v), stepping="event")
+            i = simulate_swarm(SwarmParams(**common, coordination="instant"), seed=s)
+            l = simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=s)
+            # Probes built barely change (both fill the field; only a handful of terminal
+            # launches differ), so the coordination cost is travel, not manufacturing.
+            assert abs(l.total_probes_launched - i.total_probes_launched) <= 0.02 * i.total_probes_launched
+            ds.append(l.wasted_arrivals - i.wasted_arrivals)
+        return ds
+
+    slow, fast = fuel_deltas(0.01), fuel_deltas(0.2)
+    assert statistics.median(fast) > statistics.median(slow)  # fuel tax grows with v/c
+    assert statistics.median(fast) > 0
+    assert sum(1 for d in fast if d > 0) >= 5  # positive in nearly every seed at directed-energy speed

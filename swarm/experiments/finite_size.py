@@ -1,19 +1,18 @@
-"""Experiment: does the coordination tax hold as the star field grows?
+"""Experiment: is the fuel tax a scale-stable fraction of the swarm's effort?
 
-FRONTIER #1, robustness slice. The headline penalties are measured on a 300-star box,
-but the motivation (galactic saturation) is a far larger field, so the first question a
-referee asks is whether 30%/50% is a small-box artifact. This sweeps the system size N
-and reports the median t100 penalty per policy at each N, on paired seeded galaxies.
+The redundant-travel (fuel) tax from light-speed lag is a robust fraction of total journeys
+at directed-energy speed. This sweeps the system size N at Lambda = v/c = 0.2 (powered, event
+mode) and reports the fuel tax both in absolute wasted journeys (which must grow with the
+field) and as a PERCENT of the perfect-information waste (which is the scale-free quantity).
+The percent tax stays near ~18-19% across the range, so the cost is a roughly size-independent
+fraction of effort, not a small-box artifact.
 
-Reach is bounded by cost, not choice: the max-boost policy scans the nearest K unsettled
-stars at every launch, so a run is O(N^2), and N=2400 already costs ~1 min per seed. We
-therefore sweep N in {300, 600, 1200} with 8 seeds by default (a 4x span in system size),
-which is what the paper's figure regenerates; `main()` can be pointed at a larger, slower
-sweep by editing FS_N / FS_SEEDS. The point is the TREND across the reachable range - is
-the penalty roughly flat, growing, or shrinking with N - stated honestly, not a claim
-about N -> infinity.
+Reach is bounded by cost: at high v/c the hops are short, so an event-mode run generates
+~8N arrivals and each event does O(N) bookkeeping, making a run ~O(N^2); N=2400 already costs
+~20 s. We sweep N in {300, 600, 1200} with 16 seeds by default (a 4x span), which is what the
+paper's figure regenerates, plus an N=2400 trend point at fewer seeds.
 
-Run:  uv run python -m experiments.finite_size      (from the swarm/ package root)
+Run:  uv run python -m experiments.finite_size
 """
 
 from __future__ import annotations
@@ -21,71 +20,64 @@ from __future__ import annotations
 import statistics
 from dataclasses import dataclass
 
-from experiments.lightspeed_coordination import POLICIES, SEEDS, run_cell
+from experiments.lightspeed_coordination import run_paired, summary
 
-# Bounded, deterministic sweep. 8 seeds keeps the build-time figure to a few minutes while
-# still giving a median + IQR per point; N spans 4x. See the module docstring on the O(N^2)
-# reach limit (max-boost's K-nearest scan).
+# Bounded, deterministic sweep. Lambda=0.2 (directed-energy), powered, event mode.
+FS_LAMBDA = 0.2
 FS_N = (300, 600, 1200)
-FS_SEEDS = SEEDS[:8]
+FS_SEEDS_MAIN = 16
+FS_TREND = (2400, 4)  # a single higher-N trend point at fewer seeds (O(N^2) cost)
 
 
 @dataclass
 class FSPoint:
     n_stars: int
-    pen_median: float          # median t100 penalty (%)
-    pen_lo: float              # 25th percentile
-    pen_hi: float              # 75th percentile
-    v_eff_km_s: float          # median effective speed (lightspeed)
-    wasted_hop_pc: float       # median wasted-trip hop length (lightspeed)
-    settle_hop_pc: float       # median winning-trip hop length (lightspeed)
+    fuel_pct_median: float
+    fuel_pct_lo: float
+    fuel_pct_hi: float
+    fuel_abs_median: float
+    time_pct_median: float
+    seeds_positive: int
+    seeds: int
 
 
-def _q(xs: list[float]) -> tuple[float, float, float]:
-    xs = sorted(xs)
-    return statistics.median(xs), xs[len(xs) // 4], xs[(3 * len(xs)) // 4]
-
-
-def run_finite_size(
-    n_list: tuple[int, ...] = FS_N, seeds: list[int] | None = None
-) -> dict[str, list[FSPoint]]:
-    """{policy: [FSPoint per N]} - median t100 penalty and mechanism metrics vs N."""
-    seeds = seeds if seeds is not None else FS_SEEDS
-    out: dict[str, list[FSPoint]] = {pol: [] for pol in POLICIES}
+def run_finite_size(n_list: tuple[int, ...] = FS_N, k: int = FS_SEEDS_MAIN) -> list[FSPoint]:
+    from experiments.lightspeed_coordination import SEEDS
+    pts: list[FSPoint] = []
     for n in n_list:
-        for pol in POLICIES:
-            c = run_cell(pol, n_stars=n, seeds=seeds)
-            med, lo, hi = _q(c.pen["t100"])
-            out[pol].append(
-                FSPoint(
-                    n_stars=n,
-                    pen_median=med,
-                    pen_lo=lo,
-                    pen_hi=hi,
-                    v_eff_km_s=statistics.median(c.v_eff_km_s),
-                    wasted_hop_pc=statistics.median(c.wasted_hop_pc),
-                    settle_hop_pc=statistics.median(c.settle_hop_pc),
-                )
+        c = run_paired("powered", n_stars=n, probe_speed_c=FS_LAMBDA, seeds=SEEDS[:k])
+        fmed, flo, fhi, _, _, _ = summary(c.fuel_pct)
+        from experiments.stats_util import sign_test_positive
+        kpos, nn, _ = sign_test_positive(c.fuel_abs)
+        pts.append(
+            FSPoint(
+                n_stars=n,
+                fuel_pct_median=fmed,
+                fuel_pct_lo=flo,
+                fuel_pct_hi=fhi,
+                fuel_abs_median=statistics.median(c.fuel_abs),
+                time_pct_median=statistics.median(c.time_pct) if c.time_pct else float("nan"),
+                seeds_positive=kpos,
+                seeds=nn,
             )
-    return out
+        )
+    return pts
 
 
 def main() -> None:
-    print(f"Finite-size scaling of the fill-100% penalty - {len(FS_SEEDS)} seeds, N in {FS_N}\n")
-    data = run_finite_size()
-    for pol in POLICIES:
-        print(f"{pol}:")
-        print(f"  {'N':>6}{'penalty% (median [IQR])':>28}{'v_eff km/s':>12}{'wasted hop pc':>15}")
-        for p in data[pol]:
-            iqr = f"{p.pen_median:+.1f} [{p.pen_lo:+.1f},{p.pen_hi:+.1f}]"
-            print(f"  {p.n_stars:>6}{iqr:>28}{p.v_eff_km_s:>12.0f}{p.wasted_hop_pc:>15.2f}")
-        print()
+    print(f"Fuel tax vs system size - powered, Lambda={FS_LAMBDA}, event mode\n")
+    print(f"  {'N':>6}{'fuel % (med [IQR])':>24}{'fuel abs (med)':>16}{'time % (med)':>14}{'seeds +':>10}")
+    pts = list(run_finite_size())
+    tn, tk = FS_TREND
+    pts += run_finite_size((tn,), tk)
+    for p in pts:
+        iqr = f"{p.fuel_pct_median:+.1f} [{p.fuel_pct_lo:+.1f},{p.fuel_pct_hi:+.1f}]"
+        print(f"  {p.n_stars:>6}{iqr:>24}{p.fuel_abs_median:>+16.0f}{p.time_pct_median:>+14.1f}"
+              f"{f'{p.seeds_positive}/{p.seeds}':>10}")
     print(
-        "Reading: across a 4x span in system size the penalty stays in the same band for\n"
-        "each policy (powered ~0, nearest ~a third, max-boost ~a half) rather than washing\n"
-        "out - if anything it firms up as the field grows and hops lengthen. The O(N^2)\n"
-        "max-boost cost bounds the reachable N; this is the trend over that range, not a\n"
-        "limit claim."
+        "\nReading: the absolute wasted journeys grow with the field (more stars, more traffic),\n"
+        "but as a PERCENT of the perfect-information waste the fuel tax is roughly flat near\n"
+        "~18-19% - a size-independent fraction of effort, not a finite-box artifact."
     )
 
 

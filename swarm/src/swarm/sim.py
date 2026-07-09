@@ -245,10 +245,13 @@ def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Pro
             state.wasted_arrivals += 1
             state.wasted_hop_sum_pc += p.hop_len_pc  # wasted-trip hop length (read-only)
             state.wasted_hop_count += 1
-            # The retarget cap only bites under lightspeed, where stale views cause bounce
-            # chains; instant races resolve to a truly-unsettled star, so re-targeting is
-            # unbounded there - keeping the perfect-info baseline bit-identical.
-            if params.coordination == "lightspeed" and p.retargets >= params.max_retargets:
+            # Retire a probe after too many lost races (a bounce-chain bound). Applied to BOTH
+            # coordination modes: instant also loses in-transit races and re-targets (a probe
+            # aims at a truly-unsettled star but another can settle it before it arrives), so it
+            # is NOT bounce-free. Capping only lightspeed would inflate instant's wasted-trip
+            # count and bias the paired fuel comparison. Bookkeeping, not physics; the results
+            # are shown insensitive to the threshold.
+            if p.retargets >= params.max_retargets:
                 continue  # bounce chain exhausted → retire the probe as wasted
             target = _select_target(state, p.target, set(), params)
             if target is not None:

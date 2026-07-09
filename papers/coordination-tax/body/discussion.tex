@@ -1,64 +1,68 @@
 \section{Discussion}
 
-The result refines rather than overturns the slingshot picture. Nicholson and Forgan's
-speed-up is real and large \cite{nicholson-forgan-2013}, but it was computed under perfect
-coordination, and coordination is not free. Under finite light-speed a meaningful fraction
-of the advantage, roughly a third for nearest-star slingshots and half for maximum-boost,
-is spent on trips to stars that turn out to be already taken. The more aggressively a
-policy reaches for distant, high-boost targets, the more of its speed it loses to
-uncoordinated collisions.
+The result refines rather than overturns the slingshot picture, and it does so twice over.
+Nicholson and Forgan's speed-up is real, large, and here reproduced quantitatively
+\cite{nicholson-forgan-2013}; finite light-speed does not erode it, and does not measurably
+delay the fill of the field. What a perfect-information model hides is not lost time but lost
+motion: probes flying to stars that others have already claimed. That redundant travel is the
+coordination tax, it is governed by the probe's speed in units of $c$, and it matters only once
+a swarm flies fast enough for a decision to outrun its own news.
+
+\subsection{Why the cost is fuel, and larger than it looks}
+Because the field always fills and each settlement launches a fixed number of offspring, the two
+coordination regimes build essentially the same number of probes, differing by well under a
+percent; the delay changes almost nothing about how much is manufactured, only how far it is
+flown. The tax is therefore a travel cost, and we have measured
+it as a count of wasted journeys. In energy terms it is larger than that count suggests, and
+increasingly so with speed: the kinetic cost of a hop scales with $v^2$, so a wasted journey at
+$0.2\,c$ squanders far more than one at slingshot speed, on top of there being proportionally
+more of them. A coordination tax that is a fifth of journeys at directed-energy speed is a
+heavier fraction of the energy budget still. This is the sense in which the tax ``scales with how
+fast the swarm flies'': both the rate of wasted trips and the cost of each rise with $v$.
 
 \subsection{Limitations}
 \label{sec:limitations}
 The measurement is a conservative upper bound in two senses, and both point to future work.
-Probes here learn only at their decision stars, ignoring news their paths cross in flight,
-so a two-endpoint knowledge model would recover some of the wasted trips; and probes here
-share nothing directly, so adding probe-to-probe relay of the settled map would let a swarm
-partially coordinate rather than merely collide. Both would lower the tax without erasing
-it, since the fundamental limit, that no probe can know a distant star is taken until its
-light arrives, is set by physics, not by protocol. Three further simplifications bound the
-scope. First, the field is uniform. Changing the uniform density only rescales the absolute
-clock, leaving the relative penalty nearly unchanged (Section~\ref{sec:model}); but a
-non-uniform, clumpier distribution is a genuine unknown, and because it would lengthen the
-long-range hops that carry the penalty we expect it to move the relative penalties upward,
-making the uniform-field figures conservative for the maximum-boost policy in particular.
-Second, the maximum-boost scan is $O(N^2)$, which bounded the finite-size sweep at a few
-thousand stars; the penalties are stable and slightly rising across that range, but the
-extrapolation to a full galaxy is a trend, not a measurement. Third, the dynamics have no
-loss term: settled sites never fail, so the field always closes. A settlement-death term of
-the kind that produces the ``Aurora'' steady state, in which the settled fraction equilibrates
-below one \cite{carroll-nellenback-2019}, is exactly what would be needed to turn lag into a
+Probes here learn only at their decision stars, ignoring news their paths cross in flight, so a
+two-endpoint knowledge model would recover some wasted trips; and probes share nothing directly,
+so probe-to-probe relay of the settled map would let a swarm partially coordinate rather than
+merely collide. Both would lower the tax without erasing it, since the floor -- that no probe can
+know a distant star is taken until its light arrives -- is set by physics, not protocol. Three
+further bounds on scope. First, the field is uniform; changing its density only rescales the
+clock (confirmed), but a clumpier distribution would lengthen the long-range hops and is a
+genuine unknown we do not probe. Second, at high $v/c$ the hops are short, so an event-driven run
+generates of order one arrival per star settled many times over and costs roughly $O(N^2)$; this
+bounded the size sweep at a few thousand stars, over which the fuel tax is a stable fraction, so
+the extrapolation to a full galaxy is a supported trend rather than a measurement. Third, the
+dynamics have no loss term: settled sites never fail, so the field always closes. A
+settlement-death term of the kind that produces the ``Aurora'' steady state
+\cite{carroll-nellenback-2019} is what would be needed to turn coordination failure into a
 permanent unsettled remainder; delay alone does not.
 
 \subsection{The signature of delayed agreement}
-The behaviour is, by analogy rather than by derivation, the expected signature of delayed
-multi-agent agreement. Formal consensus degrades as the ratio of communication delay to
-decision cadence grows: the standard protocol is stable only while the one-hop delay stays
-below a bound set by the coupling \cite{olfati-saber-murray-2004}, a result later generalized
-to switching topologies and link failures \cite{olfati-saber-fax-murray-2007}. We do not
-apply that bound quantitatively, because it needs a probe decision cadence the literature
-does not fix; but the regime is unambiguous. Our probes never reach agreement about the
-settled map at all: at a mean inter-star spacing of about a parsec the round-trip light-time
-is several years, far longer than any plausible decision cadence, so they sit deep in the
-regime where guaranteed agreement is not merely slow but impossible \cite{flp-1985}, and a
-system that must nonetheless keep acting is forced to trade a single consistent map for
-availability \cite{gilbert-lynch-2002}, which is precisely the choice (\ref{eq:gate}) encodes.
-
-The same progression drove the space teleoperation and networking communities away from
-real-time control, and it is worth tracing because it fixes where interstellar hops sit. Past
-about a second of round-trip delay a human operator abandons closed-loop control for
-move-and-wait \cite{ferrell-1965}, and as delay grows the handoff continues through
-supervisory control to full remote autonomy \cite{sheridan-1993}. Past minutes to hours no
-continuous end-to-end path exists at all, and communication becomes hop-by-hop
-store-and-forward, the delay-tolerant regime motivated by the interplanetary case
-\cite{burleigh-2003} and standardized first as an architecture \cite{rfc-4838} and now as a
-deployed protocol \cite{rfc-9171}. At interstellar hop lengths every one of those faster
-regimes is left far behind; each probe is effectively an independent colony acting on priors,
-and the coordination tax is what that independence costs when probes want the same stars.
+The behaviour is, by analogy rather than derivation, the expected signature of delayed
+multi-agent agreement. Formal consensus degrades as the ratio of communication delay to decision
+cadence grows: the standard protocol is stable only while the one-hop delay stays below a bound
+set by the coupling \cite{olfati-saber-murray-2004}, generalized later to switching topologies and
+link failures \cite{olfati-saber-fax-murray-2007}. We do not apply that bound quantitatively --
+it needs a probe decision cadence the literature does not fix -- but the regime is unambiguous:
+at a parsec spacing the round-trip light-time is years, far longer than any plausible cadence, so
+the probes sit deep in the region where guaranteed agreement is not merely slow but impossible
+\cite{flp-1985}, and a system that must keep acting trades a single consistent map for
+availability \cite{gilbert-lynch-2002}, which is exactly what (\ref{eq:gate}) encodes. The same
+progression drove the space teleoperation and networking communities from closed-loop control
+through move-and-wait and supervisory control \cite{ferrell-1965,sheridan-1993} to hop-by-hop
+delay-tolerant store-and-forward once no continuous path survives
+\cite{burleigh-2003,rfc-4838,rfc-9171}. At interstellar hops every faster regime is left behind;
+each probe is an independent
+colony acting on priors, and the coordination tax is what that independence costs in fuel when
+probes want the same stars.
 
 \subsection{A design lesson}
-There is a practical corollary. For a real swarm on stale maps, a locally greedy policy is
-not merely simpler than a boost-maximising one; it is more robust to the delay it cannot
-avoid, because a lost race costs only the star next door. A designer who cannot buy
-coordination should prefer locality, spending the slingshot advantage on speed rather than
-on reach.
+The corollary is a threshold, not a preference. At slingshot speeds the tax is about a percent of
+journeys: coordination machinery -- relay, gossip, a shared map -- is not worth its mass, and a
+designer should spend everything on speed. At the directed-energy speeds that make a probe fast
+enough to matter, the same physics that buys the speed also makes stale views expensive, and a
+fifth of journeys wasted is worth engineering against. The faster the swarm you can build, the
+more a little coordination is worth buying -- and the finite speed of light sets how much you can
+ever buy back.

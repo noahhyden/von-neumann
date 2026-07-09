@@ -1,22 +1,19 @@
 """Generate the publication figures and headline statistics for papers/coordination-tax/.
 
-Every number plotted or printed here is produced by the validated swarm fold (CLAUDE.md
-1): we import the real experiments (`lightspeed_coordination`, `finite_size`) and the real
-`simulate_swarm` fold - nothing is hardcoded or invented. The fold is a pure, seeded,
-deterministic function of (params, seed), and the seed ensemble and star counts are fixed,
-so every PDF and every printed statistic is bit-reproducible run to run.
+Every number plotted or printed here is produced by the validated swarm fold (CLAUDE.md 1):
+we import the real experiments and the real `simulate_swarm` fold - all at the resolved
+`stepping="event"` timestep - and nothing is hardcoded. The fold is a pure, seeded,
+deterministic function of (params, seed), and the seed ensemble and star counts are fixed, so
+every PDF and every printed statistic is bit-reproducible run to run.
 
 Figures (vector PDF, IEEE single-column geometry, serif fonts):
-  (a) fig_slowdown_by_policy.pdf  - box + strip of the 32 per-seed fill-100% penalties, per policy.
-  (b) fig_settlement_curves.pdf   - fraction settled vs year, one seed, slingshot_nearest,
-                                    perfect-info vs light-speed-limited.
-  (c) fig_penalty_by_coverage.pdf - median penalty at t25..t100, per policy (the shift is
-                                    present across the whole fill, not just the fragile tail).
-  (d) fig_finite_size.pdf         - median fill-100% penalty vs system size N, per policy.
-
-Printed to stdout: the medians, IQRs, bootstrap 95% CIs and sign-test p-values, the
-per-coverage-fraction penalties, the effective speeds / Lambda / hop lengths, and the
-finite-size table - i.e. every quantity the paper restates.
+  (a) fig_fuel_tax_vs_lambda.pdf - the headline scaling law: redundant-travel (fuel) tax and
+      fill-time tax vs Lambda = v/c, powered flight, event mode.
+  (b) fig_time_tax_vs_dt.pdf     - the fill-time tax collapsing to ~0 as the timestep resolves
+      (the coarse-dt "coordination tax" is a discretization artifact).
+  (c) fig_fuel_tax_by_seed.pdf   - per-seed fuel tax at slingshot vs directed-energy speed
+      (box + strip): robust and positive in every seed at high v/c.
+  (d) fig_fuel_tax_vs_n.pdf      - the fuel tax is a scale-stable fraction (~18-19%) of effort.
 
 Run (from the swarm/ package root):
     uv run --extra dev python -m experiments.paper_figures
@@ -29,225 +26,162 @@ from pathlib import Path
 
 import matplotlib as mpl
 
-mpl.use("Agg")  # deterministic, headless, file-only backend
+mpl.use("Agg")
 import matplotlib.pyplot as plt
 
-from swarm import SwarmParams, simulate_swarm
 from swarm.models import C_PC_PER_YEAR, KM_S_TO_PC_YR
 
-from experiments.finite_size import FS_N, FS_SEEDS, run_finite_size
-from experiments.lightspeed_coordination import COVERAGE, N_STARS, SEEDS, Cell, run_cell
-from experiments.stats_util import bootstrap_median_ci, sign_test_positive
+from experiments.dt_artifact import DTS, _median_time_penalty
+from experiments.finite_size import run_finite_size
+from experiments.lightspeed_coordination import LAMBDAS, SEEDS, run_paired, summary
 
-# --- IEEE single-column geometry + serif fonts (drops into a two-column IEEEtran paper) ---
 COLW = 3.5
 GOLDEN = (5**0.5 - 1) / 2
-mpl.rcParams.update(
-    {
-        "font.family": "serif",
-        "mathtext.fontset": "cm",
-        "axes.labelsize": 9,
-        "font.size": 9,
-        "legend.fontsize": 8,
-        "xtick.labelsize": 8,
-        "ytick.labelsize": 8,
-        "axes.titlesize": 9,
-        "lines.linewidth": 1.0,
-        "axes.linewidth": 0.6,
-        "figure.dpi": 150,
-    }
-)
+mpl.rcParams.update({
+    "font.family": "serif", "mathtext.fontset": "cm",
+    "axes.labelsize": 9, "font.size": 9, "legend.fontsize": 8,
+    "xtick.labelsize": 8, "ytick.labelsize": 8, "axes.titlesize": 9,
+    "lines.linewidth": 1.0, "axes.linewidth": 0.6, "figure.dpi": 150,
+})
 
-# papers/coordination-tax/ resolved from this file: .../swarm/experiments/paper_figures.py
-#   parents[0] = experiments, parents[1] = swarm, parents[2] = repo root.
 OUT_DIR = Path(__file__).resolve().parents[2] / "papers" / "coordination-tax"
 
-# The three policies, in the paper's order, with readable labels and print-safe styling
-# (grayscale + linestyle + marker, so the multi-line figures survive a monochrome print).
-POLICIES = [
-    ("powered", "powered", {"color": "0.6", "linestyle": ":", "marker": "o"}),
-    ("slingshot_nearest", "slingshot\nnearest", {"color": "0.4", "linestyle": "--", "marker": "s"}),
-    ("slingshot_maxboost", "slingshot\nmax-boost", {"color": "0.0", "linestyle": "-", "marker": "^"}),
-]
-# Nice single-line labels for the legend of the line figures.
-LEGEND = {"powered": "powered", "slingshot_nearest": "slingshot nearest", "slingshot_maxboost": "slingshot max-boost"}
 
+def fig_fuel_tax_vs_lambda(sweep: dict) -> tuple[Path, dict]:
+    """(a) Fuel tax and time tax (median + 95% CI) vs Lambda = v/c."""
+    lam = list(LAMBDAS)
+    fuel = [summary(sweep[l].fuel_pct) for l in lam]
+    time = [summary(sweep[l].time_pct) for l in lam]
+    fmed = [s[0] for s in fuel]; ferr = [[s[0] - s[3] for s in fuel], [s[4] - s[0] for s in fuel]]
+    tmed = [s[0] for s in time]; terr = [[s[0] - s[3] for s in time], [s[4] - s[0] for s in time]]
 
-def _iqr(xs: list[float]) -> tuple[float, float, float]:
-    """Median and quartiles matching lightspeed_coordination._iqr (32 seeds)."""
-    xs = sorted(xs)
-    med = statistics.median(xs)
-    lo = xs[len(xs) // 4]
-    hi = xs[(3 * len(xs)) // 4]
-    return med, lo, hi
-
-
-def fig_slowdown_by_policy(cells: dict[str, Cell]) -> Path:
-    """(a) Distribution of per-seed % fill-100% penalty from light-speed lag, per policy."""
-    data = [cells[pol].pen["t100"] for pol, _, _ in POLICIES]
-    labels = [lab for _, lab, _ in POLICIES]
-
-    fig, ax = plt.subplots(figsize=(COLW, COLW * 0.85))  # a touch taller than golden
-    positions = list(range(1, len(data) + 1))
-    ax.boxplot(
-        data,
-        positions=positions,
-        widths=0.55,
-        showfliers=False,
-        medianprops={"color": "black", "linewidth": 1.2},
-        boxprops={"linewidth": 0.8},
-        whiskerprops={"linewidth": 0.8},
-        capprops={"linewidth": 0.8},
-    )
-    # Overlay the 32 raw per-seed points (deterministic horizontal spread, no RNG).
-    for pos, ys in zip(positions, data):
-        n = len(ys)
-        offs = [(-0.18 + 0.36 * i / (n - 1)) if n > 1 else 0.0 for i in range(n)]
-        xs = [pos + o for o in offs]
-        ax.plot(xs, ys, linestyle="none", marker="o", markersize=2.0,
-                markerfacecolor="0.35", markeredgecolor="none", alpha=0.55)
-
-    ax.set_xticks(positions)
-    ax.set_xticklabels(labels)
-    ax.set_ylabel("fill-time penalty from light-speed lag (%)")
-    ax.axhline(0.0, color="0.6", linewidth=0.6, linestyle="--", zorder=0)
-    ax.margins(x=0.08)
-    fig.tight_layout()
-
-    out = OUT_DIR / "fig_slowdown_by_policy.pdf"
-    fig.savefig(out, format="pdf", bbox_inches="tight", pad_inches=0.01)
-    plt.close(fig)
-    return out
-
-
-def fig_penalty_by_coverage(cells: dict[str, Cell]) -> Path:
-    """(c) Median penalty at each coverage fraction, per policy (not just the t100 tail)."""
-    xfrac = [int(k[1:]) for k in COVERAGE]  # 25, 50, 75, 90, 99, 100
-
-    fig, ax = plt.subplots(figsize=(COLW, COLW * GOLDEN))
-    for pol, _, style in POLICIES:
-        ys = [statistics.median(cells[pol].pen[k]) for k in COVERAGE]
-        ax.plot(xfrac, ys, label=LEGEND[pol], markersize=3.5, **style)
-    ax.set_xlabel("coverage fraction settled (%)")
-    ax.set_ylabel("median fill-time penalty (%)")
-    ax.axhline(0.0, color="0.6", linewidth=0.6, linestyle="--", zorder=0)
-    ax.set_ylim(bottom=-5)
+    fig, ax = plt.subplots(figsize=(COLW, COLW * 0.8))
+    ax.errorbar(lam, fmed, yerr=ferr, marker="o", markersize=3.5, color="0.0",
+                capsize=2, linewidth=1.0, label="fuel (wasted journeys)")
+    ax.errorbar(lam, tmed, yerr=terr, marker="s", markersize=3.5, color="0.55",
+                linestyle="--", capsize=2, linewidth=1.0, label="fill time")
+    ax.set_xscale("log")
+    ax.set_xlabel(r"probe speed $\Lambda = v/c$")
+    ax.set_ylabel("coordination tax (% over perfect info)")
+    ax.axhline(0.0, color="0.6", linewidth=0.6, linestyle=":", zorder=0)
     ax.legend(loc="upper left", frameon=False)
     fig.tight_layout()
-
-    out = OUT_DIR / "fig_penalty_by_coverage.pdf"
+    out = OUT_DIR / "fig_fuel_tax_vs_lambda.pdf"
     fig.savefig(out, format="pdf", bbox_inches="tight", pad_inches=0.01)
     plt.close(fig)
-    return out
+    return out, {l: (summary(sweep[l].fuel_pct), summary(sweep[l].time_pct)) for l in lam}
 
 
-def fig_settlement_curves() -> tuple[Path, tuple[float, float]]:
-    """(b) Fraction settled vs year, one seed, slingshot_nearest: instant vs lightspeed."""
-    seed = SEEDS[0]
-    inst = simulate_swarm(SwarmParams(n_stars=N_STARS, policy="slingshot_nearest", coordination="instant"), seed=seed)
-    ls = simulate_swarm(SwarmParams(n_stars=N_STARS, policy="slingshot_nearest", coordination="lightspeed"), seed=seed)
+def fig_time_tax_vs_dt() -> tuple[Path, list]:
+    """(b) Fill-time tax vs timestep, collapsing to ~0 at the resolved limit."""
+    rows = [(dt, _median_time_penalty(dt)) for dt in DTS]
+    ev = _median_time_penalty(None)
+    xs = [dt for dt, _ in rows]
+    ys = [r[0] for _, r in rows]
 
     fig, ax = plt.subplots(figsize=(COLW, COLW * GOLDEN))
-    for res, label, style in (
-        (inst, "perfect information", {"color": "0.15", "linestyle": "-"}),
-        (ls, "light-speed limited", {"color": "0.15", "linestyle": "--"}),
-    ):
-        years = [s.year for s in res.steps]
-        frac = [s.fraction_settled * 100.0 for s in res.steps]
-        ax.plot(years, frac, label=label, **style)
-
-    ax.set_xlabel("year")
-    ax.set_ylabel("fraction of field settled (%)")
-    ax.set_ylim(0, 100)
-    ax.set_xlim(left=0)
-    ax.legend(loc="lower right", frameon=False)
+    ax.plot(xs, ys, marker="o", markersize=3.5, color="0.0")
+    ax.axhline(ev[0], color="0.5", linewidth=0.8, linestyle="--",
+               label=f"event (dt$\\to$0): {ev[0]:+.1f}%")
+    ax.set_xscale("log")
+    ax.set_xlabel("fixed timestep dt (years)")
+    ax.set_ylabel("fill-100% time tax (%)")
+    ax.axhline(0.0, color="0.7", linewidth=0.6, linestyle=":", zorder=0)
+    ax.legend(loc="upper left", frameon=False)
     fig.tight_layout()
-
-    out = OUT_DIR / "fig_settlement_curves.pdf"
+    out = OUT_DIR / "fig_time_tax_vs_dt.pdf"
     fig.savefig(out, format="pdf", bbox_inches="tight", pad_inches=0.01)
     plt.close(fig)
-    return out, (inst.t100_years, ls.t100_years)
+    return out, rows + [("event", ev)]
 
 
-def fig_finite_size(fs_data: dict) -> Path:
-    """(d) Median fill-100% penalty vs system size N, per policy (with IQR band)."""
-    fig, ax = plt.subplots(figsize=(COLW, COLW * GOLDEN))
-    for pol, _, style in POLICIES:
-        pts = fs_data[pol]
-        ns = [p.n_stars for p in pts]
-        med = [p.pen_median for p in pts]
-        lo = [p.pen_lo for p in pts]
-        hi = [p.pen_hi for p in pts]
-        ax.fill_between(ns, lo, hi, color=style["color"], alpha=0.12, linewidth=0)
-        ax.plot(ns, med, label=LEGEND[pol], markersize=3.5, **style)
-    ax.set_xlabel("system size (number of stars)")
-    ax.set_ylabel("median fill-100% penalty (%)")
+def fig_fuel_tax_by_seed(sweep: dict) -> Path:
+    """(c) Per-seed fuel tax at slingshot (Lambda~0.01) vs directed-energy (Lambda=0.2)."""
+    data = [sweep[0.01].fuel_pct, sweep[0.1].fuel_pct, sweep[0.2].fuel_pct]
+    labels = [r"$\Lambda$=0.01" + "\n(slingshot)", r"$\Lambda$=0.1", r"$\Lambda$=0.2" + "\n(dir.-energy)"]
+    fig, ax = plt.subplots(figsize=(COLW, COLW * 0.8))
+    pos = list(range(1, len(data) + 1))
+    ax.boxplot(data, positions=pos, widths=0.55, showfliers=False,
+               medianprops={"color": "black", "linewidth": 1.2},
+               boxprops={"linewidth": 0.8}, whiskerprops={"linewidth": 0.8},
+               capprops={"linewidth": 0.8})
+    for p, ys in zip(pos, data):
+        n = len(ys)
+        offs = [(-0.18 + 0.36 * i / (n - 1)) if n > 1 else 0.0 for i in range(n)]
+        ax.plot([p + o for o in offs], ys, linestyle="none", marker="o", markersize=2.0,
+                markerfacecolor="0.35", markeredgecolor="none", alpha=0.55)
+    ax.set_xticks(pos); ax.set_xticklabels(labels)
+    ax.set_ylabel("fuel tax: extra wasted journeys (%)")
     ax.axhline(0.0, color="0.6", linewidth=0.6, linestyle="--", zorder=0)
-    ax.set_ylim(bottom=-5)
-    ax.legend(loc="center left", frameon=False)
     fig.tight_layout()
-
-    out = OUT_DIR / "fig_finite_size.pdf"
+    out = OUT_DIR / "fig_fuel_tax_by_seed.pdf"
     fig.savefig(out, format="pdf", bbox_inches="tight", pad_inches=0.01)
     plt.close(fig)
     return out
+
+
+def fig_fuel_tax_vs_n() -> tuple[Path, list]:
+    """(d) Fuel tax (% of waste) vs system size at Lambda=0.2 - a scale-stable fraction."""
+    pts = list(run_finite_size())
+    ns = [p.n_stars for p in pts]
+    med = [p.fuel_pct_median for p in pts]
+    lo = [p.fuel_pct_lo for p in pts]
+    hi = [p.fuel_pct_hi for p in pts]
+    fig, ax = plt.subplots(figsize=(COLW, COLW * GOLDEN))
+    ax.fill_between(ns, lo, hi, color="0.0", alpha=0.12, linewidth=0)
+    ax.plot(ns, med, marker="o", markersize=3.5, color="0.0")
+    ax.set_xlabel("system size (number of stars)")
+    ax.set_ylabel("fuel tax (% of perfect-info waste)")
+    ax.set_ylim(0, max(hi) * 1.3)
+    fig.tight_layout()
+    out = OUT_DIR / "fig_fuel_tax_vs_n.pdf"
+    fig.savefig(out, format="pdf", bbox_inches="tight", pad_inches=0.01)
+    plt.close(fig)
+    return out, pts
 
 
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    print(f"Writing figures to {OUT_DIR}  (N={N_STARS} stars, {len(SEEDS)} seeds)\n")
+    print(f"Writing figures to {OUT_DIR}  ({len(SEEDS)} seeds, event timestep)\n")
 
-    # One 32-seed paired ensemble, reused by figures (a) and (c) and every printed statistic.
-    cells = {pol: run_cell(pol) for pol, _, _ in POLICIES}
+    sweep = {l: run_paired("powered", probe_speed_c=l) for l in LAMBDAS}  # reused by (a) and (c)
+    print("  [sweep done]", flush=True)
 
-    out_a = fig_slowdown_by_policy(cells)
-    out_c = fig_penalty_by_coverage(cells)
-    out_b, (t100_inst, t100_ls) = fig_settlement_curves()
-
-    # (d) finite-size sweep (its own, smaller seed set / larger N).
-    fs_data = run_finite_size()
-    out_d = fig_finite_size(fs_data)
+    out_a, stats_a = fig_fuel_tax_vs_lambda(sweep)
+    out_c = fig_fuel_tax_by_seed(sweep)
+    print("  [figs a, c done]", flush=True)
+    out_b, rows_b = fig_time_tax_vs_dt()
+    print("  [fig b done]", flush=True)
+    out_d, pts_d = fig_fuel_tax_vs_n()
+    print("  [fig d done]", flush=True)
 
     print(f"[a] {out_a.name}   [b] {out_b.name}   [c] {out_c.name}   [d] {out_d.name}\n")
 
-    # ---- Headline: fill-100% penalty with spread, bootstrap CI, sign test ----
-    print("Fill-100% penalty  (median, IQR, bootstrap 95% CI, seeds-positive/nonzero, sign-test p):")
-    for pol, _, _ in POLICIES:
-        xs = cells[pol].pen["t100"]
-        med, lo, hi = _iqr(xs)
-        _, blo, bhi = bootstrap_median_ci(xs)
-        k, n, p = sign_test_positive(xs)
-        print(f"  {pol:<20} {med:+5.1f}%  IQR [{lo:+.1f},{hi:+.1f}]  CI [{blo:+.1f},{bhi:+.1f}]  "
-              f"{k}/{n} pos  p={p:.2e}")
+    print("Fuel + time tax vs Lambda (median, 95% CI, sign-test p):")
+    for l in LAMBDAS:
+        (fm, _, _, flo, fhi, fp), (tm, _, _, tlo, thi, tp) = stats_a[l]
+        print(f"  Lambda={l:<5} fuel {fm:+5.1f}% CI[{flo:+.1f},{fhi:+.1f}] p={fp:.1e}   "
+              f"time {tm:+5.1f}% CI[{tlo:+.1f},{thi:+.1f}] p={tp:.1e}")
 
-    # ---- Penalty across coverage fractions ----
-    print("\nMedian penalty by coverage fraction (%):")
-    print(f"  {'policy':<20}" + "".join(f"{k:>8}" for k in COVERAGE))
-    for pol, _, _ in POLICIES:
-        row = "".join(f"{statistics.median(cells[pol].pen[k]):>+8.1f}" for k in COVERAGE)
-        print(f"  {pol:<20}{row}")
+    print("\nFill-time tax vs timestep (median %):")
+    for tag, r in rows_b:
+        label = f"dt={tag:.0f}" if isinstance(tag, float) else tag
+        print(f"  {label:<12} {r[0]:+.1f}%  seeds+ {r[3]}/{r[4]}")
 
-    # ---- Mechanism: effective speed (Lambda) vs wasted-hop length (locality) ----
-    print("\nMechanism (lightspeed, median over seeds):")
-    print(f"  {'policy':<20}{'v_eff km/s':>12}{'Lambda_eff':>12}{'wasted hop pc':>15}{'settle hop pc':>15}")
-    for pol, _, _ in POLICIES:
-        c = cells[pol]
+    print("\nFuel tax vs N at Lambda=0.2 (% of waste, and absolute):")
+    for p in pts_d:
+        print(f"  N={p.n_stars:<5} {p.fuel_pct_median:+.1f}% [{p.fuel_pct_lo:+.1f},{p.fuel_pct_hi:+.1f}]  "
+              f"abs {p.fuel_abs_median:+.0f}  time {p.time_pct_median:+.1f}%  seeds+ {p.seeds_positive}/{p.seeds}")
+
+    # Where the natural policies sit on the Lambda axis (connective text only; cheap subset -
+    # maxboost is O(N^2) per run in event mode, so use a small field and few seeds here).
+    print("\nNatural-policy anchors (event, N=200, 8 seeds):")
+    for pol in ("powered", "slingshot_nearest", "slingshot_maxboost"):
+        c = run_paired(pol, n_stars=200, seeds=SEEDS[:8])
         v = statistics.median(c.v_eff_km_s)
         lam = v * KM_S_TO_PC_YR / C_PC_PER_YEAR
-        print(f"  {pol:<20}{v:>12.0f}{lam:>12.2e}{statistics.median(c.wasted_hop_pc):>15.2f}"
-              f"{statistics.median(c.settle_hop_pc):>15.2f}")
-
-    # ---- Finite-size table ----
-    print(f"\nFinite-size scaling (fill-100% penalty %, {len(FS_SEEDS)} seeds, N in {FS_N}):")
-    print(f"  {'policy':<20}" + "".join(f"{f'N={n}':>18}" for n in FS_N))
-    for pol, _, _ in POLICIES:
-        row = "".join(f"{p.pen_median:+.1f} [{p.pen_lo:+.0f},{p.pen_hi:+.0f}]".rjust(18) for p in fs_data[pol])
-        print(f"  {pol:<20}{row}")
-
-    # ---- Settlement-curve figure anchor ----
-    print(f"\nSettlement curve (slingshot_nearest, seed=SEEDS[0]={SEEDS[0]}):")
-    print(f"  t100 instant   = {t100_inst:,.0f} yr")
-    print(f"  t100 lightspeed = {t100_ls:,.0f} yr   shift = {(t100_ls - t100_inst) / t100_inst * 100:+.1f}%")
+        fm, _, _, _, _, fp = summary(c.fuel_pct)
+        print(f"  {pol:<20} v_eff={v:>8.0f} km/s  Lambda={lam:.2e}  fuel {fm:+.1f}% p={fp:.1e}")
 
 
 if __name__ == "__main__":

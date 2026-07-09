@@ -65,12 +65,15 @@ Knobs (`SwarmParams`): `n_stars`, `density_stars_per_pc3`, `probe_speed_c`,
   source paper grants every probe perfect instantaneous global knowledge; we add the
   finite-c gate (`coordination="lightspeed"`): a probe treats a distant star as settled only
   once the news-light has arrived (`settled_year[i] + dist/c ≤ year`), so probes race from
-  stale views and waste trips. This is the basis of the coordination-tax paper. The
-  experiments live in `experiments/`:
-  - `lightspeed_coordination.py` - the 32-seed paired A/B: per-coverage-fraction penalty,
-    bootstrap CI + sign test, effective speeds, and the wasted-hop mechanism.
-  - `finite_size.py` - the penalty is stable across a 4× span in system size.
-  - `validation.py` - the perfect-info baseline reproduces Nicholson & Forgan qualitatively.
+  stale views and waste trips. The finding, at the resolved event timestep: light-speed lag
+  does **not** slow the fill (the coarse-dt penalty is a discretization artifact), but it costs
+  redundant TRAVEL - wasted journeys - a fuel tax that scales with `Λ = v/c` (~1% at slingshot
+  speeds, ~18% at directed-energy speeds). This is the basis of the coordination-tax paper.
+  Experiments in `experiments/` (all event mode):
+  - `lightspeed_coordination.py` - the 32-seed paired A/B: the fuel + time tax vs `Λ = v/c`.
+  - `dt_artifact.py` - the fill-time tax collapsing to ~0 as the fixed timestep resolves.
+  - `finite_size.py` - the fuel tax is a scale-stable fraction (~18-19%) of effort.
+  - `validation.py` - the perfect-info baseline reproduces Nicholson & Forgan quantitatively (~166x).
   - `stats_util.py` - seeded, dependency-free bootstrap CI + sign test.
   - `paper_figures.py` - regenerates the four paper figures and prints every cited number.
 
