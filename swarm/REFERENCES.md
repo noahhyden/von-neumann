@@ -200,10 +200,15 @@ distant star `i` as settled only once the news has arrived -
   timescale - at the local circular speed (~220 km/s, [kerr-lynden-bell-1986]) a star sweeps
   ~225 pc/Myr (220 × 1.0227 pc·Myr⁻¹·(km/s)⁻¹), and even the peculiar component alone (~30-40 km/s
   thin-disc dispersion, [nordstrom-2004-gcs]) carries it ~31-41 pc/Myr, far past the ~1 pc mean
-  hop - so proper motion would reshuffle the beacon geometry the gate reads. It is **bounded for
-  our relative result**: both coordination modes run on the *identical* frozen field, so the paired
-  difference still isolates the light-lag effect; it remains a genuine limitation on *absolute*
-  fill times. (Displacements derived from the two `[ESTIMATE]` speeds; sources ground those speeds.)
+  hop - so proper motion would reshuffle which stars are near which over a Myr fill. It is **bounded
+  for our relative result**: both coordination modes run on the *identical* frozen field, so the
+  paired difference still isolates the light-lag effect; it remains a genuine limitation on
+  *absolute* fill times. The narrower worry that the belief gate itself needs *retarded* stellar
+  positions (the beacon leaves where the star was) is separately negligible: during a beacon's
+  light-crossing a star moves only the fraction `v_star/c ~ (40 km/s)/c ~ 1e-4` of the distance it
+  signals across, a hundredth of a percent, so the gate geometry is right at decision time; the
+  idealization is the slow Myr-scale layout drift, which the paired design controls. (Displacements
+  derived from the two `[ESTIMATE]` speeds; sources ground those speeds.)
 - **Pure lag still fills a connected field to 100%** (re-targeting guarantees it). A
   steady-state settled fraction `X_eq = 1 − T_launch/T_settle < 1` (Carroll-Nellenback's
   "Aurora effect") requires a settlement *death* term - a separate sibling, not lag alone.

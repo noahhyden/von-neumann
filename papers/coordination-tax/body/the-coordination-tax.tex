@@ -6,10 +6,14 @@ the \emph{identical} field, once with perfect information and once with the ligh
 (\ref{eq:gate}), all at the resolved event-driven timestep. Reporting the distribution across the
 ensemble follows the seeded Monte Carlo practice of the field \cite{forgan-2009}; we give the
 median with a seeded percentile-bootstrap 95\% confidence interval. We deliberately do not lean on
-a significance test: by the structure of the model a stale view can only make a probe believe a
-settled star is still open, never the reverse, so the light-delayed run can essentially only
-\emph{add} wasted journeys. The sign of the effect is therefore built in; what is informative is
-its magnitude and how it scales, which is what the intervals and the sweeps below report.
+a significance test on the fuel tax: by the structure of the model a stale view can only make a
+probe believe a settled star is still open, never the reverse, so the decision-site run can only
+\emph{add} wasted journeys. The sign is therefore built in; what is informative is the magnitude and
+its scaling, which the intervals and sweeps below report. (This monotonicity is specific to the
+decision-site gate: the in-flight-relay variant of Section~\ref{sec:floor} can \emph{lower} waste
+below the perfect-information baseline, by aborting doomed hops that perfect knowledge at the stops
+would not.) For the one genuinely null claim -- no fill-time tax at low speed -- we do not wave the
+test away but give an equivalence bound instead (below).
 
 \subsection{There is no fill-time tax; the coarse-timestep one is an artifact}
 Light-speed lag does not measurably slow the fill of the field. Fig.~\ref{fig:dt} shows why the
@@ -129,9 +133,13 @@ about 3{,}580 pc under the light-speed gate, and 2{,}930 pc under perfect inform
 does not prevent. The recovery is not free: the mid-flight detours lengthen the fill slightly, by
 about 2\% at $\Lambda = 0.2$. So the decision-site tax is an upper bound, not a floor: a swarm that
 relays in flight can recover essentially all of the wasted-arrival tax and some of the collisions
-perfect information leaves behind, at a small cost in time. What remains as a true floor is the
-partial travel a probe flies toward a doomed star before the beacon reaches it, which grows with
-$\Lambda$ as the probe covers more of the hop before the relatively slower news catches up.
+perfect information leaves behind, at a small cost in time. This is an information ceiling rather
+than an engineering estimate -- the beacon is idealized as isotropic, unattenuated, and detectable
+the instant its light arrives, so a real relay working against a finite link budget would recover
+less. What it establishes is that the decision-site tax is nowhere near a physical floor: most of it
+is protocol, not physics. What genuinely remains is the partial travel a probe flies toward a doomed
+star before the beacon reaches it, which grows with $\Lambda$ as the probe covers more of the hop
+before the relatively slower news catches up.
 
 \subsection{Does the tax hold at scale?}
 \label{sec:scale}
