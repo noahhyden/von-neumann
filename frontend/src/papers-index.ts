@@ -61,6 +61,8 @@ export const PAPERS: PaperMeta[] = [
       "carroll-nellenback-2019",
       "lamport-1978",
       "recons-census",
+      "kerr-lynden-bell-1986",
+      "nordstrom-2004-gcs",
       "olfati-saber-murray-2004",
       "olfati-saber-fax-murray-2007",
       "flp-1985",

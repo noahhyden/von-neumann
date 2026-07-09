@@ -169,19 +169,41 @@ distant star `i` as settled only once the news has arrived -
   near `v_eff ~ 2500-3900 km/s` (`Λ ~ 0.01`), which is why they sit at the low end of the tax
   and cannot reach the directed-energy regime.
 - **`max_retargets = 8` `[ESTIMATE]`** - a **bookkeeping** cap, not physics: a probe that loses
-  this many races is retired. Applied to **both** coordination modes (symmetric), so the paired
-  wasted-journey comparison is fair - `instant` also loses in-transit races and re-targets, so
-  capping only `lightspeed` would inflate `instant`'s waste. Results are insensitive to the
-  value (fuel tax at `Λ=0.2` is +18.5/+21.9/+21.9% at cap = 8/30/100, converging).
+  this many races is retired (bounding stale-view bounce chains). Applied to **both** coordination
+  modes (symmetric), so the paired wasted-journey comparison is fair - `instant` also loses
+  in-transit races and re-targets, so capping only `lightspeed` would inflate `instant`'s waste.
+  The measured fuel tax at `Λ=0.2` (powered, N=400, 32 seeds) *converges* with the cap rather than
+  being flat: +6.3 / +12.9 / +18.4 / +20.4 / +20.4% at cap = 2/4/8/16/32. It rises while the cap
+  still truncates live bounce chains, then saturates by cap ~16. The default cap = 8 sits near
+  convergence (+18.4%, ~90% of the +20.4% asymptote) - a mild lower bound, not a knob the result is
+  blind to. Honest correction of an earlier "insensitive" note (`experiments/measure.py::retarget_cap`).
 
 **Modelling assumptions (stated as assumptions, not measured facts - §1):**
 - **A settled star is an omnidirectional beacon emitting at year `settled_year[i]`.** No relay,
   no directionality.
-- **Decision-site knowledge only.** Belief is evaluated at the decision star at decision time,
-  so news a probe's worldline passes *through* mid-flight is ignored. This **undercounts**
-  knowledge → probes are slightly pessimistic → a **conservative upper bound** on redundant
-  effort. Mid-flight learning (two-endpoint cone) and true probe-to-probe **gossip relay** are
-  the deferred sibling slice.
+- **Decision-site knowledge only (in `lightspeed`).** Belief is evaluated at the decision star at
+  decision time, so news a probe's worldline passes *through* mid-flight is ignored. This
+  **undercounts** knowledge → probes are pessimistic → `lightspeed` is a **conservative upper
+  bound** on redundant effort. The optimistic complement is now implemented as
+  `coordination="inflight"` (below); true probe-to-probe **gossip relay** of the settled map
+  remains a deferred sibling, and `inflight` (beacon-only) is a conservative subset of it.
+- **`coordination="inflight"` - the physical-floor bound.** A probe listens *while flying*: when
+  the beacon from its now-claimed target overtakes it, at the closed-form time
+  `t_learn = (settled + (v/c)·arrive)/(1 + v/c)`, it aborts the doomed hop at its interpolated
+  mid-flight position and re-aims at cruise speed. Event-exact (the loop advances to the
+  global-minimum actionable time, so no learning is ever skipped - no dt artifact). It is the
+  optimistic bound on what in-flight relay recovers; the floor finding below reports it.
+- **Fixed stars / stellar proper motion (inherited idealization).** Stars carry velocity vectors
+  (for the slingshot boost) but are held **fixed in position**, following both source models:
+  Nicholson & Forgan 2013 and Forgan, Papadogiannakis & Kitching 2013 each freeze positions and
+  each flag it as their *most important* simplification. It is a real idealization on the fill
+  timescale - at the local circular speed (~220 km/s, [kerr-lynden-bell-1986]) a star sweeps
+  ~225 pc/Myr (220 × 1.0227 pc·Myr⁻¹·(km/s)⁻¹), and even the peculiar component alone (~30-40 km/s
+  thin-disc dispersion, [nordstrom-2004-gcs]) carries it ~31-41 pc/Myr, far past the ~1 pc mean
+  hop - so proper motion would reshuffle the beacon geometry the gate reads. It is **bounded for
+  our relative result**: both coordination modes run on the *identical* frozen field, so the paired
+  difference still isolates the light-lag effect; it remains a genuine limitation on *absolute*
+  fill times. (Displacements derived from the two `[ESTIMATE]` speeds; sources ground those speeds.)
 - **Pure lag still fills a connected field to 100%** (re-targeting guarantees it). A
   steady-state settled fraction `X_eq = 1 − T_launch/T_settle < 1` (Carroll-Nellenback's
   "Aurora effect") requires a settlement *death* term - a separate sibling, not lag alone.
@@ -190,7 +212,20 @@ distant star `i` as settled only once the news has arrived -
   (well under 1%, no systematic sign at low `Λ`, ~+0.5% at `Λ=0.2`). The coordination cost is
   therefore redundant TRAVEL (wasted journeys), not extra manufacturing.
 
-**Finding (32-seed paired ensemble, event timestep).** Two parts, both deterministic.
+**Energy-weighted tax (basis; §1, §8).** Wasted journeys are also weighted by the kinetic energy
+their launch speed cost, not counted flat. Primary weight: Newtonian specific energy
+`E/m = (1/2)v²`, as a fraction of `c²` via `Λ = v/c`: `(1/2)Λ² =` 5.0e-5, 1.25e-3, 5.0e-3, 2.0e-2
+at `Λ =` 0.01, 0.05, 0.1, 0.2. The only physical input is `c` (SI-exact); the rest is arithmetic.
+Cross-check: the relativistic form `E/m = (γ−1)c²`, `γ = 1/√(1−Λ²)`, exceeds Newtonian by only
+0.0075 / 0.19 / 0.76 / 3.10% at those `Λ`, so Newtonian is a safe primary metric (it mildly
+under-estimates at 0.2c). Each wasted trip is scaled by a **rendezvous multiplier in [1, 2]**: a
+flyby imparts one-way acceleration energy (1×), while landing requires braking to rest then
+re-accelerating - ~2× by the quadratic v-dependence; beamed light sails have no braking beam at
+arrival, so deceleration is a real, distinct cost ([lubin-2016]). We report the tax as a 1×-2×
+band. Accumulators `settle_energy_c2` / `wasted_energy_c2` are read-only sums of `(1/2)(v/c)²` over
+winning / wasted journeys (no RNG; the pinned baseline is unchanged).
+
+**Finding (paired ensemble, event timestep).** Several parts, all deterministic.
 
 *No fill-time tax; the coarse-dt one is an artifact* (`experiments/dt_artifact.py`). With the
 slice-1 fixed `dt=5000 yr` the fill-100% penalty for slingshot-nearest looks like a robust
