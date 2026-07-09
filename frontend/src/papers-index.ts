@@ -37,7 +37,7 @@ export const PAPERS: PaperMeta[] = [
         "orcid": "0009-0003-4523-0467"
       }
     ],
-    "abstract": "A swarm of self-replicating probes fills a stellar field star by star, each probe settling a star and launching copies. The standard exploration-timescale model grants every probe perfect, instantaneous knowledge of which stars are already settled, and names finite light-speed as its own future work. We add that light-speed limit and measure its cost. The first finding is a caution: a model advanced in a timestep coarser than the interval between probe launches makes many probes decide from the same stale snapshot at once, and the resulting collisions appear to slow the fill by tens of percent. That number is a discretization artifact. Resolved so that each probe decides at its true arrival time, the tens-of-percent slowdown collapses -- to a few percent at directed-energy speeds and to nothing at slingshot speeds -- and the gravitational-slingshot speed-up survives, reproducing the source model quantitatively at about 166 times powered flight. The dominant cost is redundant travel: with essentially the same number of probes built, stale views send probes to stars others have already claimed. We show, and derive from a short collision argument, that this wasted-journey fraction equals the probe's speed in units of light, v/c -- negligible for a powered cruise, about a percent at slingshot speeds, and a fifth at the directed-energy speeds beamed propulsion targets. The tax grows with the replication branching factor before saturating, does not grow with system size over the range we test, and is not a hard floor: a probe that listens in flight, rather than only at its decision stars, recovers essentially all of it at a small cost in fill time. Whether the wasted travel also costs energy is mission-dependent, since a slingshot probe's kinetic energy is largely gravitationally sourced, so we denominate the tax in journeys. The coordination cost a perfect-information model hides is dominated by fuel and effort and scales, cleanly, as v/c.",
+    "abstract": "A swarm of self-replicating probes fills a stellar field star by star, each probe settling a star and launching copies. The standard exploration-timescale model grants every probe perfect, instantaneous knowledge of which stars are already settled, and names finite light-speed as its own future work. We add that light-speed limit and measure its cost. The first finding is a caution: a model advanced in a timestep coarser than the interval between probe launches makes many probes decide from the same stale snapshot at once, and the resulting collisions appear to slow the fill by tens of percent. That number is a discretization artifact. Resolved so that each probe decides at its true arrival time, the tens-of-percent slowdown collapses -- to a few percent at directed-energy speeds and to nothing at slingshot speeds -- and the gravitational-slingshot speed-up survives, reproducing the source model quantitatively at about 166 times powered flight. The dominant cost is redundant travel: with essentially the same number of probes built, stale views send probes to stars others have already claimed. We show, and derive from a short collision argument, that stale views multiply the wasted journeys by 1 + v/c, so the coordination tax -- the extra wasted journeys as a fraction of those a perfect-information swarm already flies -- equals the probe's speed in units of light, v/c: negligible for a powered cruise, about a percent at slingshot speeds, and a fifth at the directed-energy speeds beamed propulsion targets. The perfect-information baseline is itself wasteful -- about four in five journeys are redundant even with an instantaneous map -- so this is a v/c surcharge on an already-redundant process, not a claim that a fifth of all journeys are wasted. The tax grows with the replication branching factor -- without saturating up to sixteen offspring, where it reaches about a third -- does not grow with system size over the range we test, holds under a clumpy (non-uniform) field where if anything it softens, and is not a hard floor: a probe that listens in flight, rather than only at its decision stars, recovers essentially all of it at a small cost in fill time. Whether the wasted travel also costs energy is mission-dependent, since a slingshot probe's kinetic energy is largely gravitationally sourced, so we denominate the tax in journeys. The coordination cost a perfect-information model hides is dominated by fuel and effort and scales, cleanly, as v/c.",
     "date": "2026-07-09",
     "keywords": [
       "self-replication",
@@ -61,17 +61,12 @@ export const PAPERS: PaperMeta[] = [
       "carroll-nellenback-2019",
       "lamport-1978",
       "recons-census",
+      "clark-evans-1954",
       "kerr-lynden-bell-1986",
       "nordstrom-2004-gcs",
-      "olfati-saber-murray-2004",
       "olfati-saber-fax-murray-2007",
       "flp-1985",
-      "gilbert-lynch-2002",
-      "ferrell-1965",
-      "sheridan-1993",
-      "burleigh-2003",
-      "rfc-4838",
-      "rfc-9171"
+      "gilbert-lynch-2002"
     ],
     "pdf": "papers/coordination-tax.pdf"
   },
