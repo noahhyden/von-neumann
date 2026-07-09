@@ -13,10 +13,13 @@ import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** Every \cite{id} (and \cite{a,b}) id used in a compiled document. */
+/** Every citation id used in a compiled document. Handles both the numeric \cite (IEEEtran
+ * papers, e.g. electronics-wall) and natbib's \citep / \citet (author-year papers, e.g.
+ * coordination-tax), including their starred forms, optional [pre][post] notes, and
+ * comma-separated id lists. */
 function citesInTex(tex) {
   const ids = new Set();
-  for (const m of tex.matchAll(/\\cite\{([^}]*)\}/g)) {
+  for (const m of tex.matchAll(/\\cite[pt]?\*?(?:\[[^\]]*\])*\{([^}]*)\}/g)) {
     for (const id of m[1].split(",").map((s) => s.trim()).filter(Boolean)) ids.add(id);
   }
   return ids;

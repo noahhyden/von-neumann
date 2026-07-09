@@ -2,7 +2,7 @@
 
 The result refines rather than overturns the slingshot picture, and it does so twice over.
 Nicholson and Forgan's speed-up is real, large, and here reproduced quantitatively
-\cite{nicholson-forgan-2013}; finite light-speed does not erode it, and does not measurably
+\citep{nicholson-forgan-2013}; finite light-speed does not erode it, and does not measurably
 delay the fill of the field. What a perfect-information model hides is not lost time but lost
 motion: probes flying to stars that others have already claimed. That redundant travel is the
 coordination tax, it is governed by the probe's speed in units of $c$, and it matters only once
@@ -41,9 +41,9 @@ protocol.
 A further, inherited idealization concerns the stars themselves. They carry the velocity vectors
 that power each slingshot but are held fixed in position, exactly as in the two source models,
 both of which name this as their single most important simplification
-\cite{nicholson-forgan-2013,forgan-papadog-kitching-2013}. It is not a small one: at the local
+\citep{nicholson-forgan-2013,forgan-papadog-kitching-2013}. It is not a small one: at the local
 circular speed a star sweeps about $225$ pc in a million years, and even the peculiar velocity
-dispersion alone carries it some $30$ to $40$ pc \cite{kerr-lynden-bell-1986,nordstrom-2004-gcs},
+dispersion alone carries it some $30$ to $40$ pc \citep{kerr-lynden-bell-1986,nordstrom-2004-gcs},
 far past the roughly one-parsec mean hop, so over a Myr-scale fill real proper motion would
 reshuffle which stars are near which. One might object that this touches the delayed-belief gate
 itself, not just the backdrop: the beacon leaves where the star \emph{was}, so a moving field would
@@ -67,23 +67,23 @@ scale. A sixteen-fold lever arm cannot support one, and one over which the fract
 shrinks certainly cannot. Third, the dynamics have no loss term: settled sites never fail, so the field
 always closes. A
 settlement-death term of the kind that produces the ``Aurora'' steady state
-\cite{carroll-nellenback-2019} is what would be needed to turn coordination failure into a
+\citep{carroll-nellenback-2019} is what would be needed to turn coordination failure into a
 permanent unsettled remainder; delay alone does not.
 
 \subsection{Relation to delayed agreement}
 The behaviour is, by analogy and not by derivation, the signature of delayed multi-agent agreement,
 and we cite that literature only to place the regime. Consensus protocols degrade as communication
 delay grows against the decision cadence, staying stable only below a delay bound set by the
-coupling \cite{olfati-saber-murray-2004,olfati-saber-fax-murray-2007}. We borrow the picture, not the
+coupling \citep{olfati-saber-murray-2004,olfati-saber-fax-murray-2007}. We borrow the picture, not the
 theorems: the classical impossibility results assume fault models that are not ours -- asynchronous
-crash faults for FLP \cite{flp-1985}, network partition for CAP \cite{gilbert-lynch-2002} -- and none
+crash faults for FLP \citep{flp-1985}, network partition for CAP \citep{gilbert-lynch-2002} -- and none
 of them predicts the $\Lambda = v/c$ scaling that is this paper's result. What they do fix is the
 regime. At parsec spacing the round-trip light-time is years, far longer than any plausible decision
 cadence, so a swarm that must keep acting can only trade a single consistent map for availability,
 which is exactly what (\ref{eq:gate}) encodes. The same delay budget drove the teleoperation and
 networking communities from closed-loop control through move-and-wait and supervisory control
-\cite{ferrell-1965,sheridan-1993} to delay-tolerant store-and-forward once no continuous path
-survives \cite{burleigh-2003,rfc-4838,rfc-9171}; at interstellar hops every faster regime is left
+\citep{ferrell-1965,sheridan-1993} to delay-tolerant store-and-forward once no continuous path
+survives \citep{burleigh-2003,rfc-4838,rfc-9171}; at interstellar hops every faster regime is left
 behind, and each probe is an independent colony acting on priors. The coordination tax is what that
 independence costs when probes want the same stars.
 

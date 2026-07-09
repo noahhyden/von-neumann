@@ -22,47 +22,63 @@ function esc(s) {
 }
 
 /**
+ * Convert one author DISPLAY token ("A. Nicholson", "R. A. Freitas Jr.") into BibTeX's
+ * canonical "Last, First" (or "Last, Suffix, First") form.
+ *
+ * We use "Last, First" rather than the raw display order so BibTeX can identify the
+ * surname: numeric styles (IEEEtran) still print "A. Nicholson", and author-year styles
+ * (natbib/plainnat, used by the astrobiology-journal manuscript) can form proper Harvard
+ * labels like "(Nicholson, 2013)" instead of the whole name. Person names in sources.ts
+ * always begin with initials ("A.", "M. H."); a token that does not (an institutional
+ * author such as "International Astronomical Union") is left brace-wrapped verbatim so
+ * BibTeX does not mistake its last word for a surname.
+ */
+function toBibName(token) {
+  const words = token.split(/\s+/).filter(Boolean);
+  if (words.length <= 1 || !/^[A-Z]\.$/.test(words[0])) return `{${token}}`;
+  let suffix = null;
+  if (/^(jr\.?|sr\.?|ii|iii|iv)$/i.test(words[words.length - 1])) suffix = words.pop();
+  const last = words.pop();
+  const first = words.join(" ");
+  return suffix ? `${last}, ${suffix}, ${first}` : `${last}, ${first}`;
+}
+
+/**
  * Convert an author DISPLAY string into BibTeX's "A and B and C" form.
  *
  * The display strings in sources.ts intentionally carry affiliations, "(eds.)",
- * "et al.", and name suffixes ("Jr.", "III"). BibTeX's own name parser mangles
- * all of these (it reads "Jr." as a surname, splits "(Los Alamos ...)" into fake
- * initials, etc.). So we do NOT let BibTeX parse names: we strip the parts that
- * must never enter the author field, then brace-wrap each remaining author token
- * as a single opaque literal so BibTeX prints it verbatim, in order, with no
- * initial-abbreviation or surname reordering.
+ * "et al." / "and others", and name suffixes ("Jr.", "III"). We strip the parts that must
+ * never enter the author field, split into individual names on the display separators
+ * (comma, ampersand, semicolon, or the word "and"), and hand each to toBibName. A trailing
+ * "et al." or "and others" becomes BibTeX's "others" keyword (IEEEtran renders it "et al.";
+ * author-year styles render it "et al." too).
  *
- * Applied before esc(), so any "&" here is still a literal separator; after the
- * split there are no "&" left in the output.
+ * Applied before esc(), so any "&" here is still a literal separator.
  */
 function authorsToBib(authors) {
-  // 1. Strip parenthetical groups (affiliations, "(eds.)", "(ed.)") and collapse
-  //    the whitespace they leave behind. These must never enter the author field.
+  // 1. Strip parenthetical groups (affiliations, "(eds.)", "(ed.)") and collapse whitespace.
   let s = String(authors)
     .replace(/\s*\([^)]*\)/g, "")
     .replace(/\s+/g, " ")
     .trim();
 
-  // 2. Detect a trailing "et al." (now that parentheticals are gone). Remove it
-  //    and remember to append BibTeX's "and others", which IEEEtran renders as
-  //    "et al.".
+  // 2. Detect a trailing "et al." or "and others" and replace it with BibTeX's "others".
   let hasEtAl = false;
-  const etAl = s.replace(/\s*\bet al\.?\s*$/i, "");
-  if (etAl !== s) {
+  const stripped = s.replace(/\s*(?:\bet al\.?|\band others)\s*$/i, "");
+  if (stripped !== s) {
     hasEtAl = true;
-    s = etAl.trim();
+    s = stripped.trim();
   }
 
-  // 3. Split on the existing separators into individual author tokens.
-  // 4. Brace-wrap each non-empty token so BibTeX treats it as one literal and
-  //    prints it verbatim. Drop empty tokens (e.g. a trailing separator).
+  // 3. Split into author tokens on the display separators (&, ;, comma, or the word "and"),
+  //    convert each to "Last, First", and drop empties.
   const tokens = s
-    .split(/\s*[&;,]\s*/)
+    .split(/\s*(?:[&;,]|\band\b)\s*/i)
     .map((t) => t.trim())
     .filter((t) => t.length > 0)
-    .map((t) => `{${t}}`);
+    .map(toBibName);
 
-  // 5. Join with " and ", appending " and others" when the et al. flag fired.
+  // 4. Join with " and ", appending " and others" when the et al. flag fired.
   if (hasEtAl) tokens.push("others");
   return tokens.join(" and ");
 }

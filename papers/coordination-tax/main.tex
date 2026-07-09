@@ -1,21 +1,26 @@
 % main.tex - the coordination-tax paper. Hand-written; gen-tex.mjs leaves it alone.
+% Journal-manuscript format: single-column article with author-year (natbib) citations,
+% suitable as an initial submission to an astrobiology journal (e.g. the International
+% Journal of Astrobiology, the venue of Nicholson & Forgan 2013, which this paper extends).
+% Deliberately uses only TeX Live packages - no bundled publisher class, no biber - so CI
+% typesets it unchanged; the publisher's own house template is applied at submission time.
 % Bibliography is generated: ../refs.bib comes from frontend/src/sources.ts.
-% Figures are generated (gitignored vector PDFs): the swarm module writes
-% fig_slowdown_by_policy.pdf and fig_settlement_curves.pdf here via
+% Figures are generated (gitignored vector PDFs) by the swarm module via
 % `uv run --extra dev python -m experiments.paper_figures`.
-\documentclass[conference]{IEEEtran}
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
 \usepackage{graphicx}
 \usepackage{booktabs}
-\usepackage{cite}
-\usepackage{url}
 \usepackage{amsmath}
+\usepackage[round,authoryear]{natbib}
+\usepackage{url}
+\bibliographystyle{plainnat}
 
-\title{The Coordination Cost of Light-Speed Delay in a Self-Replicating Probe Swarm Scales as v/c}
-
-\author{
-\IEEEauthorblockN{Noah Hyd\'en}
-\IEEEauthorblockA{Independent researcher \\ ORCID: 0009-0003-4523-0467}
-}
+\title{The Coordination Cost of Light-Speed Delay in a\\ Self-Replicating Probe Swarm Scales as $v/c$}
+\author{Noah Hyd\'en\\[2pt]
+  \normalsize Independent researcher\\
+  \normalsize ORCID: 0009-0003-4523-0467}
+\date{}
 
 \begin{document}
 \maketitle
@@ -44,9 +49,10 @@ coordination cost a perfect-information model hides is dominated by fuel and eff
 cleanly, as v/c.
 \end{abstract}
 
-\begin{IEEEkeywords}
-self-replication, interstellar exploration, light-speed delay, multi-agent coordination, swarm dynamics
-\end{IEEEkeywords}
+\noindent\textbf{Keywords:} self-replication; interstellar exploration; light-speed delay;
+multi-agent coordination; swarm dynamics
+
+\bigskip
 
 \input{body/introduction}
 \input{body/the-light-delayed-belief-model}
@@ -54,7 +60,6 @@ self-replication, interstellar exploration, light-speed delay, multi-agent coord
 \input{body/discussion}
 \input{body/conclusion}
 
-\bibliographystyle{IEEEtran}
 \bibliography{../refs}
 
 \end{document}
