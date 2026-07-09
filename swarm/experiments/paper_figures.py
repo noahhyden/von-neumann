@@ -31,6 +31,7 @@ import matplotlib as mpl
 
 mpl.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import NullLocator
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 OUT_DIR = Path(__file__).resolve().parents[2] / "papers" / "coordination-tax"
@@ -70,6 +71,18 @@ def _err(summ: list[dict]) -> list[list[float]]:
     return [[m - s["ci_lo"] for m, s in zip(med, summ)], [s["ci_hi"] - m for m, s in zip(med, summ)]]
 
 
+def _clean_log_x(ax, xs) -> None:
+    """Label a log x-axis at exactly the data points and drop the minor ticks.
+
+    A log axis spanning only ~1 decade (our dt and size sweeps) otherwise auto-labels
+    dense minor ticks (2,3,..,9 x 10^n) that collide and overprint. We instead place major
+    ticks at the actual swept values with plain labels and remove the minor ticks entirely.
+    """
+    ax.set_xticks(list(xs))
+    ax.set_xticklabels([f"{x:g}" for x in xs])
+    ax.xaxis.set_minor_locator(NullLocator())
+
+
 # --------------------------------------------------------------------------------------------
 
 def fig_fuel_tax_vs_lambda() -> Path:
@@ -92,8 +105,9 @@ def fig_fuel_tax_vs_lambda() -> Path:
     ax.errorbar(lam, tmed, yerr=_err(time), marker="s", markersize=3.5, color="0.55",
                 linestyle="--", capsize=2, linewidth=1.0, zorder=2, label="fill time")
     ax.set_xscale("log")
+    _clean_log_x(ax, lam)
     ax.set_xlabel(r"probe speed $\Lambda = v/c$")
-    ax.set_ylabel("coordination tax (% over perfect info)")
+    ax.set_ylabel("coordination tax (%)")
     ax.axhline(0.0, color="0.6", linewidth=0.6, linestyle=":", zorder=0)
     ax.legend(loc="upper left", frameon=False)
     fig.tight_layout()
@@ -139,6 +153,7 @@ def fig_time_tax_vs_dt() -> Path:
     ax.axhline(ev["time_pct"]["median"], color="0.5", linewidth=0.8, linestyle="--",
                label=f"event (dt$\\to$0): {ev['time_pct']['median']:+.1f}%")
     ax.set_xscale("log")
+    _clean_log_x(ax, xs)
     ax.set_xlabel("fixed timestep dt (years)")
     ax.set_ylabel("fill-100% time tax (%)")
     ax.axhline(0.0, color="0.7", linewidth=0.6, linestyle=":", zorder=0)
@@ -214,8 +229,9 @@ def fig_fuel_tax_vs_n() -> Path:
     ax.fill_between(ns, lo, hi, color="0.0", alpha=0.12, linewidth=0)
     ax.plot(ns, med, marker="o", markersize=3.5, color="0.0")
     ax.set_xscale("log")
+    _clean_log_x(ax, ns)
     ax.set_xlabel("system size (number of stars)")
-    ax.set_ylabel("fuel tax (% of perfect-info waste)")
+    ax.set_ylabel("fuel tax (%)")
     ax.set_ylim(0, max(hi) * 1.3)
     fig.tight_layout()
     return _save(fig, "fig_fuel_tax_vs_n.pdf")
