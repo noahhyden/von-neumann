@@ -11,3 +11,7 @@ refs.bib
 *.blg
 *.pdf
 **/*.pdf
+*.fls
+*.fdb_latexmk
+*.toc
+*.synctex.gz
