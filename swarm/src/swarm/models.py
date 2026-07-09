@@ -10,6 +10,7 @@ Nothing here imports pimas, the DOM, or a clock.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -21,6 +22,15 @@ from pydantic import BaseModel, Field
 C_PC_PER_YEAR: float = 299792.458 * 3.15576e7 / 3.0856775814913673e13
 # 1 km/s expressed in pc/yr (derived from the same constants).
 KM_S_TO_PC_YR: float = 3.15576e7 / 3.0856775814913673e13
+
+# Fixed log-spaced hop-length bin edges (pc), for the clumpy-field d-cancellation check. Per-bin
+# won/wasted arrival counts let us test whether the wasted-trip ratio p_lag/p_perfect stays flat
+# in hop length d even in a NON-uniform field - the mechanism the tax = Lambda law rests on (the
+# hop length cancels only if the local claim rate is d-independent). Fixed (not per-run) so the
+# bins are comparable across fields; 0.1-30 pc brackets sub-nearest-neighbour to cross-box hops at
+# the densities used (mean NN ~0.55 pc at 1 star/pc^3; box side ~8 pc at N=500, ~17 pc at N=4800).
+HOP_BIN_EDGES: tuple[float, ...] = tuple(round(0.1 * (300.0 ** (k / 12.0)), 6) for k in range(13))
+N_HOP_BINS: int = len(HOP_BIN_EDGES) + 1  # + one underflow (< first edge) and one overflow slot
 
 # Target-selection / travel policies (Nicholson & Forgan 2013, their three scenarios).
 Policy = Literal["powered", "slingshot_nearest", "slingshot_maxboost"]
@@ -90,6 +100,19 @@ class SwarmParams(BaseModel):
     )
     max_retargets: int = Field(
         ge=0, default=8, description="[ESTIMATE] cap on re-target hops before a probe is retired as wasted (bounds stale-view bounce chains)"
+    )
+
+    # --- clumpy (non-uniform) star field (FRONTIER #1 robustness: does tax = Lambda survive a
+    #     non-uniform field, where hop length and local claim rate correlate?). Default None keeps
+    #     the uniform cube - BIT-IDENTICAL to every prior run. When set, positions are drawn from a
+    #     Thomas cluster process: n_clumps parent centres scattered uniformly, then each star placed
+    #     at parent + Gaussian(sigma) and reflected into the box, so N and the mean density stay
+    #     EXACTLY fixed (a fair paired comparison changes only the spatial arrangement). REFERENCES.md.
+    n_clumps: int | None = Field(
+        default=None, description="clumpy field: number of Thomas cluster centres (None = uniform cube, the default and all prior behaviour)"
+    )
+    clump_sigma_frac: float = Field(
+        gt=0, default=0.15, description="[ESTIMATE] cluster scatter radius as a fraction of box side; read only when n_clumps is set (large -> uniform limit)"
     )
 
     @property
@@ -165,6 +188,12 @@ class SwarmState:
     settle_v2_sum: float = 0.0  # sum of speed^2 [(pc/yr)^2] over winning journeys
     wasted_v_sum_pc_yr: float = 0.0  # sum of flight speeds over wasted journeys
     wasted_v2_sum: float = 0.0  # sum of speed^2 [(pc/yr)^2] over wasted journeys
+    # --- hop-length-stratified arrival counts (read-only; the clumpy-field d-cancellation test) ---
+    # Won (settled) and wasted arrivals binned by hop length (HOP_BIN_EDGES). The per-bin wasted
+    # fraction under instant vs lightspeed is how we check p_lag/p_perfect stays flat in d even in
+    # a clumpy field. Pure counters - no RNG, no decision - so the fold stays bit-identical.
+    settle_hop_hist: list[int] = field(default_factory=lambda: [0] * N_HOP_BINS)
+    wasted_hop_hist: list[int] = field(default_factory=lambda: [0] * N_HOP_BINS)
 
     def n_settled(self) -> int:
         return sum(1 for y in self.settled_year if y >= 0.0)
@@ -219,4 +248,8 @@ class SwarmResult:
     wasted_energy_c2: float = 0.0  # sum over wasted journeys of (1/2)(v/c)^2
     mean_settle_speed_km_s: float = 0.0  # mean flight speed of winning journeys
     mean_wasted_speed_km_s: float = 0.0  # mean flight speed of wasted journeys
+    # Won/wasted arrivals binned by hop length (HOP_BIN_EDGES) - the clumpy-field d-cancellation
+    # test reads these to check the wasted-trip ratio is flat in d even in a non-uniform field.
+    settle_hop_hist: list[int] = field(default_factory=list)
+    wasted_hop_hist: list[int] = field(default_factory=list)
     steps: list[SwarmStep] = field(default_factory=list)

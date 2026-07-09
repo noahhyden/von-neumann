@@ -286,6 +286,83 @@ def test_maxboost_wasted_hops_are_longer_than_nearest() -> None:
     assert near.mean_wasted_hop_pc > 0.0  # some races are lost under lag
 
 
+# --- clumpy (non-uniform) star field: does tax = Lambda survive it? (referee robustness) ---
+# The Thomas cluster process places n_clumps centres and scatters stars Gaussian(sigma) around
+# them, reflected into the box so N and mean density stay EXACTLY fixed. The default (n_clumps
+# None) is the uniform cube, and every test above runs under it - so the whole suite already
+# pins the uniform path bit-for-bit; these tests pin the new clumpy path.
+
+
+def _mean_nn_pc(s) -> float:
+    """Mean nearest-neighbour distance (pc) over the field - a cheap clustering probe."""
+    xs, ys, zs = s.xs, s.ys, s.zs
+    n = len(xs)
+    total = 0.0
+    for i in range(n):
+        best = float("inf")
+        for j in range(n):
+            if i == j:
+                continue
+            d2 = (xs[i] - xs[j]) ** 2 + (ys[i] - ys[j]) ** 2 + (zs[i] - zs[j]) ** 2
+            if d2 < best:
+                best = d2
+        total += best ** 0.5
+    return total / n
+
+
+def test_clumpy_field_holds_star_count_and_box_exactly() -> None:
+    # Reflection (not clipping) keeps every scattered star inside the box, so a clumpy field has
+    # EXACTLY N stars in the same box as the uniform one - the fair-comparison invariant (mean
+    # density unchanged; only the spatial arrangement differs).
+    p = SwarmParams(n_stars=400, n_clumps=20, clump_sigma_frac=0.05)
+    s = initial_state(p, seed=3)
+    L = p.box_side_pc
+    assert len(s.xs) == len(s.ys) == len(s.zs) == 400
+    assert all(0.0 <= x <= L for x in s.xs)
+    assert all(0.0 <= y <= L for y in s.ys)
+    assert all(0.0 <= z <= L for z in s.zs)
+
+
+def test_tight_clumps_are_more_clustered_than_uniform() -> None:
+    # Small sigma really clusters: mean nearest-neighbour distance drops well below the uniform
+    # field's at the SAME N and box. This is what creates the hop-length / local-claim-rate
+    # correlation the reviewer worried could break tax = Lambda.
+    uni = initial_state(SwarmParams(n_stars=300), seed=5)
+    clumpy = initial_state(SwarmParams(n_stars=300, n_clumps=15, clump_sigma_frac=0.05), seed=5)
+    assert _mean_nn_pc(clumpy) < 0.6 * _mean_nn_pc(uni)
+
+
+def test_large_sigma_relaxes_toward_uniform() -> None:
+    # The correctness limit: as sigma grows the clumps wash out and the field approaches uniform,
+    # so its clustering statistic returns close to the uniform field's. (This is why the sweep's
+    # uniform-limit level MUST reproduce the ~0.96 slope - if it does not, the generator is wrong.)
+    uni = _mean_nn_pc(initial_state(SwarmParams(n_stars=300), seed=5))
+    wide = _mean_nn_pc(initial_state(SwarmParams(n_stars=300, n_clumps=15, clump_sigma_frac=0.6), seed=5))
+    assert 0.8 * uni < wide < 1.2 * uni
+
+
+def test_clumpy_field_is_deterministic_and_still_fills() -> None:
+    # Pure seeded fold: same seed -> identical clumpy field and run. And a clumpy field still
+    # fills completely - re-targeting crosses the voids between clumps (no loss term).
+    p = SwarmParams(n_stars=300, n_clumps=15, clump_sigma_frac=0.08,
+                    probe_speed_c=0.2, speed_cap_c=0.4, stepping="event", coordination="lightspeed")
+    a = simulate_swarm(p, seed=7)
+    b = simulate_swarm(p, seed=7)
+    assert a.t100_years == b.t100_years and a.wasted_arrivals == b.wasted_arrivals
+    assert a.final_settled == a.n_stars == 300
+
+
+def test_hop_histograms_account_for_every_arrival() -> None:
+    # The stratified-by-hop-length counts must be complete: winners settle every star but the
+    # homeworld (settled at init, no hop), and the wasted-hop histogram totals the wasted arrivals.
+    r = simulate_swarm(SwarmParams(n_stars=300, n_clumps=15, clump_sigma_frac=0.08,
+                                   probe_speed_c=0.2, speed_cap_c=0.4, stepping="event",
+                                   coordination="lightspeed"), seed=9)
+    assert sum(r.settle_hop_hist) == r.final_settled - 1  # origin settled without an arrival
+    assert sum(r.wasted_hop_hist) == r.wasted_arrivals
+    assert sum(r.settle_hop_hist) + sum(r.wasted_hop_hist) == r.total_arrivals
+
+
 def test_new_observables_do_not_perturb_the_pinned_fold() -> None:
     # The read-only accumulators must not have changed the fold: the pinned baseline holds.
     r = simulate_swarm(SwarmParams(n_stars=400), seed=BASE_SEED)

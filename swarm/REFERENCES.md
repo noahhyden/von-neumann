@@ -310,8 +310,33 @@ scale, it gently shrinks, so there is no support for extrapolating a fixed-perce
 **Density-rescaling invariance (checked):** changing the *uniform* density rescales every
 distance by a common factor, so travel time and light-time scale together and `Λ` (hence the
 relative penalty) is unchanged - a pure geometric rescaling of the absolute clock, confirmed to
-the printed digit across 0.14 → 5 stars/pc³. A *non-uniform* (clumpier) field is a separate,
-unaddressed case expected to lengthen long-range hops - a documented limitation.
+the printed digit across 0.14 → 5 stars/pc³.
+
+**Clumpy (non-uniform) field (`experiments/measure.py::clumpiness`, event, 48 seeds, N=500):** the
+sharper test the density rescaling does NOT settle. A non-uniform field is where the law could
+genuinely break: hop length and local claim rate can correlate, and the `d`-cancellation in
+`tax = Λ` assumes a locally uniform claim rate. We place the stars with a **Thomas cluster process**
+(`n_clumps = 25` centres; each star scattered `parent + Gaussian(σ)` and reflected into the box, so
+`N` and the mean density are held EXACTLY fixed - only the spatial arrangement changes) and sweep the
+scatter `σ/L` from the uniform limit to strong clustering, crossed with `Λ ∈ {0.05, 0.1, 0.2}`.
+Clumpiness is reported by the measured **Clark-Evans aggregation index R** (observed / Poisson mean
+nearest-neighbour distance; `R = 1` uniform, `R < 1` clustered). Result: the through-origin slope `a`
+of `tax = a·Λ` is `0.97 [0.89, 1.19]` at the uniform null (reproducing the headline `0.96` - the
+generator's hard correctness check), stays statistically consistent with 1 up to moderate clustering
+(`a = 0.90, 0.86, 0.88` at `R = 1.03, 0.97, 0.78`), and drops resolvably only at EXTREME substructure
+(`a = 0.51 [0.41, 0.70]` at `R = 0.56`, more clumped than a dynamically-relaxed stellar field). Every
+deviation is DOWNWARD, so **`tax = Λ` is a conservative upper bound**: clumpiness makes the coordination
+tax smaller, never larger. Mechanism (the hop-length-stratified wasted-trip ratio in the same JSON):
+the per-hop ratio `p_lag/p_perfect` is squeezed below `1 + Λ` wherever the baseline per-hop waste
+probability approaches 1 (long hops, dense clumps) - a **saturation** effect, identical in shape between
+uniform and clumpy fields, which is also why the measured slope is `0.96` and not a clean `1.0`. Since
+`v` and `c` are global constants they factor out of both exposure sums, so the `(d, claim-rate)`
+correlation cancels EXACTLY in the linear regime; clumpiness can bite only through this saturation. The
+knobs are geometry, not measured physical quantities: `n_clumps = 25` (~20 stars/clump at N=500, dense
+enough to over-subscribe under 2-offspring branching) and the `σ/L` ladder are a swept dimensionless
+robustness axis `[ESTIMATE]`; the Clark-Evans Poisson expectation uses the 3D coefficient
+`E[NN] = 0.55396·ρ^(-1/3)`, with `0.55396 = Γ(4/3)/(4π/3)^(1/3)` derived from the Poisson
+nearest-neighbour distribution (Clark & Evans 1954).
 
 **Baseline validation (`experiments/measure.py::validation`, event).** (1) `"instant"` is the c→∞
 limit of the gate and reproduces the plain perfect-info fold **bit-for-bit** (pinned by
@@ -335,7 +360,9 @@ overlaid), `fig_fuel_tax_by_seed`, `fig_time_tax_vs_dt`, `fig_concurrency` (mech
 
 ## Simplifications still deferred to later slices
 
-- **Uniform cube star field**, not a galactic disk with a density gradient.
+- **Uniform cube star field** by default, not a galactic disk with a density gradient (the
+  `clumpiness` measurement above tests a Thomas-cluster non-uniform field for robustness, but a
+  full disk with a radial gradient is still deferred).
 - **Replicate at the settled star**, not truly replicate-in-transit from the ISM (the
   effect is similar - one child per arrival, inheriting the parent's boosted speed).
 - **Scalar speeds, not velocity vectors** (see the boost-geometry `[ESTIMATE]` above).
@@ -366,4 +393,6 @@ Sources that ground this module's ideas or cross-check its numbers, consolidated
 - **Fischer, Lynch & Paterson 1985** - M. J. Fischer, N. A. Lynch & M. S. Paterson (1985). Impossibility of Distributed Consensus with One Faulty Process. Journal of the ACM 32(2):374-382, DOI 10.1145/3149.214121. https://groups.csail.mit.edu/tds/papers/Lynch/jacm85.pdf. The FLP impossibility result: in a fully asynchronous system (no bound on message delay) no protocol can guarantee agreement if even one node can fail. Grounds why the fully-independent-colonies rung is qualitatively different - guaranteed real-time consensus is not merely slow but impossible, so each node acts on pre-launch priors.
 - **Gilbert & Lynch 2002** - S. Gilbert & N. A. Lynch (2002). Brewer's Conjecture and the Feasibility of Consistent, Available, Partition-Tolerant Web Services. ACM SIGACT News 33(2):51-59, DOI 10.1145/564585.564601. https://doi.org/10.1145/564585.564601. The formal CAP theorem: under network partition you must trade consistency against availability. Grounds why light-delayed probes favour availability (act now on a local view) over consistency (a single global settled-map) - the mechanism that produces the wasted long-range trips measured in the lightspeed regime.
 - **Demers et al. 1987** - A. Demers, D. Greene, C. Hauser, W. Irish, J. Larson, S. Shenker, H. Sturgis, D. Swinehart & D. Terry (1987). Epidemic Algorithms for Replicated Database Maintenance. PODC '87 (6th ACM Symp. on Principles of Distributed Computing) 1-12, DOI 10.1145/41840.41841. https://doi.org/10.1145/41840.41841. The foundational gossip / anti-entropy work: how state (here, which stars are settled) propagates by pairwise relay rather than central broadcast. Grounds the deferred probe-to-probe gossip-relay sibling slice named in swarm/REFERENCES.md, beyond the current omnidirectional-beacon assumption.
+- **Clark & Evans 1954** - P. J. Clark & F. C. Evans (1954). Distance to Nearest Neighbor as a Measure of Spatial Relationships in Populations. Ecology 35(4):445-453, DOI 10.2307/1931034. https://doi.org/10.2307/1931034. The aggregation index R = (observed mean nearest-neighbour distance) / (expected under a Poisson process), R=1 random, R<1 clustered, R>1 regular - the measured clumpiness x-axis for the `clumpiness` experiment. The 3D Poisson expectation `E[NN] = 0.55396·ρ^(-1/3)` (coefficient `Γ(4/3)/(4π/3)^(1/3)`) generalizes their 2D form; used comparatively across fields at fixed N and box so the box edge bias cancels.
+- **Thomas / Neyman-Scott cluster process** - M. Thomas (1949), A generalization of Poisson's binomial limit for use in ecology, Biometrika 36:18-25, DOI 10.1093/biomet/36.1-2.18 (https://doi.org/10.1093/biomet/36.1-2.18); J. Neyman & E. L. Scott (1958), Statistical approach to problems of cosmology, J. R. Stat. Soc. B 20:1-43. The parent-plus-offspring point process used to generate the non-uniform star field: cluster centres scattered uniformly, stars placed Gaussian around them. A standard, tunable clustering model whose scatter interpolates cleanly to the uniform limit, which is what lets the `clumpiness` sweep use the uniform slope as a hard null.
 - **Lubin 2016** - P. Lubin (UC Santa Barbara) (2016). A Roadmap to Interstellar Flight (arXiv:1604.01356). Journal of the British Interplanetary Society 69:40-72. https://arxiv.org/abs/1604.01356. The far end of the propulsion spectrum for a self-replicating seed: beamed directed-energy light-sail acceleration of gram-scale craft toward ~0.2c, sidestepping the rocket-equation penalty by leaving the energy source at home. Connects to the swarm's interstellar cruise-speed assumptions.
