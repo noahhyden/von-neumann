@@ -16,7 +16,7 @@ both believe an unsettled star is the best target they both fly to it; the loser
 find it taken, its trip wasted, and must re-target from the even more stale picture it holds on
 arrival. This is availability chosen over consistency: rather than wait for a single agreed map
 that finite light-speed makes impossible, each probe acts now on its local view
-\cite{lamport-1978}. Stars carry velocity magnitudes that feed the slingshot boost but are held
+\citep{lamport-1978}. Stars carry velocity magnitudes that feed the slingshot boost but are held
 fixed in position, following the source model, so $\mathrm{dist}(f,i)$ in (\ref{eq:gate}) is
 static and the beacon geometry does not shift under the probe. Physical arrival always reads
 ground truth: what a probe finds on arrival is the star's real status, whatever it believed
@@ -24,7 +24,7 @@ when it aimed.
 
 \subsection{The three flight policies, and the speed axis}
 We carry three named policies, following the slingshot studies we extend
-\cite{forgan-papadog-kitching-2013,nicholson-forgan-2013}. \emph{Powered nearest-neighbour}
+\citep{forgan-papadog-kitching-2013,nicholson-forgan-2013}. \emph{Powered nearest-neighbour}
 flight moves under the probe's own power to the nearest unsettled star. \emph{Nearest-star
 slingshot} flight takes the same nearest target but gains speed from gravitational slingshots
 off the stars it passes. \emph{Maximum-boost slingshot} flight instead selects, among the
@@ -32,7 +32,7 @@ nearest believed-unsettled stars, the target that yields the largest velocity ga
 gravitational boost self-limits (its per-encounter gain falls off once the probe outruns the
 stellar escape speed), so both slingshot policies saturate at a mean speed of a few thousand
 km/s, a few times $10^{-3}$ of $c$. To reach the higher speeds that beamed directed-energy
-concepts target, $0.1$ to $0.2\,c$ \cite{lubin-2016,carroll-nellenback-2019}, a probe must be
+concepts target, $0.1$ to $0.2\,c$ \citep{lubin-2016,carroll-nellenback-2019}, a probe must be
 driven, not slung; we therefore sweep the powered cruise speed as a clean, direct control on
 $v/c$, from the source model's $3\times10^{-5}\,c$ up to $0.2\,c$. Powered flight thus spans the
 whole speed axis, while the two slingshot policies sit near $v/c \approx 0.01$.
@@ -118,7 +118,7 @@ uniform density rescales every inter-star distance by a common factor, multiplyi
 light-travel time on every hop equally, so $\Lambda$ and the relative penalties are unchanged: this
 is a scale-free property of a uniform field, exactly what (\ref{eq:tax}) predicts when the hop
 length cancels, so confirming it holds to the printed digit from $0.14$ to $5$ stars per cubic
-parsec \cite{recons-census} is a consistency check on the derivation, not an independent robustness
+parsec \citep{recons-census} is a consistency check on the derivation, not an independent robustness
 result. The case that would genuinely test density sensitivity is a clumpy, non-uniform field, which
 we do not simulate (a documented limitation). And because the field always fills under
 both regimes and each settlement launches a fixed number of offspring, the two regimes build
@@ -129,7 +129,7 @@ of journeys flown, which is why the coordination cost is a travel cost.
 \subsection{Baseline validation}
 By construction the ``instant'' regime is the $c\to\infty$ limit of (\ref{eq:gate}), and it
 reproduces the plain perfect-information fold bit-for-bit. Against Nicholson and Forgan's
-published model \cite{nicholson-forgan-2013} the event-driven fold reproduces both headline
+published model \citep{nicholson-forgan-2013} the event-driven fold reproduces both headline
 findings \emph{quantitatively}: gravitational slingshots explore about two orders of magnitude
 faster than powered flight (a factor of about $166$ on a $400$-star field), and their surprising
 result that aiming for the nearest star beats aiming for the largest boost on total exploration

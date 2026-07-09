@@ -4,7 +4,7 @@
 We measured the cost as a paired ensemble: 48 seeded galaxies of 500 stars, each filled twice on
 the \emph{identical} field, once with perfect information and once with the light-speed gate of
 (\ref{eq:gate}), all at the resolved event-driven timestep. Reporting the distribution across the
-ensemble follows the seeded Monte Carlo practice of the field \cite{forgan-2009}; we give the
+ensemble follows the seeded Monte Carlo practice of the field \citep{forgan-2009}; we give the
 median with a seeded percentile-bootstrap 95\% confidence interval. We deliberately do not lean on
 a significance test on the fuel tax: by the structure of the model a stale view can only make a
 probe believe a settled star is still open, never the reverse, so the decision-site run can only
@@ -162,11 +162,11 @@ Table~\ref{tab:regime} places the physical propulsion concepts on the speed axis
 powered cruise ($3\times10^{-5}\,c$) is far too slow for any race to matter, and pays nothing. The
 gravitational slingshot that motivated this study reaches only $\Lambda \approx 0.01$ before its
 boost self-limits, and pays about a percent of journeys -- real, but small. The tax becomes large only for beamed
-directed-energy or light-sail propulsion at $0.1$ to $0.2\,c$ \cite{lubin-2016,carroll-nellenback-2019},
+directed-energy or light-sail propulsion at $0.1$ to $0.2\,c$ \citep{lubin-2016,carroll-nellenback-2019},
 where it takes a tenth to a fifth of journeys. Every case still fills the field to completion: this
 is a property of the model, not a result, since with re-targeting and no loss term the reachable
 field must close, and delay supplies no term that would leave a permanent unsettled remainder of the
-kind an ``Aurora'' steady state requires \cite{carroll-nellenback-2019}. The coordination failure
+kind an ``Aurora'' steady state requires \citep{carroll-nellenback-2019}. The coordination failure
 shows up as wasted motion, not as an unfilled galaxy.
 
 \begin{table}[!t]
@@ -180,16 +180,16 @@ shows up as wasted motion, not as an unfilled galaxy.
     \toprule
     Propulsion regime & $\Lambda = v/c$ & Fuel tax (\%) \\
     \midrule
-    Powered cruise \cite{nicholson-forgan-2013}          & $3\times10^{-5}$ & $\approx 0$ \\
-    Gravitational slingshot \cite{nicholson-forgan-2013} & $\approx 0.01$   & $\approx 1$ \\
-    Directed-energy / light sail \cite{lubin-2016}       & $0.1$ to $0.2$   & 9 to 20 \\
+    Powered cruise \citep{nicholson-forgan-2013}          & $3\times10^{-5}$ & $\approx 0$ \\
+    Gravitational slingshot \citep{nicholson-forgan-2013} & $\approx 0.01$   & $\approx 1$ \\
+    Directed-energy / light sail \citep{lubin-2016}       & $0.1$ to $0.2$   & 9 to 20 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \begin{figure}[!t]
   \centering
-  \includegraphics[width=\columnwidth]{fig_time_tax_vs_dt.pdf}
+  \includegraphics[width=0.66\linewidth]{fig_time_tax_vs_dt.pdf}
   \caption{The fill-100\% time penalty for nearest-star slingshot flight versus the fixed timestep,
     over the 32-seed ensemble. The apparent penalty is monotone in the step and collapses to zero
     (dashed line: the event-driven, dt-independent limit). The tens-of-percent ``coordination tax''
@@ -199,7 +199,7 @@ shows up as wasted motion, not as an unfilled galaxy.
 
 \begin{figure}[!t]
   \centering
-  \includegraphics[width=\columnwidth]{fig_concurrency.pdf}
+  \includegraphics[width=0.66\linewidth]{fig_concurrency.pdf}
   \caption{Probes in flight versus the fraction of the field settled, for perfect information and
     the light-speed gate (medians over 16 seeds, 500-star field, $\Lambda = 0.2$). The population
     stays near its peak of a few hundred all the way into the final percent and the two regimes
@@ -210,7 +210,7 @@ shows up as wasted motion, not as an unfilled galaxy.
 
 \begin{figure}[!t]
   \centering
-  \includegraphics[width=\columnwidth]{fig_fuel_tax_vs_lambda.pdf}
+  \includegraphics[width=0.66\linewidth]{fig_fuel_tax_vs_lambda.pdf}
   \caption{The coordination tax versus probe speed $\Lambda = v/c$, powered flight, over the
     48-seed ensemble at the event-driven timestep (both as a percent over perfect information;
     points: medians; bars: bootstrap 95\% confidence
@@ -222,7 +222,7 @@ shows up as wasted motion, not as an unfilled galaxy.
 
 \begin{figure}[!t]
   \centering
-  \includegraphics[width=\columnwidth]{fig_fuel_tax_by_seed.pdf}
+  \includegraphics[width=0.66\linewidth]{fig_fuel_tax_by_seed.pdf}
   \caption{Per-seed distribution of the fuel tax (extra wasted journeys, as a percent of the
     perfect-information waste) at slingshot speed ($\Lambda = 0.01$), $\Lambda = 0.1$, and
     directed-energy speed ($\Lambda = 0.2$), over the 48-seed ensemble (box: interquartile range and
@@ -233,7 +233,7 @@ shows up as wasted motion, not as an unfilled galaxy.
 
 \begin{figure}[!t]
   \centering
-  \includegraphics[width=\columnwidth]{fig_branching.pdf}
+  \includegraphics[width=0.66\linewidth]{fig_branching.pdf}
   \caption{Fuel tax versus the replication branching factor (offspring per settlement) at moderate
     and directed-energy speed, over the 32-seed ensemble (points: medians; bars: bootstrap 95\%
     confidence intervals). Contention grows with branching at high $\Lambda$ and then saturates; the
@@ -243,7 +243,7 @@ shows up as wasted motion, not as an unfilled galaxy.
 
 \begin{figure}[!t]
   \centering
-  \includegraphics[width=\columnwidth]{fig_floor_bracket.pdf}
+  \includegraphics[width=0.66\linewidth]{fig_floor_bracket.pdf}
   \caption{Redundant travel under perfect information, the decision-site light-speed gate, and
     in-flight relay, versus $\Lambda$ (medians over 48 seeds, 400-star field). Listening in flight
     drives completed wasted arrivals to zero and cuts redundant travel below even the
@@ -253,7 +253,7 @@ shows up as wasted motion, not as an unfilled galaxy.
 
 \begin{figure}[!t]
   \centering
-  \includegraphics[width=\columnwidth]{fig_fuel_tax_vs_n.pdf}
+  \includegraphics[width=0.66\linewidth]{fig_fuel_tax_vs_n.pdf}
   \caption{Fuel tax as a percent of the perfect-information waste versus system size, at
     $\Lambda = 0.2$ (point: median; shaded band: bootstrap 95\% confidence interval; 32 to 48 seeds
     per point). Over a sixteen-fold range the tax holds near 18 to 19\% up to about a thousand stars

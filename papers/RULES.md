@@ -48,7 +48,9 @@ regenerates it from `sources.ts` before every build.
 Two lists of citation ids exist for each paper, and they must be identical as sets:
 
 1. `paper.json`'s `cites` array - the manifest shown on the site.
-2. Every `\cite{...}` id used in the compiled document (`main.tex` and `body/*.tex`).
+2. Every citation id used in the compiled document (`main.tex` and `body/*.tex`). The
+   checker recognizes both the numeric `\cite{...}` of IEEEtran papers and the author-year
+   `\citep{...}`/`\citet{...}` of natbib papers (see the per-paper format note in R7).
 
 Because `refs.bib` carries *all* sources, nothing stops prose from citing a source
 the manifest omits, or the manifest from declaring a source the prose never uses.
@@ -120,8 +122,17 @@ for the index; `gen-tex.mjs`'s existence guard for no-overwrite.
 - Plain language: a paper explains its "why" in words, for non-specialists
   (`CLAUDE.md` 4).
 - The written research (prose in `*.tex` and the Markdown here) is licensed
-  **CC BY-NC-ND 4.0** (see [`../LICENSE-DOCS`](../LICENSE-DOCS)). `IEEEtran` is
-  third-party (LPPL 1.3) and is not redistributed.
+  **CC BY-NC-ND 4.0** (see [`../LICENSE-DOCS`](../LICENSE-DOCS)). The document classes are
+  third-party (LPPL) and are **not redistributed** - CI relies on their being in TeX Live.
+- **Format is per paper, whichever the target venue wants; both must be TeX-Live-only.**
+  `electronics-wall` uses `IEEEtran` (conference, numeric `\cite`). `coordination-tax` uses
+  the standard `article` class as a single-column journal manuscript with author-year
+  citations (`natbib` + `plainnat`, `\citep`/`\citet`), suitable as an initial submission to
+  an astrobiology journal such as the International Journal of Astrobiology; the publisher's
+  own house class (e.g. Cambridge's `cup-journal`, which is not in TeX Live and needs biber)
+  is applied at submission time, outside CI. `refs.bib` is style-agnostic and serves both:
+  `gen-bib.mjs` emits BibTeX-canonical `Last, First` names so numeric styles print "F. Last"
+  and author-year styles can form proper "(Last, Year)" labels from the same entries.
 
 ---
 
@@ -132,12 +143,12 @@ below is about making a paper read as *real scientific publishing* rather than a
 sourced draft. It is drawn from studying the works this project actually cites -
 Nicholson & Forgan 2013 and Forgan, Papadogiannakis & Kitching 2013 (the swarm
 lineage), Nagapurkar & Das 2022 and Freitas & Merkle 2004 (the closure/embodied-energy
-lineage) - and from the IEEE conference-paper conventions our `IEEEtran` class assumes.
-None of it is enforced by a script; treat it as the house style, and depart from it
-only with a reason.
+lineage) - and from standard journal/conference conventions. None of it is enforced by a
+script; treat it as the house style, and depart from it only with a reason. Some items below
+are class-specific (noted inline); the section spine and rigor apply whatever the class.
 
 - **P1. Follow the section spine.** Abstract -> `I. Introduction` (prior work folded
-  in, citation-dense; open it with `\IEEEPARstart`) -> a `Method`/`Model` section with
+  in, citation-dense; under IEEEtran open it with `\IEEEPARstart`) -> a `Method`/`Model` section with
   subsections -> a `Results` section carrying the figures and a summary table ->
   `Discussion` that *leads with a Limitations subsection* and then draws implications
   -> `Conclusion` -> optional unnumbered `\section*{Acknowledgment}` -> References.
@@ -203,8 +214,9 @@ deploy time.
    `cites`, abstract).
 3. `node scripts/gen-tex.mjs <slug>` to scaffold `main.tex` + `body/*.tex` (the
    scaffolded abstract is copied verbatim from `paper.json`, so R4 holds immediately).
-4. Write the prose in `body/*.tex`. Use `\cite{<id>}` for every quantitative claim.
-   Keep the declared `cites` and the ids you actually use in exact agreement (R3).
+4. Write the prose in `body/*.tex`. Cite every quantitative claim - `\cite{<id>}` under
+   IEEEtran, or `\citep{<id>}`/`\citet{<id>}` under natbib author-year. Keep the declared
+   `cites` and the ids you actually use in exact agreement (R3).
 5. `npm run check` to validate cites (R3), the abstract (R4), and typography (R5), and
    to refresh `papers-index.ts` (R6). Run this **after** the prose is written, since
    R3 requires declared and used cites to match.
