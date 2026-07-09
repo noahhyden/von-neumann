@@ -73,12 +73,33 @@ jobs:
       # Figures are gitignored vector PDFs generated from the source modules. Best-effort,
       # like the LaTeX step: if a figure build fails, the paper simply typesets without it
       # (or is skipped below) and the site still deploys. ci.yml gates this on PRs.
+      #
+      # Generation runs a seeded event-mode ensemble that can be many minutes of compute, and
+      # it runs on every push to main, so we cache the resulting PDFs keyed on the SOURCE that
+      # produces them (sim + experiment code + locked deps). A deploy that did not touch a
+      # figure-source module restores its figures from cache and skips regeneration; the fold
+      # is deterministic, so a hit is byte-identical to a rebuild. This keeps a no-sim-change
+      # deploy fast instead of paying the full figure build each time.
+      - name: Cache coordination-tax figures
+        id: figs-ct
+        uses: actions/cache@v4
+        with:
+          path: von-neumann/papers/coordination-tax/fig_*.pdf
+          key: figs-coordination-tax-pages-v1-${{ hashFiles('von-neumann/swarm/src/**/*.py', 'von-neumann/swarm/experiments/**/*.py', 'von-neumann/swarm/pyproject.toml', 'von-neumann/swarm/uv.lock') }}
       - name: Generate coordination-tax figures (swarm)
+        if: steps.figs-ct.outputs.cache-hit != 'true'
         continue-on-error: true
         working-directory: von-neumann/swarm
         run: uv run --extra dev python -m experiments.paper_figures
 
+      - name: Cache electronics-wall figures
+        id: figs-ew
+        uses: actions/cache@v4
+        with:
+          path: von-neumann/papers/electronics-wall/fig_*.pdf
+          key: figs-electronics-wall-pages-v1-${{ hashFiles('von-neumann/closure-sim/src/**/*.py', 'von-neumann/closure-sim/pyproject.toml', 'von-neumann/closure-sim/uv.lock') }}
       - name: Generate electronics-wall figures (closure-sim)
+        if: steps.figs-ew.outputs.cache-hit != 'true'
         continue-on-error: true
         working-directory: von-neumann/closure-sim
         run: uv run --extra dev python -m closure_sim.paper_figures
