@@ -1,14 +1,19 @@
 \section{Results: the coordination tax}
 \label{sec:results}
 
-We measured the cost as a paired ensemble: 32 seeded galaxies, each filled twice on the
-\emph{identical} field, once with perfect information and once with the light-speed gate of
-(\ref{eq:gate}), all at the resolved event-driven timestep. Two quantities matter: the relative
-slowdown in the time to fill the field, and the number of wasted journeys, trips to stars a
-probe finds already settled on arrival. Reporting the distribution across the ensemble follows
-the seeded Monte Carlo practice of the field \cite{forgan-2009}; we give the median with a
-seeded percentile-bootstrap 95\% confidence interval and a two-sided sign test over the paired
-seeds.
+We measured the cost as a paired ensemble: 48 seeded galaxies of 500 stars, each filled twice on
+the \emph{identical} field, once with perfect information and once with the light-speed gate of
+(\ref{eq:gate}), all at the resolved event-driven timestep. Reporting the distribution across the
+ensemble follows the seeded Monte Carlo practice of the field \cite{forgan-2009}; we give the
+median with a seeded percentile-bootstrap 95\% confidence interval. We deliberately do not lean on
+a significance test on the fuel tax: by the structure of the model a stale view can only make a
+probe believe a settled star is still open, never the reverse, so the decision-site run can only
+\emph{add} wasted journeys. The sign is therefore built in; what is informative is the magnitude and
+its scaling, which the intervals and sweeps below report. (This monotonicity is specific to the
+decision-site gate: the in-flight-relay variant of Section~\ref{sec:floor} can \emph{lower} waste
+below the perfect-information baseline, by aborting doomed hops that perfect knowledge at the stops
+would not.) For the one genuinely null claim -- no fill-time tax at low speed -- we do not wave the
+test away but give an equivalence bound instead (below).
 
 \subsection{There is no fill-time tax; the coarse-timestep one is an artifact}
 Light-speed lag does not measurably slow the fill of the field. Fig.~\ref{fig:dt} shows why the
@@ -25,108 +30,193 @@ two-orders-of-magnitude figure (about $166\times$ on a 400-star field), where th
 reported only about $20\times$. The celebrated speed-up survives contact with finite information;
 the fill-time tax does not exist.
 
-\subsection{The real cost is redundant travel, governed by $\Lambda = v/c$}
+\subsection{Why the time cost stays far below the fuel cost}
+\label{sec:mechanism}
+Fuel and time are hit unequally because the fill rate is carried by a large parallel population, and
+a wasted trip removes only one member of it. Fig.~\ref{fig:concurrency} tracks the number of probes
+in flight as the field fills: exponential branching keeps a median of about 480 probes aloft at the
+peak of a 500-star fill, and the light-delayed swarm carries essentially the same population as the
+perfect-information one (peaks of about 470 against 480), because both build the same probes. The
+front advances at the aggregate rate of hundreds of probes settling stars, and losing a fraction of
+them to wasted trips lowers that rate only in proportion, damped by the redundancy. So a fuel tax of
+a fifth of journeys does not become a fifth of the fill time: at $\Lambda = 0.2$ the fill-time tax is
+a few percent, roughly a third of the fuel tax, and it is present throughout rather than only at the
+end -- a median of $4.2\%$ already at half-fill, $5.1\%$ at 90\%, and $6.6\%$ at completion. The
+population stays near its peak all the way into the final percent (about 480 aloft, and still near
+that at 99\% settled, since branching keeps launching until stars run out; Fig.~\ref{fig:concurrency}),
+and nearly identical between the regimes, so the two fills proceed almost in lockstep and the lag
+accumulates gradually rather than spiking at the tail. The large population does not make the time
+cost vanish, as a coarser reading might suggest; it holds it to a fraction of the fuel cost. At low
+$\Lambda$, where few trips are wasted, that fraction of a small number is what leaves the fill time
+statistically indistinguishable from the perfect-information one.
+
+\subsection{The real cost is redundant travel, and it scales as $\Lambda$}
 What the delay changes is how far the swarm flies. Because the field always fills and each
 settlement launches a fixed number of offspring, both coordination regimes build essentially the
 same number of probes -- differing by well under a percent, in a handful of terminal launches --
-so the resource the delay moves is journeys, and stale views add wasted ones. That
-redundant-travel tax is governed cleanly by the probe's speed in units of $c$. Table~\ref{tab:lambda}
-and Fig.~\ref{fig:lambda} give it for powered flight swept across the speed axis: negligible at
-the cruise speed, a median of 0.7\% of journeys at $\Lambda = 0.01$, rising monotonically to
-18.4\% at $\Lambda = 0.2$. It is not marginal -- at every speed from $\Lambda = 0.03$ upward it is
-positive in all 32 seeds ($p \approx 5\times10^{-10}$), and Fig.~\ref{fig:byseed} shows the
-per-seed distributions sitting cleanly above zero. A small fill-time tax rides alongside it once
-the swarm is fast, growing from nil at $\Lambda \le 0.01$ to a few percent at $\Lambda = 0.2$
-(Table~\ref{tab:lambda}), but the redundant travel is the larger and cleaner signal, and unlike
-the coarse-step time tax it is real: it does not vanish when the dynamics are resolved, because it
-is not a batching artifact but the physical consequence of deciding on stale views.
+so the resource the delay moves is journeys, and stale views add wasted ones. Table~\ref{tab:lambda}
+and Fig.~\ref{fig:lambda} give the redundant-travel tax for powered flight swept across the speed
+axis: a median of 0.6\% of wasted journeys at $\Lambda = 0.01$, rising to 19.5\% at $\Lambda = 0.2$,
+with the confidence interval clear of zero at every speed and the per-seed spread widening with
+$\Lambda$ (Fig.~\ref{fig:byseed}).
 
-This is what $\Lambda$ was always meant to govern. The ratio is the same on every hop, so it
-cannot pick out where in the field the cost lands; but it sets, cleanly and monotonically, how
-much of the swarm's motion is wasted. It is the right dimensionless group for the fuel tax, and it
-does not predict a time tax because at resolved dynamics there is essentially none to predict.
+These points sit on the line the collision model predicted. Fitting the tax as $a\,\Lambda$ through
+the origin gives $a = 0.96$, within four percent of the derived coefficient of one, and the raw
+ratio of wasted trips $p_{\text{lag}}/p_{\text{perfect}}$ tracks $1 + \Lambda$ almost exactly --
+$1.006$, $1.042$, $1.093$, $1.195$ measured against $1.010$, $1.050$, $1.100$, $1.200$ predicted by
+(\ref{eq:tax}) at $\Lambda = 0.01, 0.05, 0.1, 0.2$. So the tax is not merely empirical: the
+wasted-journey fraction \emph{is} $\Lambda$, for the reason the derivation gives, the blind stale
+window $d/c$ adding to the travel exposure $d/v$. The small shortfall below the line at the lowest
+speeds is the leading-order model's expected error, not a different law, and the same argument
+explains why the tax is independent of hop length and density (both cancel in (\ref{eq:tax})), which
+Section~\ref{sec:scale} and the density check confirm.
+
+A fill-time tax rides alongside the fuel tax, but only once the swarm is fast, and it is a genuine
+effect rather than a coarse-step artifact. At low speed it is indistinguishable from zero -- a median
+of $0.0\%$ with a bootstrap interval inside $[0, 1.3]\%$ for $\Lambda \le 0.03$, i.e. equivalent to
+no delay at a one-percent margin -- but it is unambiguously nonzero by $\Lambda = 0.1$ and reaches a
+median of $6.6\%$ $[5.2, 10.5]$ at $\Lambda = 0.2$ (Table~\ref{tab:lambda}). This is why we call the
+cost fuel-\emph{dominated} rather than time-free: at the directed-energy speeds where the fuel tax is
+largest, a secondary time cost of several percent emerges with it. Section~\ref{sec:mechanism}
+explains why the time cost stays a fraction of the fuel cost rather than matching it -- the fill rate
+is carried by a large parallel population that individual wasted trips barely dent, so wasting a
+fifth of journeys slows the fill by only a few percent.
 
 \begin{table}[!t]
   \centering
-  \caption{Coordination tax over the 32-seed paired ensemble at the event-driven timestep,
-    powered flight, as a function of $\Lambda = v/c$: the redundant-travel (fuel) tax as a
-    percent of the wasted journeys under perfect information, and the fill-time tax, each as a
-    median with a bootstrap 95\% confidence interval. The fuel tax is positive in all 32 seeds
-    from $\Lambda = 0.03$ up.}
+  \caption{Coordination tax over the 48-seed paired ensemble at the event-driven timestep, powered
+    flight, as a function of $\Lambda = v/c$: the redundant-travel (fuel) tax as a percent of the
+    wasted journeys under perfect information, and the fill-time tax, each as a median with a
+    bootstrap 95\% confidence interval.}
   \label{tab:lambda}
   \begin{tabular}{lcc}
     \toprule
     $\Lambda = v/c$ & Fuel tax (\%) & Fill-time tax (\%) \\
     \midrule
-    0.01 & \mbox{0.7 [0.6, 1.1]}   & \mbox{0.0 [0.0, 0.0]} \\
-    0.03 & \mbox{3.2 [2.1, 4.0]}   & \mbox{0.2 [0.0, 1.4]} \\
-    0.05 & \mbox{5.8 [4.3, 7.3]}   & \mbox{1.3 [0.2, 2.4]} \\
-    0.10 & \mbox{10.9 [7.8, 12.8]} & \mbox{2.4 [0.9, 4.1]} \\
-    0.20 & \mbox{18.4 [16.9, 21.7]}& \mbox{3.6 [1.9, 7.3]} \\
+    0.01 & \mbox{0.6 [0.5, 0.8]}   & \mbox{0.0 [0.0, 0.0]} \\
+    0.03 & \mbox{2.9 [1.8, 4.1]}   & \mbox{0.1 [0.0, 1.3]} \\
+    0.05 & \mbox{4.2 [3.4, 5.8]}   & \mbox{0.3 [0.0, 1.8]} \\
+    0.10 & \mbox{9.3 [7.4, 11.4]}  & \mbox{2.6 [0.9, 4.0]} \\
+    0.20 & \mbox{19.5 [17.8, 23.3]}& \mbox{6.6 [5.2, 10.5]} \\
     \bottomrule
   \end{tabular}
 \end{table}
 
+\subsection{Contention scales with the branching factor}
+\label{sec:branching}
+The tax exists only because probes contend for stars, and contention is created by replication:
+each settlement launches offspring, and it is those offspring that can race. The branching factor
+is therefore the parameter most likely to change the answer, so we sweep it. Fig.~\ref{fig:branching}
+shows the fuel tax for two, three and four offspring per settlement. At moderate speed
+($\Lambda = 0.05$) it is flat, near 6\% regardless of branching. At directed-energy speed
+($\Lambda = 0.2$) it grows with branching, from 18.4\% at two offspring to 24.9\% at three, then
+saturates at 25.5\% at four: more offspring make more simultaneous races, but once enough probes are
+already contending the marginal collision rate levels off. The default of two offspring is thus not
+a floor that hides a much larger tax at higher branching; the tax rises modestly and then plateaus,
+and the whole effect stays within the same order of magnitude.
+
+\subsection{The physical floor: how much survives relaying in flight}
+\label{sec:floor}
+The tax reported so far is a conservative upper bound, because a probe here learns only at its
+decision stars and ignores news its path crosses in flight. The opposite extreme is a probe that
+listens continuously: the moment the beacon from a now-claimed target overtakes it -- at the
+closed-form time set by the beacon closing on the probe at $c$ while the probe closes on the target
+at $v$ -- it abandons the doomed hop and re-aims from wherever it then is. This ``in-flight relay''
+mode is the optimistic bound on what any relay protocol can recover, and we measure it directly.
+Its effect is dramatic. Because a beacon travelling at $c$ always overtakes a probe travelling at
+$v < c$ before the probe arrives, a listening probe essentially never completes a wasted arrival:
+the count of wasted arrivals falls from about 2{,}070 under decision-site knowledge to zero at
+$\Lambda = 0.2$. Redundant travel falls too, and below even the perfect-information baseline -- from
+about 3{,}580 pc under the light-speed gate, and 2{,}930 pc under perfect information, to about
+1{,}640 pc -- because listening in flight also lets a probe bail out of an ``assignment collision''
+(two probes independently choosing the same open star) that perfect knowledge at the decision site
+does not prevent. The recovery is not free: the mid-flight detours lengthen the fill slightly, by
+about 2\% at $\Lambda = 0.2$. So the decision-site tax is an upper bound, not a floor: a swarm that
+relays in flight can recover essentially all of the wasted-arrival tax and some of the collisions
+perfect information leaves behind, at a small cost in time. This is an information ceiling rather
+than an engineering estimate -- the beacon is idealized as isotropic, unattenuated, and detectable
+the instant its light arrives, so a real relay working against a finite link budget would recover
+less. What it establishes is that the decision-site tax is nowhere near a physical floor: most of it
+is protocol, not physics. What genuinely remains is the partial travel a probe flies toward a doomed
+star before the beacon reaches it, which grows with $\Lambda$ as the probe covers more of the hop
+before the relatively slower news catches up.
+
+\subsection{Does the tax hold at scale?}
+\label{sec:scale}
+A tax measured on a few-hundred-star field is only interesting if it survives to larger ones, so we
+sweep the system size at $\Lambda = 0.2$ over a sixteen-fold range, from 300 to 4{,}800 stars, with
+32 to 48 seeds at every size (Fig.~\ref{fig:scale}). The absolute count of wasted journeys grows with
+the field, as it must, from a median of about 240 extra trips at 300 stars to about 4{,}000 at
+4{,}800. As a fraction of the perfect-information waste the tax does the opposite: it holds near 18
+to 19\% up to about a thousand stars and then declines gently, to $16.3\%$ $[15.3, 17.8]$ at 2{,}400
+stars and $13.1\%$ $[11.6, 14.0]$ at 4{,}800. With this many seeds the decline is resolved rather
+than suspected -- the confidence intervals at 300 and 4{,}800 stars do not overlap -- so it is a real
+trend, not finite-sample scatter, though the event-mode $O(N^2)$ cost still caps how far we can push
+it. The direction is what matters for the one extrapolation a reader might be tempted to make: the
+fraction does not grow with scale, and in fact shrinks, so nothing here supports carrying a
+fixed-percentage tax out to a $10^{11}$-star galaxy. We report the scale behaviour over the range we
+can measure and make no claim beyond it.
+
+\subsection{Where the cost falls}
+Table~\ref{tab:regime} places the physical propulsion concepts on the speed axis. The source model's
+powered cruise ($3\times10^{-5}\,c$) is far too slow for any race to matter, and pays nothing. The
+gravitational slingshot that motivated this study reaches only $\Lambda \approx 0.01$ before its
+boost self-limits, and pays about a percent of journeys -- real, but small. The tax becomes large only for beamed
+directed-energy or light-sail propulsion at $0.1$ to $0.2\,c$ \cite{lubin-2016,carroll-nellenback-2019},
+where it takes a tenth to a fifth of journeys. Every case still fills the field to completion: this
+is a property of the model, not a result, since with re-targeting and no loss term the reachable
+field must close, and delay supplies no term that would leave a permanent unsettled remainder of the
+kind an ``Aurora'' steady state requires \cite{carroll-nellenback-2019}. The coordination failure
+shows up as wasted motion, not as an unfilled galaxy.
+
 \begin{table}[!t]
   \centering
-  \caption{Where real propulsion concepts sit on the $\Lambda$ axis, and the fuel tax each
-    incurs. The powered cruise is far too slow for lag to bite; gravitational slingshots
-    self-limit near $\Lambda \approx 0.01$; only beamed directed-energy propulsion reaches the
-    regime where the tax is large.}
+  \caption{Where real propulsion concepts sit on the $\Lambda$ axis, and the fuel tax each incurs.
+    The powered cruise is far too slow for lag to bite; gravitational slingshots self-limit near
+    $\Lambda \approx 0.01$; only beamed directed-energy propulsion reaches the regime where the tax
+    is large.}
   \label{tab:regime}
   \begin{tabular}{lcc}
     \toprule
     Propulsion regime & $\Lambda = v/c$ & Fuel tax (\%) \\
     \midrule
-    Powered cruise \cite{nicholson-forgan-2013}        & $3\times10^{-5}$ & $\approx 0$ \\
+    Powered cruise \cite{nicholson-forgan-2013}          & $3\times10^{-5}$ & $\approx 0$ \\
     Gravitational slingshot \cite{nicholson-forgan-2013} & $\approx 0.01$   & $\approx 1$ \\
-    Directed-energy / light sail \cite{lubin-2016}     & $0.1$ to $0.2$   & 11 to 18 \\
+    Directed-energy / light sail \cite{lubin-2016}       & $0.1$ to $0.2$   & 9 to 20 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\subsection{The fuel tax is a scale-stable fraction of effort}
-The tax is not an artifact of the small field either. Fig.~\ref{fig:scale} sweeps the system size
-at $\Lambda = 0.2$. The absolute count of wasted journeys grows with the field, as it must -- from
-a median of about 230 extra trips at 300 stars to about 1{,}160 at 1{,}200 -- but as a fraction of
-the perfect-information waste the tax is flat, 17.9\%, 18.9\%, 19.2\% at 300, 600, 1{,}200 stars,
-positive in all 16 seeds at every size. The redundant-travel cost is thus a roughly
-size-independent fraction of the swarm's effort, which is what makes the extrapolation toward
-galactic scale a supported trend rather than a boundary effect of a small box.
+\begin{figure}[!t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_time_tax_vs_dt.pdf}
+  \caption{The fill-100\% time penalty for nearest-star slingshot flight versus the fixed timestep,
+    over the 32-seed ensemble. The apparent penalty is monotone in the step and collapses to zero
+    (dashed line: the event-driven, dt-independent limit). The tens-of-percent ``coordination tax''
+    of a coarse-step model is a discretization artifact, not a physical slowdown.}
+  \label{fig:dt}
+\end{figure}
 
-\subsection{Where the cost falls}
-Table~\ref{tab:regime} places the physical propulsion concepts on this axis. The source model's
-powered cruise ($3\times10^{-5}\,c$) is far too slow for any race to matter, and pays nothing. The
-gravitational slingshot that motivated this study reaches only $\Lambda \approx 0.01$ before its
-boost self-limits, and pays about a percent -- real, but small. The tax becomes large only for
-beamed directed-energy or light-sail propulsion at $0.1$ to $0.2\,c$
-\cite{lubin-2016,carroll-nellenback-2019}, where it takes a fifth of journeys. Every case still
-fills the field to completion: this is a property of the model, not a result, since with
-re-targeting and no loss term the reachable field must close, and delay supplies no term that
-would leave a permanent unsettled remainder of the kind an ``Aurora'' steady state requires
-\cite{carroll-nellenback-2019}. The coordination failure shows up as wasted motion, not as an
-unfilled galaxy.
+\begin{figure}[!t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_concurrency.pdf}
+  \caption{Probes in flight versus the fraction of the field settled, for perfect information and
+    the light-speed gate (medians over 16 seeds, 500-star field, $\Lambda = 0.2$). The population
+    stays near its peak of a few hundred all the way into the final percent and the two regimes
+    track each other closely, so the fills run almost in lockstep and the light-lag swarm loses only
+    the small productive-rate deficit that keeps the time tax a fraction of the fuel tax.}
+  \label{fig:concurrency}
+\end{figure}
 
 \begin{figure}[!t]
   \centering
   \includegraphics[width=\columnwidth]{fig_fuel_tax_vs_lambda.pdf}
   \caption{The coordination tax versus probe speed $\Lambda = v/c$, powered flight, over the
-    32-seed ensemble at the event-driven timestep (points: medians; bars: bootstrap 95\%
-    confidence intervals). The redundant-travel (fuel) tax rises cleanly and monotonically with
-    $\Lambda$, from under a percent at slingshot speeds to about a fifth at directed-energy speeds;
-    the fill-time tax is a small companion that only appears once the swarm is fast.}
+    48-seed ensemble at the event-driven timestep (points: medians; bars: bootstrap 95\% confidence
+    intervals). The redundant-travel (fuel) tax sits on the derived law tax $=\Lambda$ (grey line,
+    Eq.~\ref{eq:tax}) at every speed; the fill-time tax stays near zero at slingshot speeds and
+    emerges to a few percent only in the directed-energy regime.}
   \label{fig:lambda}
-\end{figure}
-
-\begin{figure}[!t]
-  \centering
-  \includegraphics[width=\columnwidth]{fig_time_tax_vs_dt.pdf}
-  \caption{The fill-100\% time penalty for nearest-star slingshot flight versus the fixed
-    timestep, over the 32-seed ensemble. The apparent penalty is monotone in the step and
-    collapses to zero (dashed line: the event-driven, dt-independent limit). The tens-of-percent
-    ``coordination tax'' of a coarse-step model is a discretization artifact, not a physical
-    slowdown.}
-  \label{fig:dt}
 \end{figure}
 
 \begin{figure}[!t]
@@ -134,18 +224,40 @@ unfilled galaxy.
   \includegraphics[width=\columnwidth]{fig_fuel_tax_by_seed.pdf}
   \caption{Per-seed distribution of the fuel tax (extra wasted journeys, as a percent of the
     perfect-information waste) at slingshot speed ($\Lambda = 0.01$), $\Lambda = 0.1$, and
-    directed-energy speed ($\Lambda = 0.2$), over the 32-seed ensemble (box: interquartile range
-    and median; points: individual seeds). The tax is small but consistently positive at
-    slingshot speed and unambiguous at directed-energy speed.}
+    directed-energy speed ($\Lambda = 0.2$), over the 48-seed ensemble (box: interquartile range and
+    median; points: individual seeds). The tax is small but consistently positive at slingshot speed
+    and unambiguous at directed-energy speed.}
   \label{fig:byseed}
+\end{figure}
+
+\begin{figure}[!t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_branching.pdf}
+  \caption{Fuel tax versus the replication branching factor (offspring per settlement) at moderate
+    and directed-energy speed, over the 32-seed ensemble (points: medians; bars: bootstrap 95\%
+    confidence intervals). Contention grows with branching at high $\Lambda$ and then saturates; the
+    default of two offspring does not hide a much larger tax.}
+  \label{fig:branching}
+\end{figure}
+
+\begin{figure}[!t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_floor_bracket.pdf}
+  \caption{Redundant travel under perfect information, the decision-site light-speed gate, and
+    in-flight relay, versus $\Lambda$ (medians over 48 seeds, 400-star field). Listening in flight
+    drives completed wasted arrivals to zero and cuts redundant travel below even the
+    perfect-information baseline, recovering the light-lag tax at a small cost in fill time.}
+  \label{fig:floor}
 \end{figure}
 
 \begin{figure}[!t]
   \centering
   \includegraphics[width=\columnwidth]{fig_fuel_tax_vs_n.pdf}
   \caption{Fuel tax as a percent of the perfect-information waste versus system size, at
-    $\Lambda = 0.2$ (point: median; shaded band: interquartile range over 16 seeds). The tax is a
-    roughly scale-independent fraction of effort, near 18 to 19\% across a four-fold range in the
-    number of stars, so it does not wash out at larger scale.}
+    $\Lambda = 0.2$ (point: median; shaded band: bootstrap 95\% confidence interval; 32 to 48 seeds
+    per point). Over a sixteen-fold range the tax holds near 18 to 19\% up to about a thousand stars
+    and then declines to about 13\% at 4{,}800; the end intervals do not overlap, so it does not grow
+    with scale but gently shrinks, which is why we make no fixed-percentage extrapolation to galactic
+    size.}
   \label{fig:scale}
 \end{figure}

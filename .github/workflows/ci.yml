@@ -157,21 +157,16 @@ jobs:
       # modules, so the paper restates only their real output (papers/RULES.md R1, P4).
       # A figure-build failure fails the PR, since the typeset below needs them. Each
       # paper's figure + typeset pair runs only when that paper is affected (see above).
-      # Figure generation runs a seeded event-mode ensemble that can be minutes of compute,
-      # so we cache the resulting PDFs keyed on the SOURCE that produces them (the sim +
-      # experiment code + its locked deps). A paper affected only by a prose/.tex change
-      # therefore restores its figures from cache and skips regeneration; a change to the
-      # figure-source module misses the cache and rebuilds. The fold is deterministic, so a
-      # cache hit is byte-identical to a rebuild.
-      - name: Cache coordination-tax figures
-        id: figs-ct
+      # coordination-tax figures RENDER from committed JSON result artifacts
+      # (swarm/experiments/results/), not from a live simulation. The heavy ensemble
+      # (swarm/experiments/measure.py) runs LOCALLY and commits its deterministic seeded
+      # output; CI only plots it, which takes a few seconds - so there is no figure cache here
+      # (a change to the committed JSON, i.e. new data, or to the figure code re-renders
+      # directly, and the swarm pytest job's drift-guard re-runs a slice to prove the committed
+      # JSON still matches the fold). The heavy measure.py is never run in CI. (electronics-wall
+      # below still builds its own figures from closure-sim and keeps its source-keyed cache.)
+      - name: Render coordination-tax figures from committed results (swarm)
         if: steps.changed.outputs.coordination_tax == 'true'
-        uses: actions/cache@v4
-        with:
-          path: papers/coordination-tax/fig_*.pdf
-          key: figs-coordination-tax-ci-v1-${{ hashFiles('swarm/src/**/*.py', 'swarm/experiments/**/*.py', 'swarm/pyproject.toml', 'swarm/uv.lock') }}
-      - name: Generate coordination-tax figures (swarm)
-        if: steps.changed.outputs.coordination_tax == 'true' && steps.figs-ct.outputs.cache-hit != 'true'
         working-directory: swarm
         run: uv run --extra dev python -m experiments.paper_figures
       - name: Typeset coordination-tax (LaTeX) - a broken .tex fails the PR

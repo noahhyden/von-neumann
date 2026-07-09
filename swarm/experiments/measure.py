@@ -1,0 +1,408 @@
+"""Heavy measurement driver: runs the full referee-revision ensemble and writes committed JSON.
+
+This is the "beefed-up simulation" the paper's second revision rests on. It is deliberately
+kept OUT of CI: a full event-mode ensemble over many seeds, sizes, branching factors and three
+coordination modes is minutes-to-hours of compute, which would overwhelm the GitHub runners.
+Instead it runs locally and commits its deterministic seeded output as JSON result artifacts
+under ``experiments/results/``; the figures (``paper_figures.py``) and the paper then restate
+only those committed numbers, and CI just renders the figures and typesets (no heavy sim). The
+fold is a pure seeded function of (params, seed), so every JSON is bit-reproducible run to run.
+
+Each measurement writes its own file and SKIPS if the file already exists (pass ``--force`` to
+recompute, or name specific measurements to run a subset), so a long run is resumable and can be
+committed incrementally - progress survives an interrupted session.
+
+Run:
+    uv run --extra dev python -m experiments.measure            # all measurements (skip existing)
+    uv run --extra dev python -m experiments.measure --force    # recompute all
+    uv run --extra dev python -m experiments.measure lambda_sweep floor_bracket   # a subset
+
+Measurements (referee asks in brackets):
+    lambda_sweep   - fuel/time/energy tax vs Lambda = v/c, powered, event [headline]
+    branching      - tax vs offspring branching factor 2/3/4 [ask 1: the parameter that makes contention]
+    energy_tax     - energy-weighted tax per policy, count vs (1/2)v^2 weighting, 1x-2x bracket [ask 2]
+    finite_size    - fuel tax % vs N over a 16x span, with the extrapolation caveat [ask 3]
+    concurrency    - in-flight probe count vs coverage: why a loser is never on the critical path [ask 4]
+    floor_bracket  - instant / inflight / lightspeed: how much of the tax survives in-flight relay [ask 5]
+    retarget_cap   - fuel tax vs the max_retargets bookkeeping cap: show the insensitivity [smaller point]
+    dt_artifact    - fill-time tax collapsing to ~0 as the fixed timestep resolves [kept from round 1]
+    validation     - Nicholson & Forgan quantitative reproduction at event mode [kept from round 1]
+"""
+
+from __future__ import annotations
+
+import json
+import statistics
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+from swarm import SwarmParams, simulate_swarm
+from swarm.models import C_PC_PER_YEAR, KM_S_TO_PC_YR
+
+from experiments.stats_util import bootstrap_median_ci, sign_test_positive
+
+RESULTS_DIR = Path(__file__).resolve().parent / "results"
+SCHEMA_VERSION = 2
+
+# Deterministic seed ensemble (paired: every mode shares each seed). 64 available; each
+# measurement uses a prefix sized to its cost.
+SEEDS = [0x9E3779B9 + 2654435761 * k for k in range(64)]
+
+
+# --------------------------------------------------------------------------------------------
+# metric extraction + summary
+# --------------------------------------------------------------------------------------------
+
+def record(r) -> dict:
+    """The scalar metrics of one run, as a plain dict (JSON-serialisable, no objects)."""
+    return {
+        "t25": r.t25_years, "t50": r.t50_years, "t75": r.t75_years,
+        "t90": r.t90_years, "t99": r.t99_years, "t100": r.t100_years,
+        "final_settled": r.final_settled, "n_stars": r.n_stars,
+        "total_launched": r.total_probes_launched,
+        "wasted_arrivals": r.wasted_arrivals,
+        "wasted_travel_pc": r.wasted_travel_pc,
+        "midflight_aborts": r.midflight_aborts,
+        "settle_energy_c2": r.settle_energy_c2,
+        "wasted_energy_c2": r.wasted_energy_c2,
+        "mean_launch_speed_km_s": r.mean_launch_speed_km_s,
+        "mean_wasted_speed_km_s": r.mean_wasted_speed_km_s,
+        "mean_wasted_hop_pc": r.mean_wasted_hop_pc,
+    }
+
+
+def summarize(xs: list[float]) -> dict:
+    """Median, IQR, seeded bootstrap 95% CI, sign test, and mean for a per-seed list."""
+    xs = [x for x in xs if x is not None]
+    if not xs:
+        return {"n": 0, "median": None, "iqr_lo": None, "iqr_hi": None,
+                "ci_lo": None, "ci_hi": None, "mean": None, "seeds_pos": 0, "seeds_nonzero": 0, "p": 1.0}
+    ys = sorted(xs)
+    _, blo, bhi = bootstrap_median_ci(ys)
+    kpos, nnz, p = sign_test_positive(ys)
+    return {
+        "n": len(ys), "median": statistics.median(ys),
+        "iqr_lo": ys[len(ys) // 4], "iqr_hi": ys[(3 * len(ys)) // 4],
+        "ci_lo": blo, "ci_hi": bhi, "mean": statistics.fmean(ys),
+        "seeds_pos": kpos, "seeds_nonzero": nnz, "p": p,
+    }
+
+
+def pct_delta(treat: float, base: float) -> float | None:
+    """Percent change of ``treat`` over ``base`` (None if base is zero/None)."""
+    if base is None or treat is None or base == 0:
+        return None
+    return (treat - base) / base * 100.0
+
+
+def write_result(name: str, config: dict, payload: dict) -> Path:
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    out = RESULTS_DIR / f"{name}.json"
+    doc = {"schema_version": SCHEMA_VERSION, "generator": "experiments.measure",
+           "measurement": name, "config": config, **payload}
+    out.write_text(json.dumps(doc, indent=2, sort_keys=False) + "\n")
+    return out
+
+
+def _paired(mode_treat: str, *, seeds: list[int], mode_base: str = "instant", **params) -> list[tuple[dict, dict]]:
+    """Fill each seeded galaxy under ``mode_base`` and ``mode_treat`` (same seed); return records."""
+    rows: list[tuple[dict, dict]] = []
+    for i, s in enumerate(seeds):
+        b = simulate_swarm(SwarmParams(coordination=mode_base, **params), seed=s)
+        t = simulate_swarm(SwarmParams(coordination=mode_treat, **params), seed=s)
+        rows.append((record(b), record(t)))
+        print(f"      seed {i + 1}/{len(seeds)}", end="\r", flush=True)
+    print(" " * 40, end="\r")
+    return rows
+
+
+def _tax_block(rows: list[tuple[dict, dict]]) -> dict:
+    """Standard paired-tax summaries (fuel/time/travel/energy/probes) from baseline vs treatment."""
+    fuel_pct = [pct_delta(t["wasted_arrivals"], b["wasted_arrivals"]) for b, t in rows]
+    fuel_abs = [t["wasted_arrivals"] - b["wasted_arrivals"] for b, t in rows]
+    time_pct = [pct_delta(t["t100"], b["t100"]) for b, t in rows]
+    travel_pct = [pct_delta(t["wasted_travel_pc"], b["wasted_travel_pc"]) for b, t in rows]
+    # Energy tax: extra wasted-journey kinetic energy over the baseline's useful (winning) energy,
+    # at the flyby (1x) and rendezvous (2x) endpoints of the brake-and-reaccel bracket.
+    e_extra = [t["wasted_energy_c2"] - b["wasted_energy_c2"] for b, t in rows]
+    e_useful = [b["settle_energy_c2"] for b, t in rows]
+    energy_pct_1x = [ex / eu * 100.0 if eu else None for ex, eu in zip(e_extra, e_useful)]
+    energy_pct_2x = [2.0 * ex / eu * 100.0 if eu else None for ex, eu in zip(e_extra, e_useful)]
+    probes_pct = [pct_delta(t["total_launched"], b["total_launched"]) for b, t in rows]
+    return {
+        "fuel_pct": summarize(fuel_pct), "fuel_abs": summarize(fuel_abs),
+        "time_pct": summarize(time_pct), "travel_pct": summarize(travel_pct),
+        "energy_pct_1x": summarize(energy_pct_1x), "energy_pct_2x": summarize(energy_pct_2x),
+        "probes_pct": summarize(probes_pct),
+        "per_seed": [{"base": b, "treat": t} for b, t in rows],
+    }
+
+
+# --------------------------------------------------------------------------------------------
+# measurements
+# --------------------------------------------------------------------------------------------
+
+def m_lambda_sweep() -> None:
+    """Headline: fuel/time/travel/energy tax vs Lambda = v/c (powered, event, lightspeed vs instant)."""
+    seeds = SEEDS[:48]
+    n_stars = 500
+    lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
+    data = {}
+    for lam in lambdas:
+        print(f"    Lambda={lam}", flush=True)
+        rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy="powered",
+                       probe_speed_c=lam, speed_cap_c=max(0.05, 2 * lam), stepping="event")
+        data[str(lam)] = _tax_block(rows)
+    write_result("lambda_sweep",
+                 {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                  "lambdas": lambdas, "mode_base": "instant", "mode_treat": "lightspeed",
+                  "stepping": "event"},
+                 {"data": data})
+
+
+def m_branching() -> None:
+    """Fuel/time/energy tax vs the replication branching factor (offspring per settlement)."""
+    seeds = SEEDS[:32]
+    n_stars = 400
+    offspring = [2, 3, 4]
+    lambdas = [0.05, 0.2]
+    data = {}
+    for lam in lambdas:
+        for off in offspring:
+            key = f"lam{lam}_off{off}"
+            print(f"    Lambda={lam} offspring={off}", flush=True)
+            rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy="powered",
+                           probe_speed_c=lam, speed_cap_c=max(0.05, 2 * lam),
+                           offspring_per_settlement=off, stepping="event")
+            data[key] = _tax_block(rows)
+    write_result("branching",
+                 {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                  "lambdas": lambdas, "offspring": offspring, "mode_treat": "lightspeed",
+                  "stepping": "event"},
+                 {"data": data})
+
+
+def m_energy_tax() -> None:
+    """Energy-weighted tax per policy: count-tax vs (1/2)v^2-weighted tax (1x and 2x brackets).
+
+    The energy weighting bites hardest where journeys have DIFFERENT speeds - the slingshot
+    policies, whose wasted trips are faster/longer than the powered cruise. So we run all three
+    policies (lightspeed vs instant, event) and report the count tax alongside the energy tax.
+    """
+    seeds = SEEDS[:32]
+    n_stars = 400
+    policies = ["powered", "slingshot_nearest", "slingshot_maxboost"]
+    data = {}
+    for pol in policies:
+        print(f"    policy={pol}", flush=True)
+        rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy=pol, stepping="event")
+        block = _tax_block(rows)
+        # effective speed of wasted vs winning journeys (median over seeds), for the discussion
+        v_wasted = [t["mean_wasted_speed_km_s"] for _, t in rows if t["mean_wasted_speed_km_s"] > 0]
+        block["mean_wasted_speed_km_s"] = statistics.median(v_wasted) if v_wasted else 0.0
+        block["lambda_eff"] = (block["mean_wasted_speed_km_s"] * KM_S_TO_PC_YR / C_PC_PER_YEAR)
+        data[pol] = block
+    write_result("energy_tax",
+                 {"policies": policies, "n_stars": n_stars, "n_seeds": len(seeds),
+                  "mode_treat": "lightspeed", "stepping": "event",
+                  "note": "energy_pct_1x/2x are the flyby/rendezvous bracket; relativistic excess < 3.1% to 0.2c"},
+                 {"data": data})
+
+
+def m_finite_size() -> None:
+    """Fuel tax % vs system size over a 16x span (300..4800), powered, Lambda=0.2, event.
+
+    Seeds are scaled down as N grows (event-mode cost is ~O(N^2) at high Lambda). This is the
+    honest lever arm for the scale discussion: a 16x span, NOT an extrapolation to 1e11 stars.
+    """
+    # Many seeds even at large N (per-seed cost ~42 s at N=2400, ~198 s at N=4800): this is a
+    # dedicated high-seed sweep to resolve whether the large-N tax decline is real or scatter.
+    n_seeds_by_n = [(300, 48), (600, 48), (1200, 48), (2400, 48), (4800, 32)]
+    data = {}
+    for n, k in n_seeds_by_n:
+        print(f"    N={n} ({k} seeds)", flush=True)
+        rows = _paired("lightspeed", seeds=SEEDS[:k], n_stars=n, policy="powered",
+                       probe_speed_c=0.2, speed_cap_c=0.4, stepping="event")
+        data[str(n)] = _tax_block(rows)
+    write_result("finite_size",
+                 {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
+                  "mode_treat": "lightspeed", "stepping": "event"},
+                 {"data": data})
+
+
+def m_concurrency() -> None:
+    """In-flight probe count vs coverage fraction: the mechanism behind 'no fill-time tax'.
+
+    Exponential branching keeps many probes aloft throughout the fill, so a loser's wasted trip
+    is one of hundreds in flight and (almost) never sits on the critical path to the last star.
+    We record, per coverage bin, the mean number of probes in flight, for instant vs lightspeed.
+    """
+    seeds = SEEDS[:16]
+    n_stars = 500
+    lam = 0.2
+    # coverage fractions to 0.90 in steps of 0.05, then fine tail bins into the final few percent
+    # (referee: the last-star metric lives at 99%+, where the in-flight population thins).
+    bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
+    series = {"instant": {b: [] for b in bins}, "lightspeed": {b: [] for b in bins}}
+    peak = {"instant": [], "lightspeed": []}
+    for i, s in enumerate(seeds):
+        for mode in ("instant", "lightspeed"):
+            r = simulate_swarm(SwarmParams(n_stars=n_stars, policy="powered", probe_speed_c=lam,
+                                           speed_cap_c=0.4, stepping="event", coordination=mode), seed=s)
+            peak[mode].append(max(st.in_flight for st in r.steps))
+            # for each coverage bin, the in_flight at the first step reaching that fraction
+            idx = 0
+            for b in bins:
+                while idx < len(r.steps) and r.steps[idx].fraction_settled < b:
+                    idx += 1
+                if idx < len(r.steps):
+                    series[mode][b].append(r.steps[idx].in_flight)
+        print(f"      seed {i + 1}/{len(seeds)}", end="\r", flush=True)
+    print(" " * 40, end="\r")
+    data = {mode: {"coverage": bins,
+                   "in_flight_median": [statistics.median(series[mode][b]) if series[mode][b] else None for b in bins],
+                   "peak_in_flight_median": statistics.median(peak[mode])}
+            for mode in ("instant", "lightspeed")}
+    write_result("concurrency",
+                 {"policy": "powered", "lambda": lam, "n_stars": n_stars, "n_seeds": len(seeds),
+                  "stepping": "event"},
+                 {"data": data})
+
+
+def m_floor_bracket() -> None:
+    """instant / inflight / lightspeed: how much of the decision-site tax survives in-flight relay.
+
+    inflight is the optimistic bound (a probe redirects the instant a beacon overtakes it). We
+    report, per Lambda, all three modes' wasted arrivals, redundant travel, and fill time, plus
+    the inflight-vs-lightspeed deltas - the referee's requested floor estimate.
+    """
+    seeds = SEEDS[:48]
+    n_stars = 400
+    lambdas = [0.05, 0.1, 0.2]
+    data = {}
+    for lam in lambdas:
+        print(f"    Lambda={lam}", flush=True)
+        cap = max(0.05, 2 * lam)
+        runs = {}
+        for mode in ("instant", "lightspeed", "inflight"):
+            recs = []
+            for i, s in enumerate(seeds):
+                r = simulate_swarm(SwarmParams(n_stars=n_stars, policy="powered", probe_speed_c=lam,
+                                               speed_cap_c=cap, stepping="event", coordination=mode), seed=s)
+                recs.append(record(r))
+                print(f"      {mode} seed {i + 1}/{len(seeds)}", end="\r", flush=True)
+            runs[mode] = recs
+        print(" " * 50, end="\r")
+        # paired summaries relative to instant
+        def rel(mode: str, field: str) -> dict:
+            return summarize([pct_delta(runs[mode][i][field], runs["instant"][i][field]) for i in range(len(seeds))])
+        data[str(lam)] = {
+            "wasted_arrivals_median": {m: statistics.median([r["wasted_arrivals"] for r in runs[m]]) for m in runs},
+            "wasted_travel_pc_median": {m: statistics.median([r["wasted_travel_pc"] for r in runs[m]]) for m in runs},
+            "t100_median": {m: statistics.median([r["t100"] for r in runs[m] if r["t100"]]) for m in runs},
+            "midflight_aborts_median": {m: statistics.median([r["midflight_aborts"] for r in runs[m]]) for m in runs},
+            "travel_pct_over_instant": {m: rel(m, "wasted_travel_pc") for m in ("lightspeed", "inflight")},
+            "time_pct_over_instant": {m: rel(m, "t100") for m in ("lightspeed", "inflight")},
+            "per_seed": {m: runs[m] for m in runs},
+        }
+    write_result("floor_bracket",
+                 {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                  "lambdas": lambdas, "modes": ["instant", "lightspeed", "inflight"], "stepping": "event"},
+                 {"data": data})
+
+
+def m_retarget_cap() -> None:
+    """Fuel tax vs the max_retargets bookkeeping cap: show the result is insensitive to it."""
+    seeds = SEEDS[:32]
+    n_stars = 400
+    caps = [2, 4, 8, 16, 32]
+    data = {}
+    for cap in caps:
+        print(f"    max_retargets={cap}", flush=True)
+        rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy="powered",
+                       probe_speed_c=0.2, speed_cap_c=0.4, stepping="event", max_retargets=cap)
+        data[str(cap)] = _tax_block(rows)
+    write_result("retarget_cap",
+                 {"policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
+                  "caps": caps, "mode_treat": "lightspeed", "stepping": "event"},
+                 {"data": data})
+
+
+def m_dt_artifact() -> None:
+    """Fill-time tax vs fixed timestep, collapsing to ~0 at the event (dt->0) limit."""
+    seeds = SEEDS[:32]
+    n_stars = 300
+    dts = [5000.0, 2000.0, 1000.0, 500.0, 250.0]
+    rows_out = []
+    for dt in dts + [None]:
+        label = f"dt={dt:.0f}" if dt is not None else "event"
+        print(f"    {label}", flush=True)
+        pens = []
+        seeds_pos = 0
+        for s in seeds:
+            common = dict(n_stars=n_stars, policy="slingshot_nearest")
+            common.update({"stepping": "event"} if dt is None else {"stepping": "fixed", "dt_years": dt})
+            i = simulate_swarm(SwarmParams(**common, coordination="instant"), seed=s)
+            l = simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=s)
+            if i.t100_years and l.t100_years:
+                pens.append((l.t100_years - i.t100_years) / i.t100_years * 100.0)
+        kpos, nnz, _ = sign_test_positive(pens)
+        rows_out.append({"dt": dt, "label": label, "time_pct": summarize(pens),
+                         "seeds_pos": kpos, "seeds_nonzero": nnz})
+    write_result("dt_artifact",
+                 {"policy": "slingshot_nearest", "n_stars": n_stars, "n_seeds": len(seeds), "dts": dts},
+                 {"rows": rows_out})
+
+
+def m_validation() -> None:
+    """Nicholson & Forgan quantitative reproduction at the event timestep (single canonical seed)."""
+    seed = 0x9E3779B9
+    n = 400
+    out = {}
+    for pol in ("powered", "slingshot_nearest", "slingshot_maxboost"):
+        r = simulate_swarm(SwarmParams(n_stars=n, policy=pol, stepping="event"), seed=seed)
+        out[pol] = {"t100": r.t100_years, "max_speed_km_s": r.max_probe_speed_km_s}
+    speedup = out["powered"]["t100"] / out["slingshot_nearest"]["t100"]
+    write_result("validation",
+                 {"n_stars": n, "seed": seed, "stepping": "event"},
+                 {"policies": out, "nearest_speedup_over_powered": speedup,
+                  "nearest_beats_maxboost_on_time": out["slingshot_nearest"]["t100"] < out["slingshot_maxboost"]["t100"]})
+
+
+MEASUREMENTS = {
+    "lambda_sweep": m_lambda_sweep,
+    "branching": m_branching,
+    "energy_tax": m_energy_tax,
+    "finite_size": m_finite_size,
+    "concurrency": m_concurrency,
+    "floor_bracket": m_floor_bracket,
+    "retarget_cap": m_retarget_cap,
+    "dt_artifact": m_dt_artifact,
+    "validation": m_validation,
+}
+
+# Cheap-first order so an interrupted run lands the quick wins early.
+ORDER = ["validation", "dt_artifact", "retarget_cap", "energy_tax", "branching",
+         "lambda_sweep", "concurrency", "floor_bracket", "finite_size"]
+
+
+def main(argv: list[str]) -> None:
+    force = "--force" in argv
+    names = [a for a in argv if not a.startswith("-")]
+    todo = names if names else ORDER
+    for name in todo:
+        if name not in MEASUREMENTS:
+            print(f"unknown measurement: {name} (have: {', '.join(ORDER)})")
+            continue
+        out = RESULTS_DIR / f"{name}.json"
+        if out.exists() and not force:
+            print(f"[skip] {name} (exists; --force to recompute)", flush=True)
+            continue
+        print(f"[run ] {name}", flush=True)
+        MEASUREMENTS[name]()
+        print(f"[done] {name} -> results/{name}.json", flush=True)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

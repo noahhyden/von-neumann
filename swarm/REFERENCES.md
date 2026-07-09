@@ -158,9 +158,9 @@ distant star `i` as settled only once the news has arrived -
   cruise (3×10⁻⁵ c) `Λ ≈ 3×10⁻⁵` → negligible; it grows through the slingshot regime
   (`Λ ≈ 0.01`) up to directed-energy speeds (`0.1-0.2 c`, Carroll-Nellenback / Lubin). **`Λ` is
   the governing parameter of the FUEL tax:** at the resolved (event) timestep the fill-TIME tax
-  is ~0 at every speed, but the redundant-travel (wasted-journey) tax rises cleanly and
-  monotonically with `Λ` - median +0.7% at `Λ=0.01`, +3.2/+5.8/+10.9% at 0.03/0.05/0.1, +18.4%
-  at 0.2 (powered, N=400, 32 seeds). It is the right group for the right cost.
+  is small at every speed, but the redundant-travel (wasted-journey) tax rises cleanly and
+  monotonically with `Λ` - median +0.6% at `Λ=0.01`, +2.9/+4.2/+9.3% at 0.03/0.05/0.1, +19.5%
+  at 0.2 (powered, N=500, 48 seeds). It is the right group for the right cost.
 - **Effective speed `v_eff` and hop lengths (derived observables, read-only accumulators).**
   `mean_launch_speed_km_s` is the mean launch speed (so `Λ_eff = v_eff/c` can be checked per
   policy); `mean_wasted_hop_pc` / `mean_settle_hop_pc` are the mean lengths of lost-race and
@@ -169,19 +169,46 @@ distant star `i` as settled only once the news has arrived -
   near `v_eff ~ 2500-3900 km/s` (`Λ ~ 0.01`), which is why they sit at the low end of the tax
   and cannot reach the directed-energy regime.
 - **`max_retargets = 8` `[ESTIMATE]`** - a **bookkeeping** cap, not physics: a probe that loses
-  this many races is retired. Applied to **both** coordination modes (symmetric), so the paired
-  wasted-journey comparison is fair - `instant` also loses in-transit races and re-targets, so
-  capping only `lightspeed` would inflate `instant`'s waste. Results are insensitive to the
-  value (fuel tax at `Λ=0.2` is +18.5/+21.9/+21.9% at cap = 8/30/100, converging).
+  this many races is retired (bounding stale-view bounce chains). Applied to **both** coordination
+  modes (symmetric), so the paired wasted-journey comparison is fair - `instant` also loses
+  in-transit races and re-targets, so capping only `lightspeed` would inflate `instant`'s waste.
+  The measured fuel tax at `Λ=0.2` (powered, N=400, 32 seeds) *converges* with the cap rather than
+  being flat: +6.3 / +12.9 / +18.4 / +20.4 / +20.4% at cap = 2/4/8/16/32. It rises while the cap
+  still truncates live bounce chains, then saturates by cap ~16. The default cap = 8 sits near
+  convergence (+18.4%, ~90% of the +20.4% asymptote) - a mild lower bound, not a knob the result is
+  blind to. Honest correction of an earlier "insensitive" note (`experiments/measure.py::retarget_cap`).
 
 **Modelling assumptions (stated as assumptions, not measured facts - §1):**
 - **A settled star is an omnidirectional beacon emitting at year `settled_year[i]`.** No relay,
   no directionality.
-- **Decision-site knowledge only.** Belief is evaluated at the decision star at decision time,
-  so news a probe's worldline passes *through* mid-flight is ignored. This **undercounts**
-  knowledge → probes are slightly pessimistic → a **conservative upper bound** on redundant
-  effort. Mid-flight learning (two-endpoint cone) and true probe-to-probe **gossip relay** are
-  the deferred sibling slice.
+- **Decision-site knowledge only (in `lightspeed`).** Belief is evaluated at the decision star at
+  decision time, so news a probe's worldline passes *through* mid-flight is ignored. This
+  **undercounts** knowledge → probes are pessimistic → `lightspeed` is a **conservative upper
+  bound** on redundant effort. The optimistic complement is now implemented as
+  `coordination="inflight"` (below); true probe-to-probe **gossip relay** of the settled map
+  remains a deferred sibling, and `inflight` (beacon-only) is a conservative subset of it.
+- **`coordination="inflight"` - the physical-floor bound.** A probe listens *while flying*: when
+  the beacon from its now-claimed target overtakes it, at the closed-form time
+  `t_learn = (settled + (v/c)·arrive)/(1 + v/c)`, it aborts the doomed hop at its interpolated
+  mid-flight position and re-aims at cruise speed. Event-exact (the loop advances to the
+  global-minimum actionable time, so no learning is ever skipped - no dt artifact). It is the
+  optimistic bound on what in-flight relay recovers; the floor finding below reports it.
+- **Fixed stars / stellar proper motion (inherited idealization).** Stars carry velocity vectors
+  (for the slingshot boost) but are held **fixed in position**, following both source models:
+  Nicholson & Forgan 2013 and Forgan, Papadogiannakis & Kitching 2013 each freeze positions and
+  each flag it as their *most important* simplification. It is a real idealization on the fill
+  timescale - at the local circular speed (~220 km/s, [kerr-lynden-bell-1986]) a star sweeps
+  ~225 pc/Myr (220 × 1.0227 pc·Myr⁻¹·(km/s)⁻¹), and even the peculiar component alone (~30-40 km/s
+  thin-disc dispersion, [nordstrom-2004-gcs]) carries it ~31-41 pc/Myr, far past the ~1 pc mean
+  hop - so proper motion would reshuffle which stars are near which over a Myr fill. It is **bounded
+  for our relative result**: both coordination modes run on the *identical* frozen field, so the
+  paired difference still isolates the light-lag effect; it remains a genuine limitation on
+  *absolute* fill times. The narrower worry that the belief gate itself needs *retarded* stellar
+  positions (the beacon leaves where the star was) is separately negligible: during a beacon's
+  light-crossing a star moves only the fraction `v_star/c ~ (40 km/s)/c ~ 1e-4` of the distance it
+  signals across, a hundredth of a percent, so the gate geometry is right at decision time; the
+  idealization is the slow Myr-scale layout drift, which the paired design controls. (Displacements
+  derived from the two `[ESTIMATE]` speeds; sources ground those speeds.)
 - **Pure lag still fills a connected field to 100%** (re-targeting guarantees it). A
   steady-state settled fraction `X_eq = 1 − T_launch/T_settle < 1` (Carroll-Nellenback's
   "Aurora effect") requires a settlement *death* term - a separate sibling, not lag alone.
@@ -190,7 +217,24 @@ distant star `i` as settled only once the news has arrived -
   (well under 1%, no systematic sign at low `Λ`, ~+0.5% at `Λ=0.2`). The coordination cost is
   therefore redundant TRAVEL (wasted journeys), not extra manufacturing.
 
-**Finding (32-seed paired ensemble, event timestep).** Two parts, both deterministic.
+**Energy accounting (why we do NOT headline an energy tax; §1, §3).** An earlier revision weighted
+each wasted journey by its Newtonian specific kinetic energy `(1/2)(v/c)²` and reported an "energy
+tax" several times the journey-count tax for the slingshot policies. We retract that as a headline:
+it double-counts. Under the slingshot policies the probe's kinetic energy is **gravitationally
+sourced** (extracted from stellar motion, Nicholson & Forgan) rather than spent as propellant, and a
+probe that re-targets on arrival keeps its speed and pays nothing further - so weighting a wasted
+slingshot trip by its full `(1/2)v²` counts free energy as a fuel cost. The genuine energy cost of a
+wasted trip is **mission-dependent**: the braking + re-acceleration a rendezvous needs (~`v²` for a
+fuel-braked craft; [lubin-2016] notes beamed sails carry no braking beam), or ~0 for a flyby or a
+gravitational capture. Our scalar-speed fold does not model deceleration, so we denominate the tax
+in **journeys** and give the energy reading only as a mission-conditional bound (0 for a flyby,
+~`v²` for a fuel rendezvous). The read-only accumulators `settle_energy_c2` / `wasted_energy_c2`
+(sums of `(1/2)(v/c)²`, no RNG, pinned baseline unchanged) and `experiments/measure.py::energy_tax`
+remain available for anyone wanting the KE-weighted numbers, but the paper does not feature them.
+(Arithmetic, for reference: `(1/2)Λ² =` 5.0e-5 / 1.25e-3 / 5.0e-3 / 2.0e-2 at `Λ` = 0.01/0.05/0.1/0.2;
+the relativistic `(γ−1)c²` exceeds Newtonian by < 3.1% up to 0.2c.)
+
+**Finding (paired ensemble, event timestep).** Several parts, all deterministic.
 
 *No fill-time tax; the coarse-dt one is an artifact* (`experiments/dt_artifact.py`). With the
 slice-1 fixed `dt=5000 yr` the fill-100% penalty for slingshot-nearest looks like a robust
@@ -199,30 +243,69 @@ many launches into one window so they decide from the same stale snapshot and co
 the step, the penalty falls monotonically - **30.3 → 27.6 → 25.0 → 12.8 → 5.3%** at dt =
 5000/2000/1000/500/250 - and at the event (dt→0) limit it is **+0.0%**, no longer distinguishable
 from zero. The same refinement restores the slingshot-vs-powered speedup to N&F's full ~two
-orders of magnitude (**~166x**), where the coarse step gave only ~20x. **Light-speed lag does not
-slow the fill.**
+orders of magnitude (**~166x**), where the coarse step gave only ~20x. **The tens-of-percent
+fill-time tax was the artifact**; at the resolved timestep the fill-time cost is ~0 at slingshot
+speeds and only a few percent at directed-energy speeds (below), far below the redundant-travel cost.
 
-*The real cost is redundant travel, governed by `Λ = v/c`* (`experiments/lightspeed_coordination.py`).
-Probes-built is ~mode-independent (above), so the coordination cost is wasted journeys. For
-powered flight swept across the speed axis (N=400, 32 seeds), the fuel tax (extra wasted journeys
-as % of the perfect-info waste), median [bootstrap 95% CI], sign-test p:
-  - `Λ=0.01`: **+0.7% [0.6, 1.1]**, p=1.5e-8
-  - `Λ=0.03`: **+3.2% [2.1, 4.0]**, p=4.7e-10 (all 32 seeds)
-  - `Λ=0.05`: **+5.8% [4.3, 7.3]**, p=4.7e-10
-  - `Λ=0.10`: **+10.9% [7.8, 12.8]**, p=4.7e-10
-  - `Λ=0.20`: **+18.4% [16.9, 21.7]**, p=4.7e-10
+*The real cost is redundant travel, governed by `Λ = v/c`* (`experiments/measure.py::lambda_sweep`).
+Probes-built is ~mode-independent (above), so the coordination cost is wasted journeys. For powered
+flight swept across the speed axis (N=500, 48 seeds, lightspeed vs instant), the fuel tax (extra
+wasted journeys as % of the perfect-info waste), median [bootstrap 95% CI], (seeds positive):
+  - `Λ=0.01`: **+0.6% [0.5, 0.8]** (40/47)
+  - `Λ=0.03`: **+2.9% [1.8, 4.1]** (42/48)
+  - `Λ=0.05`: **+4.2% [3.4, 5.8]** (42/48)
+  - `Λ=0.10`: **+9.3% [7.4, 11.4]** (46/48)
+  - `Λ=0.20`: **+19.5% [17.8, 23.3]** (48/48)
 
-  The fill-time tax is a small companion (0.0/0.2/1.3/2.4/3.6% across the same Λ), real but minor.
-  Natural-policy anchors (event, N=200): powered cruise `Λ=3e-5` fuel ~0%; slingshots `Λ≈0.008-0.01`
-  (v_eff ~2500-3100 km/s) fuel ~0.1-0.8%; only directed-energy propulsion (`Λ=0.1-0.2`) reaches the
-  large-tax regime. `stats_util.py` holds the seeded bootstrap + sign test (no scipy/numpy).
+  We do NOT lean on a sign-test p-value: by construction a stale view can only ADD wasted journeys,
+  so the sign is built in - the magnitude and its scaling are the informative part (CIs and sweeps,
+  not significance theatre). Honest correction of a round-1 overclaim.
 
-**Fuel tax is a scale-stable fraction (`experiments/finite_size.py`, powered, `Λ=0.2`, event,
-16 seeds).** As a *percent* of the perfect-info waste the fuel tax is flat in N - **+17.9 /
-+18.9 / +19.2%** at N = 300 / 600 / 1200 (16/16 seeds each) - while the *absolute* wasted-journey
-count grows with the field (median +232 / +508 / +1160). So the cost is a size-independent
-fraction of effort, not a small-box artifact. Reach is bounded by the O(N²) event-mode cost at
-high `Λ`; this is the trend over the reachable range.
+  *Derived law (collision model), confirmed.* The measured tax follows **`tax ≈ Λ`**: a through-origin
+  fit gives slope **0.96** (the exposure model predicts exactly 1), and the raw ratio
+  `waste_ls / waste_inst` tracks **`1 + Λ`** almost exactly - 1.006 / 1.042 / 1.093 / 1.195 measured
+  against 1.010 / 1.050 / 1.100 / 1.200 predicted at Λ = 0.01/0.05/0.1/0.2. The argument (a blind stale
+  window `d/c` added to the travel exposure `d/v` gives ratio `1 + v/c`) is in the paper as a numbered
+  equation; it also predicts the observed hop-length- and density-independence (both cancel).
+
+  *Fill-time tax: small, regime-dependent, not a tail spike.* A companion fill-time tax rides along:
+  median 0.0 / 0.1 / 0.3 / 2.6 / **6.6%** across Λ = 0.01/0.03/0.05/0.1/0.2. It is bounded within the
+  noise of zero for Λ ≤ 0.03 (bootstrap interval inside [0, 1.3]%, an equivalence to no delay at a 1%
+  margin) and unambiguous only from Λ = 0.1. It is present throughout the fill, not concentrated at the
+  end: at Λ=0.2 it is +4.2 / +5.1 / +5.5 / +6.6% at t50 / t90 / t99 / t100. The near-constant in-flight
+  population (~480, still near-peak at 99% coverage) holds it to ~1/3 of the fuel tax rather than zero.
+
+*Contention scales with branching* (`experiments/measure.py::branching`, N=400, 32 seeds). The tax
+grows with the offspring branching factor at high `Λ` then saturates: at `Λ=0.2`, +18.4 / +24.9 /
++25.5% for offspring = 2/3/4; at `Λ=0.05` it is ~flat (~+6%). The default of 2 is not a floor hiding
+a much larger tax; the whole effect stays within an order of magnitude.
+
+*Why the time cost stays below the fuel cost: concurrency* (`experiments/measure.py::concurrency`,
+N=500, 16 seeds). A median ~480 probes are in flight at the peak of a fill, and the population stays
+near that peak into the final percent (~478 at 99% coverage; branching launches until stars run out),
+nearly identical between the two regimes (~470 vs ~480). So the fills proceed almost in lockstep and
+the light-lag swarm falls behind only by the small rate at which wasted trips dilute its productive
+settlements - holding the time tax to ~1/3 of the fuel tax rather than to zero.
+
+*Physical floor: relaying in flight* (`experiments/measure.py::floor_bracket`, N=400, 48 seeds,
+powered). The decision-site (`lightspeed`) tax is an upper bound. Under `inflight` (a probe listens
+while flying and aborts a doomed hop when its beacon overtakes it) completed wasted arrivals fall to
+**0** at every `Λ`, and redundant travel drops BELOW even the perfect-info baseline (at `Λ=0.2`:
+~3580 pc lightspeed, ~2930 pc instant, **~1640 pc inflight**), because listening also averts the
+assignment collisions perfect knowledge leaves. Cost: mid-flight detours lengthen the fill by ~2% at
+`Λ=0.2`. So in-flight relay recovers essentially all of the wasted-arrival tax; the residual floor is
+the partial travel flown before a beacon arrives, which grows with `Λ`.
+
+**Fuel tax vs scale (`experiments/measure.py::finite_size`, powered, `Λ=0.2`, event, high-seed).** As
+a *percent* of the perfect-info waste the tax holds near ~18-19% up to ~1000 stars then DECLINES at
+larger fields - **+19.0 / +18.2 / +17.9 / +16.3 / +13.1%** at N = 300 / 600 / 1200 / 2400 / 4800
+(48 / 48 / 48 / 48 / 32 seeds; the O(N²) event cost caps N, not the seed count) - while the *absolute*
+wasted-journey count grows with the field (median +237 / +494 / +1056 / +2228 / +4010). With 32-48
+seeds per point the decline is **resolved, not scatter**: the bootstrap CIs at N=300 ([+16.4,+22.5])
+and N=4800 ([+11.6,+14.0]) do not overlap. This is an honest correction of a round-1 "scale-stable
+fraction" claim (which rested on a 4x span to N=1200): over a 16x span the fraction does NOT grow with
+scale, it gently shrinks, so there is no support for extrapolating a fixed-percentage tax to a
+10¹¹-star galaxy. (An earlier 4-seed N=4800 point read ~11%; 32 seeds tighten it to 13.1%.)
 
 **Density-rescaling invariance (checked):** changing the *uniform* density rescales every
 distance by a common factor, so travel time and light-time scale together and `Λ` (hence the
@@ -230,20 +313,24 @@ relative penalty) is unchanged - a pure geometric rescaling of the absolute cloc
 the printed digit across 0.14 → 5 stars/pc³. A *non-uniform* (clumpier) field is a separate,
 unaddressed case expected to lengthen long-range hops - a documented limitation.
 
-**Baseline validation (`experiments/validation.py`, event).** (1) `"instant"` is the c→∞ limit
-of the gate and reproduces the plain perfect-info fold **bit-for-bit** (pinned by
+**Baseline validation (`experiments/measure.py::validation`, event).** (1) `"instant"` is the c→∞
+limit of the gate and reproduces the plain perfect-info fold **bit-for-bit** (pinned by
 `test_instant_mode_is_the_perfect_info_baseline`). (2) We reproduce Nicholson & Forgan
 **quantitatively** at the resolved timestep: slingshots ≫ powered (nearest fills a 400-star field
 ~166× sooner than powered - their ~two orders of magnitude, where the coarse dt=5000 fold gave
 only ~20×), and **nearest beats maxboost on time** while maxboost reaches the higher peak speed.
 
-**Paper figures (`experiments/paper_figures.py`, for `papers/coordination-tax/`).** The figures,
-two results tables, and every reported statistic in the paper restate this deterministic output;
-no new numbers. Four figures regenerate (all event mode): `fig_fuel_tax_vs_lambda.pdf` (the
-headline scaling law: fuel + time tax vs `Λ`), `fig_time_tax_vs_dt.pdf` (the fill-time tax
-collapsing to ~0 as the step resolves - the artifact), `fig_fuel_tax_by_seed.pdf` (per-seed fuel
-tax at `Λ`=0.01/0.1/0.2), and `fig_fuel_tax_vs_n.pdf` (scale-stable fraction). `main()` also
-prints every number the paper cites. Regenerate via
+**The measurement/figure pipeline (heavy compute stays local; §2, §4).** The full ensemble runs in
+`experiments/measure.py`, which writes deterministic seeded JSON to `experiments/results/*.json`
+(committed). That heavy driver is **kept out of CI** - it is minutes-to-hours of compute. The paper
+figures are then RENDERED from the committed JSON by `experiments/paper_figures.py` (no simulation),
+which CI runs in a few seconds; `tests/test_measure_results.py` re-runs a tiny slice of each
+measurement and asserts it still matches the committed JSON, so the artifacts cannot drift from the
+fold. Seven figures regenerate: `fig_fuel_tax_vs_lambda` (headline, with the derived `tax = Λ` line
+overlaid), `fig_fuel_tax_by_seed`, `fig_time_tax_vs_dt`, `fig_concurrency` (mechanism),
+`fig_branching`, `fig_floor_bracket`, and `fig_fuel_tax_vs_n` (scale). The energy-tax figure was cut
+(see the energy-accounting note above). Regenerate the numbers via
+`uv run --extra dev python -m experiments.measure` and the figures via
 `uv run --extra dev python -m experiments.paper_figures`.
 
 ## Simplifications still deferred to later slices

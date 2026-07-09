@@ -8,61 +8,91 @@ motion: probes flying to stars that others have already claimed. That redundant 
 coordination tax, it is governed by the probe's speed in units of $c$, and it matters only once
 a swarm flies fast enough for a decision to outrun its own news.
 
-\subsection{Why the cost is fuel, and larger than it looks}
+\subsection{What the tax is denominated in}
 Because the field always fills and each settlement launches a fixed number of offspring, the two
 coordination regimes build essentially the same number of probes, differing by well under a
 percent; the delay changes almost nothing about how much is manufactured, only how far it is
-flown. The tax is therefore a travel cost, and we have measured
-it as a count of wasted journeys. In energy terms it is larger than that count suggests, and
-increasingly so with speed: the kinetic cost of a hop scales with $v^2$, so a wasted journey at
-$0.2\,c$ squanders far more than one at slingshot speed, on top of there being proportionally
-more of them. A coordination tax that is a fifth of journeys at directed-energy speed is a
-heavier fraction of the energy budget still. This is the sense in which the tax ``scales with how
-fast the swarm flies'': both the rate of wasted trips and the cost of each rise with $v$.
+flown. The tax is therefore a travel cost, and we deliberately denominate it in journeys rather
+than energy, because translating journeys into energy is mission-dependent in a way our model does
+not fix. A wasted journey's kinetic energy is not straightforwardly a fuel cost: under the
+slingshot policies most of that energy was extracted gravitationally from stellar motion rather
+than spent as propellant, and a probe that re-targets on arrival keeps its speed and pays nothing
+further. The genuine energy penalty of a wasted trip is whatever a rendezvous at the doomed star
+would have cost -- braking to rest and re-accelerating -- which scales with $v^2$ for a fuel-braked
+craft but is near zero for a flyby or a gravitationally-braked one. We therefore do not headline an
+energy figure; the honest statement is that the journey tax becomes an energy tax only to the
+extent a mission must brake, and then it grows with $v^2$. A caveat cuts the other way, too: even as
+a travel cost the tax is denominated in journeys, not in the swarm's total resource budget, which
+is dominated by building the probes -- a cost we hold fixed and identical across regimes and do not
+model. As a fraction of total mission resources the coordination tax is smaller than its share of
+journeys.
 
 \subsection{Limitations}
 \label{sec:limitations}
-The measurement is a conservative upper bound in two senses, and both point to future work.
-Probes here learn only at their decision stars, ignoring news their paths cross in flight, so a
-two-endpoint knowledge model would recover some wasted trips; and probes share nothing directly,
-so probe-to-probe relay of the settled map would let a swarm partially coordinate rather than
-merely collide. Both would lower the tax without erasing it, since the floor -- that no probe can
-know a distant star is taken until its light arrives -- is set by physics, not protocol. Three
-further bounds on scope. First, the field is uniform; changing its density only rescales the
+The decision-site headline is a conservative upper bound: probes here learn only at their decision
+stars, ignoring news their paths cross in flight. We relax exactly that assumption in
+Section~\ref{sec:floor}, where a probe that listens in flight recovers essentially all of the
+wasted-arrival tax, so the headline is an upper bound rather than a floor. A true probe-to-probe
+relay of the settled map, which we do not implement, would sit between the beacon-only in-flight
+bound and the decision-site one and is the natural next step. The floor beneath all of them -- that
+no probe can know a distant star is taken until its light arrives -- is set by physics, not
+protocol.
+
+A further, inherited idealization concerns the stars themselves. They carry the velocity vectors
+that power each slingshot but are held fixed in position, exactly as in the two source models,
+both of which name this as their single most important simplification
+\cite{nicholson-forgan-2013,forgan-papadog-kitching-2013}. It is not a small one: at the local
+circular speed a star sweeps about $225$ pc in a million years, and even the peculiar velocity
+dispersion alone carries it some $30$ to $40$ pc \cite{kerr-lynden-bell-1986,nordstrom-2004-gcs},
+far past the roughly one-parsec mean hop, so over a Myr-scale fill real proper motion would
+reshuffle which stars are near which. One might object that this touches the delayed-belief gate
+itself, not just the backdrop: the beacon leaves where the star \emph{was}, so a moving field would
+need retarded positions in (\ref{eq:gate}). But that specific correction is tiny, and for a clean
+reason: during a beacon's light-crossing a star moves only the fraction $v_\star/c$ of the distance
+it is signalling across, and $v_\star/c \approx (40~\mathrm{km/s})/c \approx 10^{-4}$ -- a hundredth
+of a percent, whatever the decision distance -- so the gate reads essentially the right geometry at
+the moment of decision. What the frozen field removes is the slow, Myr-scale drift
+of the layout, and that is exactly what the paired design controls: both coordination regimes run on
+the \emph{identical} frozen field, so the difference still isolates the light-lag cost even where the
+absolute layout is idealized. The absolute fill times, however, do inherit the idealization.
+
+Three further bounds on scope. First, the field is uniform; changing its density only rescales the
 clock (confirmed), but a clumpier distribution would lengthen the long-range hops and is a
 genuine unknown we do not probe. Second, at high $v/c$ the hops are short, so an event-driven run
 generates of order one arrival per star settled many times over and costs roughly $O(N^2)$; this
-bounded the size sweep at a few thousand stars, over which the fuel tax is a stable fraction, so
-the extrapolation to a full galaxy is a supported trend rather than a measurement. Third, the
-dynamics have no loss term: settled sites never fail, so the field always closes. A
+bounded the size sweep to a sixteen-fold range. Over it the tax does not grow with scale -- it holds
+near a fifth up to about a thousand stars and then trends downward at the largest fields we can reach
+(Section~\ref{sec:scale}) -- so we make no quantitative extrapolation to galactic ($\sim\!10^{11}$-star)
+scale. A sixteen-fold lever arm cannot support one, and one over which the fraction if anything
+shrinks certainly cannot. Third, the dynamics have no loss term: settled sites never fail, so the field
+always closes. A
 settlement-death term of the kind that produces the ``Aurora'' steady state
 \cite{carroll-nellenback-2019} is what would be needed to turn coordination failure into a
 permanent unsettled remainder; delay alone does not.
 
-\subsection{The signature of delayed agreement}
-The behaviour is, by analogy rather than derivation, the expected signature of delayed
-multi-agent agreement. Formal consensus degrades as the ratio of communication delay to decision
-cadence grows: the standard protocol is stable only while the one-hop delay stays below a bound
-set by the coupling \cite{olfati-saber-murray-2004}, generalized later to switching topologies and
-link failures \cite{olfati-saber-fax-murray-2007}. We do not apply that bound quantitatively --
-it needs a probe decision cadence the literature does not fix -- but the regime is unambiguous:
-at a parsec spacing the round-trip light-time is years, far longer than any plausible cadence, so
-the probes sit deep in the region where guaranteed agreement is not merely slow but impossible
-\cite{flp-1985}, and a system that must keep acting trades a single consistent map for
-availability \cite{gilbert-lynch-2002}, which is exactly what (\ref{eq:gate}) encodes. The same
-progression drove the space teleoperation and networking communities from closed-loop control
-through move-and-wait and supervisory control \cite{ferrell-1965,sheridan-1993} to hop-by-hop
-delay-tolerant store-and-forward once no continuous path survives
-\cite{burleigh-2003,rfc-4838,rfc-9171}. At interstellar hops every faster regime is left behind;
-each probe is an independent
-colony acting on priors, and the coordination tax is what that independence costs in fuel when
-probes want the same stars.
+\subsection{Relation to delayed agreement}
+The behaviour is, by analogy and not by derivation, the signature of delayed multi-agent agreement,
+and we cite that literature only to place the regime. Consensus protocols degrade as communication
+delay grows against the decision cadence, staying stable only below a delay bound set by the
+coupling \cite{olfati-saber-murray-2004,olfati-saber-fax-murray-2007}. We borrow the picture, not the
+theorems: the classical impossibility results assume fault models that are not ours -- asynchronous
+crash faults for FLP \cite{flp-1985}, network partition for CAP \cite{gilbert-lynch-2002} -- and none
+of them predicts the $\Lambda = v/c$ scaling that is this paper's result. What they do fix is the
+regime. At parsec spacing the round-trip light-time is years, far longer than any plausible decision
+cadence, so a swarm that must keep acting can only trade a single consistent map for availability,
+which is exactly what (\ref{eq:gate}) encodes. The same delay budget drove the teleoperation and
+networking communities from closed-loop control through move-and-wait and supervisory control
+\cite{ferrell-1965,sheridan-1993} to delay-tolerant store-and-forward once no continuous path
+survives \cite{burleigh-2003,rfc-4838,rfc-9171}; at interstellar hops every faster regime is left
+behind, and each probe is an independent colony acting on priors. The coordination tax is what that
+independence costs when probes want the same stars.
 
 \subsection{A design lesson}
 The corollary is a threshold, not a preference. At slingshot speeds the tax is about a percent of
 journeys: coordination machinery -- relay, gossip, a shared map -- is not worth its mass, and a
 designer should spend everything on speed. At the directed-energy speeds that make a probe fast
 enough to matter, the same physics that buys the speed also makes stale views expensive, and a
-fifth of journeys wasted is worth engineering against. The faster the swarm you can build, the
-more a little coordination is worth buying -- and the finite speed of light sets how much you can
-ever buy back.
+fifth of journeys wasted is worth engineering against -- and, as Section~\ref{sec:floor} shows, a
+probe that merely listens in flight buys back nearly all of it. The faster the swarm you can build,
+the more that little coordination is worth buying, and the finite speed of light sets only the small
+residual -- the travel already flown before the news arrives -- that no protocol can ever recover.

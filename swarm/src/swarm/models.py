@@ -28,8 +28,11 @@ Policy = Literal["powered", "slingshot_nearest", "slingshot_maxboost"]
 # Coordination regime (FRONTIER #1). "instant" = the paper's assumption of perfect global
 # knowledge (bit-identical to slices 1-3). "lightspeed" = a probe deciding at a star only
 # knows a distant star is settled once the news-light has arrived (settled_year + dist/c ≤
-# now), so probes race for the same star from stale views. See REFERENCES.md.
-Coordination = Literal["instant", "lightspeed"]
+# now), so probes race for the same star from stale views. "inflight" = the optimistic floor:
+# a probe also listens WHILE flying, so when a beacon from its now-claimed target overtakes it
+# mid-hop it redirects early (avoiding the wasted arrival and its brake), wasting only the
+# partial travel already flown. instant <= inflight <= lightspeed. See REFERENCES.md.
+Coordination = Literal["instant", "lightspeed", "inflight"]
 
 # Time-stepping scheme. "fixed" advances by a constant dt_years (the original slice-1
 # behaviour; keep dt <= mean hop time or it quantizes the timescale). "event" jumps to the
@@ -113,6 +116,13 @@ class Probe:
     speed_pc_yr: float
     retargets: int = 0  # how many times this probe has lost a race and re-aimed (capped by max_retargets)
     hop_len_pc: float = 0.0  # length of the hop this probe is currently flying (its launch/re-aim distance)
+    # Launch position + year of the current hop. Used only by coordination="inflight" to
+    # interpolate the probe's mid-flight position when a beacon overtakes it; unread (and left
+    # at defaults) in "instant"/"lightspeed", so those folds stay bit-identical.
+    from_x: float = 0.0
+    from_y: float = 0.0
+    from_z: float = 0.0
+    launch_year: float = 0.0
 
 
 @dataclass
@@ -135,6 +145,11 @@ class SwarmState:
     total_arrivals: int = 0  # every probe arrival processed
     wasted_arrivals: int = 0  # arrivals landing on an already-(truly-)settled star (redundant trips)
     retarget_count: int = 0  # total re-target events (a lost race that re-aimed)
+    # Redundant travel distance (pc): the common currency across coordination modes. A lost
+    # full arrival contributes its whole hop; an "inflight" mid-flight abort contributes only
+    # the partial distance flown before it redirected. midflight_aborts counts the latter.
+    wasted_travel_pc: float = 0.0
+    midflight_aborts: int = 0
     # --- effective-speed + hop-length observability (read-only accumulators; touch no RNG) ---
     launch_speed_sum_pc_yr: float = 0.0  # sum of departing speeds over every probe launched
     launch_count: int = 0  # number of probes launched (for the mean effective speed)
@@ -142,6 +157,14 @@ class SwarmState:
     settle_hop_count: int = 0
     wasted_hop_sum_pc: float = 0.0  # sum of hop lengths of arrivals that LOST (wasted trips)
     wasted_hop_count: int = 0
+    # --- energy-weighted-tax observability (read-only; Newtonian (1/2)v^2 per journey) -------
+    # Summed over completed journeys at arrival (when the win/waste is known), using the speed
+    # the probe actually flew. Lets the tax be weighted by the kinetic energy its launch speed
+    # cost, not counted flat. No RNG, no decision - cannot perturb the pinned fold.
+    settle_v_sum_pc_yr: float = 0.0  # sum of flight speeds over winning journeys
+    settle_v2_sum: float = 0.0  # sum of speed^2 [(pc/yr)^2] over winning journeys
+    wasted_v_sum_pc_yr: float = 0.0  # sum of flight speeds over wasted journeys
+    wasted_v2_sum: float = 0.0  # sum of speed^2 [(pc/yr)^2] over wasted journeys
 
     def n_settled(self) -> int:
         return sum(1 for y in self.settled_year if y >= 0.0)
@@ -176,6 +199,11 @@ class SwarmResult:
     total_arrivals: int = 0  # every probe arrival (settlements + wasted trips)
     wasted_arrivals: int = 0  # arrivals at an already-settled star - the cost of stale info
     retarget_count: int = 0  # total re-target events
+    # Redundant travel distance (pc) and, for "inflight", the count of mid-flight aborts. This
+    # is the mode-comparable fuel currency: full doomed hops (instant/lightspeed) plus partial
+    # aborted hops (inflight). The floor bracket (instant/inflight/lightspeed) is read from it.
+    wasted_travel_pc: float = 0.0
+    midflight_aborts: int = 0
     # Effective speed actually achieved (not just the powered-cruise input): the mean speed at
     # which probes were launched, in km/s, so Lambda_eff = v/c can be checked per policy.
     mean_launch_speed_km_s: float = 0.0
@@ -183,4 +211,12 @@ class SwarmResult:
     # measure of "how non-local a lost race is" - the quantity that actually governs the tax.
     mean_settle_hop_pc: float = 0.0
     mean_wasted_hop_pc: float = 0.0
+    # Energy-weighted-tax observables. Newtonian specific kinetic energy (1/2)(v/c)^2 summed
+    # over journeys (dimensionless, in units of c^2), split winning vs wasted, so the paper can
+    # weight redundant travel by the energy its launch speed cost. The relativistic form
+    # (gamma-1)c^2 exceeds this by < 3.1% up to 0.2c, so Newtonian is the safe primary metric.
+    settle_energy_c2: float = 0.0  # sum over winning journeys of (1/2)(v/c)^2
+    wasted_energy_c2: float = 0.0  # sum over wasted journeys of (1/2)(v/c)^2
+    mean_settle_speed_km_s: float = 0.0  # mean flight speed of winning journeys
+    mean_wasted_speed_km_s: float = 0.0  # mean flight speed of wasted journeys
     steps: list[SwarmStep] = field(default_factory=list)

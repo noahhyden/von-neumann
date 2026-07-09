@@ -43,15 +43,21 @@ what it costs. The answer, built from a controlled paired-ensemble experiment, h
 and the first is a caution. The cost is easy to overstate: a simulation that advances in a
 fixed timestep coarser than the interval between probe launches makes many probes decide from
 the same stale snapshot at once, and they collide far more than they physically would. Read
-that way the delay appears to slow the fill of the field by tens of percent. It does not. When
-the dynamics are resolved so that each probe decides at its own arrival time, the slowdown
-vanishes: light-speed lag does not measurably delay the fill, and the slingshot speed-up
-survives contact with finite information intact, reproducing the source model quantitatively.
-The real cost shows up elsewhere. Every star still gets settled, and with a negligible change
-in how many probes are built, well under a percent; what the delay changes is how many wasted
-journeys the swarm flies to stars other probes have already claimed. That is a cost in fuel and effort, not in time, and a
+that way the delay appears to slow the fill of the field by tens of percent. That number is an
+artifact. When the dynamics are resolved so that each probe decides at its own arrival time, the
+tens-of-percent slowdown collapses to a few percent at most, and to nothing at slingshot speeds,
+while the slingshot speed-up survives contact with finite information intact, reproducing the
+source model quantitatively. The dominant cost shows up elsewhere. Every star still gets settled,
+and with a negligible change in how many probes are built, well under a percent; what the delay
+chiefly changes is how many wasted journeys the swarm flies to stars other probes have already
+claimed. That is a cost paid mostly in fuel and effort rather than time, and a
 perfect-information model hides it entirely. It is governed cleanly by a single dimensionless
 number, the probe's speed in units of the speed of light: negligible for a powered cruise,
 about a percent of journeys at slingshot speeds, and rising to roughly a fifth at the
-directed-energy speeds that beamed-propulsion concepts target. The coordination tax is paid in
-fuel, not time, and it scales with how fast the swarm flies.
+directed-energy speeds that beamed-propulsion concepts target. We derive from a short collision
+argument that the wasted-journey fraction should equal $\Lambda$ itself and confirm it in
+simulation, show the tax grows with the replication branching factor before saturating, and --
+because a probe deciding only at its stops is pessimistic -- that a probe which listens in flight
+recovers almost all of it, bounding how much coordination can ever buy back. The cost is dominated
+by fuel and effort, with a secondary fill-time penalty that emerges only at the highest speeds; and
+it scales, cleanly, with how fast the swarm flies.

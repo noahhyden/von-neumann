@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "generator": "experiments.measure",
+  "measurement": "validation",
+  "config": {
+    "n_stars": 400,
+    "seed": 2654435769,
+    "stepping": "event"
+  },
+  "policies": {
+    "powered": {
+      "t100": 1384139.931765423,
+      "max_speed_km_s": 8.993773739999998
+    },
+    "slingshot_nearest": {
+      "t100": 8317.629077273952,
+      "max_speed_km_s": 3903.570779554112
+    },
+    "slingshot_maxboost": {
+      "t100": 48161.44417659684,
+      "max_speed_km_s": 6505.446308452049
+    }
+  },
+  "nearest_speedup_over_powered": 166.4103939844196,
+  "nearest_beats_maxboost_on_time": true
+}

@@ -292,6 +292,30 @@ def test_new_observables_do_not_perturb_the_pinned_fold() -> None:
     assert r.final_settled == 400 and r.t100_years == 1_515_000.0  # test_baseline_regression values
 
 
+def test_energy_observables_are_consistent_and_do_not_perturb_the_fold() -> None:
+    # The energy accumulators (Newtonian (1/2)(v/c)^2 per journey) are read-only: the pinned
+    # baseline is unchanged, the summed energy is nonnegative, and the mean winning-journey
+    # speed matches the powered cruise (9 km/s = 3e-5 c).
+    r = simulate_swarm(SwarmParams(n_stars=400), seed=BASE_SEED)
+    assert r.final_settled == 400 and r.t100_years == 1_515_000.0  # baseline intact
+    assert r.settle_energy_c2 > 0.0  # winning journeys carry kinetic energy
+    assert r.wasted_energy_c2 >= 0.0
+    assert r.mean_settle_speed_km_s == pytest.approx(8.99, abs=0.1)  # = 3e-5 c cruise
+
+
+def test_energy_weight_grows_with_speed() -> None:
+    # The energy-weighted-tax rationale: a wasted journey at directed-energy speed costs vastly
+    # more than one at the powered cruise, because specific kinetic energy scales as v^2. The
+    # mean wasted-trip speed at Lambda=0.2 is ~20x the Lambda=0.01 speed (so ~400x the energy
+    # per journey). Both regimes waste some trips under lag.
+    slow = simulate_swarm(SwarmParams(n_stars=300, policy="powered", probe_speed_c=0.01,
+                                      coordination="lightspeed", stepping="event", speed_cap_c=0.05), seed=BASE_SEED)
+    fast = simulate_swarm(SwarmParams(n_stars=300, policy="powered", probe_speed_c=0.2,
+                                      coordination="lightspeed", stepping="event", speed_cap_c=0.4), seed=BASE_SEED)
+    assert slow.wasted_energy_c2 > 0.0 and fast.wasted_energy_c2 > 0.0
+    assert fast.mean_wasted_speed_km_s > 15 * slow.mean_wasted_speed_km_s  # v ratio is exactly 20
+
+
 # --- event-driven stepping (dt-independent) ------------------------------------------------
 # "event" jumps to the next arrival instead of a fixed dt, so it is the exact continuum limit.
 # It is required in the boosted/slingshot regime, where a fixed dt >> hop time over-synchronizes
@@ -356,3 +380,49 @@ def test_fuel_tax_grows_with_speed_at_event_mode() -> None:
     assert statistics.median(fast) > statistics.median(slow)  # fuel tax grows with v/c
     assert statistics.median(fast) > 0
     assert sum(1 for d in fast if d > 0) >= 5  # positive in nearly every seed at directed-energy speed
+
+
+# --- inflight (mid-flight learning): the optimistic floor ----------------------------------
+# "inflight" probes also listen WHILE flying: when the beacon from a now-claimed target overtakes
+# a probe (the closed-form _learn_year), it aborts the doomed hop early and re-aims from its
+# mid-flight position. "instant"/"lightspeed" decide only at stars. This is the referee-requested
+# estimate of the physical floor - how much of the decision-site tax survives in-flight relaying.
+# Event mode only (mid-flight learning is event-exact there).
+
+
+def test_inflight_is_deterministic_and_fills() -> None:
+    p = SwarmParams(n_stars=300, policy="slingshot_nearest", coordination="inflight", stepping="event")
+    a = simulate_swarm(p, seed=7)
+    b = simulate_swarm(p, seed=7)
+    assert [s.n_settled for s in a.steps] == [s.n_settled for s in b.steps]
+    assert a.t100_years == b.t100_years and a.wasted_travel_pc == b.wasted_travel_pc
+    assert a.final_settled == a.n_stars == 300  # a connected field still fills
+
+
+def test_inflight_aborts_before_arriving_so_wasted_arrivals_collapse() -> None:
+    # The point of listening in flight: a doomed probe redirects before it lands, so it (almost)
+    # never completes a wasted arrival. The decision-site (lightspeed) wasted-arrival tax is thus
+    # an upper bound, not a floor - a swarm that relays in flight avoids nearly all wasted
+    # arrivals, aborting mid-flight instead, and on shorter partial hops.
+    common = dict(n_stars=300, policy="slingshot_nearest", stepping="event")
+    ls = simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=BASE_SEED)
+    fl = simulate_swarm(SwarmParams(**common, coordination="inflight"), seed=BASE_SEED)
+    assert ls.wasted_arrivals == 1330 and ls.midflight_aborts == 0
+    assert fl.wasted_arrivals == 0  # every doomed hop is aborted before arrival
+    assert fl.midflight_aborts == 2495  # ... by learning in flight (pinned regression)
+    assert fl.wasted_travel_pc < ls.wasted_travel_pc  # partial aborts beat full wasted hops
+
+
+def test_inflight_trades_travel_for_time() -> None:
+    # Honest trade-off (not a free lunch): mid-flight redirects add detours, so the fill takes
+    # LONGER than the decision-site run even though it wastes far fewer arrivals.
+    common = dict(n_stars=300, policy="slingshot_nearest", stepping="event")
+    ls = simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=BASE_SEED)
+    fl = simulate_swarm(SwarmParams(**common, coordination="inflight"), seed=BASE_SEED)
+    assert fl.t100_years is not None and ls.t100_years is not None
+    assert fl.t100_years > ls.t100_years  # detours cost time
+
+
+def test_inflight_offspring_zero_is_a_noop() -> None:
+    r = simulate_swarm(SwarmParams(n_stars=250, coordination="inflight", stepping="event", offspring_per_settlement=0))
+    assert r.final_settled == 1 and r.midflight_aborts == 0 and r.total_probes_launched == 0

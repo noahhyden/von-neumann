@@ -63,44 +63,55 @@ def _dist(s: SwarmState, a: int, b: int) -> float:
     return (dx * dx + dy * dy + dz * dz) ** 0.5
 
 
-def _believes_settled(s: SwarmState, frm: int, i: int, params: SwarmParams) -> bool:
-    """Does a decider AT star ``frm`` in year ``s.year`` know star ``i`` is settled?
+def _believes_settled_at(
+    s: SwarmState, px: float, py: float, pz: float, i: int, year: float, coordination: str
+) -> bool:
+    """Does an observer at point ``(px,py,pz)`` in ``year`` know star ``i`` is settled?
 
     The light-speed-limited coordination gate (FRONTIER #1). A settled star is a beacon
-    emitting "I'm settled" at ``settled_year[i]``; the news reaches ``frm`` only after the
-    light-travel time ``dist/c``. So under ``coordination="lightspeed"`` a decider believes
-    ``i`` settled iff the beacon has had time to arrive. Under ``"instant"`` (the paper's
-    perfect-global-info assumption) this collapses to ``settled_year[i] >= 0`` - bit-identical
-    to slices 1-3. This is a pure function of state already present (positions + settled_year
-    + year + the sourced ``C_PC_PER_YEAR``); it adds no RNG and can't desync from truth.
-
-    Observer is the decision star ``frm`` (decisions happen only at stars), so news a probe
-    passes THROUGH mid-flight is ignored - a conservative simplification that undercounts
-    knowledge (documented in REFERENCES.md); mobile-relay gossip is a deferred sibling.
+    emitting "I'm settled" at ``settled_year[i]``; the news reaches the observer only after the
+    light-travel time ``dist/c``. Under ``"lightspeed"``/``"inflight"`` the observer believes
+    ``i`` settled iff the beacon has had time to arrive; under ``"instant"`` (perfect global
+    info) this collapses to ``settled_year[i] >= 0`` - bit-identical to slices 1-3. Pure
+    function of state (positions + settled_year + the sourced ``C_PC_PER_YEAR``); no RNG.
     """
     if s.settled_year[i] < 0.0:
         return False
-    if params.coordination == "instant":
+    if coordination == "instant":
         return True
-    return s.settled_year[i] + _dist(s, frm, i) / C_PC_PER_YEAR <= s.year
+    dx = s.xs[i] - px
+    dy = s.ys[i] - py
+    dz = s.zs[i] - pz
+    d = (dx * dx + dy * dy + dz * dz) ** 0.5
+    return s.settled_year[i] + d / C_PC_PER_YEAR <= year
 
 
-def _nearest_unsettled(s: SwarmState, frm: int, exclude: set[int], params: SwarmParams) -> int | None:
-    """Index of the nearest *believed*-unsettled star to ``frm`` not in ``exclude``.
+def _believes_settled(s: SwarmState, frm: int, i: int, params: SwarmParams) -> bool:
+    """Star-based wrapper: the observer sits AT star ``frm`` in ``s.year`` (a decision site).
 
-    O(N) scan; deterministic tie-break by lowest index. "Believed" = the light-speed gate
-    (`_believes_settled`); under ``coordination="instant"`` this is exactly the old nearest-
-    unsettled. (Spatial hashing to make this O(1)-ish is the scale slice.)
+    "instant"/"lightspeed" decide only at stars, so this is the whole gate for them and is
+    bit-identical to the pre-refactor version. "inflight" additionally evaluates the gate at a
+    probe's mid-flight position via ``_believes_settled_at`` (see ``_process_learns``).
+    """
+    return _believes_settled_at(s, s.xs[frm], s.ys[frm], s.zs[frm], i, s.year, params.coordination)
+
+
+def _nearest_unsettled_at(
+    s: SwarmState, px: float, py: float, pz: float, year: float, coordination: str, exclude: set[int]
+) -> int | None:
+    """Index of the nearest *believed*-unsettled star to point ``(px,py,pz)`` not in ``exclude``.
+
+    O(N) scan; deterministic tie-break by lowest index. (Spatial hashing to make this
+    O(1)-ish is the scale slice.)
     """
     best: int | None = None
     best_d2 = float("inf")
-    fx, fy, fz = s.xs[frm], s.ys[frm], s.zs[frm]
     for i in range(len(s.xs)):
-        if i in exclude or _believes_settled(s, frm, i, params):
+        if i in exclude or _believes_settled_at(s, px, py, pz, i, year, coordination):
             continue
-        dx = s.xs[i] - fx
-        dy = s.ys[i] - fy
-        dz = s.zs[i] - fz
+        dx = s.xs[i] - px
+        dy = s.ys[i] - py
+        dz = s.zs[i] - pz
         d2 = dx * dx + dy * dy + dz * dz
         if d2 < best_d2:
             best_d2 = d2
@@ -108,33 +119,39 @@ def _nearest_unsettled(s: SwarmState, frm: int, exclude: set[int], params: Swarm
     return best
 
 
-def _nearest_k_unsettled(s: SwarmState, frm: int, exclude: set[int], k: int, params: SwarmParams) -> list[int]:
-    """The ``k`` nearest *believed*-unsettled stars to ``frm`` (deterministic order by (distance, index))."""
-    fx, fy, fz = s.xs[frm], s.ys[frm], s.zs[frm]
+def _nearest_unsettled(s: SwarmState, frm: int, exclude: set[int], params: SwarmParams) -> int | None:
+    return _nearest_unsettled_at(s, s.xs[frm], s.ys[frm], s.zs[frm], s.year, params.coordination, exclude)
+
+
+def _nearest_k_unsettled_at(
+    s: SwarmState, px: float, py: float, pz: float, year: float, coordination: str, k: int, exclude: set[int]
+) -> list[int]:
+    """The ``k`` nearest *believed*-unsettled stars to a point (deterministic order by (distance, index))."""
     cands: list[tuple[float, int]] = []
     for i in range(len(s.xs)):
-        if i in exclude or _believes_settled(s, frm, i, params):
+        if i in exclude or _believes_settled_at(s, px, py, pz, i, year, coordination):
             continue
-        dx = s.xs[i] - fx
-        dy = s.ys[i] - fy
-        dz = s.zs[i] - fz
+        dx = s.xs[i] - px
+        dy = s.ys[i] - py
+        dz = s.zs[i] - pz
         cands.append((dx * dx + dy * dy + dz * dz, i))
     cands.sort()
     return [i for _, i in cands[:k]]
 
 
-def _select_target(s: SwarmState, frm: int, exclude: set[int], params: SwarmParams) -> int | None:
-    """Pick the next star per policy, reading the decider's *belief* of what's unsettled.
+def _select_target_at(
+    s: SwarmState, px: float, py: float, pz: float, year: float, params: SwarmParams, exclude: set[int]
+) -> int | None:
+    """Pick the next star per policy from point ``(px,py,pz)``, reading light-delayed belief.
 
     powered / slingshot_nearest → nearest believed-unsettled star. slingshot_maxboost → among
     the nearest ``max_boost_candidates`` believed-unsettled stars, the one whose slingshot
-    gives the largest boost. In this scalar model the boost grows with the destination star's
-    speed, so max-boost = highest star speed among the candidates (tie-break lowest index). We
-    scan only the nearest K (not the whole field) so a max-boost probe doesn't fly across the
-    galaxy for a marginally bigger kick - a documented [ESTIMATE] bound.
+    gives the largest boost (highest star speed in this scalar model; tie-break lowest index).
+    We scan only the nearest K so a max-boost probe doesn't cross the galaxy for a marginal
+    kick - a documented [ESTIMATE] bound.
     """
     if params.policy == "slingshot_maxboost":
-        cand = _nearest_k_unsettled(s, frm, exclude, params.max_boost_candidates, params)
+        cand = _nearest_k_unsettled_at(s, px, py, pz, year, params.coordination, params.max_boost_candidates, exclude)
         if not cand:
             return None
         best = cand[0]
@@ -142,7 +159,12 @@ def _select_target(s: SwarmState, frm: int, exclude: set[int], params: SwarmPara
             if s.star_speed_pc_yr[i] > s.star_speed_pc_yr[best]:
                 best = i
         return best
-    return _nearest_unsettled(s, frm, exclude, params)
+    return _nearest_unsettled_at(s, px, py, pz, year, params.coordination, exclude)
+
+
+def _select_target(s: SwarmState, frm: int, exclude: set[int], params: SwarmParams) -> int | None:
+    """Star-based wrapper: decide AT star ``frm`` in ``s.year``."""
+    return _select_target_at(s, s.xs[frm], s.ys[frm], s.zs[frm], s.year, params, exclude)
 
 
 def _boosted_speed(current_pc_yr: float, star_speed_pc_yr: float, params: SwarmParams) -> float:
@@ -189,6 +211,8 @@ def _launch_from(s: SwarmState, star: int, params: SwarmParams, incoming_speed: 
                 arrive_year=s.year + params.settle_time_years + travel,
                 speed_pc_yr=departing,
                 hop_len_pc=hop,
+                from_x=s.xs[star], from_y=s.ys[star], from_z=s.zs[star],
+                launch_year=s.year + params.settle_time_years,
             )
         )
         s.next_probe_id += 1
@@ -238,6 +262,8 @@ def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Pro
             state.settled_year[p.target] = state.year
             state.settle_hop_sum_pc += p.hop_len_pc  # winning-trip hop length (read-only)
             state.settle_hop_count += 1
+            state.settle_v_sum_pc_yr += p.speed_pc_yr  # winning-trip flight speed (energy weight)
+            state.settle_v2_sum += p.speed_pc_yr * p.speed_pc_yr
             _launch_from(state, p.target, params, p.speed_pc_yr)
         else:
             # Raced and lost: a wasted trip (the cost of stale info). Re-target (by policy,
@@ -245,6 +271,9 @@ def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Pro
             state.wasted_arrivals += 1
             state.wasted_hop_sum_pc += p.hop_len_pc  # wasted-trip hop length (read-only)
             state.wasted_hop_count += 1
+            state.wasted_travel_pc += p.hop_len_pc  # a lost full arrival wastes its whole hop
+            state.wasted_v_sum_pc_yr += p.speed_pc_yr  # wasted-trip flight speed (energy weight)
+            state.wasted_v2_sum += p.speed_pc_yr * p.speed_pc_yr
             # Retire a probe after too many lost races (a bounce-chain bound). Applied to BOTH
             # coordination modes: instant also loses in-transit races and re-targets (a probe
             # aims at a truly-unsettled star but another can settle it before it arrives), so it
@@ -262,8 +291,120 @@ def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Pro
                     Probe(
                         id=p.id, target=target, arrive_year=state.year + travel,
                         speed_pc_yr=p.speed_pc_yr, retargets=p.retargets + 1, hop_len_pc=hop,
+                        from_x=state.xs[p.target], from_y=state.ys[p.target], from_z=state.zs[p.target],
+                        launch_year=state.year,
                     )
                 )
+
+
+def _learn_year(p: Probe, settled_year: list[float]) -> float:
+    """Year the beacon from ``p``'s (already-settled) target overtakes ``p`` in flight.
+
+    ``p`` flies straight at its target star at speed ``v``, so its distance to the target is
+    ``d(t) = v*(arrive - t)``. The beacon leaves the target at ``settled_year[target]`` and
+    travels at ``c``; it reaches ``p`` when ``settled + d(t)/c = t``. Solving:
+    ``t = (settled + (v/c)*arrive) / (1 + v/c)``. Always in ``(settled, arrive)`` - the probe
+    learns strictly before it would have arrived, because the beacon (c) closes on it faster
+    than it closes on the target (v). Closed form: deterministic, no RNG, no iteration.
+    """
+    v_over_c = p.speed_pc_yr / C_PC_PER_YEAR
+    return (settled_year[p.target] + v_over_c * p.arrive_year) / (1.0 + v_over_c)
+
+
+def _is_doomed(state: SwarmState, p: Probe) -> bool:
+    """``p``'s target has been claimed by another probe (ground truth), so ``p`` will waste."""
+    return state.settled_year[p.target] >= 0.0
+
+
+def _actionable_year(state: SwarmState, params: SwarmParams, p: Probe) -> float:
+    """When ``p`` next acts: its mid-flight learning time if doomed under inflight, else arrival.
+
+    Under "inflight" a doomed probe redirects at ``_learn_year`` (< its arrival); everything
+    else acts on arrival. Because the loop always advances to the global minimum of this over
+    all probes, no learning time is ever skipped, so the mid-flight redirect is event-exact
+    (no fixed-step artifact).
+    """
+    if params.coordination == "inflight" and _is_doomed(state, p):
+        tl = _learn_year(p, state.settled_year)
+        if tl < p.arrive_year:
+            return tl
+    return p.arrive_year
+
+
+def _next_event_year(state: SwarmState, params: SwarmParams) -> float | None:
+    """Earliest actionable time over all in-flight probes (arrival or mid-flight learning)."""
+    if not state.probes:
+        return None
+    return min(_actionable_year(state, params, p) for p in state.probes)
+
+
+def _process_learns(state: SwarmState, params: SwarmParams, learns: list[Probe]) -> None:
+    """Redirect each mid-flight learner at ``state.year`` (inflight only).
+
+    Each learner's target was claimed by another probe; the beacon has now overtaken it. It
+    aborts the doomed hop at its current (interpolated) position and re-aims at cruise speed -
+    so it never completes the wasted arrival and never brakes at the claimed star. The partial
+    distance already flown is charged as redundant travel; NO wasted-rendezvous energy is
+    charged (it did not decelerate). Retires if the re-target cap is hit or nothing is believed
+    unsettled from here.
+    """
+    learn_ids = {p.id for p in learns}
+    state.probes = [p for p in state.probes if p.id not in learn_ids]
+    for p in learns:
+        # Position when the beacon overtook it: interpolate from the launch point to the target.
+        span = p.arrive_year - p.launch_year
+        frac = (state.year - p.launch_year) / span if span > 0.0 else 1.0
+        frac = 0.0 if frac < 0.0 else (1.0 if frac > 1.0 else frac)
+        tx, ty, tz = state.xs[p.target], state.ys[p.target], state.zs[p.target]
+        px = p.from_x + (tx - p.from_x) * frac
+        py = p.from_y + (ty - p.from_y) * frac
+        pz = p.from_z + (tz - p.from_z) * frac
+        state.wasted_travel_pc += p.hop_len_pc * frac  # partial redundant travel (not the whole hop)
+        state.midflight_aborts += 1
+        if p.retargets >= params.max_retargets:
+            continue  # bounce chain exhausted -> retire the probe
+        target = _select_target_at(state, px, py, pz, state.year, params, set())
+        if target is None:
+            continue  # nothing believed-unsettled from here -> retire
+        state.retarget_count += 1
+        dx = state.xs[target] - px
+        dy = state.ys[target] - py
+        dz = state.zs[target] - pz
+        hop = (dx * dx + dy * dy + dz * dz) ** 0.5
+        travel = hop / p.speed_pc_yr
+        state.probes.append(
+            Probe(
+                id=p.id, target=target, arrive_year=state.year + travel,
+                speed_pc_yr=p.speed_pc_yr, retargets=p.retargets + 1, hop_len_pc=hop,
+                from_x=px, from_y=py, from_z=pz, launch_year=state.year,
+            )
+        )
+
+
+def _resolve_events(state: SwarmState, params: SwarmParams, cutoff: float) -> None:
+    """Process every probe whose actionable time is <= ``cutoff``, at ``state.year == cutoff``.
+
+    Splits them into arrivals (settle-or-waste at a star) and, under inflight, mid-flight
+    learns (redirects). Arrivals run first so ground-truth settlements are visible; a probe
+    doomed by one of those settlements has ``_learn_year > cutoff`` and is handled next event.
+    For "instant"/"lightspeed" there are never any learns, so this is bit-identical to the
+    old arrivals-only path.
+    """
+    arrivals: list[Probe] = []
+    learns: list[Probe] = []
+    inflight = params.coordination == "inflight"
+    for p in state.probes:
+        if _actionable_year(state, params, p) <= cutoff:
+            if inflight and _is_doomed(state, p) and _learn_year(p, state.settled_year) < p.arrive_year:
+                learns.append(p)
+            else:
+                arrivals.append(p)
+    arrivals.sort(key=lambda p: (p.arrive_year, p.id))
+    learns.sort(key=lambda p: (p.arrive_year, p.id))
+    if arrivals:
+        _process_arrivals(state, params, arrivals)
+    if learns:
+        _process_learns(state, params, learns)
 
 
 def step(state: SwarmState, params: SwarmParams) -> SwarmState:
@@ -272,36 +413,30 @@ def step(state: SwarmState, params: SwarmParams) -> SwarmState:
     Processes every probe that has arrived by the new ``year`` together, in deterministic
     order. Simple and cheap, but if ``dt`` exceeds the hop time it batches many launches into
     one step (they all decide from the same snapshot), which over-synchronizes races and
-    inflates the coordination tax - use ``stepping="event"`` in the boosted regime.
+    inflates the coordination tax - use ``stepping="event"`` in the boosted regime. (inflight
+    mid-flight learning is event-exact only under ``stepping="event"``; in fixed mode it is
+    resolved at the step boundary, so run the floor bracket in event mode.)
     """
     state.year += params.dt_years
-    arrivals = sorted(
-        (p for p in state.probes if p.arrive_year <= state.year),
-        key=lambda p: (p.arrive_year, p.id),
-    )
-    if not arrivals:
-        return state
-    _process_arrivals(state, params, arrivals)
+    _resolve_events(state, params, state.year)
     return state
 
 
 def step_event(state: SwarmState, params: SwarmParams) -> SwarmState:
-    """Advance to the NEXT probe arrival (event-driven, dt-independent). Mutates ``state``.
+    """Advance to the NEXT event (arrival, or inflight mid-flight learning). Mutates ``state``.
 
-    Jumps ``year`` to the earliest ``arrive_year`` and processes exactly the probes arriving
-    then (ties broken by id). This is the exact continuum (dt -> 0) limit: launches are
-    staggered at their true times and ground truth updates between events, so no fixed-step
-    over-synchronization. No-op when there are no probes.
+    Jumps ``year`` to the earliest actionable time and processes exactly the probes acting then
+    (ties broken by id). This is the exact continuum (dt -> 0) limit: launches are staggered at
+    their true times, ground truth and beacon-learning update between events, so there is no
+    fixed-step over-synchronization. No-op when there are no probes.
     """
     if not state.probes:
         return state
-    next_year = min(p.arrive_year for p in state.probes)
+    next_year = _next_event_year(state, params)
+    if next_year is None:
+        return state
     state.year = next_year
-    arrivals = sorted(
-        (p for p in state.probes if p.arrive_year <= next_year),
-        key=lambda p: (p.arrive_year, p.id),
-    )
-    _process_arrivals(state, params, arrivals)
+    _resolve_events(state, params, next_year)
     return state
 
 
@@ -341,9 +476,12 @@ def simulate_swarm(params: SwarmParams, *, seed: int = 0x9E3779B9) -> SwarmResul
 
     record_thresholds()
     if params.stepping == "event":
-        # Event-driven: one step per arrival, jumping to the next event; dt-independent.
+        # Event-driven: one step per event, jumping to the next event; dt-independent. The event
+        # is the earliest arrival OR (inflight) mid-flight learning, so the loop guard uses the
+        # same actionable-time helper the step does.
         while state.probes:
-            if min(p.arrive_year for p in state.probes) > params.max_years:
+            ne = _next_event_year(state, params)
+            if ne is None or ne > params.max_years:
                 break
             step_event(state, params)
             steps.append(_snapshot(state, n_stars))
@@ -374,6 +512,8 @@ def simulate_swarm(params: SwarmParams, *, seed: int = 0x9E3779B9) -> SwarmResul
         total_arrivals=state.total_arrivals,
         wasted_arrivals=state.wasted_arrivals,
         retarget_count=state.retarget_count,
+        wasted_travel_pc=state.wasted_travel_pc,
+        midflight_aborts=state.midflight_aborts,
         mean_launch_speed_km_s=(
             state.launch_speed_sum_pc_yr / state.launch_count / KM_S_TO_PC_YR
             if state.launch_count else 0.0
@@ -383,6 +523,17 @@ def simulate_swarm(params: SwarmParams, *, seed: int = 0x9E3779B9) -> SwarmResul
         ),
         mean_wasted_hop_pc=(
             state.wasted_hop_sum_pc / state.wasted_hop_count if state.wasted_hop_count else 0.0
+        ),
+        # Newtonian specific kinetic energy (1/2)(v/c)^2 summed over journeys (fraction of c^2).
+        settle_energy_c2=0.5 * state.settle_v2_sum / (C_PC_PER_YEAR * C_PC_PER_YEAR),
+        wasted_energy_c2=0.5 * state.wasted_v2_sum / (C_PC_PER_YEAR * C_PC_PER_YEAR),
+        mean_settle_speed_km_s=(
+            state.settle_v_sum_pc_yr / state.settle_hop_count / KM_S_TO_PC_YR
+            if state.settle_hop_count else 0.0
+        ),
+        mean_wasted_speed_km_s=(
+            state.wasted_v_sum_pc_yr / state.wasted_hop_count / KM_S_TO_PC_YR
+            if state.wasted_hop_count else 0.0
         ),
         steps=steps,
     )
