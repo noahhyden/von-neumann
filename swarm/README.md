@@ -22,10 +22,11 @@ come in later slices (below).
     energy from stellar motion, N&F Eq. 3–4), still targeting the nearest star.
   - `slingshot_maxboost` - target the star giving the **biggest boost**, not the nearest.
 - The reachable field fills outward. We report the **exploration timescale** (years to
-  settle 50 / 90 / 100%), the **settlement-front radius**, and the **peak probe speed**.
-  Powered fills a 500-star box in ~1.5 Myr (Myr order, as in the paper's 5–10 Myr for
-  200k); slingshots fill it **far faster** and probes reach ~10³ km/s - and, as the paper
-  found, **nearest-slingshot beats max-boost** on time (chasing boosts wastes travel).
+  settle 25 through 100% of the field), the **settlement-front radius**, and the **peak
+  probe speed**. Powered fills a 500-star box in ~1.5 Myr (Myr order, as in the paper's
+  5–10 Myr for 200k); slingshots fill it **far faster** and probes reach ~10³ km/s - and, as
+  the paper found, **nearest-slingshot beats max-boost** on time (chasing boosts wastes
+  travel).
 
 The headline result matches the paper's spirit: the settlement *front* advances at only
 ~40% of an individual probe's speed - nearest-hop zig-zag and settling make the wave
@@ -42,7 +43,7 @@ style (parallel coordinate lists) - the shape the scale slice will make typed ar
 ## Run it
 
 ```sh
-uv run --extra dev pytest -q      # 13 behavior tests
+uv run --extra dev pytest -q      # 36 behavior tests
 
 uv run --extra dev python -c "
 from swarm import SwarmParams, simulate_swarm
@@ -60,17 +61,30 @@ Knobs (`SwarmParams`): `n_stars`, `density_stars_per_pc3`, `probe_speed_c`,
 - **Slingshot dynamics** - the three policies above (this section's boost physics).
 - **Spatial hashing** - the frontend TS port uses a uniform-grid index (proven identical
   to brute force) so the live "Swarm" surface scales to thousands of stars smoothly.
+- **Light-speed-limited coordination** (FRONTIER issue #1) - *the novel extension*. The
+  source paper grants every probe perfect instantaneous global knowledge; we add the
+  finite-c gate (`coordination="lightspeed"`): a probe treats a distant star as settled only
+  once the news-light has arrived (`settled_year[i] + dist/c ≤ year`), so probes race from
+  stale views and waste trips. The finding, at the resolved event timestep: light-speed lag
+  does **not** slow the fill (the coarse-dt penalty is a discretization artifact), but it costs
+  redundant TRAVEL - wasted journeys - a fuel tax that scales with `Λ = v/c` (~1% at slingshot
+  speeds, ~18% at directed-energy speeds). This is the basis of the coordination-tax paper.
+  Experiments in `experiments/` (all event mode):
+  - `lightspeed_coordination.py` - the 32-seed paired A/B: the fuel + time tax vs `Λ = v/c`.
+  - `dt_artifact.py` - the fill-time tax collapsing to ~0 as the fixed timestep resolves.
+  - `finite_size.py` - the fuel tax is a scale-stable fraction (~18-19%) of effort.
+  - `validation.py` - the perfect-info baseline reproduces Nicholson & Forgan quantitatively (~166x).
+  - `stats_util.py` - seeded, dependency-free bootstrap CI + sign test.
+  - `paper_figures.py` - regenerates the four paper figures and prints every cited number.
 
 ## What's still deferred
 
 1. **Full 200k-star scale + WebGL rendering** - the frontend uses canvas today (fine to
    ~10⁴); the WebGL instanced draw for 10⁵⁺ (Canvas→WebGL→WebGPU ladder) is future work.
    pimas stays the control/metrics skin, never the hot loop (§7).
-2. **Light-speed-limited coordination** - *the novel extension* (FRONTIER issue #1): the
-   source paper grants every probe perfect instantaneous global knowledge; finite-c is
-   explicitly its future work. Probes deciding from stale, propagation-delayed local views
-   (and reconciling) is new work - a natural fit for `speculate` (a choice against a
-   probe's *believed* world) and `explain` (why a decision was made on lagged info).
+2. **Mid-flight learning and probe-to-probe relay** - the light-speed model uses
+   decision-site knowledge only (a conservative upper bound); a two-endpoint knowledge cone
+   and true gossip relay of the settled map are the deferred sibling slice.
 
 ## Shape (CLAUDE.md §7)
 

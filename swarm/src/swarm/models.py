@@ -31,6 +31,13 @@ Policy = Literal["powered", "slingshot_nearest", "slingshot_maxboost"]
 # now), so probes race for the same star from stale views. See REFERENCES.md.
 Coordination = Literal["instant", "lightspeed"]
 
+# Time-stepping scheme. "fixed" advances by a constant dt_years (the original slice-1
+# behaviour; keep dt <= mean hop time or it quantizes the timescale). "event" jumps to the
+# next probe arrival - exact and dt-independent, the continuum (dt -> 0) limit. "event" is
+# required whenever hops can be short relative to any fixed dt (the boosted/slingshot
+# regime), where "fixed" over-synchronizes launches and inflates the coordination tax.
+Stepping = Literal["fixed", "event"]
+
 
 class SwarmParams(BaseModel):
     """Inputs to one settlement-front run. Physical numbers sourced in REFERENCES.md."""
@@ -49,7 +56,10 @@ class SwarmParams(BaseModel):
         ge=0, default=0.0, description="dwell to build offspring before they depart [ESTIMATE]"
     )
     dt_years: float = Field(
-        gt=0, default=5000.0, description="fixed timestep; keep ≲ mean hop time (~1e5 yr at defaults)"
+        gt=0, default=5000.0, description="fixed timestep (stepping='fixed'); keep ≲ mean hop time (~1e5 yr at defaults)"
+    )
+    stepping: Stepping = Field(
+        default="fixed", description="time-stepping: fixed (constant dt) | event (jump to next arrival, dt-independent)"
     )
     max_years: float = Field(gt=0, default=50_000_000.0, description="safety cap; the run ends when the front does")
 
@@ -102,6 +112,7 @@ class Probe:
     arrive_year: float
     speed_pc_yr: float
     retargets: int = 0  # how many times this probe has lost a race and re-aimed (capped by max_retargets)
+    hop_len_pc: float = 0.0  # length of the hop this probe is currently flying (its launch/re-aim distance)
 
 
 @dataclass
@@ -124,6 +135,13 @@ class SwarmState:
     total_arrivals: int = 0  # every probe arrival processed
     wasted_arrivals: int = 0  # arrivals landing on an already-(truly-)settled star (redundant trips)
     retarget_count: int = 0  # total re-target events (a lost race that re-aimed)
+    # --- effective-speed + hop-length observability (read-only accumulators; touch no RNG) ---
+    launch_speed_sum_pc_yr: float = 0.0  # sum of departing speeds over every probe launched
+    launch_count: int = 0  # number of probes launched (for the mean effective speed)
+    settle_hop_sum_pc: float = 0.0  # sum of hop lengths of arrivals that WON (settled a star)
+    settle_hop_count: int = 0
+    wasted_hop_sum_pc: float = 0.0  # sum of hop lengths of arrivals that LOST (wasted trips)
+    wasted_hop_count: int = 0
 
     def n_settled(self) -> int:
         return sum(1 for y in self.settled_year if y >= 0.0)
@@ -149,8 +167,20 @@ class SwarmResult:
     front_radius_pc: float
     max_probe_speed_km_s: float  # peak accumulated probe speed (powered = the cruise speed)
     policy: str
+    # Coverage-fraction timescales beyond the original 50/90/100 (t100 is a tail statistic
+    # dominated by the last few stars, so we also report earlier, more robust fractions).
+    t25_years: float | None = None
+    t75_years: float | None = None
+    t99_years: float | None = None
     coordination: str = "instant"  # knowledge regime this run used
     total_arrivals: int = 0  # every probe arrival (settlements + wasted trips)
     wasted_arrivals: int = 0  # arrivals at an already-settled star - the cost of stale info
     retarget_count: int = 0  # total re-target events
+    # Effective speed actually achieved (not just the powered-cruise input): the mean speed at
+    # which probes were launched, in km/s, so Lambda_eff = v/c can be checked per policy.
+    mean_launch_speed_km_s: float = 0.0
+    # Mean hop length of winning vs wasted trips (pc): the wasted-trip length is the direct
+    # measure of "how non-local a lost race is" - the quantity that actually governs the tax.
+    mean_settle_hop_pc: float = 0.0
+    mean_wasted_hop_pc: float = 0.0
     steps: list[SwarmStep] = field(default_factory=list)

@@ -10,7 +10,7 @@
 \usepackage{url}
 \usepackage{amsmath}
 
-\title{The Coordination Tax: Light-Speed Delay in a Self-Replicating Probe Swarm Bites Only When Hops Are Long}
+\title{The Coordination Tax Is Paid in Fuel, Not Time: Light-Speed Delay in a Self-Replicating Probe Swarm}
 
 \author{
 \IEEEauthorblockN{Noah Hyd\'en}
@@ -21,23 +21,28 @@
 \maketitle
 
 \begin{abstract}
-A swarm of self-replicating probes fills a stellar field star by star, each probe
-settling a star and launching copies. The standard exploration-timescale model grants
-every probe perfect, instantaneous knowledge of which stars are already settled, and
-names finite light-speed as its own future work. We add that light-speed limit: a probe
-deciding at a star treats a distant star as settled only once the news, travelling at
-the speed of light, has arrived, so probes race for the same target from stale views and
-waste trips. Over a 32-seed paired ensemble on identical galaxies, the delay slows the
-time to fill the field by a median of about 0 percent for powered nearest-neighbour
-flight, about 30 percent for nearest-star slingshot flight, and about 50 percent for
-maximum-boost slingshot flight; every case still reaches full coverage, so lag alone
-leaves no permanent unsettled fraction. The scale of the lag is set by a single
-dimensionless ratio, the information delay across a hop divided by the travel time across
-it, which equals the probe speed in units of the speed of light; whether it actually
-bites is decided by how non-local each hop is. Fast but local flight is nearly immune,
-because a probe that loses a race simply takes the star next door, while the cost falls
-on long-range hops made from stale views. Under finite light-speed the slingshot speed-up
-is real, but a meaningful fraction of it is eaten by uncoordinated long-range collisions.
+A swarm of self-replicating probes fills a stellar field star by star, each probe settling
+a star and launching copies. The standard exploration-timescale model grants every probe
+perfect, instantaneous knowledge of which stars are already settled, and names finite
+light-speed as its own future work. We add that light-speed limit and measure its cost, and
+the first finding is a caution: a model advanced in a timestep coarser than the interval
+between probe launches makes many probes decide from the same stale snapshot at once, and the
+resulting collisions appear to slow the fill of the field by tens of percent. They do not.
+Resolved so that each probe decides at its true arrival time, light-speed lag does not
+measurably delay the fill, and the gravitational-slingshot speed-up survives contact with
+finite information, reproducing the source model quantitatively at about 166 times powered
+flight. The real cost lies elsewhere. The field is always filled, with a negligible change in the
+number of probes built; what the delay changes is the number of wasted journeys the swarm flies
+to stars other probes have already claimed. That is a tax in fuel and effort, not time, and it is
+governed cleanly by the probe's speed in units of the speed of light: a median of about 0.7
+percent of journeys at slingshot speeds, rising monotonically to about 18 percent at the
+directed-energy speeds beamed-propulsion concepts target, positive in all 32 seeds of a
+paired ensemble and a roughly scale-independent fraction of effort across a four-fold range of
+field sizes. Gravitational slingshots self-limit well below the speeds where the tax bites, so
+the cost falls specifically on fast, driven probes; and because the kinetic cost of a wasted
+hop grows with speed, the tax is heavier still as a fraction of the energy budget. The
+coordination cost a perfect-information model hides is paid in fuel, not time, and it scales
+with how fast the swarm flies.
 \end{abstract}
 
 \begin{IEEEkeywords}

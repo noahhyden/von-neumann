@@ -1,76 +1,151 @@
 \section{Results: the coordination tax}
+\label{sec:results}
 
-We measured the cost as a paired ensemble: 32 seeded galaxies of 300 stars each, every one
-filled twice, once with perfect information and once with the light-speed gate of
-(\ref{eq:gate}), so that the only difference between the two runs of a pair is the delay.
-The quantity of interest is the relative slowdown in the time to settle the entire field,
-$t_{100}$, per seed. Reporting the distribution across the ensemble rather than a single
-run follows the seeded Monte Carlo practice of the field \cite{forgan-2009}.
+We measured the cost as a paired ensemble: 32 seeded galaxies, each filled twice on the
+\emph{identical} field, once with perfect information and once with the light-speed gate of
+(\ref{eq:gate}), all at the resolved event-driven timestep. Two quantities matter: the relative
+slowdown in the time to fill the field, and the number of wasted journeys, trips to stars a
+probe finds already settled on arrival. Reporting the distribution across the ensemble follows
+the seeded Monte Carlo practice of the field \cite{forgan-2009}; we give the median with a
+seeded percentile-bootstrap 95\% confidence interval and a two-sided sign test over the paired
+seeds.
+
+\subsection{There is no fill-time tax; the coarse-timestep one is an artifact}
+Light-speed lag does not measurably slow the fill of the field. Fig.~\ref{fig:dt} shows why the
+literature intuition says otherwise. Run with the source model's fixed timestep the fill-100\%
+penalty for nearest-star slingshot flight is a median of 30.3\%, positive in all 32 seeds -- a
+large, robust-looking tax. It is an artifact of the step. As the timestep is refined the penalty
+falls monotonically -- 27.6\%, 25.0\%, 12.8\%, 5.3\% at 2000, 1000, 500, 250 years -- and at the
+event-driven limit it is a median of 0.0\%, no longer distinguishable from zero. The coarse step
+had batched many launches into one window so they decided from the same stale snapshot and
+collided; resolving the step lets each probe decide at its own arrival time, and the collisions
+that cost time disappear. The same refinement restores the slingshot speed-up to its full value:
+against powered flight the event-driven fold reproduces Nicholson and Forgan's roughly
+two-orders-of-magnitude figure (about $166\times$ on a 400-star field), where the coarse step had
+reported only about $20\times$. The celebrated speed-up survives contact with finite information;
+the fill-time tax does not exist.
+
+\subsection{The real cost is redundant travel, governed by $\Lambda = v/c$}
+What the delay changes is how far the swarm flies. Because the field always fills and each
+settlement launches a fixed number of offspring, both coordination regimes build essentially the
+same number of probes -- differing by well under a percent, in a handful of terminal launches --
+so the resource the delay moves is journeys, and stale views add wasted ones. That
+redundant-travel tax is governed cleanly by the probe's speed in units of $c$. Table~\ref{tab:lambda}
+and Fig.~\ref{fig:lambda} give it for powered flight swept across the speed axis: negligible at
+the cruise speed, a median of 0.7\% of journeys at $\Lambda = 0.01$, rising monotonically to
+18.4\% at $\Lambda = 0.2$. It is not marginal -- at every speed from $\Lambda = 0.03$ upward it is
+positive in all 32 seeds ($p \approx 5\times10^{-10}$), and Fig.~\ref{fig:byseed} shows the
+per-seed distributions sitting cleanly above zero. A small fill-time tax rides alongside it once
+the swarm is fast, growing from nil at $\Lambda \le 0.01$ to a few percent at $\Lambda = 0.2$
+(Table~\ref{tab:lambda}), but the redundant travel is the larger and cleaner signal, and unlike
+the coarse-step time tax it is real: it does not vanish when the dynamics are resolved, because it
+is not a batching artifact but the physical consequence of deciding on stale views.
+
+This is what $\Lambda$ was always meant to govern. The ratio is the same on every hop, so it
+cannot pick out where in the field the cost lands; but it sets, cleanly and monotonically, how
+much of the swarm's motion is wasted. It is the right dimensionless group for the fuel tax, and it
+does not predict a time tax because at resolved dynamics there is essentially none to predict.
 
 \begin{table}[!t]
   \centering
-  \caption{Median fill-time penalty from light-speed lag, over the 32-seed paired
-    ensemble at 300 stars. The penalty tracks hop locality, not raw speed.}
-  \label{tab:penalty}
+  \caption{Coordination tax over the 32-seed paired ensemble at the event-driven timestep,
+    powered flight, as a function of $\Lambda = v/c$: the redundant-travel (fuel) tax as a
+    percent of the wasted journeys under perfect information, and the fill-time tax, each as a
+    median with a bootstrap 95\% confidence interval. The fuel tax is positive in all 32 seeds
+    from $\Lambda = 0.03$ up.}
+  \label{tab:lambda}
   \begin{tabular}{lcc}
     \toprule
-    Flight policy & Median penalty (\%) & IQR (\%) \\
+    $\Lambda = v/c$ & Fuel tax (\%) & Fill-time tax (\%) \\
     \midrule
-    Powered nearest-neighbour   & 0.0  & [0.0, 0.0]   \\
-    Nearest-star slingshot      & 30.3 & [20.0, 38.5] \\
-    Maximum-boost slingshot     & 51.4 & [46.0, 54.0] \\
+    0.01 & \mbox{0.7 [0.6, 1.1]}   & \mbox{0.0 [0.0, 0.0]} \\
+    0.03 & \mbox{3.2 [2.1, 4.0]}   & \mbox{0.2 [0.0, 1.4]} \\
+    0.05 & \mbox{5.8 [4.3, 7.3]}   & \mbox{1.3 [0.2, 2.4]} \\
+    0.10 & \mbox{10.9 [7.8, 12.8]} & \mbox{2.4 [0.9, 4.1]} \\
+    0.20 & \mbox{18.4 [16.9, 21.7]}& \mbox{3.6 [1.9, 7.3]} \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-The medians and their spread are given in Table~\ref{tab:penalty} and shown per seed in
-Fig.~\ref{fig:slowdown}. Powered flight pays essentially nothing; nearest-star slingshot
-loses about a third of its time; maximum-boost slingshot loses about half. Two facts stand
-out.
+\begin{table}[!t]
+  \centering
+  \caption{Where real propulsion concepts sit on the $\Lambda$ axis, and the fuel tax each
+    incurs. The powered cruise is far too slow for lag to bite; gravitational slingshots
+    self-limit near $\Lambda \approx 0.01$; only beamed directed-energy propulsion reaches the
+    regime where the tax is large.}
+  \label{tab:regime}
+  \begin{tabular}{lcc}
+    \toprule
+    Propulsion regime & $\Lambda = v/c$ & Fuel tax (\%) \\
+    \midrule
+    Powered cruise \cite{nicholson-forgan-2013}        & $3\times10^{-5}$ & $\approx 0$ \\
+    Gravitational slingshot \cite{nicholson-forgan-2013} & $\approx 0.01$   & $\approx 1$ \\
+    Directed-energy / light sail \cite{lubin-2016}     & $0.1$ to $0.2$   & 11 to 18 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
-The first is that the penalty is \emph{not} simply $\Lambda = v/c$ from (\ref{eq:lambda}).
-Powered flight is nearly untouched even though it is the slowest regime, and the two fast
-slingshot regimes differ from each other by nearly a factor of two despite comparable
-speeds. If $\Lambda$ alone set the cost, the fastest probes would pay the most in a smooth
-progression; instead the cost tracks hop locality. A probe flying to the \emph{nearest}
-star that loses a race has lost almost nothing: the next-nearest unsettled star is right
-beside it, so the wasted trip and the recovery are both short. A probe chasing the
-\emph{biggest boost} deliberately reaches past its neighbours to a distant star; when it
-loses that race, both the wasted trip and the re-targeting detour are long. So
-$\Lambda \approx v/c$ sets the \emph{scale} of the lag, but the \emph{non-locality of each
-hop decides whether it bites}. Fig.~\ref{fig:settlement} shows the effect on a single
-representative galaxy for the nearest-star policy: the light-speed run reaches full
-settlement at about 110{,}000 years against 80{,}000 for the perfect-information run on the
-same seed, a right-shift of roughly a third that is visible as a lag in the settlement
-curve, not a change in its final height.
+\subsection{The fuel tax is a scale-stable fraction of effort}
+The tax is not an artifact of the small field either. Fig.~\ref{fig:scale} sweeps the system size
+at $\Lambda = 0.2$. The absolute count of wasted journeys grows with the field, as it must -- from
+a median of about 230 extra trips at 300 stars to about 1{,}160 at 1{,}200 -- but as a fraction of
+the perfect-information waste the tax is flat, 17.9\%, 18.9\%, 19.2\% at 300, 600, 1{,}200 stars,
+positive in all 16 seeds at every size. The redundant-travel cost is thus a roughly
+size-independent fraction of the swarm's effort, which is what makes the extrapolation toward
+galactic scale a supported trend rather than a boundary effect of a small box.
 
-The second fact is what does \emph{not} happen: every case still fills the field to full
-coverage. Light-speed lag makes the swarm slower and more wasteful, but it never leaves a
-permanent unsettled remainder. Re-targeting guarantees that a probe which loses a race
-simply picks another star, and eventually the field is closed. A permanent settled
-fraction below one, a steady state in which some region stays forever empty, would require
-settled sites to \emph{die}, adding a loss term to the dynamics; delay by itself supplies
-no such term. Lag is a tax on speed, not a barrier to completion.
+\subsection{Where the cost falls}
+Table~\ref{tab:regime} places the physical propulsion concepts on this axis. The source model's
+powered cruise ($3\times10^{-5}\,c$) is far too slow for any race to matter, and pays nothing. The
+gravitational slingshot that motivated this study reaches only $\Lambda \approx 0.01$ before its
+boost self-limits, and pays about a percent -- real, but small. The tax becomes large only for
+beamed directed-energy or light-sail propulsion at $0.1$ to $0.2\,c$
+\cite{lubin-2016,carroll-nellenback-2019}, where it takes a fifth of journeys. Every case still
+fills the field to completion: this is a property of the model, not a result, since with
+re-targeting and no loss term the reachable field must close, and delay supplies no term that
+would leave a permanent unsettled remainder of the kind an ``Aurora'' steady state requires
+\cite{carroll-nellenback-2019}. The coordination failure shows up as wasted motion, not as an
+unfilled galaxy.
 
 \begin{figure}[!t]
   \centering
-  \includegraphics[width=\columnwidth]{fig_slowdown_by_policy.pdf}
-  \caption{Distribution of the per-seed fill-time penalty imposed by light-speed-limited
-    coordination, over the fixed 32-seed ensemble at 300 stars, for the three flight
-    policies (box: interquartile range and median; points: individual seeds). Powered
-    nearest-neighbour flight pays essentially no penalty, because a lost race is recovered
-    at the star next door, while the long-range maximum-boost policy fills the field
-    materially later, because wasted trips launched from stale views become long detours.}
-  \label{fig:slowdown}
+  \includegraphics[width=\columnwidth]{fig_fuel_tax_vs_lambda.pdf}
+  \caption{The coordination tax versus probe speed $\Lambda = v/c$, powered flight, over the
+    32-seed ensemble at the event-driven timestep (points: medians; bars: bootstrap 95\%
+    confidence intervals). The redundant-travel (fuel) tax rises cleanly and monotonically with
+    $\Lambda$, from under a percent at slingshot speeds to about a fifth at directed-energy speeds;
+    the fill-time tax is a small companion that only appears once the swarm is fast.}
+  \label{fig:lambda}
 \end{figure}
 
 \begin{figure}[!t]
   \centering
-  \includegraphics[width=\columnwidth]{fig_settlement_curves.pdf}
-  \caption{Fraction of the reachable field settled versus year for the nearest-star
-    slingshot policy on a single representative galaxy, under perfect global information
-    (solid) and under light-speed-limited coordination (dashed). The light-speed curve is
-    shifted later, reaching full settlement at about 110{,}000 years versus 80{,}000, a
-    delay attributable to information lag alone; both curves reach the same final height.}
-  \label{fig:settlement}
+  \includegraphics[width=\columnwidth]{fig_time_tax_vs_dt.pdf}
+  \caption{The fill-100\% time penalty for nearest-star slingshot flight versus the fixed
+    timestep, over the 32-seed ensemble. The apparent penalty is monotone in the step and
+    collapses to zero (dashed line: the event-driven, dt-independent limit). The tens-of-percent
+    ``coordination tax'' of a coarse-step model is a discretization artifact, not a physical
+    slowdown.}
+  \label{fig:dt}
+\end{figure}
+
+\begin{figure}[!t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_fuel_tax_by_seed.pdf}
+  \caption{Per-seed distribution of the fuel tax (extra wasted journeys, as a percent of the
+    perfect-information waste) at slingshot speed ($\Lambda = 0.01$), $\Lambda = 0.1$, and
+    directed-energy speed ($\Lambda = 0.2$), over the 32-seed ensemble (box: interquartile range
+    and median; points: individual seeds). The tax is small but consistently positive at
+    slingshot speed and unambiguous at directed-energy speed.}
+  \label{fig:byseed}
+\end{figure}
+
+\begin{figure}[!t]
+  \centering
+  \includegraphics[width=\columnwidth]{fig_fuel_tax_vs_n.pdf}
+  \caption{Fuel tax as a percent of the perfect-information waste versus system size, at
+    $\Lambda = 0.2$ (point: median; shaded band: interquartile range over 16 seeds). The tax is a
+    roughly scale-independent fraction of effort, near 18 to 19\% across a four-fold range in the
+    number of stars, so it does not wash out at larger scale.}
+  \label{fig:scale}
 \end{figure}

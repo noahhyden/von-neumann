@@ -19,3 +19,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# The swarm package is a src layout (installed), but experiments/ is a namespace package at
+# the module root, invoked as `python -m experiments.x`. Put the root on the path so tests
+# can import experiments.stats_util the same way the experiments import each other.
+pythonpath = ["."]

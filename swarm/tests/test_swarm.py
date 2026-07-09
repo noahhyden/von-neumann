@@ -203,7 +203,8 @@ def test_lightspeed_adds_wasted_trips() -> None:
     # perfect-info racing is the floor, lag only adds.
     inst = simulate_swarm(SwarmParams(n_stars=300, coordination="instant", policy="slingshot_nearest"), seed=BASE_SEED)
     ls = simulate_swarm(SwarmParams(n_stars=300, coordination="lightspeed", policy="slingshot_nearest"), seed=BASE_SEED)
-    assert inst.wasted_arrivals == 1705
+    # Both modes share the symmetric max_retargets cap, so instant is not artificially inflated.
+    assert inst.wasted_arrivals == 1637
     assert ls.wasted_arrivals == 2042
     assert ls.wasted_arrivals > inst.wasted_arrivals
 
@@ -251,3 +252,107 @@ def test_wasted_arrival_counters_are_consistent() -> None:
     # every settled star except the homeworld required a (winning) arrival
     assert r.total_arrivals - r.wasted_arrivals >= r.final_settled - 1
     assert r.coordination == "lightspeed"
+
+
+# --- coverage fractions, effective speed, hop locality (referee-driven observables) ------
+
+
+def test_coverage_fractions_are_ordered() -> None:
+    # t25 <= t50 <= t75 <= t90 <= t99 <= t100: reporting the penalty at earlier, more
+    # robust coverage fractions than the fragile t100 tail requires them to be monotone.
+    r = simulate_swarm(SwarmParams(n_stars=400, policy="slingshot_nearest"), seed=BASE_SEED)
+    ts = [r.t25_years, r.t50_years, r.t75_years, r.t90_years, r.t99_years, r.t100_years]
+    assert all(t is not None for t in ts)
+    assert all(a <= b for a, b in zip(ts, ts[1:]))
+
+
+def test_effective_launch_speed_matches_the_regime() -> None:
+    # The mean launch speed is the speed probes actually depart at (so Lambda_eff = v/c can
+    # be checked). Powered = the 9 km/s cruise; slingshots accumulate far past it.
+    powered = simulate_swarm(SwarmParams(n_stars=300, policy="powered"), seed=BASE_SEED)
+    sling = simulate_swarm(SwarmParams(n_stars=300, policy="slingshot_nearest"), seed=BASE_SEED)
+    assert powered.mean_launch_speed_km_s == pytest.approx(8.99, abs=0.05)  # = 3e-5 c cruise
+    assert sling.mean_launch_speed_km_s > 100 * powered.mean_launch_speed_km_s
+
+
+def test_maxboost_wasted_hops_are_longer_than_nearest() -> None:
+    # The mechanism behind the tax: max-boost reaches past its neighbours, so BOTH its
+    # winning and its wasted trips are longer than nearest-star's. This is the "hop
+    # non-locality" that the penalty tracks (not raw speed).
+    near = simulate_swarm(SwarmParams(n_stars=300, coordination="lightspeed", policy="slingshot_nearest"), seed=BASE_SEED)
+    maxb = simulate_swarm(SwarmParams(n_stars=300, coordination="lightspeed", policy="slingshot_maxboost"), seed=BASE_SEED)
+    assert maxb.mean_wasted_hop_pc > near.mean_wasted_hop_pc
+    assert maxb.mean_settle_hop_pc > near.mean_settle_hop_pc
+    assert near.mean_wasted_hop_pc > 0.0  # some races are lost under lag
+
+
+def test_new_observables_do_not_perturb_the_pinned_fold() -> None:
+    # The read-only accumulators must not have changed the fold: the pinned baseline holds.
+    r = simulate_swarm(SwarmParams(n_stars=400), seed=BASE_SEED)
+    assert r.final_settled == 400 and r.t100_years == 1_515_000.0  # test_baseline_regression values
+
+
+# --- event-driven stepping (dt-independent) ------------------------------------------------
+# "event" jumps to the next arrival instead of a fixed dt, so it is the exact continuum limit.
+# It is required in the boosted/slingshot regime, where a fixed dt >> hop time over-synchronizes
+# launches and inflates the measured coordination tax (see REFERENCES.md).
+
+
+def test_event_mode_is_deterministic_and_fills() -> None:
+    p = SwarmParams(n_stars=300, policy="slingshot_nearest", coordination="lightspeed", stepping="event")
+    a = simulate_swarm(p, seed=7)
+    b = simulate_swarm(p, seed=7)
+    assert [s.n_settled for s in a.steps] == [s.n_settled for s in b.steps]
+    assert a.t100_years == b.t100_years
+    assert a.final_settled == a.n_stars == 300  # a connected field still fills
+
+
+def test_event_mode_resolves_a_shorter_timescale_than_coarse_fixed_dt() -> None:
+    # Boosted hops are far shorter than dt=5000 yr, so the fixed-step run quantizes each hop
+    # up to a whole step and overstates the fill time; the event fold gives the true, shorter one.
+    fixed = simulate_swarm(SwarmParams(n_stars=300, policy="slingshot_nearest", stepping="fixed"), seed=BASE_SEED)
+    event = simulate_swarm(SwarmParams(n_stars=300, policy="slingshot_nearest", stepping="event"), seed=BASE_SEED)
+    assert event.t100_years is not None and fixed.t100_years is not None
+    assert event.t100_years < fixed.t100_years / 2  # the coarse timestep inflates it several-fold
+
+
+def test_event_mode_penalty_is_far_smaller_than_coarse_dt_penalty() -> None:
+    # The central correction: the light-speed coordination penalty measured with the coarse
+    # fixed dt is largely a discretization artifact. At the resolved (event) limit it nearly
+    # vanishes for a 300-star field, well below the inflated coarse-dt figure.
+    def pen(stepping: str) -> float:
+        i = simulate_swarm(SwarmParams(n_stars=300, policy="slingshot_nearest", coordination="instant", stepping=stepping), seed=BASE_SEED)
+        l = simulate_swarm(SwarmParams(n_stars=300, policy="slingshot_nearest", coordination="lightspeed", stepping=stepping), seed=BASE_SEED)
+        return (l.t100_years - i.t100_years) / i.t100_years * 100.0
+    coarse = pen("fixed")   # dt=5000: the inflated ~37% single-seed figure
+    resolved = pen("event")  # dt -> 0: near zero
+    assert coarse > 25.0
+    assert abs(resolved) < 10.0
+    assert resolved < coarse  # resolving the timestep shrinks the apparent tax
+
+
+def test_fuel_tax_grows_with_speed_at_event_mode() -> None:
+    # The headline finding: at the resolved timestep the coordination cost is redundant TRAVEL
+    # (extra wasted journeys to stars already claimed), and it scales with Lambda = v/c. A fast
+    # (directed-energy, Lambda=0.2) powered swarm pays a larger fuel tax than a slow one
+    # (Lambda=0.01), and pays it in almost every seed. Probes-built is identical, so it is fuel.
+    import statistics
+    seeds = [0x9E3779B9 + 2654435761 * k for k in range(6)]
+
+    def fuel_deltas(v: float) -> list[int]:
+        ds = []
+        for s in seeds:
+            common = dict(n_stars=300, policy="powered", probe_speed_c=v,
+                          speed_cap_c=max(0.05, 2 * v), stepping="event")
+            i = simulate_swarm(SwarmParams(**common, coordination="instant"), seed=s)
+            l = simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=s)
+            # Probes built barely change (both fill the field; only a handful of terminal
+            # launches differ), so the coordination cost is travel, not manufacturing.
+            assert abs(l.total_probes_launched - i.total_probes_launched) <= 0.02 * i.total_probes_launched
+            ds.append(l.wasted_arrivals - i.wasted_arrivals)
+        return ds
+
+    slow, fast = fuel_deltas(0.01), fuel_deltas(0.2)
+    assert statistics.median(fast) > statistics.median(slow)  # fuel tax grows with v/c
+    assert statistics.median(fast) > 0
+    assert sum(1 for d in fast if d > 0) >= 5  # positive in nearly every seed at directed-energy speed

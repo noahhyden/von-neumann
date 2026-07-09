@@ -180,17 +180,22 @@ def _launch_from(s: SwarmState, star: int, params: SwarmParams, incoming_speed: 
         if target is None:
             break
         chosen.add(target)
-        travel = _dist(s, star, target) / departing
+        hop = _dist(s, star, target)
+        travel = hop / departing
         s.probes.append(
             Probe(
                 id=s.next_probe_id,
                 target=target,
                 arrive_year=s.year + params.settle_time_years + travel,
                 speed_pc_yr=departing,
+                hop_len_pc=hop,
             )
         )
         s.next_probe_id += 1
         s.total_launched += 1
+        # Read-only observability: mean effective launch speed (touches no RNG, no decision).
+        s.launch_speed_sum_pc_yr += departing
+        s.launch_count += 1
 
 
 def initial_state(params: SwarmParams, *, seed: int) -> SwarmState:
@@ -215,12 +220,59 @@ def initial_state(params: SwarmParams, *, seed: int) -> SwarmState:
     return state
 
 
-def step(state: SwarmState, params: SwarmParams) -> SwarmState:
-    """Advance one fixed timestep. Mutates and returns ``state`` (single-owner fold).
+def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Probe]) -> None:
+    """Settle-or-waste the given arrivals (already sorted by (arrive_year, id)) at ``state.year``.
 
-    Arrivals are processed in deterministic order (arrive_year, id). A probe arriving at
-    an already-settled star re-targets to the nearest unsettled star and keeps going;
-    the first to reach an unsettled star settles it and launches its offspring.
+    Shared by both stepping schemes: a probe arriving at an already-settled star re-targets
+    (the cost of stale info); the first to reach an unsettled star settles it and launches
+    its offspring. Reads GROUND TRUTH on arrival - what the probe finds, not what it believed.
+    """
+    arrived_ids = {p.id for p in arrivals}
+    # Keep non-arrived probes; launches and re-targets append into this same list.
+    state.probes = [p for p in state.probes if p.id not in arrived_ids]
+
+    state.total_arrivals += len(arrivals)
+    for p in arrivals:
+        if state.settled_year[p.target] < 0.0:
+            # First to arrive: settle it and spread (slingshot off it, boosting offspring).
+            state.settled_year[p.target] = state.year
+            state.settle_hop_sum_pc += p.hop_len_pc  # winning-trip hop length (read-only)
+            state.settle_hop_count += 1
+            _launch_from(state, p.target, params, p.speed_pc_yr)
+        else:
+            # Raced and lost: a wasted trip (the cost of stale info). Re-target (by policy,
+            # from this arrival star's belief), keeping this probe's speed - up to the cap.
+            state.wasted_arrivals += 1
+            state.wasted_hop_sum_pc += p.hop_len_pc  # wasted-trip hop length (read-only)
+            state.wasted_hop_count += 1
+            # Retire a probe after too many lost races (a bounce-chain bound). Applied to BOTH
+            # coordination modes: instant also loses in-transit races and re-targets (a probe
+            # aims at a truly-unsettled star but another can settle it before it arrives), so it
+            # is NOT bounce-free. Capping only lightspeed would inflate instant's wasted-trip
+            # count and bias the paired fuel comparison. Bookkeeping, not physics; the results
+            # are shown insensitive to the threshold.
+            if p.retargets >= params.max_retargets:
+                continue  # bounce chain exhausted → retire the probe as wasted
+            target = _select_target(state, p.target, set(), params)
+            if target is not None:
+                state.retarget_count += 1
+                hop = _dist(state, p.target, target)
+                travel = hop / p.speed_pc_yr
+                state.probes.append(
+                    Probe(
+                        id=p.id, target=target, arrive_year=state.year + travel,
+                        speed_pc_yr=p.speed_pc_yr, retargets=p.retargets + 1, hop_len_pc=hop,
+                    )
+                )
+
+
+def step(state: SwarmState, params: SwarmParams) -> SwarmState:
+    """Advance one FIXED timestep of ``dt_years``. Mutates and returns ``state``.
+
+    Processes every probe that has arrived by the new ``year`` together, in deterministic
+    order. Simple and cheap, but if ``dt`` exceeds the hop time it batches many launches into
+    one step (they all decide from the same snapshot), which over-synchronizes races and
+    inflates the coordination tax - use ``stepping="event"`` in the boosted regime.
     """
     state.year += params.dt_years
     arrivals = sorted(
@@ -229,39 +281,27 @@ def step(state: SwarmState, params: SwarmParams) -> SwarmState:
     )
     if not arrivals:
         return state
+    _process_arrivals(state, params, arrivals)
+    return state
 
-    arrived_ids = {p.id for p in arrivals}
-    # Keep non-arrived probes; launches and re-targets append into this same list.
-    state.probes = [p for p in state.probes if p.id not in arrived_ids]
 
-    state.total_arrivals += len(arrivals)
-    for p in arrivals:
-        # Physical arrival reads GROUND TRUTH - the star's real status is what the probe
-        # finds when it gets there, regardless of what it believed when it aimed.
-        if state.settled_year[p.target] < 0.0:
-            # First to arrive: settle it and spread (slingshot off it, boosting offspring).
-            state.settled_year[p.target] = state.year
-            _launch_from(state, p.target, params, p.speed_pc_yr)
-        else:
-            # Raced and lost: a wasted trip (the cost of stale info). Re-target (by policy,
-            # from this arrival star's belief), keeping this probe's speed - up to the cap.
-            state.wasted_arrivals += 1
-            # The retarget cap only bites under lightspeed, where stale views cause bounce
-            # chains; instant races resolve to a truly-unsettled star, so re-targeting is
-            # unbounded there - keeping the perfect-info baseline bit-identical.
-            if params.coordination == "lightspeed" and p.retargets >= params.max_retargets:
-                continue  # bounce chain exhausted → retire the probe as wasted
-            target = _select_target(state, p.target, set(), params)
-            if target is not None:
-                state.retarget_count += 1
-                travel = _dist(state, p.target, target) / p.speed_pc_yr
-                state.probes.append(
-                    Probe(
-                        id=p.id, target=target, arrive_year=state.year + travel,
-                        speed_pc_yr=p.speed_pc_yr, retargets=p.retargets + 1,
-                    )
-                )
+def step_event(state: SwarmState, params: SwarmParams) -> SwarmState:
+    """Advance to the NEXT probe arrival (event-driven, dt-independent). Mutates ``state``.
 
+    Jumps ``year`` to the earliest ``arrive_year`` and processes exactly the probes arriving
+    then (ties broken by id). This is the exact continuum (dt -> 0) limit: launches are
+    staggered at their true times and ground truth updates between events, so no fixed-step
+    over-synchronization. No-op when there are no probes.
+    """
+    if not state.probes:
+        return state
+    next_year = min(p.arrive_year for p in state.probes)
+    state.year = next_year
+    arrivals = sorted(
+        (p for p in state.probes if p.arrive_year <= next_year),
+        key=lambda p: (p.arrive_year, p.id),
+    )
+    _process_arrivals(state, params, arrivals)
     return state
 
 
@@ -288,22 +328,34 @@ def simulate_swarm(params: SwarmParams, *, seed: int = 0x9E3779B9) -> SwarmResul
     state = initial_state(params, seed=seed)
     n_stars = len(state.xs)
     steps = [_snapshot(state, n_stars)]
-    thresholds = {50: None, 90: None, 100: None}  # type: dict[int, float | None]
+    # t100 is a fragile tail statistic (the last few stars dominate it); we also record
+    # earlier coverage fractions so the penalty can be reported where it is more robust.
+    pcts = (25, 50, 75, 90, 99, 100)
+    thresholds = {p: None for p in pcts}  # type: dict[int, float | None]
 
     def record_thresholds() -> None:
         frac = state.n_settled() / n_stars * 100.0
-        for pct in (50, 90, 100):
+        for pct in pcts:
             if thresholds[pct] is None and frac >= pct:
                 thresholds[pct] = state.year
 
     record_thresholds()
-    n_steps = int(round(params.max_years / params.dt_years))
-    for _ in range(n_steps):
-        if not state.probes:
-            break  # front has stalled or the reachable field is exhausted
-        step(state, params)
-        steps.append(_snapshot(state, n_stars))
-        record_thresholds()
+    if params.stepping == "event":
+        # Event-driven: one step per arrival, jumping to the next event; dt-independent.
+        while state.probes:
+            if min(p.arrive_year for p in state.probes) > params.max_years:
+                break
+            step_event(state, params)
+            steps.append(_snapshot(state, n_stars))
+            record_thresholds()
+    else:
+        n_steps = int(round(params.max_years / params.dt_years))
+        for _ in range(n_steps):
+            if not state.probes:
+                break  # front has stalled or the reachable field is exhausted
+            step(state, params)
+            steps.append(_snapshot(state, n_stars))
+            record_thresholds()
 
     return SwarmResult(
         n_stars=n_stars,
@@ -312,6 +364,9 @@ def simulate_swarm(params: SwarmParams, *, seed: int = 0x9E3779B9) -> SwarmResul
         t50_years=thresholds[50],
         t90_years=thresholds[90],
         t100_years=thresholds[100],
+        t25_years=thresholds[25],
+        t75_years=thresholds[75],
+        t99_years=thresholds[99],
         front_radius_pc=_front_radius(state),
         max_probe_speed_km_s=state.max_speed_pc_yr / KM_S_TO_PC_YR,
         policy=params.policy,
@@ -319,5 +374,15 @@ def simulate_swarm(params: SwarmParams, *, seed: int = 0x9E3779B9) -> SwarmResul
         total_arrivals=state.total_arrivals,
         wasted_arrivals=state.wasted_arrivals,
         retarget_count=state.retarget_count,
+        mean_launch_speed_km_s=(
+            state.launch_speed_sum_pc_yr / state.launch_count / KM_S_TO_PC_YR
+            if state.launch_count else 0.0
+        ),
+        mean_settle_hop_pc=(
+            state.settle_hop_sum_pc / state.settle_hop_count if state.settle_hop_count else 0.0
+        ),
+        mean_wasted_hop_pc=(
+            state.wasted_hop_sum_pc / state.wasted_hop_count if state.wasted_hop_count else 0.0
+        ),
         steps=steps,
     )
