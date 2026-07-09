@@ -144,17 +144,18 @@ before the relatively slower news catches up.
 \subsection{Does the tax hold at scale?}
 \label{sec:scale}
 A tax measured on a few-hundred-star field is only interesting if it survives to larger ones, so we
-sweep the system size at $\Lambda = 0.2$ over a sixteen-fold range, from 300 to 4{,}800 stars
-(Fig.~\ref{fig:scale}). The absolute count of wasted journeys grows with the field, as it must, from
-a median of about 230 extra trips at 300 stars to about 3{,}300 at 4{,}800. As a fraction of the
-perfect-information waste the tax holds near 18 to 19\% up to about a thousand stars, but it does not
-stay flat: at the largest fields we can reach it trends downward, to a median of about 16\% at 2{,}400
-stars and 11\% at 4{,}800. We are candid that the largest points carry few seeds -- the event-mode
-cost is roughly $O(N^2)$ at this speed, which caps the sweep -- so we cannot fully separate a real
-decline from finite-sample scatter. But the direction is what matters for the one extrapolation a
-reader might be tempted to make: the fraction does not grow with scale, and if anything shrinks, so
-nothing here supports carrying a fixed-percentage tax out to a $10^{11}$-star galaxy. We report the
-scale behaviour over the range we can measure and make no claim beyond it.
+sweep the system size at $\Lambda = 0.2$ over a sixteen-fold range, from 300 to 4{,}800 stars, with
+32 to 48 seeds at every size (Fig.~\ref{fig:scale}). The absolute count of wasted journeys grows with
+the field, as it must, from a median of about 240 extra trips at 300 stars to about 4{,}000 at
+4{,}800. As a fraction of the perfect-information waste the tax does the opposite: it holds near 18
+to 19\% up to about a thousand stars and then declines gently, to $16.3\%$ $[15.3, 17.8]$ at 2{,}400
+stars and $13.1\%$ $[11.6, 14.0]$ at 4{,}800. With this many seeds the decline is resolved rather
+than suspected -- the confidence intervals at 300 and 4{,}800 stars do not overlap -- so it is a real
+trend, not finite-sample scatter, though the event-mode $O(N^2)$ cost still caps how far we can push
+it. The direction is what matters for the one extrapolation a reader might be tempted to make: the
+fraction does not grow with scale, and in fact shrinks, so nothing here supports carrying a
+fixed-percentage tax out to a $10^{11}$-star galaxy. We report the scale behaviour over the range we
+can measure and make no claim beyond it.
 
 \subsection{Where the cost falls}
 Table~\ref{tab:regime} places the physical propulsion concepts on the speed axis. The source model's
@@ -253,9 +254,10 @@ shows up as wasted motion, not as an unfilled galaxy.
   \centering
   \includegraphics[width=\columnwidth]{fig_fuel_tax_vs_n.pdf}
   \caption{Fuel tax as a percent of the perfect-information waste versus system size, at
-    $\Lambda = 0.2$ (point: median; shaded band: bootstrap 95\% confidence interval). Over a
-    sixteen-fold range the tax holds near 18 to 19\% up to about a thousand stars and then trends
-    downward at the largest, fewest-seed fields; it does not grow with scale, so nothing here
-    supports extrapolating a fixed-percentage tax to galactic size.}
+    $\Lambda = 0.2$ (point: median; shaded band: bootstrap 95\% confidence interval; 32 to 48 seeds
+    per point). Over a sixteen-fold range the tax holds near 18 to 19\% up to about a thousand stars
+    and then declines to about 13\% at 4{,}800; the end intervals do not overlap, so it does not grow
+    with scale but gently shrinks, which is why we make no fixed-percentage extrapolation to galactic
+    size.}
   \label{fig:scale}
 \end{figure}

@@ -78,3 +78,18 @@ def test_floor_bracket_json_matches_fold() -> None:
         r = record(simulate_swarm(SwarmParams(n_stars=cfg["n_stars"], policy="powered", probe_speed_c=lam,
                                               speed_cap_c=cap, stepping=cfg["stepping"], coordination=mode), seed=seed))
         _assert_record_matches(r, block["per_seed"][mode][0], f"floor_bracket {mode} seed0")
+
+
+def test_finite_size_json_matches_fold() -> None:
+    # Guard the referee-critical scale numbers at the SMALLEST N only (N=4800 is ~200 s/seed;
+    # too slow for a test). The small point exercises the same pipeline the whole sweep uses.
+    d = _load("finite_size")
+    n = min(int(k) for k in d["data"])
+    block = d["data"][str(n)]
+    for i in range(2):
+        seed = SEEDS[i]
+        common = dict(n_stars=n, policy="powered", probe_speed_c=0.2, speed_cap_c=0.4, stepping="event")
+        base = record(simulate_swarm(SwarmParams(**common, coordination="instant"), seed=seed))
+        treat = record(simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=seed))
+        _assert_record_matches(base, block["per_seed"][i]["base"], f"finite_size base seed{i}")
+        _assert_record_matches(treat, block["per_seed"][i]["treat"], f"finite_size treat seed{i}")

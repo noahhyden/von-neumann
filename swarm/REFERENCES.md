@@ -296,15 +296,16 @@ assignment collisions perfect knowledge leaves. Cost: mid-flight detours lengthe
 `Λ=0.2`. So in-flight relay recovers essentially all of the wasted-arrival tax; the residual floor is
 the partial travel flown before a beacon arrives, which grows with `Λ`.
 
-**Fuel tax vs scale (`experiments/measure.py::finite_size`, powered, `Λ=0.2`, event).** As a
-*percent* of the perfect-info waste the tax holds near ~18-19% up to ~1000 stars then trends DOWN at
-the largest fields - **+17.9 / +18.9 / +19.2 / +16.4 / +10.6%** at N = 300 / 600 / 1200 / 2400 / 4800
-(24 / 24 / 16 / 8 / 4 seeds; the O(N²) event cost caps the seed count at large N) - while the
-*absolute* wasted-journey count grows with the field (median +232 / +508 / +1160 / +2137 / +3289).
-This is an honest correction of a round-1 "scale-stable fraction" claim (which rested on a 4x span to
-N=1200): over a 16x span the fraction does NOT grow with scale and may shrink, so there is no support
-for extrapolating a fixed-percentage tax to a 10¹¹-star galaxy. The large-N decline may be partly
-finite-seed scatter (few seeds there), but the direction is not the alarming one.
+**Fuel tax vs scale (`experiments/measure.py::finite_size`, powered, `Λ=0.2`, event, high-seed).** As
+a *percent* of the perfect-info waste the tax holds near ~18-19% up to ~1000 stars then DECLINES at
+larger fields - **+19.0 / +18.2 / +17.9 / +16.3 / +13.1%** at N = 300 / 600 / 1200 / 2400 / 4800
+(48 / 48 / 48 / 48 / 32 seeds; the O(N²) event cost caps N, not the seed count) - while the *absolute*
+wasted-journey count grows with the field (median +237 / +494 / +1056 / +2228 / +4010). With 32-48
+seeds per point the decline is **resolved, not scatter**: the bootstrap CIs at N=300 ([+16.4,+22.5])
+and N=4800 ([+11.6,+14.0]) do not overlap. This is an honest correction of a round-1 "scale-stable
+fraction" claim (which rested on a 4x span to N=1200): over a 16x span the fraction does NOT grow with
+scale, it gently shrinks, so there is no support for extrapolating a fixed-percentage tax to a
+10¹¹-star galaxy. (An earlier 4-seed N=4800 point read ~11%; 32 seeds tighten it to 13.1%.)
 
 **Density-rescaling invariance (checked):** changing the *uniform* density rescales every
 distance by a common factor, so travel time and light-time scale together and `Λ` (hence the
