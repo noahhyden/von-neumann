@@ -114,6 +114,16 @@ for (const path of entries) {
     }
   }
 
+  // Per-paper Zenodo DOI (issue #8), written back into paper.json by the zenodo
+  // workflow. Production takes precedence over sandbox; while only a sandbox DOI
+  // exists we still surface it, flagged so the site can label it "(sandbox)". The
+  // DOI is an identifier from Zenodo, not a number we invent (CLAUDE.md 1): its
+  // source is the minted deposition, recorded in paper.json.
+  const prodDoi = paper.zenodo_concept_doi || "";
+  const sandboxDoi = paper.zenodo_sandbox_concept_doi || "";
+  const doi = prodDoi || sandboxDoi || null;
+  const doiIsSandbox = !prodDoi && !!sandboxDoi;
+
   papers.push({
     slug: paper.slug,
     title: paper.title,
@@ -127,6 +137,8 @@ for (const path of entries) {
     keywords: paper.keywords || [],
     cites,
     pdf: `papers/${paper.slug}.pdf`,
+    doi,
+    doiIsSandbox,
   });
 }
 
@@ -164,6 +176,13 @@ export interface PaperMeta {
   cites: string[];
   /** Path to the compiled PDF, relative to the site root: papers/<slug>.pdf */
   pdf: string;
+  /**
+   * Per-paper Zenodo concept DOI (always resolves to the latest version), or null
+   * until one is minted. Production preferred over sandbox; see doiIsSandbox.
+   */
+  doi: string | null;
+  /** True when \`doi\` is a sandbox.zenodo.org DOI (label it as such; not citable). */
+  doiIsSandbox: boolean;
 }
 
 export const PAPERS: PaperMeta[] = ${JSON.stringify(papers, null, 2)};

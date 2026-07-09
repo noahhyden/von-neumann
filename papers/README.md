@@ -27,6 +27,9 @@ papers/
     gen-bib.mjs      # sources.ts  -> refs.bib          (generated, gitignored)
     gen-tex.mjs      # paper.json  -> main.tex + body stubs (only fills missing files)
     gen-index.mjs    # paper.json  -> ../frontend/src/papers-index.ts (committed)
+    gen-versions.mjs # git history -> ../frontend/src/papers-versions.ts (build-time, gitignored)
+    backfill-paper-pdfs.sh # one-time manual seed of historical PDFs onto paper-pdfs
+    zenodo-publish.mjs     # drive Zenodo's REST API (used by the zenodo workflow)
   <slug>/
     paper.json       # the paper's metadata (title, authors, sections, cites, abstract)
     main.tex         # the document (hand-written prose after scaffolding)
@@ -105,10 +108,57 @@ latexmk -pdf -cd electronics-wall/main.tex
 ## How PDFs are published
 
 CI compiles each paper and copies the resulting `<slug>.pdf` to the site build under
-`papers/<slug>.pdf`. `papers-index.ts` records that path in each `PaperMeta.pdf`, so
-the frontend can link to the compiled PDF. Build artifacts (`refs.bib`, `*.pdf`,
-`*.aux`, and friends) are gitignored - only the sources (`paper.json`, `*.tex`) and
-the committed `papers-index.ts` live in the repo.
+`papers/<slug>.pdf` (the "latest" alias). `papers-index.ts` records that path in each
+`PaperMeta.pdf`, so the frontend can link to the compiled PDF. Build artifacts
+(`refs.bib`, `doi.tex`, `*.pdf`, `*.aux`, and friends) are gitignored - only the
+sources (`paper.json`, `*.tex`) and the committed `papers-index.ts` live in the repo.
+
+## Every version is published (issue #7)
+
+A **version** is every commit whose diff touches `papers/<slug>/` - git history is the
+version list, no manual tagging. `scripts/gen-versions.mjs` derives that list at build
+time (it cannot be committed: its newest entry names the current commit's own SHA) and
+writes the gitignored `frontend/src/papers-versions.ts`, which the papers surface reads
+to show a per-paper "Versions" list.
+
+Rendered history is kept out of git on an **orphan `paper-pdfs` branch** (binaries out
+of the main tree, and - unlike a GitHub Release - it never triggers the repo-level
+Zenodo webhook). The deploy (`pages.yml`) archives each freshly built PDF there at
+`<slug>/<shortSha>.pdf` (immutable: an already-archived version is never rewritten or
+recompiled), then assembles every archived PDF into the site at
+`/papers/<slug>/<shortSha>.pdf`. A version with no archived PDF links its frozen source
+on GitHub instead.
+
+Versions that predate this feature can be seeded once with
+`scripts/backfill-paper-pdfs.sh` (a manual, best-effort recompile of history - the only
+time old LaTeX is ever recompiled; the pipeline never does). Run it once with push
+access; versions that fail to compile are logged and simply link their source.
+
+## Per-paper Zenodo DOI (issue #8)
+
+Each paper can get its **own** Zenodo concept DOI (independent of the whole-repo DOI in
+[`CITATION.cff`](../CITATION.cff), which stays as the software citation). The `zenodo`
+workflow drives Zenodo's REST API directly, one deposition per paper, minting a fresh
+version DOI per run under a stable concept DOI. It is **manual and gated** - it runs only
+when you trigger it and only against **sandbox.zenodo.org** until a token is present.
+
+To use it:
+
+1. Create a token at
+   <https://sandbox.zenodo.org/account/settings/applications/tokens/new/> with scopes
+   `deposit:write` and `deposit:actions`.
+2. Add it as the repo Actions secret **`ZENODO_SANDBOX_TOKEN`**.
+3. Run the **zenodo** workflow (Actions tab -> zenodo -> Run workflow -> pick a paper).
+   It reserves the DOI, typesets the paper with the DOI printed on it, uploads the PDF
+   plus a reproducibility zip, publishes, and opens a **PR** writing the sandbox DOI
+   into `paper.json` (`zenodo_sandbox_*`) and regenerating `papers-index.ts`. Merge the
+   PR; the site then shows the DOI, labelled "(sandbox)".
+
+Graduating to production later is additive: add a `ZENODO_TOKEN` secret and point
+`ZENODO_BASE` at `https://zenodo.org/api`. Production identifiers are stored under
+separate `zenodo_*` keys, so the sandbox and production state never collide. The deposit
+license defaults to the repo's research-prose license (CC BY-NC-ND 4.0); set
+`paper.license` (an SPDX id) to override.
 
 ## License
 

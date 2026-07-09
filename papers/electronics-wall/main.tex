@@ -20,6 +20,11 @@
 \begin{document}
 \maketitle
 
+% Reserved Zenodo DOI, printed on the title page when the zenodo workflow has
+% generated doi.tex (gitignored, issue #8). Absent in ordinary builds, so nothing
+% prints; the paper typesets identically with or without a minted DOI.
+\IfFileExists{doi.tex}{\input{doi.tex}}{}
+
 \begin{abstract}
 A self-replicating space factory lands with a fixed cargo and builds copies of
 itself from local material. Its promise is leverage: the fraction of its own mass

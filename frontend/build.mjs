@@ -7,9 +7,18 @@ import { build as esbuild } from "esbuild";
 import { gzipSync } from "node:zlib";
 import { mkdir, writeFile, rm, readFile, cp, readdir } from "node:fs/promises";
 import { join } from "node:path";
+import { execFileSync } from "node:child_process";
 
 const ROOT = import.meta.dirname;
 const OUT = join(ROOT, "dist");
+
+// The papers surface imports src/papers-versions.ts, a git-derived, gitignored
+// module (a version = every commit touching papers/<slug>/, see gen-versions.mjs).
+// It cannot be committed - its newest entry names the current commit's own SHA - so
+// it is generated here at build time, exactly as refs.bib is generated before the
+// paper is typeset. It always writes a valid module (empty when git history is
+// unavailable), so a shallow clone or a source tarball still builds.
+execFileSync("node", [join(ROOT, "..", "papers", "scripts", "gen-versions.mjs")], { stdio: "inherit" });
 
 await rm(OUT, { recursive: true, force: true });
 await mkdir(OUT, { recursive: true });

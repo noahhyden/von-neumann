@@ -1,0 +1,157 @@
+name: zenodo
+
+# Mint a per-paper Zenodo DOI (issue #8). MANUAL and GATED: it runs only on a
+# workflow_dispatch you trigger, and only when the ZENODO_SANDBOX_TOKEN secret is set;
+# with no token it exits cleanly as a no-op (it never mints without an explicit token +
+# manual run). It targets sandbox.zenodo.org - identical API, no real DOIs burned - so
+# the flow can be iterated safely. Graduating to production is additive: add ZENODO_
+# TOKEN and point ZENODO_BASE at https://zenodo.org/api.
+#
+# One deposition PER PAPER (concept DOI), a new version per run (version DOI), driven
+# straight from Zenodo's REST API - deliberately bypassing the repo-scoped GitHub->
+# Zenodo auto-integration, which archives the whole monorepo and cannot scope to a
+# paper. The repo-level concept DOI in CITATION.cff stays as the software citation.
+
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "Which paper to deposit"
+        required: true
+        type: choice
+        options:
+          - coordination-tax
+          - electronics-wall
+      license:
+        description: "SPDX license id for the deposit (repo default cc-by-nc-nd-4.0)"
+        required: false
+        default: "cc-by-nc-nd-4.0"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  # One deposit per paper at a time; a second run for the same paper waits.
+  group: zenodo-${{ github.event.inputs.slug }}
+  cancel-in-progress: false
+
+jobs:
+  deposit:
+    runs-on: ubuntu-latest
+    env:
+      SLUG: ${{ github.event.inputs.slug }}
+      ZENODO_BASE: https://sandbox.zenodo.org/api
+      ZENODO_TOKEN: ${{ secrets.ZENODO_SANDBOX_TOKEN }}
+      ZENODO_LICENSE: ${{ github.event.inputs.license }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Gate: secrets are not usable in step-level `if:`, so map to env and test here.
+      # No token -> clean no-op with instructions, so a curious run never errors.
+      - name: Gate on the sandbox token
+        id: gate
+        run: |
+          if [ -z "$ZENODO_TOKEN" ]; then
+            echo "ZENODO_SANDBOX_TOKEN is not set. To enable this workflow:"
+            echo "  1. Create a token at https://sandbox.zenodo.org/account/settings/applications/tokens/new/"
+            echo "     with scopes: deposit:write, deposit:actions"
+            echo "  2. Add it as the repo secret ZENODO_SANDBOX_TOKEN (Settings > Secrets > Actions)."
+            echo "  3. Re-run this workflow. Skipping for now (no-op)."
+            echo "gated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "token present; proceeding."
+            echo "gated=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.gated == 'false'
+        with:
+          node-version: "24"
+      - uses: astral-sh/setup-uv@v5
+        if: steps.gate.outputs.gated == 'false'
+        with:
+          enable-cache: true
+
+      # Reserve the DOI FIRST and write papers/<slug>/doi.tex, so the typeset PDF below
+      # carries its own DOI. Create-vs-newversion is decided from paper.json state.
+      - name: Reserve the DOI (create or new version) and write doi.tex
+        if: steps.gate.outputs.gated == 'false'
+        run: node papers/scripts/zenodo-publish.mjs reserve --slug "$SLUG" --state "$RUNNER_TEMP/zenodo-state.json"
+
+      - name: Generate the bibliography
+        if: steps.gate.outputs.gated == 'false'
+        working-directory: papers
+        run: node scripts/gen-bib.mjs
+
+      - name: Generate figures for the paper
+        if: steps.gate.outputs.gated == 'false'
+        run: |
+          case "$SLUG" in
+            coordination-tax) cd swarm && uv run --extra dev python -m experiments.paper_figures ;;
+            electronics-wall) cd closure-sim && uv run --extra dev python -m closure_sim.paper_figures ;;
+            *) echo "no figure module mapped for $SLUG"; exit 1 ;;
+          esac
+
+      - name: Typeset the paper (with the reserved DOI on it)
+        if: steps.gate.outputs.gated == 'false'
+        uses: xu-cheng/latex-action@v4
+        with:
+          working_directory: papers/${{ github.event.inputs.slug }}
+          root_file: main.tex
+
+      # Reproducibility artifact: the paper source plus everything needed to regenerate
+      # its figures (its sim module + the shared bibliography source). Offsets having no
+      # institutional affiliation with a self-contained, rebuildable record.
+      - name: Bundle the reproducibility zip
+        if: steps.gate.outputs.gated == 'false'
+        run: |
+          case "$SLUG" in
+            coordination-tax) MOD=swarm ;;
+            electronics-wall) MOD=closure-sim ;;
+          esac
+          zip -r "$RUNNER_TEMP/${SLUG}-repro.zip" \
+            "papers/$SLUG" "$MOD" frontend/src/sources.ts \
+            -x '*/.venv/*' '*/__pycache__/*' '*/build/*' '*/node_modules/*' '*.aux' '*.log' '*.fls' '*.fdb_latexmk' >/dev/null
+          echo "zip: $(du -h "$RUNNER_TEMP/${SLUG}-repro.zip" | cut -f1)"
+
+      - name: Upload files, set metadata, publish, and write DOIs back into paper.json
+        id: finalize
+        if: steps.gate.outputs.gated == 'false'
+        run: |
+          node papers/scripts/zenodo-publish.mjs finalize \
+            --slug "$SLUG" \
+            --state "$RUNNER_TEMP/zenodo-state.json" \
+            --pdf "papers/$SLUG/main.pdf" \
+            --zip "$RUNNER_TEMP/${SLUG}-repro.zip"
+
+      # Refresh the committed index so the DOI added to paper.json shows on the site.
+      - name: Refresh the papers index with the new DOI
+        if: steps.gate.outputs.gated == 'false'
+        working-directory: papers
+        run: node scripts/gen-index.mjs
+
+      # DOI write-back reaches main via a PR (main is protected; no direct push).
+      - name: Open a PR with the DOI written into paper.json
+        if: steps.gate.outputs.gated == 'false'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          add-paths: |
+            papers/${{ github.event.inputs.slug }}/paper.json
+            frontend/src/papers-index.ts
+          branch: zenodo/${{ github.event.inputs.slug }}-doi
+          commit-message: "papers(${{ github.event.inputs.slug }}): record Zenodo sandbox DOI"
+          author: "noahhyden <221401490+noahhyden@users.noreply.github.com>"
+          committer: "noahhyden <221401490+noahhyden@users.noreply.github.com>"
+          title: "Record Zenodo sandbox DOI for ${{ github.event.inputs.slug }}"
+          body: |
+            Automated by the `zenodo` workflow (issue #8, sandbox).
+
+            - Version DOI: `${{ steps.finalize.outputs.version_doi }}`
+            - Concept DOI: `${{ steps.finalize.outputs.concept_doi }}`
+
+            This writes the sandbox identifiers into `paper.json` (`zenodo_sandbox_*`)
+            and regenerates `papers-index.ts` so the site shows the DOI (labelled
+            sandbox). The whole-repo DOI in `CITATION.cff` is unchanged.

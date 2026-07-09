@@ -33,6 +33,11 @@ import { SOURCES, sourceById, sourceNumber, sourceCategories, STRENGTH_LABEL } f
 import type { Source } from "./sources.js";
 import { PAPERS } from "./papers-index.js";
 import type { PaperMeta } from "./papers-index.js";
+// Generated at build time from git history (a version = every commit touching
+// papers/<slug>/); see papers/scripts/gen-versions.mjs. Gitignored, always present
+// after a build. Empty when git history is unavailable, so the guards below no-op.
+import { PAPER_VERSIONS } from "./papers-versions.js";
+import type { VersionMeta } from "./papers-versions.js";
 
 type Surface = "overview" | "wall" | "mission" | "fleet" | "swarm" | "spine" | "launch" | "power" | "probe" | "sources" | "papers";
 
@@ -1538,7 +1543,32 @@ function PapersSurface() {
                 </p>
                 <p>{p.abstract}</p>
                 <p class="legend" style="margin:0 0 16px">{() => p.keywords.join("  .  ")}</p>
-                <p><a class="src-link" href={p.pdf} target="_blank" rel="noopener noreferrer">Read the typeset PDF ({p.pdf})</a></p>
+                {p.doi ? (
+                  <p class="note" style="margin:0 0 12px">
+                    DOI: <a class="src-link" href={`https://doi.org/${p.doi}`} target="_blank" rel="noopener noreferrer">{p.doi}</a>
+                    {p.doiIsSandbox ? " (sandbox; not a citable identifier)" : ""}
+                  </p>
+                ) : null}
+                <p><a class="src-link" href={p.pdf} target="_blank" rel="noopener noreferrer">Read the latest typeset PDF ({p.pdf})</a></p>
+                {/* Every commit touching this paper is a version (issue #7). Each row
+                    links its archived PDF when one exists, else the frozen source on
+                    GitHub. The list is git-derived at build time (PAPER_VERSIONS). */}
+                <Show when={() => (PAPER_VERSIONS[p.slug] || []).length > 1}>
+                  <p class="panel-head" style="margin-top:24px">Versions</p>
+                  <For each={() => PAPER_VERSIONS[p.slug] || []}>
+                    {(v: VersionMeta, i: () => number) => (
+                      <div class="src">
+                        <div class="src-top">
+                          <span class="src-num">{() => (i() === 0 ? "latest" : v.shortSha)}</span>
+                          <span class="src-cite"><b>{v.date}</b> &nbsp;/&nbsp; {v.subject}</span>
+                        </div>
+                        {v.hasPdf
+                          ? <a class="src-link" href={v.pdf} target="_blank" rel="noopener noreferrer">{v.pdf}</a>
+                          : <a class="src-link" href={v.sourceUrl} target="_blank" rel="noopener noreferrer">source at {v.shortSha} (PDF not archived)</a>}
+                      </div>
+                    )}
+                  </For>
+                </Show>
                 <p class="panel-head" style="margin-top:24px">References</p>
                 <For each={() => p.cites}>
                   {(id: string) => {
