@@ -220,29 +220,19 @@ def initial_state(params: SwarmParams, *, seed: int) -> SwarmState:
     return state
 
 
-def step(state: SwarmState, params: SwarmParams) -> SwarmState:
-    """Advance one fixed timestep. Mutates and returns ``state`` (single-owner fold).
+def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Probe]) -> None:
+    """Settle-or-waste the given arrivals (already sorted by (arrive_year, id)) at ``state.year``.
 
-    Arrivals are processed in deterministic order (arrive_year, id). A probe arriving at
-    an already-settled star re-targets to the nearest unsettled star and keeps going;
-    the first to reach an unsettled star settles it and launches its offspring.
+    Shared by both stepping schemes: a probe arriving at an already-settled star re-targets
+    (the cost of stale info); the first to reach an unsettled star settles it and launches
+    its offspring. Reads GROUND TRUTH on arrival - what the probe finds, not what it believed.
     """
-    state.year += params.dt_years
-    arrivals = sorted(
-        (p for p in state.probes if p.arrive_year <= state.year),
-        key=lambda p: (p.arrive_year, p.id),
-    )
-    if not arrivals:
-        return state
-
     arrived_ids = {p.id for p in arrivals}
     # Keep non-arrived probes; launches and re-targets append into this same list.
     state.probes = [p for p in state.probes if p.id not in arrived_ids]
 
     state.total_arrivals += len(arrivals)
     for p in arrivals:
-        # Physical arrival reads GROUND TRUTH - the star's real status is what the probe
-        # finds when it gets there, regardless of what it believed when it aimed.
         if state.settled_year[p.target] < 0.0:
             # First to arrive: settle it and spread (slingshot off it, boosting offspring).
             state.settled_year[p.target] = state.year
@@ -272,6 +262,43 @@ def step(state: SwarmState, params: SwarmParams) -> SwarmState:
                     )
                 )
 
+
+def step(state: SwarmState, params: SwarmParams) -> SwarmState:
+    """Advance one FIXED timestep of ``dt_years``. Mutates and returns ``state``.
+
+    Processes every probe that has arrived by the new ``year`` together, in deterministic
+    order. Simple and cheap, but if ``dt`` exceeds the hop time it batches many launches into
+    one step (they all decide from the same snapshot), which over-synchronizes races and
+    inflates the coordination tax - use ``stepping="event"`` in the boosted regime.
+    """
+    state.year += params.dt_years
+    arrivals = sorted(
+        (p for p in state.probes if p.arrive_year <= state.year),
+        key=lambda p: (p.arrive_year, p.id),
+    )
+    if not arrivals:
+        return state
+    _process_arrivals(state, params, arrivals)
+    return state
+
+
+def step_event(state: SwarmState, params: SwarmParams) -> SwarmState:
+    """Advance to the NEXT probe arrival (event-driven, dt-independent). Mutates ``state``.
+
+    Jumps ``year`` to the earliest ``arrive_year`` and processes exactly the probes arriving
+    then (ties broken by id). This is the exact continuum (dt -> 0) limit: launches are
+    staggered at their true times and ground truth updates between events, so no fixed-step
+    over-synchronization. No-op when there are no probes.
+    """
+    if not state.probes:
+        return state
+    next_year = min(p.arrive_year for p in state.probes)
+    state.year = next_year
+    arrivals = sorted(
+        (p for p in state.probes if p.arrive_year <= next_year),
+        key=lambda p: (p.arrive_year, p.id),
+    )
+    _process_arrivals(state, params, arrivals)
     return state
 
 
@@ -310,13 +337,22 @@ def simulate_swarm(params: SwarmParams, *, seed: int = 0x9E3779B9) -> SwarmResul
                 thresholds[pct] = state.year
 
     record_thresholds()
-    n_steps = int(round(params.max_years / params.dt_years))
-    for _ in range(n_steps):
-        if not state.probes:
-            break  # front has stalled or the reachable field is exhausted
-        step(state, params)
-        steps.append(_snapshot(state, n_stars))
-        record_thresholds()
+    if params.stepping == "event":
+        # Event-driven: one step per arrival, jumping to the next event; dt-independent.
+        while state.probes:
+            if min(p.arrive_year for p in state.probes) > params.max_years:
+                break
+            step_event(state, params)
+            steps.append(_snapshot(state, n_stars))
+            record_thresholds()
+    else:
+        n_steps = int(round(params.max_years / params.dt_years))
+        for _ in range(n_steps):
+            if not state.probes:
+                break  # front has stalled or the reachable field is exhausted
+            step(state, params)
+            steps.append(_snapshot(state, n_stars))
+            record_thresholds()
 
     return SwarmResult(
         n_stars=n_stars,

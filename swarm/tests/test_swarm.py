@@ -289,3 +289,42 @@ def test_new_observables_do_not_perturb_the_pinned_fold() -> None:
     # The read-only accumulators must not have changed the fold: the pinned baseline holds.
     r = simulate_swarm(SwarmParams(n_stars=400), seed=BASE_SEED)
     assert r.final_settled == 400 and r.t100_years == 1_515_000.0  # test_baseline_regression values
+
+
+# --- event-driven stepping (dt-independent) ------------------------------------------------
+# "event" jumps to the next arrival instead of a fixed dt, so it is the exact continuum limit.
+# It is required in the boosted/slingshot regime, where a fixed dt >> hop time over-synchronizes
+# launches and inflates the measured coordination tax (see REFERENCES.md).
+
+
+def test_event_mode_is_deterministic_and_fills() -> None:
+    p = SwarmParams(n_stars=300, policy="slingshot_nearest", coordination="lightspeed", stepping="event")
+    a = simulate_swarm(p, seed=7)
+    b = simulate_swarm(p, seed=7)
+    assert [s.n_settled for s in a.steps] == [s.n_settled for s in b.steps]
+    assert a.t100_years == b.t100_years
+    assert a.final_settled == a.n_stars == 300  # a connected field still fills
+
+
+def test_event_mode_resolves_a_shorter_timescale_than_coarse_fixed_dt() -> None:
+    # Boosted hops are far shorter than dt=5000 yr, so the fixed-step run quantizes each hop
+    # up to a whole step and overstates the fill time; the event fold gives the true, shorter one.
+    fixed = simulate_swarm(SwarmParams(n_stars=300, policy="slingshot_nearest", stepping="fixed"), seed=BASE_SEED)
+    event = simulate_swarm(SwarmParams(n_stars=300, policy="slingshot_nearest", stepping="event"), seed=BASE_SEED)
+    assert event.t100_years is not None and fixed.t100_years is not None
+    assert event.t100_years < fixed.t100_years / 2  # the coarse timestep inflates it several-fold
+
+
+def test_event_mode_penalty_is_far_smaller_than_coarse_dt_penalty() -> None:
+    # The central correction: the light-speed coordination penalty measured with the coarse
+    # fixed dt is largely a discretization artifact. At the resolved (event) limit it nearly
+    # vanishes for a 300-star field, well below the inflated coarse-dt figure.
+    def pen(stepping: str) -> float:
+        i = simulate_swarm(SwarmParams(n_stars=300, policy="slingshot_nearest", coordination="instant", stepping=stepping), seed=BASE_SEED)
+        l = simulate_swarm(SwarmParams(n_stars=300, policy="slingshot_nearest", coordination="lightspeed", stepping=stepping), seed=BASE_SEED)
+        return (l.t100_years - i.t100_years) / i.t100_years * 100.0
+    coarse = pen("fixed")   # dt=5000: the inflated ~37% single-seed figure
+    resolved = pen("event")  # dt -> 0: near zero
+    assert coarse > 25.0
+    assert abs(resolved) < 10.0
+    assert resolved < coarse  # resolving the timestep shrinks the apparent tax

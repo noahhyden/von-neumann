@@ -104,6 +104,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Figure generation runs a validated simulation ensemble and can be minutes of
+      # compute per paper; typesetting spins up a full LaTeX container. Doing both for
+      # EVERY paper on EVERY run wastes compute when a change touches neither a paper nor
+      # its figure-source module. So we scope the expensive steps (figure gen + typeset)
+      # to the papers actually affected by the diff. A paper is affected when its own
+      # files change, when its figure-source module changes, or when a shared input
+      # changes (the bibliography source, the generator scripts, or this workflow). The
+      # cheap correctness checks below (bib/index/typography, papers/RULES.md R2-R6) still
+      # run unconditionally, since they are fast and catch cross-cutting bib/cite drift.
+      # (The Pages deploy in pages.yml still builds ALL papers - the published site needs
+      # every PDF - so this scoping is a CI-gate optimization only.)
+      - name: Detect which papers the diff affects
+        uses: dorny/paths-filter@v3
+        id: changed
+        with:
+          filters: |
+            shared: &shared
+              - 'frontend/src/sources.ts'
+              - 'papers/scripts/**'
+              - '.github/workflows/ci.yml'
+            coordination_tax:
+              - *shared
+              - 'papers/coordination-tax/**'
+              - 'swarm/**'
+            electronics_wall:
+              - *shared
+              - 'papers/electronics-wall/**'
+              - 'closure-sim/**'
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -127,19 +155,28 @@ jobs:
         run: node scripts/check-typography.mjs
       # Figures are generated (gitignored vector PDFs) from the validated source
       # modules, so the paper restates only their real output (papers/RULES.md R1, P4).
-      # A figure-build failure fails the PR, since the typeset below needs them.
+      # A figure-build failure fails the PR, since the typeset below needs them. Each
+      # paper's figure + typeset pair runs only when that paper is affected (see above).
       - name: Generate coordination-tax figures (swarm)
+        if: steps.changed.outputs.coordination_tax == 'true'
         working-directory: swarm
         run: uv run --extra dev python -m experiments.paper_figures
-      - name: Generate electronics-wall figures (closure-sim)
-        working-directory: closure-sim
-        run: uv run --extra dev python -m closure_sim.paper_figures
-      - name: Typeset every paper (LaTeX) - a broken .tex fails the PR
+      - name: Typeset coordination-tax (LaTeX) - a broken .tex fails the PR
+        if: steps.changed.outputs.coordination_tax == 'true'
         uses: xu-cheng/latex-action@v4
         with:
-          working_directory: papers
-          root_file: "*/main.tex"
-          work_in_root_file_dir: true
+          working_directory: papers/coordination-tax
+          root_file: main.tex
+      - name: Generate electronics-wall figures (closure-sim)
+        if: steps.changed.outputs.electronics_wall == 'true'
+        working-directory: closure-sim
+        run: uv run --extra dev python -m closure_sim.paper_figures
+      - name: Typeset electronics-wall (LaTeX) - a broken .tex fails the PR
+        if: steps.changed.outputs.electronics_wall == 'true'
+        uses: xu-cheng/latex-action@v4
+        with:
+          working_directory: papers/electronics-wall
+          root_file: main.tex
 
   frontend:
     runs-on: ubuntu-latest

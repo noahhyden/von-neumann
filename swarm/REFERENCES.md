@@ -190,10 +190,26 @@ distant star `i` as settled only once the news has arrived -
   A steady-state settled fraction `X_eq = 1 − T_launch/T_settle < 1` (Carroll-Nellenback's
   "Aurora effect") requires a settlement *death* term - a separate sibling, not lag alone.
 
-**Finding (32-seed paired ensemble, `experiments/lightspeed_coordination.py`):** on the same
-seeded galaxies (N=300), light-speed lag slows the fill-100% timescale by a median of **+0.0%
-(powered), +30.3% (slingshot-nearest), +51.4% (slingshot-maxboost)**, and every case still
-reaches 100%. Full statistics (this run, deterministic):
+> **[CORRECTION IN PROGRESS - dt artifact]** The `+30.3% / +51.4%` figures below were
+> measured with the coarse fixed timestep `dt=5000 yr`. That is fine for powered flight
+> (hops ~10^5 yr) but far too coarse for the boosted slingshot regime (hops ~10^2-10^3 yr):
+> a fixed dt >> hop time batches many launches into one step, so they all decide from the
+> same stale snapshot and collide, which **inflates the measured coordination tax**. At the
+> resolved limit (`stepping="event"`, dt-independent) the fill-time tax at N=300 is **~0%**
+> (nearest ~+0.0%, maxboost ~-0.7% over 32 seeds), does not grow with N, and the
+> policy-ordering vanishes. So the headline "30-50% tax" and the "hop-locality" mechanism are
+> largely discretization artifacts. The `event` stepping mode (added here) is the correct
+> basis; the paper and the numbers below are being re-derived on it, and a regime sweep is
+> under way to see whether a genuine effect survives in another metric (redundant-effort /
+> fuel), speed regime, or scale. The fixed-dt numbers are retained here only until that
+> re-derivation lands. Separately, at resolved dt the slingshot-vs-powered speedup reproduces
+> Nicholson & Forgan quantitatively (~166x, i.e. their two orders of magnitude).
+
+**Finding (32-seed paired ensemble, `experiments/lightspeed_coordination.py`, fixed dt=5000 -
+see the correction note above):** on the same seeded galaxies (N=300), light-speed lag slows
+the fill-100% timescale by a median of **+0.0% (powered), +30.3% (slingshot-nearest), +51.4%
+(slingshot-maxboost)**, and every case still reaches 100%. Full statistics (this run,
+deterministic):
 
 - **Fill-100% penalty, median [IQR], seeded-bootstrap 95% CI, sign-test p (over 32 paired
   seeds):** powered +0.0 [0.0, 0.0], CI [0.0, 0.0], p=1.0 (null: positive in only 6 of the 11

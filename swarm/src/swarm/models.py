@@ -31,6 +31,13 @@ Policy = Literal["powered", "slingshot_nearest", "slingshot_maxboost"]
 # now), so probes race for the same star from stale views. See REFERENCES.md.
 Coordination = Literal["instant", "lightspeed"]
 
+# Time-stepping scheme. "fixed" advances by a constant dt_years (the original slice-1
+# behaviour; keep dt <= mean hop time or it quantizes the timescale). "event" jumps to the
+# next probe arrival - exact and dt-independent, the continuum (dt -> 0) limit. "event" is
+# required whenever hops can be short relative to any fixed dt (the boosted/slingshot
+# regime), where "fixed" over-synchronizes launches and inflates the coordination tax.
+Stepping = Literal["fixed", "event"]
+
 
 class SwarmParams(BaseModel):
     """Inputs to one settlement-front run. Physical numbers sourced in REFERENCES.md."""
@@ -49,7 +56,10 @@ class SwarmParams(BaseModel):
         ge=0, default=0.0, description="dwell to build offspring before they depart [ESTIMATE]"
     )
     dt_years: float = Field(
-        gt=0, default=5000.0, description="fixed timestep; keep ≲ mean hop time (~1e5 yr at defaults)"
+        gt=0, default=5000.0, description="fixed timestep (stepping='fixed'); keep ≲ mean hop time (~1e5 yr at defaults)"
+    )
+    stepping: Stepping = Field(
+        default="fixed", description="time-stepping: fixed (constant dt) | event (jump to next arrival, dt-independent)"
     )
     max_years: float = Field(gt=0, default=50_000_000.0, description="safety cap; the run ends when the front does")
 
