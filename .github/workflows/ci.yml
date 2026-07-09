@@ -157,8 +157,21 @@ jobs:
       # modules, so the paper restates only their real output (papers/RULES.md R1, P4).
       # A figure-build failure fails the PR, since the typeset below needs them. Each
       # paper's figure + typeset pair runs only when that paper is affected (see above).
-      - name: Generate coordination-tax figures (swarm)
+      # Figure generation runs a seeded event-mode ensemble that can be minutes of compute,
+      # so we cache the resulting PDFs keyed on the SOURCE that produces them (the sim +
+      # experiment code + its locked deps). A paper affected only by a prose/.tex change
+      # therefore restores its figures from cache and skips regeneration; a change to the
+      # figure-source module misses the cache and rebuilds. The fold is deterministic, so a
+      # cache hit is byte-identical to a rebuild.
+      - name: Cache coordination-tax figures
+        id: figs-ct
         if: steps.changed.outputs.coordination_tax == 'true'
+        uses: actions/cache@v4
+        with:
+          path: papers/coordination-tax/fig_*.pdf
+          key: figs-coordination-tax-ci-v1-${{ hashFiles('swarm/src/**/*.py', 'swarm/experiments/**/*.py', 'swarm/pyproject.toml', 'swarm/uv.lock') }}
+      - name: Generate coordination-tax figures (swarm)
+        if: steps.changed.outputs.coordination_tax == 'true' && steps.figs-ct.outputs.cache-hit != 'true'
         working-directory: swarm
         run: uv run --extra dev python -m experiments.paper_figures
       - name: Typeset coordination-tax (LaTeX) - a broken .tex fails the PR
@@ -167,8 +180,15 @@ jobs:
         with:
           working_directory: papers/coordination-tax
           root_file: main.tex
-      - name: Generate electronics-wall figures (closure-sim)
+      - name: Cache electronics-wall figures
+        id: figs-ew
         if: steps.changed.outputs.electronics_wall == 'true'
+        uses: actions/cache@v4
+        with:
+          path: papers/electronics-wall/fig_*.pdf
+          key: figs-electronics-wall-ci-v1-${{ hashFiles('closure-sim/src/**/*.py', 'closure-sim/pyproject.toml', 'closure-sim/uv.lock') }}
+      - name: Generate electronics-wall figures (closure-sim)
+        if: steps.changed.outputs.electronics_wall == 'true' && steps.figs-ew.outputs.cache-hit != 'true'
         working-directory: closure-sim
         run: uv run --extra dev python -m closure_sim.paper_figures
       - name: Typeset electronics-wall (LaTeX) - a broken .tex fails the PR
