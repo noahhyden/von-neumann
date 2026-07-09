@@ -38,7 +38,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from swarm import SwarmParams, simulate_swarm
-from swarm.models import C_PC_PER_YEAR, KM_S_TO_PC_YR
+from swarm.models import C_PC_PER_YEAR, KM_S_TO_PC_YR, N_HOP_BINS
+from swarm.sim import initial_state
 
 from experiments.stats_util import bootstrap_median_ci, sign_test_positive
 
@@ -61,6 +62,7 @@ def record(r) -> dict:
         "t90": r.t90_years, "t99": r.t99_years, "t100": r.t100_years,
         "final_settled": r.final_settled, "n_stars": r.n_stars,
         "total_launched": r.total_probes_launched,
+        "total_arrivals": r.total_arrivals,
         "wasted_arrivals": r.wasted_arrivals,
         "wasted_travel_pc": r.wasted_travel_pc,
         "midflight_aborts": r.midflight_aborts,
@@ -94,6 +96,48 @@ def pct_delta(treat: float, base: float) -> float | None:
     if base is None or treat is None or base == 0:
         return None
     return (treat - base) / base * 100.0
+
+
+def through_origin_slope(xs: list[float], ys: list[float]) -> float | None:
+    """Least-squares slope of ``y = a*x`` through the origin: a = sum(x*y)/sum(x^2).
+
+    The clumpy-field test fits the fuel tax against Lambda through the origin (the derivation
+    predicts tax = 1*Lambda, i.e. a = 1) - so a per-seed slope is the single number that says
+    whether clumpiness moved the LAW's coefficient.
+    """
+    pairs = [(x, y) for x, y in zip(xs, ys) if y is not None]
+    denom = sum(x * x for x, _ in pairs)
+    if denom == 0:
+        return None
+    return sum(x * y for x, y in pairs) / denom
+
+
+def clark_evans_R(xs: list[float], ys: list[float], zs: list[float], box_side_pc: float) -> float:
+    """Clark-Evans aggregation index R = observed mean NN distance / Poisson expectation (3D).
+
+    R = 1 Poisson (uniform), R < 1 clustered, R > 1 regular. The Poisson 3D nearest-neighbour
+    expectation is 0.55396 * rho^(-1/3) with rho = N / L^3 (Clark & Evans 1954, the 3D form).
+    Used comparatively across fields at the SAME N and box, so the (mild, constant) box edge bias
+    cancels. O(N^2) - cheap next to the sim, and computed on a modest seed subset.
+    """
+    n = len(xs)
+    if n < 2 or box_side_pc <= 0:
+        return 1.0
+    total = 0.0
+    for i in range(n):
+        best = float("inf")
+        xi, yi, zi = xs[i], ys[i], zs[i]
+        for j in range(n):
+            if i == j:
+                continue
+            d2 = (xi - xs[j]) ** 2 + (yi - ys[j]) ** 2 + (zi - zs[j]) ** 2
+            if d2 < best:
+                best = d2
+        total += best ** 0.5
+    observed = total / n
+    rho = n / (box_side_pc ** 3)
+    expected = 0.55396 / (rho ** (1.0 / 3.0))
+    return observed / expected
 
 
 def write_result(name: str, config: dict, payload: dict) -> Path:
@@ -165,7 +209,11 @@ def m_branching() -> None:
     """Fuel/time/energy tax vs the replication branching factor (offspring per settlement)."""
     seeds = SEEDS[:32]
     n_stars = 400
-    offspring = [2, 3, 4]
+    # Swept high (to 16) so the saturation claim is tested, not asserted from a 3-point plateau:
+    # more offspring make more simultaneous races, but once enough probes already contend the
+    # marginal collision rate should level off. Event-mode cost grows with offspring (off=16 has
+    # ~6x the arrivals of off=4), so this measurement is the heavy end of the local run.
+    offspring = [2, 3, 4, 8, 16]
     lambdas = [0.05, 0.2]
     data = {}
     for lam in lambdas:
@@ -355,6 +403,98 @@ def m_dt_artifact() -> None:
                  {"rows": rows_out})
 
 
+def m_clumpiness() -> None:
+    """Does tax = Lambda survive a CLUMPY (non-uniform) field? [reviewer robustness ask]
+
+    The headline law's derivation assumes a locally uniform claim rate, so the hop length d
+    cancels. A reviewer's sharpest critique: in a clumpy field hop length and local claim rate
+    correlate, which could break the law's FORM (not just rescale it). We test it with a Thomas
+    cluster process at fixed N and mean density (only the spatial arrangement changes), sweeping
+    the clump scatter sigma from tight clumps to the uniform limit, crossed with Lambda.
+
+    Theory prediction (v and c are GLOBAL constants, so they factor out of both exposure sums and
+    the (d, rate) correlation cancels EXACTLY in the linear regime): clumpiness cannot break the
+    v/c FORM through that correlation; it can only SOFTEN the slope downward via saturation of the
+    per-hop waste probability in dense clumps (p = 1 - e^{-lambda*W} bending below linear). So we
+    expect the through-origin slope a to drop below ~0.96 with clumpiness while staying linear in
+    Lambda, UNLESS a temporal-non-stationarity term makes the tax hop-length-dependent. Three
+    reported tests: (1) slope a vs measured clumpiness (Clark-Evans R); (2) the wasted-trip ratio
+    p_lag/p_perfect stratified by hop length at the clumpiest level (flat in d => the mechanism
+    survives); (3) linearity across Lambda. The uniform level is the hard null (must return ~0.96).
+    """
+    seeds = SEEDS[:48]
+    n_stars = 500
+    lambdas = [0.05, 0.1, 0.2]
+    n_clumps = 25  # ~20 stars/clump at N=500: dense enough to over-subscribe under 2-offspring branching
+    # Levels: the exact uniform cube (null), then Thomas clumps tightening from near-uniform to
+    # extreme. sigma is the scatter as a fraction of box side; small = tight clumps + voids.
+    levels = [
+        ("uniform", {}),
+        ("sigma0.30", {"n_clumps": n_clumps, "clump_sigma_frac": 0.30}),
+        ("sigma0.15", {"n_clumps": n_clumps, "clump_sigma_frac": 0.15}),
+        ("sigma0.08", {"n_clumps": n_clumps, "clump_sigma_frac": 0.08}),
+        ("sigma0.05", {"n_clumps": n_clumps, "clump_sigma_frac": 0.05}),
+    ]
+    data = {}
+    for label, field_kw in levels:
+        print(f"    level={label}", flush=True)
+        # Measured clumpiness (Clark-Evans R), median over a seed subset (the field is O(N^2)).
+        r_vals = []
+        for s in seeds[:16]:
+            st = initial_state(SwarmParams(n_stars=n_stars, policy="powered", **field_kw), seed=s)
+            r_vals.append(clark_evans_R(st.xs, st.ys, st.zs, SwarmParams(n_stars=n_stars).box_side_pc))
+        clumpiness_R = statistics.median(r_vals)
+        per_lambda = {}
+        # Per-seed fuel tax at each Lambda, to fit a through-origin slope per seed afterwards.
+        seed_tax = {i: {} for i in range(len(seeds))}
+        for lam in lambdas:
+            print(f"      Lambda={lam}", flush=True)
+            rows: list[tuple[dict, dict]] = []
+            # Aggregate hop-length histograms across seeds (for the stratified d-cancellation test).
+            hist = {m: {"settle": [0] * N_HOP_BINS, "wasted": [0] * N_HOP_BINS}
+                    for m in ("instant", "lightspeed")}
+            base_waste_frac = []
+            for i, s in enumerate(seeds):
+                common = dict(n_stars=n_stars, policy="powered", probe_speed_c=lam,
+                              speed_cap_c=max(0.05, 2 * lam), stepping="event", **field_kw)
+                b = simulate_swarm(SwarmParams(**common, coordination="instant"), seed=s)
+                t = simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=s)
+                rows.append((record(b), record(t)))
+                for k in range(N_HOP_BINS):
+                    hist["instant"]["settle"][k] += b.settle_hop_hist[k]
+                    hist["instant"]["wasted"][k] += b.wasted_hop_hist[k]
+                    hist["lightspeed"]["settle"][k] += t.settle_hop_hist[k]
+                    hist["lightspeed"]["wasted"][k] += t.wasted_hop_hist[k]
+                if b.total_arrivals:
+                    base_waste_frac.append(b.wasted_arrivals / b.total_arrivals * 100.0)
+                seed_tax[i][lam] = pct_delta(t.wasted_arrivals, b.wasted_arrivals)
+                print(f"        seed {i + 1}/{len(seeds)}", end="\r", flush=True)
+            print(" " * 50, end="\r")
+            block = _tax_block(rows)
+            block["baseline_waste_frac_pct"] = summarize(base_waste_frac)  # perfect-info waste / all journeys
+            block["hop_hist"] = hist
+            per_lambda[str(lam)] = block
+        # Per-seed through-origin slope a of tax = a*Lambda (predicted 1), then bootstrap over seeds.
+        # Fit on FRACTIONAL tax (percent/100) so a ~ 1 means "tax = Lambda" cleanly.
+        slopes = [through_origin_slope(
+                    lambdas,
+                    [(seed_tax[i][lam] / 100.0 if seed_tax[i][lam] is not None else None) for lam in lambdas])
+                  for i in range(len(seeds))]
+        slopes = [a for a in slopes if a is not None]
+        smed, slo, shi = bootstrap_median_ci(slopes)
+        data[label] = {
+            "clumpiness_R": clumpiness_R,
+            "slope_median": smed, "slope_ci_lo": slo, "slope_ci_hi": shi,
+            "slope_per_seed": slopes,
+            "per_lambda": per_lambda,
+        }
+    write_result("clumpiness",
+                 {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                  "lambdas": lambdas, "n_clumps": n_clumps, "levels": [lb for lb, _ in levels],
+                  "mode_base": "instant", "mode_treat": "lightspeed", "stepping": "event"},
+                 {"data": data})
+
+
 def m_validation() -> None:
     """Nicholson & Forgan quantitative reproduction at the event timestep (single canonical seed)."""
     seed = 0x9E3779B9
@@ -379,12 +519,13 @@ MEASUREMENTS = {
     "floor_bracket": m_floor_bracket,
     "retarget_cap": m_retarget_cap,
     "dt_artifact": m_dt_artifact,
+    "clumpiness": m_clumpiness,
     "validation": m_validation,
 }
 
 # Cheap-first order so an interrupted run lands the quick wins early.
 ORDER = ["validation", "dt_artifact", "retarget_cap", "energy_tax", "branching",
-         "lambda_sweep", "concurrency", "floor_bracket", "finite_size"]
+         "lambda_sweep", "concurrency", "floor_bracket", "clumpiness", "finite_size"]
 
 
 def main(argv: list[str]) -> None:

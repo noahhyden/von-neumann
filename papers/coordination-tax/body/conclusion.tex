@@ -7,12 +7,16 @@ seen in a fixed-timestep model collapses -- it was a discretization artifact -- 
 speed-up survives intact, reproducing Nicholson and Forgan quantitatively. The genuine cost is
 redundant travel: every star is still settled, with a negligible change in the number of probes
 built, but stale views send probes to stars others have already claimed. That waste follows a
-simple law we both derive and measure -- the wasted-journey fraction equals the probe's speed in
-units of light, $\Lambda = v/c$ -- from negligible at the powered cruise, through about a percent at
-slingshot speeds, to a fifth at the directed-energy speeds beamed propulsion targets. It grows with
-the replication branching factor before saturating, and whether it also costs energy is
-mission-dependent: only a rendezvous that must brake pays for a wasted trip's kinetic energy, which
-for the fast policies was largely gravitationally sourced rather than fuelled. The cost is dominated
+simple law we both derive and measure -- the delay multiplies the wasted journeys by $1 + v/c$, so the
+tax, the extra wasted trips as a fraction of those a perfect-information swarm already flies, equals
+the probe's speed in units of light, $\Lambda = v/c$ -- from negligible at the powered cruise, through
+about a percent at slingshot speeds, to a fifth at the directed-energy speeds beamed propulsion
+targets. (The baseline is itself wasteful, about four in five journeys even with a perfect map, so
+this is a $v/c$ surcharge, not a fifth of all trips.) The law holds under a clumpy field, where if
+anything it softens; it grows with the replication branching factor without saturating up to sixteen
+offspring; and whether it also costs energy is mission-dependent: only a rendezvous that must brake
+pays for a wasted trip's kinetic energy, which for the fast policies was largely gravitationally
+sourced rather than fuelled. The cost is dominated
 by fuel and effort; a secondary fill-time penalty of a few percent rides alongside it, but only in
 the fast directed-energy regime and never at slingshot speeds. It is not a hard floor: a probe that
 listens in flight, one of the two extensions the model invites, recovers essentially all of the

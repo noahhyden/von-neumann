@@ -56,9 +56,16 @@ of the layout, and that is exactly what the paired design controls: both coordin
 the \emph{identical} frozen field, so the difference still isolates the light-lag cost even where the
 absolute layout is idealized. The absolute fill times, however, do inherit the idealization.
 
-Three further bounds on scope. First, the field is uniform; changing its density only rescales the
-clock (confirmed), but a clumpier distribution would lengthen the long-range hops and is a
-genuine unknown we do not probe. Second, at high $v/c$ the hops are short, so an event-driven run
+One idealization we do \emph{not} need to correct is relativity. At $0.2\,c$ the Lorentz factor is
+$\gamma \approx 1.02$, and because every target decision and every beacon-emission time is evaluated
+in the one shared galaxy frame, the coordination logic is frame-consistent; the kinematic
+corrections, under $2\%$ at this speed, do not enter the $v/c$ law, which counts journeys in that frame.
+
+Three further bounds on scope. First, the field is uniform by default; changing its density only
+rescales the clock (confirmed), and a clumpy, non-uniform field leaves the law intact -- the
+redundant-travel tax stays $\approx \Lambda$, softening if anything at extreme substructure
+(Section~\ref{sec:clumpy}). What we do not probe is a full galactic disk with a large-scale radial
+density gradient. Second, at high $v/c$ the hops are short, so an event-driven run
 generates of order one arrival per star settled many times over and costs roughly $O(N^2)$; this
 bounded the size sweep to a sixteen-fold range. Over it the tax does not grow with scale -- it holds
 near a fifth up to about a thousand stars and then trends downward at the largest fields we can reach
@@ -71,28 +78,25 @@ settlement-death term of the kind that produces the ``Aurora'' steady state
 permanent unsettled remainder; delay alone does not.
 
 \subsection{Relation to delayed agreement}
-The behaviour is, by analogy and not by derivation, the signature of delayed multi-agent agreement,
-and we cite that literature only to place the regime. Consensus protocols degrade as communication
-delay grows against the decision cadence, staying stable only below a delay bound set by the
-coupling \citep{olfati-saber-murray-2004,olfati-saber-fax-murray-2007}. We borrow the picture, not the
-theorems: the classical impossibility results assume fault models that are not ours -- asynchronous
-crash faults for FLP \citep{flp-1985}, network partition for CAP \citep{gilbert-lynch-2002} -- and none
-of them predicts the $\Lambda = v/c$ scaling that is this paper's result. What they do fix is the
-regime. At parsec spacing the round-trip light-time is years, far longer than any plausible decision
-cadence, so a swarm that must keep acting can only trade a single consistent map for availability,
-which is exactly what (\ref{eq:gate}) encodes. The same delay budget drove the teleoperation and
-networking communities from closed-loop control through move-and-wait and supervisory control
-\citep{ferrell-1965,sheridan-1993} to delay-tolerant store-and-forward once no continuous path
-survives \citep{burleigh-2003,rfc-4838,rfc-9171}; at interstellar hops every faster regime is left
-behind, and each probe is an independent colony acting on priors. The coordination tax is what that
-independence costs when probes want the same stars.
+This is a coordination problem, and the distributed-systems literature names the regime it sits in --
+by analogy, not by derivation; we invoke it only to place that regime, and the result itself is our
+own. When communication delay grows past the decision cadence a system can no longer maintain a single
+agreed state and must trade consistency for availability, acting on local views
+\citep{gilbert-lynch-2002,olfati-saber-fax-murray-2007}. At parsec spacing the round-trip light-time
+is years, far longer than any plausible decision cadence, so a swarm that must keep acting has no
+option but availability -- which is exactly what the gate (\ref{eq:gate}) encodes, each probe an
+independent colony acting on priors. We borrow only this picture. The classical impossibility results
+assume fault models that are not ours (asynchronous crash faults for FLP \citep{flp-1985}, partition
+for CAP \citep{gilbert-lynch-2002}) and none of them predicts the $\Lambda = v/c$ scaling, which is at
+bottom a geometric-probabilistic result about stale target selection, not a consensus theorem. The
+coordination tax is simply what that enforced independence costs when probes want the same stars.
 
 \subsection{A design lesson}
-The corollary is a threshold, not a preference. At slingshot speeds the tax is about a percent of
-journeys: coordination machinery -- relay, gossip, a shared map -- is not worth its mass, and a
+The corollary is a threshold, not a preference. At slingshot speeds the tax is about a percent:
+coordination machinery -- relay, gossip, a shared map -- is not worth its mass, and a
 designer should spend everything on speed. At the directed-energy speeds that make a probe fast
 enough to matter, the same physics that buys the speed also makes stale views expensive, and a
-fifth of journeys wasted is worth engineering against -- and, as Section~\ref{sec:floor} shows, a
+fifth more journeys wasted is worth engineering against -- and, as Section~\ref{sec:floor} shows, a
 probe that merely listens in flight buys back nearly all of it. The faster the swarm you can build,
 the more that little coordination is worth buying, and the finite speed of light sets only the small
 residual -- the travel already flown before the news arrives -- that no protocol can ever recover.

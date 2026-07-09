@@ -67,6 +67,24 @@ def test_lambda_sweep_json_matches_fold() -> None:
         _assert_record_matches(treat, block["per_seed"][i]["treat"], f"lambda_sweep treat seed{i}")
 
 
+def test_clumpiness_json_matches_fold() -> None:
+    # Guard the clumpy-field robustness numbers. Re-run two seeds of the uniform null level at the
+    # first Lambda and assert they reproduce the committed per-seed records (same discipline as the
+    # other measurements). The uniform level uses the default (n_clumps=None) field.
+    d = _load("clumpiness")
+    cfg = d["config"]
+    lam = cfg["lambdas"][0]
+    block = d["data"]["uniform"]["per_lambda"][str(lam)]
+    for i in range(2):
+        seed = SEEDS[i]
+        common = dict(n_stars=cfg["n_stars"], policy="powered", probe_speed_c=lam,
+                      speed_cap_c=max(0.05, 2 * lam), stepping="event")
+        base = record(simulate_swarm(SwarmParams(**common, coordination="instant"), seed=seed))
+        treat = record(simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=seed))
+        _assert_record_matches(base, block["per_seed"][i]["base"], f"clumpiness base seed{i}")
+        _assert_record_matches(treat, block["per_seed"][i]["treat"], f"clumpiness treat seed{i}")
+
+
 def test_floor_bracket_json_matches_fold() -> None:
     d = _load("floor_bracket")
     cfg = d["config"]

@@ -237,7 +237,34 @@ def fig_fuel_tax_vs_n() -> Path:
     return _save(fig, "fig_fuel_tax_vs_n.pdf")
 
 
+def fig_fuel_tax_vs_clumpiness() -> Path:
+    d = load("clumpiness")
+    levels = d["config"]["levels"]
+    R = [d["data"][lb]["clumpiness_R"] for lb in levels]
+    a = [d["data"][lb]["slope_median"] for lb in levels]
+    lo = [d["data"][lb]["slope_median"] - d["data"][lb]["slope_ci_lo"] for lb in levels]
+    hi = [d["data"][lb]["slope_ci_hi"] - d["data"][lb]["slope_median"] for lb in levels]
+    fig, ax = plt.subplots(figsize=(COLW, COLW * 0.8))
+    # Derived law: tax = Lambda, i.e. slope a = 1. The data soften BELOW it (never above), so the
+    # law is a conservative upper bound; only extreme substructure (low R) drops a resolvably.
+    ax.axhline(1.0, color="0.5", linestyle="-", linewidth=0.9, zorder=1,
+               label=r"derived: tax $=\Lambda$ ($a=1$)")
+    ax.errorbar(R, a, yerr=[lo, hi], marker="o", markersize=3.5, color="0.0",
+                capsize=2, linewidth=0, elinewidth=1.0, zorder=3)
+    # Mark the uniform null (R ~ 1) - the generator's hard correctness check.
+    ax.annotate("uniform", xy=(R[0], a[0]), xytext=(R[0] - 0.02, a[0] + 0.13),
+                fontsize=7, ha="right")
+    ax.set_xlabel(r"clumpiness: Clark-Evans $R$  (more clustered $\rightarrow$)")
+    ax.set_ylabel(r"fitted slope $a$ of tax $= a\,\Lambda$")
+    ax.invert_xaxis()  # R decreases with clustering; put uniform (R~1) at left, clumpy at right
+    ax.set_ylim(0.0, 1.35)
+    ax.legend(loc="lower left", frameon=False)
+    fig.tight_layout()
+    return _save(fig, "fig_fuel_tax_vs_clumpiness.pdf")
+
+
 FIGURES = {
+    "fig_fuel_tax_vs_clumpiness": fig_fuel_tax_vs_clumpiness,
     "fig_fuel_tax_vs_lambda": fig_fuel_tax_vs_lambda,
     "fig_fuel_tax_by_seed": fig_fuel_tax_by_seed,
     "fig_time_tax_vs_dt": fig_time_tax_vs_dt,

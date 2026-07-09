@@ -19,8 +19,93 @@ future TypeScript SoA port can match bit-for-bit. Zero pimas imports.
 
 from __future__ import annotations
 
-from swarm.models import C_PC_PER_YEAR, KM_S_TO_PC_YR, Probe, SwarmParams, SwarmResult, SwarmState, SwarmStep
+import math
+
+from swarm.models import (
+    C_PC_PER_YEAR,
+    HOP_BIN_EDGES,
+    KM_S_TO_PC_YR,
+    Probe,
+    SwarmParams,
+    SwarmResult,
+    SwarmState,
+    SwarmStep,
+)
 from swarm.rng import next_float, seed_state
+
+
+def _reflect(x: float, L: float) -> float:
+    """Reflect a coordinate into ``[0, L]`` (triangle wave), preserving the star count and box.
+
+    Reflecting rather than clipping keeps every scattered star inside the box, so a clumpy field
+    has EXACTLY the same star count and mean density ``N/L^3`` as the uniform one - the fair-comparison
+    invariant. Pure and deterministic.
+    """
+    if L <= 0.0:
+        return 0.0
+    period = 2.0 * L
+    m = x - period * math.floor(x / period)  # x mod period, in [0, period)
+    return m if m <= L else period - m
+
+
+def _normal_pair(rng: int) -> tuple[float, float, int]:
+    """Two independent standard normals from the seeded uniform stream (Box-Muller).
+
+    Consumes exactly two uniforms and returns two normals in a fixed order, so the per-star draw
+    count is constant (never a state-dependent carry-over) and the field stays a pure function of
+    (params, seed) - the CLAUDE.md 7 determinism rule a future TS port must match.
+    """
+    u1, rng = next_float(rng)
+    u2, rng = next_float(rng)
+    u1 = u1 if u1 > 1e-12 else 1e-12  # guard log(0); deterministic clamp
+    r = math.sqrt(-2.0 * math.log(u1))
+    return r * math.cos(2.0 * math.pi * u2), r * math.sin(2.0 * math.pi * u2), rng
+
+
+def _thomas_positions(params: SwarmParams, rng: int) -> tuple[list[float], list[float], list[float], int]:
+    """Thomas (Neyman-Scott) cluster process: ``n_clumps`` centres, stars scattered Gaussian around them.
+
+    Parent centres are uniform in the box; each star is assigned to a parent round-robin by index
+    (deterministic, no RNG, so clumps are equal-sized) and placed at ``parent + sigma * N(0,1)`` per
+    axis, reflected into the box. ``sigma = clump_sigma_frac * L``: small -> tight clumps and voids;
+    large -> the field relaxes to uniform (the correctness limit). Fixed 4 uniforms/star (2 pairs,
+    3 used) keeps the draw count constant.
+    """
+    L = params.box_side_pc
+    n_clumps = max(1, int(params.n_clumps or 1))
+    sigma = params.clump_sigma_frac * L
+    cx: list[float] = []
+    cy: list[float] = []
+    cz: list[float] = []
+    for _ in range(n_clumps):
+        a, rng = next_float(rng)
+        b, rng = next_float(rng)
+        c, rng = next_float(rng)
+        cx.append(a * L)
+        cy.append(b * L)
+        cz.append(c * L)
+    xs: list[float] = []
+    ys: list[float] = []
+    zs: list[float] = []
+    for i in range(params.n_stars):
+        p = i % n_clumps  # round-robin: deterministic, equal-size clumps, consumes no RNG
+        z0, z1, rng = _normal_pair(rng)
+        z2, _z3, rng = _normal_pair(rng)  # draw 4 normals (fixed count); use 3, one axis each
+        xs.append(_reflect(cx[p] + sigma * z0, L))
+        ys.append(_reflect(cy[p] + sigma * z1, L))
+        zs.append(_reflect(cz[p] + sigma * z2, L))
+    return xs, ys, zs, rng
+
+
+def _hop_bin(d: float) -> int:
+    """Index of hop length ``d`` (pc) into ``HOP_BIN_EDGES`` (0 = underflow .. len = overflow)."""
+    k = 0
+    for e in HOP_BIN_EDGES:
+        if d >= e:
+            k += 1
+        else:
+            break
+    return k
 
 
 def _generate_galaxy(
@@ -36,16 +121,21 @@ def _generate_galaxy(
     paper defers the actual shear/dispersion setup to Forgan+2012 (see REFERENCES.md).
     """
     L = params.box_side_pc
-    xs: list[float] = []
-    ys: list[float] = []
-    zs: list[float] = []
-    for _ in range(params.n_stars):
-        x, rng = next_float(rng)
-        y, rng = next_float(rng)
-        z, rng = next_float(rng)
-        xs.append(x * L)
-        ys.append(y * L)
-        zs.append(z * L)
+    if params.n_clumps is not None and int(params.n_clumps) >= 1:
+        # Clumpy (Thomas cluster process) field. A brand-new config with no committed baseline;
+        # the uniform default below is left byte-for-byte unchanged so all prior runs are untouched.
+        xs, ys, zs, rng = _thomas_positions(params, rng)
+    else:
+        xs = []
+        ys = []
+        zs = []
+        for _ in range(params.n_stars):
+            x, rng = next_float(rng)
+            y, rng = next_float(rng)
+            z, rng = next_float(rng)
+            xs.append(x * L)
+            ys.append(y * L)
+            zs.append(z * L)
     # Second pass: star speed magnitudes (does not touch the position stream above).
     base = params.star_speed_km_s * KM_S_TO_PC_YR
     disp = params.star_speed_dispersion_km_s * KM_S_TO_PC_YR
@@ -262,6 +352,7 @@ def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Pro
             state.settled_year[p.target] = state.year
             state.settle_hop_sum_pc += p.hop_len_pc  # winning-trip hop length (read-only)
             state.settle_hop_count += 1
+            state.settle_hop_hist[_hop_bin(p.hop_len_pc)] += 1  # won arrivals by hop-length bin
             state.settle_v_sum_pc_yr += p.speed_pc_yr  # winning-trip flight speed (energy weight)
             state.settle_v2_sum += p.speed_pc_yr * p.speed_pc_yr
             _launch_from(state, p.target, params, p.speed_pc_yr)
@@ -271,6 +362,7 @@ def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Pro
             state.wasted_arrivals += 1
             state.wasted_hop_sum_pc += p.hop_len_pc  # wasted-trip hop length (read-only)
             state.wasted_hop_count += 1
+            state.wasted_hop_hist[_hop_bin(p.hop_len_pc)] += 1  # wasted arrivals by hop-length bin
             state.wasted_travel_pc += p.hop_len_pc  # a lost full arrival wastes its whole hop
             state.wasted_v_sum_pc_yr += p.speed_pc_yr  # wasted-trip flight speed (energy weight)
             state.wasted_v2_sum += p.speed_pc_yr * p.speed_pc_yr
@@ -535,5 +627,7 @@ def simulate_swarm(params: SwarmParams, *, seed: int = 0x9E3779B9) -> SwarmResul
             state.wasted_v_sum_pc_yr / state.wasted_hop_count / KM_S_TO_PC_YR
             if state.wasted_hop_count else 0.0
         ),
+        settle_hop_hist=list(state.settle_hop_hist),
+        wasted_hop_hist=list(state.wasted_hop_hist),
         steps=steps,
     )
