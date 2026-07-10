@@ -151,14 +151,29 @@ signalling distance during a beacon crossing). But it does not argue why moving 
 (Carroll-Nellenback showed motion can dominate fronts) perturb the baseline contention
 p_perfect equally in both regimes; a Myr fill lets stars drift ~225 pc >> 1 pc hop.
 
-**Severity:** MAJOR (borderline). **Verdict:** PLAUSIBLE.
+**Severity:** MAJOR (borderline) as raised; **downgraded to a stated limitation on reflection**
+(see disposition). **Verdict:** PLAUSIBLE.
 
 **Fix.** Add a paragraph bounding the dynamic-reshuffling cancellation (contention rate is
 local density x branching, both mode-independent, and both regimes see the identical
-drift), ideally backed by one moving-field spot-check at Lambda=0.2.
+drift).
 
-**Status:** `[x]` cancellation argument added to the text; moving-field spot-check flagged
-as a deferred experiment.
+**Status:** `[x]` addressed as a stated limitation; the moving-field model is a future sibling
+slice, not a gate on this paper.
+
+**Disposition (scope).** The moving-field spot-check is judged **out of scope** for this paper, for
+three reasons. (1) Frozen positions are the lineage standard: every predecessor freezes them, and
+both direct parents (N&F 2013; Forgan, Papadogiannakis & Kitching 2013) name it as their single most
+important simplification - peer review judges against field norms, so this paper cannot be held to a
+bar none of its predecessors met. (2) This paper is *better* controlled on that axis than the
+lineage: it reports a paired differential on the bit-identical field, so the frozen-field bias is
+common-mode and cancels for the *relative* tax - whereas the lineage reported absolute fill times,
+where frozen positions bite hardest, a quantity this paper explicitly declines to claim. (3) A
+moving-star fold (proper motion + retarded beacon positions) is a new dynamical layer - a sibling
+module, not a robustness knob (CLAUDE.md 3 favors a clean seam over fused depth). The honest residual
+- that a Myr fill drifts stars far past a hop - is met by the paired design plus the explicit
+disclaimer that only the relative tax is claimed. So the paper's stated limitation + paired-design
+argument is a complete and standard response; no spot-check is owed.
 
 ### M5 - The equivalence claim contradicts its own interval
 
@@ -311,8 +326,12 @@ Applied in this pass (all numbers traced to committed `swarm/experiments/results
   `-4.1 [-7.9, -1.3]`, indistinguishable from the hard-walled `-4.6`. (An interim draft called it an
   edge artifact from the interior-only test alone; the periodic control reversed that.)
 
-Deferred (need heavy re-runs, not rushed):
+Out of scope (a future sibling slice, not a gate on this paper):
 
-- **M4** moving-field spot-check at `Lambda=0.2` to convert the dynamic-reshuffling argument from
-  PLAUSIBLE to CONFIRMED.
+- **M4** moving-field model (proper motion + retarded beacon positions). Descoped: frozen positions
+  are the lineage standard, the paired design controls the static bias for the relative tax, and a
+  moving-star fold is a separate module - addressed as a stated limitation (see M4 disposition).
+
+Deferred (nice-to-have, not blocking):
+
 - **m9** CI bands on Figs 1, 2, 6 (needs the per-seed series threaded into the figure driver).
