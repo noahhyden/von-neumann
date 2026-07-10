@@ -187,17 +187,22 @@ def fig_floor_bracket() -> Path:
     lambdas = d["config"]["lambdas"]
     modes = ["instant", "lightspeed", "inflight"]
     colors = {"instant": "0.75", "lightspeed": "0.15", "inflight": "0.45"}
-    labels = {"instant": "perfect info", "lightspeed": "decision-site (lightspeed)", "inflight": "in-flight relay (floor)"}
+    labels = {"instant": "perfect info", "lightspeed": "decision-site", "inflight": "in-flight relay"}
     fig, ax = plt.subplots(figsize=(COLW, COLW * 0.8))
     x = list(range(len(lambdas)))
     w = 0.26
+    bar_max = 0.0
     for j, m in enumerate(modes):
         vals = [d["data"][str(l)]["wasted_travel_pc_median"][m] for l in lambdas]
+        bar_max = max(bar_max, *vals)
         ax.bar([xi + (j - 1) * w for xi in x], vals, w, color=colors[m], label=labels[m])
     ax.set_xticks(x)
     ax.set_xticklabels([rf"$\Lambda$={l}" for l in lambdas])
     ax.set_ylabel("redundant travel (pc, median)")
-    ax.legend(loc="upper left", frameon=False, fontsize=7)
+    ax.set_ylim(0, bar_max * 1.06)
+    # Every bar is tall, so there is no clear interior space: put the legend in one row ABOVE the axes.
+    ax.legend(loc="lower center", bbox_to_anchor=(0.5, 1.00), ncol=3, frameon=False, fontsize=7,
+              handlelength=1.1, columnspacing=1.2, handletextpad=0.4)
     fig.tight_layout()
     return _save(fig, "fig_floor_bracket.pdf")
 
@@ -251,13 +256,15 @@ def fig_fuel_tax_vs_clumpiness() -> Path:
                label=r"derived: tax $=\Lambda$ ($a=1$)")
     ax.errorbar(R, a, yerr=[lo, hi], marker="o", markersize=3.5, color="0.0",
                 capsize=2, linewidth=0, elinewidth=1.0, zorder=3)
-    # Mark the uniform null (R ~ 1) - the generator's hard correctness check.
-    ax.annotate("uniform", xy=(R[0], a[0]), xytext=(R[0] - 0.02, a[0] + 0.13),
-                fontsize=7, ha="right")
-    ax.set_xlabel(r"clumpiness: Clark-Evans $R$  (more clustered $\rightarrow$)")
+    # Mark the uniform null (R ~ 1) - the generator's hard correctness check. Place it in the top
+    # headroom with a thin leader to the point, clear of the error-bar cap it used to overlap.
+    ax.annotate("uniform", xy=(R[0], a[0] + hi[0]), xytext=(R[0], 1.32),
+                fontsize=7, ha="center", va="bottom",
+                arrowprops=dict(arrowstyle="-", color="0.55", lw=0.6))
+    ax.set_xlabel(r"clumpiness: Clark-Evans $R$ (clustered $\rightarrow$)")
     ax.set_ylabel(r"fitted slope $a$ of tax $= a\,\Lambda$")
     ax.invert_xaxis()  # R decreases with clustering; put uniform (R~1) at left, clumpy at right
-    ax.set_ylim(0.0, 1.35)
+    ax.set_ylim(0.0, 1.45)
     ax.legend(loc="lower left", frameon=False)
     fig.tight_layout()
     return _save(fig, "fig_fuel_tax_vs_clumpiness.pdf")
