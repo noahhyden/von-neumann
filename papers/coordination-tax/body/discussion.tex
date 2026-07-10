@@ -54,7 +54,14 @@ of a percent, whatever the decision distance -- so the gate reads essentially th
 the moment of decision. What the frozen field removes is the slow, Myr-scale drift
 of the layout, and that is exactly what the paired design controls: both coordination regimes run on
 the \emph{identical} frozen field, so the difference still isolates the light-lag cost even where the
-absolute layout is idealized. The absolute fill times, however, do inherit the idealization.
+absolute layout is idealized. The absolute fill times, however, do inherit the idealization. The
+slingshot is idealized in a second way we inherit from the source models: we track the scalar speed a
+probe gains from an encounter and let it then depart toward its chosen target, rather than resolving
+the outgoing \emph{direction} that a real gravitational assist fixes by geometry. A directional model
+would couple boost to heading and so lower the achievable boosted speed, and thus $\Lambda$, in the
+slingshot regime; but because that regime already pays only about a percent, and the headline $v/c$
+law is driven by the directly-swept powered speed rather than by slingshot mechanics, the
+simplification does not touch the law.
 
 One idealization we do \emph{not} need to correct is relativity. At $0.2\,c$ the Lorentz factor is
 $\gamma \approx 1.02$, and because every target decision and every beacon-emission time is evaluated
@@ -89,7 +96,13 @@ independent colony acting on priors. We borrow only this picture. The classical 
 assume fault models that are not ours (asynchronous crash faults for FLP \citep{flp-1985}, partition
 for CAP \citep{gilbert-lynch-2002}) and none of them predicts the $\Lambda = v/c$ scaling, which is at
 bottom a geometric-probabilistic result about stale target selection, not a consensus theorem. The
-coordination tax is simply what that enforced independence costs when probes want the same stars.
+mechanism itself -- agents on a stale shared map flying redundant trips to targets others have already
+claimed, and communication cutting that overlap -- is familiar from multi-robot exploration, where
+coordinated frontier assignment exists precisely to suppress it \citep{burgard-2005,amigoni-2017}.
+What is specific here is not that stale views waste trips but that, when the delay is light-speed
+itself, the wasted fraction takes the clean form $\Lambda = v/c$, independent of hop length and
+density. The coordination tax is simply what that enforced independence costs when probes want the
+same stars.
 
 \subsection{A design lesson}
 The corollary is a threshold, not a preference. At slingshot speeds the tax is about a percent:

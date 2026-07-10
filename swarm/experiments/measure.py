@@ -44,7 +44,9 @@ from swarm.sim import initial_state
 from experiments.stats_util import bootstrap_median_ci, sign_test_positive
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
-SCHEMA_VERSION = 2
+# v3: per-run records carry ``total_arrivals`` (settlements + wasted trips). Added to record()
+# during the second revision; the version bump makes every committed artifact declare it.
+SCHEMA_VERSION = 3
 
 # Deterministic seed ensemble (paired: every mode shares each seed). 64 available; each
 # measurement uses a prefix sized to its cost.

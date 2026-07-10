@@ -47,6 +47,7 @@ export const PAPERS: PaperMeta[] = [
       "directed-energy propulsion"
     ],
     "cites": [
+      "von-neumann-burks-1966",
       "hart-1975",
       "tipler-1980",
       "freitas-1980-interstellar-probe",
@@ -66,7 +67,9 @@ export const PAPERS: PaperMeta[] = [
       "nordstrom-2004-gcs",
       "olfati-saber-fax-murray-2007",
       "flp-1985",
-      "gilbert-lynch-2002"
+      "gilbert-lynch-2002",
+      "burgard-2005",
+      "amigoni-2017"
     ],
     "pdf": "papers/coordination-tax.pdf"
   },
