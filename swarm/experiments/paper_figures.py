@@ -33,6 +33,8 @@ mpl.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullLocator
 
+from experiments.stats_util import bootstrap_median_ci
+
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 OUT_DIR = Path(__file__).resolve().parents[2] / "papers" / "coordination-tax"
 
@@ -148,8 +150,11 @@ def fig_time_tax_vs_dt() -> Path:
     ev = next(r for r in d["rows"] if r["dt"] is None)
     xs = [r["dt"] for r in rows]
     ys = [r["time_pct"]["median"] for r in rows]
+    ylo = [y - r["time_pct"]["ci_lo"] for y, r in zip(ys, rows)]
+    yhi = [r["time_pct"]["ci_hi"] - y for y, r in zip(ys, rows)]
     fig, ax = plt.subplots(figsize=(COLW, COLW * GOLDEN))
-    ax.plot(xs, ys, marker="o", markersize=3.5, color="0.0")
+    ax.errorbar(xs, ys, yerr=[ylo, yhi], marker="o", markersize=3.5, color="0.0",
+                capsize=2, elinewidth=0.9, linewidth=1.0)
     ax.axhline(ev["time_pct"]["median"], color="0.5", linewidth=0.8, linestyle="--",
                label=f"event (dt$\\to$0): {ev['time_pct']['median']:+.1f}%")
     ax.set_xscale("log")
@@ -193,9 +198,16 @@ def fig_floor_bracket() -> Path:
     w = 0.26
     bar_max = 0.0
     for j, m in enumerate(modes):
-        vals = [d["data"][str(l)]["wasted_travel_pc_median"][m] for l in lambdas]
-        bar_max = max(bar_max, *vals)
-        ax.bar([xi + (j - 1) * w for xi in x], vals, w, color=colors[m], label=labels[m])
+        vals, elo, ehi = [], [], []
+        for l in lambdas:
+            blk = d["data"][str(l)]
+            med = blk["wasted_travel_pc_median"][m]
+            seed_vals = [ps["wasted_travel_pc"] for ps in blk["per_seed"][m]]
+            _, clo, chi = bootstrap_median_ci(seed_vals)
+            vals.append(med); elo.append(med - clo); ehi.append(chi - med)
+        bar_max = max(bar_max, *[v + e for v, e in zip(vals, ehi)])
+        ax.bar([xi + (j - 1) * w for xi in x], vals, w, color=colors[m], label=labels[m],
+               yerr=[elo, ehi], capsize=2, error_kw={"elinewidth": 0.8})
     ax.set_xticks(x)
     ax.set_xticklabels([rf"$\Lambda$={l}" for l in lambdas])
     ax.set_ylabel("redundant travel (pc, median)")
@@ -213,9 +225,15 @@ def fig_concurrency() -> Path:
     for mode, col, ls in (("instant", "0.55", "--"), ("lightspeed", "0.0", "-")):
         cov = d["data"][mode]["coverage"]
         inf = d["data"][mode]["in_flight_median"]
-        pts = [(c, v) for c, v in zip(cov, inf) if v is not None]
-        ax.plot([c for c, _ in pts], [v for _, v in pts], color=col, linestyle=ls,
-                marker="o", markersize=2.5, label=mode)
+        lo = d["data"][mode].get("in_flight_ci_lo") or [None] * len(cov)
+        hi = d["data"][mode].get("in_flight_ci_hi") or [None] * len(cov)
+        pts = [(c, v, l, h) for c, v, l, h in zip(cov, inf, lo, hi) if v is not None]
+        cx = [c for c, _, _, _ in pts]
+        if all(p[2] is not None for p in pts):
+            ax.fill_between(cx, [p[2] for p in pts], [p[3] for p in pts], color=col, alpha=0.18,
+                            linewidth=0, zorder=1)
+        ax.plot(cx, [v for _, v, _, _ in pts], color=col, linestyle=ls,
+                marker="o", markersize=2.5, label=mode, zorder=2)
     ax.set_xlabel("coverage fraction settled")
     ax.set_ylabel("probes in flight (median)")
     ax.legend(loc="best", frameon=False)

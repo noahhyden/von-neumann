@@ -259,8 +259,11 @@ from current source before submitting. **Status:** `[x]` rebuilt in this pass.
   smallness hedge that concedes ground. **Status:** `[x]`.
 - **m9** Figs 1, 2, 6 plot bare medians - add CIs, especially Fig 1 (underpins the null).
   Figs 3/5 x-axes are log and the "tax = Lambda" line renders curved - label "(log
-  scale)". **Status:** `[~]` log-axis labels added; CI bands on Figs 1/2/6 flagged (needs
-  per-seed series in the figure driver).
+  scale)". **Status:** `[x]` log-axis labels added; CIs now shown on all three - Fig 1 gets
+  bootstrap-CI error bars (from the committed `ci_lo`/`ci_hi`), Fig 6 gets bootstrap-CI error bars
+  (from `per_seed`), and Fig 2 gets bootstrap-CI bands (`m_concurrency` extended to store per-bin
+  CIs and re-run). Captions updated; the bands overlap in Fig 2, honestly showing the two regimes
+  carry the same in-flight population.
 - **m10** Foreground the genuinely non-obvious contributions (fill-time penalty is a
   discretization artifact; the real cost is wasted journeys not time; d and density both
   cancel) even harder in the abstract's opening. **Status:** `[x]`.
@@ -332,6 +335,5 @@ Out of scope (a future sibling slice, not a gate on this paper):
   are the lineage standard, the paired design controls the static bias for the relative tax, and a
   moving-star fold is a separate module - addressed as a stated limitation (see M4 disposition).
 
-Deferred (nice-to-have, not blocking):
-
-- **m9** CI bands on Figs 1, 2, 6 (needs the per-seed series threaded into the figure driver).
+Nothing outstanding: all MAJOR findings and minors are actioned, M4 is descoped with rationale, and
+the figure CIs (m9) are done.

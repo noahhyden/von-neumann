@@ -325,10 +325,19 @@ def m_concurrency() -> None:
                     series[mode][b].append(r.steps[idx].in_flight)
         print(f"      seed {i + 1}/{len(seeds)}", end="\r", flush=True)
     print(" " * 40, end="\r")
-    data = {mode: {"coverage": bins,
-                   "in_flight_median": [statistics.median(series[mode][b]) if series[mode][b] else None for b in bins],
-                   "peak_in_flight_median": statistics.median(peak[mode])}
-            for mode in ("instant", "lightspeed")}
+    data = {}
+    for mode in ("instant", "lightspeed"):
+        meds, clos, chis = [], [], []
+        for b in bins:
+            xs = series[mode][b]
+            if xs:
+                m, clo, chi = bootstrap_median_ci(xs)
+            else:
+                m = clo = chi = None
+            meds.append(m); clos.append(clo); chis.append(chi)
+        data[mode] = {"coverage": bins, "in_flight_median": meds,
+                      "in_flight_ci_lo": clos, "in_flight_ci_hi": chis,
+                      "peak_in_flight_median": statistics.median(peak[mode])}
     write_result("concurrency",
                  {"policy": "powered", "lambda": lam, "n_stars": n_stars, "n_seeds": len(seeds),
                   "stepping": "event"},

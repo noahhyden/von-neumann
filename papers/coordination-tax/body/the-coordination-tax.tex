@@ -294,7 +294,8 @@ shows up as wasted motion, not as an unfilled galaxy.
   \centering
   \includegraphics[width=0.66\linewidth]{fig_time_tax_vs_dt.pdf}
   \caption{The fill-100\% time penalty for nearest-star slingshot flight versus the fixed timestep
-    (log axis), over the 32-seed ensemble. The apparent penalty is monotone in the step and collapses to zero
+    (log axis), over the 32-seed ensemble (points: medians; bars: bootstrap 95\% confidence
+    intervals). The apparent penalty is monotone in the step and collapses to zero
     (dashed line: the event-driven, dt-independent limit). The tens-of-percent ``coordination tax''
     of a coarse-step model is a discretization artifact, not a physical slowdown.}
   \label{fig:dt}
@@ -304,7 +305,8 @@ shows up as wasted motion, not as an unfilled galaxy.
   \centering
   \includegraphics[width=0.66\linewidth]{fig_concurrency.pdf}
   \caption{Probes in flight versus the fraction of the field settled, for perfect information and
-    the light-speed gate (medians over 16 seeds, 500-star field, $\Lambda = 0.2$). The population
+    the light-speed gate (medians over 16 seeds with bootstrap 95\% confidence bands, 500-star
+    field, $\Lambda = 0.2$). The population
     stays near its peak of a few hundred all the way into the final percent and the two regimes
     track each other closely, so the fills run almost in lockstep and the light-lag swarm loses only
     the small productive-rate deficit that keeps the time tax a fraction of the fuel tax.}
@@ -351,7 +353,8 @@ shows up as wasted motion, not as an unfilled galaxy.
   \centering
   \includegraphics[width=0.66\linewidth]{fig_floor_bracket.pdf}
   \caption{Redundant travel under perfect information, the decision-site light-speed gate, and
-    in-flight relay, versus $\Lambda$ (medians over 48 seeds, 400-star field). Listening in flight
+    in-flight relay, versus $\Lambda$ (medians over 48 seeds with bootstrap 95\% confidence
+    intervals, 400-star field). Listening in flight
     drives completed wasted arrivals to zero and cuts redundant travel below even the
     perfect-information baseline, recovering the light-lag tax at a small cost in fill time.}
   \label{fig:floor}
