@@ -45,10 +45,20 @@ is stated here and is consistent with N&F's Sun-like field.
 With the dwell derived rather than zeroed, the front-fill time changes by a *measurable but
 negligible* amount, and the size of that change is ordered by probe speed:
 
-- **powered** (3e-5 c): the ~1.6 yr dwell is ~8e-7 of the ~2e6 yr fill - unresolvable by
-  brute force, negligible by orders of magnitude.
-- **slingshot-nearest** (accumulated speed to the 0.05 c cap): the dwell costs ~0.4% of the
-  fill (measured A/B, `measure_dwell_tax`, fine timestep on a small field).
+- **powered** (3e-5 c): the ~1.6 yr dwell is ~8.5e-7 of the ~1.9e6 yr fill (event-resolved,
+  1200-star field) - unresolvable by brute force, negligible by orders of magnitude.
+- **slingshot-nearest** (accumulated speed to the 0.05 c cap): the dwell costs a median of
+  ~0.32% of the fill (measured A/B over a 24-seed ensemble; IQR 0.26-0.36%). The single-seed
+  value quoted earlier (~0.4%) is one draw from this distribution.
+- **slingshot-maxboost**: positive but within seed-to-seed noise at the field size affordable
+  here; reported as unresolved rather than as a point estimate.
+
+These derived results are computed and committed by the reproducibility harness under
+`experiments/` (`measure.py` -> `results/*.json`), and welded to the fold by
+`tests/test_measure_results.py`; the robustness margin (the powered dwell stays under 1% of the
+fill until the copy time is ~15,000x nominal) is measured there too. They introduce no new
+physical constant - each is `derive_settle_time_years` fed into `swarm.simulate_swarm`, both
+already sourced above. See [`SCRUTINY.md`](SCRUTINY.md) for the claim-by-claim plan.
 
 The physics: interstellar transit time dwarfs manufacturing time, so the same build cadence
 that *is* the clock for a local fleet (transit is days) is a vanishing tax on galactic

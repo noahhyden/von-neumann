@@ -1,0 +1,37 @@
+\section{Introduction}
+
+\IEEEPARstart{A}{} self-replicating machine that builds copies of itself from local
+material has been a fixture of long-range space-systems thinking since von Neumann's
+self-reproducing automata~\cite{von-neumann-burks-1966} and Freitas' self-reproducing
+interstellar probe~\cite{freitas-1980-interstellar-probe}. Its appeal is leverage: a
+seed that remakes most of its own mass in place turns each launched kilogram into far
+more installed capacity than a finished payload could~\cite{freitas-merkle-2004}. The
+same leverage, applied recursively, is what makes a single probe a plausible way to
+cross a galaxy in a time short against its age, the observation that sharpens the Fermi
+question~\cite{hart-1975,tipler-1980}.
+
+That programme is naturally studied at three very different scales, and in practice each
+is modelled on its own. At the smallest scale a \emph{single factory} lands, closes on
+as much of its bill of materials as it can, and copies itself. At an intermediate scale a
+\emph{local fleet} of such factories disperses across a solar system, each child building
+the next. At the largest scale a \emph{settlement front} of self-replicating probes
+crosses interstellar space, and the exploration timescale is set by how the front chooses
+targets and how fast the probes travel~\cite{nicholson-forgan-2013,forgan-papadog-kitching-2013}.
+
+Modelling the three separately leaves a seam. Every scale needs one shared number, the
+time to build a single copy, and each has been free to pick its own. In the settlement-front
+model that number appears as a per-star \emph{manufacturing dwell}: the time a freshly
+settled probe spends building offspring before they depart. For want of a sourced value it
+has been set to zero, so that the front is assumed to replicate instantaneously and only
+travel costs time. Whether that assumption is safe has never been checked against the
+factory physics that actually fixes the dwell.
+
+This paper closes the seam and asks what the closed form says. We thread one sourced factory
+through all three folds and \emph{derive} the manufacturing dwell from the very build
+physics the fleet already uses, so the number is computed once, from cited inputs, rather
+than assumed three times over. We introduce no new physical quantity; we route one the
+factory already fixes to the scale that was guessing it. The question we can then answer is
+cross-scale and quantitative: \emph{which constraint binds at which scale?} The answer,
+developed below, is that the manufacturing cadence that is the binding clock for a local
+fleet is a negligible tax on interstellar exploration, and that this conclusion is robust
+to the large uncertainty in the one number it rests on.

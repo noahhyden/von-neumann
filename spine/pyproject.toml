@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "matplotlib>=3.8"]
 
 # Sibling modules in this monorepo, consumed only through their public APIs (CLAUDE.md
 # §4). spine adds no new physics; it routes numbers each of these already documents.
@@ -29,3 +29,6 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# so tests can import the reproducibility harness (`from experiments.measure import ...`),
+# the same wiring swarm uses. The heavy driver stays out of the package tree.
+pythonpath = ["."]

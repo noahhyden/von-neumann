@@ -1,0 +1,43 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Limitations}
+The load-bearing limitation is the numerator. The copy time of \eqref{eq:copy} is computed
+from a lunar-regolith seed because no per-module mass and energy breakdown yet exists for a
+concrete interstellar-probe design; the most developed such design reports its architecture
+but not a closed bill of materials at the fidelity this calculation
+needs~\cite{borgue-hein-2020}. We therefore do not present 582~days as a probe's copy time.
+The paper's whole defense against this gap is the margin of Fig.~\ref{fig:margin}: the
+conclusion holds for any copy time within four orders of magnitude of the proxy, which
+comfortably spans the range a heavier, less-closed, or more power-starved probe could plausibly
+occupy. Closing the gap with a sourced probe bill of materials would replace the proxy with a
+measurement, but on the present evidence it cannot change the verdict.
+
+The dwell is evaluated at 1~AU around a Sun-like star, matching the uniform field the
+settlement-front model assumes but not the real spread of stellar luminosities and material
+availability. Because stellar variation enters only through the numerator, its effect is
+already bounded by the same margin; a fainter or resource-poorer star lengthens the copy time,
+and it would have to do so by four orders of magnitude to matter. We deliberately do not add a
+stellar-population sub-model: it would be a separate slice with its own validation, not a
+parameter of this one, and the margin makes it unnecessary for the present claim. Likewise we
+inherit the front model's idealizations, chiefly a frozen stellar field, but our claim is a
+ratio in which the dwell enters the same way whether or not those idealizations hold, so it is
+insulated from them in a way an absolute fill time would not be.
+
+Finally, the direct tax for max-boost slingshots is unresolved at the field size we can
+afford (Fig.~\ref{fig:tax}); we report it as positive but within seed noise rather than as a
+number. That honesty is the point of the ensemble. The powered tax is smaller still and is
+knowable only analytically, through \eqref{eq:frac}, not by brute force.
+
+\subsection{Implications}
+The substantive implication is a division of labour between scales. Manufacturing cadence is
+the binding constraint on a local, densely packed fleet, where it sets the doubling time
+outright, and is a negligible tax on a sparse interstellar front, where propulsion policy and
+raw transit time dominate the timeline by six orders of magnitude. A programme that worries
+about how fast its seeds can build is asking the right question for the solar-system phase and
+the wrong one for the galactic phase, where the same effort is better spent on propulsion. The
+result also illustrates a modelling stance: by keeping the three scales as separate, honestly
+sourced models joined at a clean seam, rather than one fused simulation, we can derive a shared
+quantity in the place it is physically fixed and route it to the place that needs it, and read
+off which constraint binds where. The seam is what makes the cross-scale statement possible;
+fusing the scales would have buried it.

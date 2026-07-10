@@ -1,0 +1,60 @@
+\section{The cross-scale model}
+
+\subsection{One factory, three folds}
+Each scale is a separate, deterministic model that we drive from a single shared factory
+specification. The factory is the sourced lunar-regolith seed of the closure and
+replication literature~\cite{nasa-cp-2255-1980,chirikjian-2004-niac,moses-chirikjian-2020}:
+a mass-closure figure $C$ (the fraction of its own mass it can remake locally) and a bill
+of materials whose masses and per-part energies are individually cited. We use it as a
+stand-in for a probe because a probe-specific bill of materials is not yet available in the
+literature (see Section~\ref{sec:discussion}); the point of this paper is that the choice
+does not matter to the conclusion.
+
+The leverage that motivates the whole programme follows from mass balance alone: if a factory
+must import $(1-C)$~kg of parts for every kilogram it builds, then installed mass per launched
+mass is $1/(1-C)$, and the rocket equation makes shipping a finished installation instead
+exponentially more expensive in propellant~\cite{tsiolkovsky-1903}. Modern seed-factory
+studies place achievable closure in the range of roughly 70 to 96 percent and agree that
+chasing full closure is not worthwhile~\cite{guided-self-replicating-factory-2021,freitas-merkle-2004},
+so a high but sub-unity $C$ is the realistic regime.
+
+\subsection{The one derived number}
+The quantity every scale shares is the time to build one copy. At a heliocentric distance
+where the delivered solar power is known, a factory builds at a rate set by the lesser of its
+machinery throughput and the power its collectors can supply, and the time to lay down one
+offspring's worth of local structure is
+\begin{equation}
+t_\mathrm{copy} \;=\; \frac{C \, m_\mathrm{seed}}{\min\!\left(\dot{m}_\mathrm{mach},\,\dot{m}_\mathrm{power}\right)},
+\label{eq:copy}
+\end{equation}
+where $m_\mathrm{seed}$ is the seed mass, $\dot{m}_\mathrm{mach}$ the machinery-limited build
+rate, and $\dot{m}_\mathrm{power}$ the rate the available power supports at the per-kilogram
+embodied energy of the bill of materials~\cite{nagapurkar-das-2022}. We evaluate
+\eqref{eq:copy} at 1~AU, where the solar constant is $1361\ \mathrm{W\,m^{-2}}$~\cite{kopp-lean-2011},
+consistent with the Sun-like uniform field the settlement-front model assumes. This is the
+same expression the fleet model already uses for its doubling cadence; nothing is added here.
+
+The settlement-front model needs this number as a per-star manufacturing dwell in years,
+\begin{equation}
+\tau \;=\; t_\mathrm{copy} / Y, \qquad Y = 365.25\ \mathrm{d},
+\label{eq:dwell}
+\end{equation}
+where $Y$ is the Julian year ($1\ \mathrm{yr} = 3.15576\times10^{7}\ \mathrm{s}$). The
+same Julian year defines the speed of light in the units the front uses for light travel
+and stellar distances, so the dwell and the fill time it will be compared against are on
+one clock. A silent mismatch here would rescale the central ratio by orders of magnitude
+without any error elsewhere, so we hold it as a machine-checked invariant of the code.
+
+\subsection{The finding, reduced to one ratio}
+With the dwell derived rather than zeroed, the front is run to completion and yields a
+fill time $T_{100}$, the time for the last star in the field to be settled. The entire
+cross-scale claim is the single dimensionless ratio
+\begin{equation}
+f \;=\; \tau / T_{100},
+\label{eq:frac}
+\end{equation}
+one manufacturing dwell as a fraction of the whole galactic fill. If $f \ll 1$, the build
+cadence that governs the local fleet, where it is the only clock that matters because transit
+between neighbours is days, is a negligible tax at galactic scale, where transit is
+millennia. The rest of the paper measures $f$, tests how much it can be trusted given that
+$t_\mathrm{copy}$ is a proxy, and measures the dwell's cost on the front directly.
