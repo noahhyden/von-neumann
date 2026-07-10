@@ -1,33 +1,42 @@
 % main.tex - the spine paper. Hand-written; gen-tex.mjs leaves it alone.
+% Journal-manuscript format: single-column article with author-year (natbib) citations,
+% matching the sibling coordination-tax paper and suitable as an initial submission to an
+% astrobiology journal (e.g. the International Journal of Astrobiology, the venue of
+% Nicholson & Forgan 2013, whose settlement-front model this paper extends by supplying the
+% manufacturing dwell they zeroed). Deliberately uses only TeX Live packages - no bundled
+% publisher class, no biber - so CI typesets it unchanged; the publisher's own house template
+% is applied at submission time.
 % Bibliography is generated: ../refs.bib comes from frontend/src/sources.ts.
 % Figures are generated (gitignored vector PDFs): the spine module writes
 % fig_margin.pdf and fig_dwell_tax.pdf here via
 % `uv run --extra dev python -m experiments.paper_figures` (from spine/), which
 % reads only the committed experiments/results/*.json.
-\documentclass[conference]{IEEEtran}
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
 \usepackage{graphicx}
 \usepackage{booktabs}
-\usepackage{cite}
-\usepackage{url}
 \usepackage{amsmath}
+\usepackage[round,authoryear]{natbib}
+\usepackage{url}
+\bibliographystyle{plainnat}
 
-\title{The Manufacturing Clock of a Self-Replicating Fleet Is a Rounding Error on Galactic Settlement}
-
-\author{
-\IEEEauthorblockN{Noah Hydén}
-\IEEEauthorblockA{Independent researcher \\ ORCID: 0009-0003-4523-0467}
-}
+\title{The Manufacturing Clock of a Self-Replicating Fleet Is a\\ Rounding Error on Galactic Settlement}
+\author{Noah Hyd\'en\\[2pt]
+  \normalsize Independent researcher\\
+  \normalsize ORCID: 0009-0003-4523-0467}
+\date{}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-A programme of self-replicating space manufacturing is usually modelled one scale at a time: a single factory that copies itself, a local fleet that disperses across a solar system, or a settlement front that crosses a galaxy. We thread one sourced factory through all three folds, so that a quantity every scale needs, the time to build one copy, is derived once rather than assumed three times over. The result is a clean cross-scale statement. The copy time that sets a local fleet's doubling clock, about 582 days for a lunar-regolith seed, is the same quantity that, at galactic scale, is under one part in a million of the roughly two-million-year time a powered front takes to fill a stellar field. The constraint that governs one scale is a rounding error at the next. Because that copy time is a lunar-factory stand-in for an interstellar probe whose own bill of materials is not yet known, we do not defend its exact value; we show the conclusion survives not knowing it. Across a copy-time sweep of five orders of magnitude the manufacturing dwell stays below one percent of the fill until the copy time is about fifteen thousand times its nominal value, so an error of four orders of magnitude in the build cadence does not change the verdict. Measured directly, seed by seed, the dwell costs a median of about a third of a percent of exploration time for the fastest slingshot policy and is within seed-to-seed noise for the slower one. The picture is therefore robust: manufacturing time is the binding clock for a local fleet, where transit is days, and a negligible tax on interstellar exploration, where transit is millennia.
+A programme of self-replicating space manufacturing is usually modelled one scale at a time: a single factory that copies itself, a local fleet that disperses across a solar system, or a settlement front that crosses a galaxy. We thread one sourced factory through all three folds, so that a quantity every scale needs, the time to build one copy, is derived once rather than assumed three times over. The result is a clean cross-scale statement. The copy time that sets a local fleet's doubling clock, about 582 days for a lunar-regolith seed, is at galactic scale a negligible manufacturing tax: switching the derived per-star dwell on lengthens the roughly two-million-year time a powered front takes to fill a stellar field by under one part in fifty thousand. Because that copy time is a lunar-factory stand-in for an interstellar probe whose own bill of materials is not yet known, we do not defend its exact value; we show the conclusion survives not knowing it. The tax grows in proportion to the copy time, and for the powered galactic fill it stays below one percent until the copy time is a few hundred times its nominal value, so an error of two orders of magnitude in the build cadence does not change the verdict. That margin is smaller for faster fronts, which is the honest boundary of the claim: measured directly, seed by seed, the dwell already costs a median of about a third of a percent of exploration time for the fastest slingshot policy, and is within seed-to-seed noise for the slower one, so there the copy time need grow only a few-fold to matter. The picture is therefore robust but bounded: manufacturing time is the binding clock for a local fleet, where transit is days, and a small, quantified tax on interstellar exploration, where transit is millennia, vanishing for a powered cruise and climbing toward a percent as the front is driven faster.
 \end{abstract}
 
-\begin{IEEEkeywords}
-self-replication, interstellar exploration, cross-scale modelling, in-situ manufacturing, von Neumann probes
-\end{IEEEkeywords}
+\noindent\textbf{Keywords:} self-replication; interstellar exploration; cross-scale
+modelling; in-situ manufacturing; von Neumann probes
+
+\bigskip
 
 \input{body/introduction}
 \input{body/the-cross-scale-model}
@@ -35,7 +44,18 @@ self-replication, interstellar exploration, cross-scale modelling, in-situ manuf
 \input{body/discussion}
 \input{body/conclusion}
 
-\bibliographystyle{IEEEtran}
+\section*{Data availability}
+Every number in this paper is restated from committed JSON produced by a pure, seeded,
+deterministic fold and welded to that fold by an automated drift test. The measurement
+driver is \texttt{spine/experiments/measure.py}; it writes \texttt{copy\_time\_robustness.json},
+\texttt{dwell\_tax.json}, and \texttt{policy\_sweep.json} under \texttt{spine/experiments/results/},
+and \texttt{spine/experiments/paper\_figures.py} renders both figures from those files with no
+further simulation. All quoted values use the pinned default scenario: a lunar-regolith seed,
+replication branching of two offspring per settlement, event-resolved stepping, and RNG seed
+\texttt{2654435769}; the headline ratio and its robustness margin are on a 1200-star field and
+the policy comparison and dwell tax on a 400-star field, as stated at each use. Rerunning the
+driver reproduces every figure bit-for-bit.
+
 \bibliography{../refs}
 
 \end{document}

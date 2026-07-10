@@ -5,10 +5,11 @@ CHEAP and CI-safe: reads the deterministic artifacts written by `experiments/mea
 (`tests/test_measure_results.py`) proves the JSON still matches the fold; regenerate the
 numbers with `python -m experiments.measure --force`.
 
-Figures (vector PDF, IEEE single-column geometry, serif fonts):
-  fig_margin.pdf    - the decisive one: powered dwell fraction of the galactic fill vs a
-                      x0.1..x1e5 copy-time sweep, with the 1% bar, the nominal copy time, and
-                      the break-even. The whole robustness margin in one plot.
+Figures (vector PDF, single-column column-width geometry, serif fonts):
+  fig_margin.pdf    - the decisive one: the powered galactic fill's cumulative manufacturing tax
+                      AND the per-copy ratio f vs a x0.1..x1e5 copy-time sweep, with the 1% bar
+                      and the nominal copy time. The whole robustness margin in one plot: the
+                      physical (cumulative) cost crosses 1% about two orders sooner than f.
   fig_dwell_tax.pdf - the measured A/B dwell tax per seed for the two slingshot policies, with
                       the ensemble median and IQR. Shows nearest is small-and-resolved and
                       maxboost is within seed noise (the spread a single seed would have hidden).
@@ -67,47 +68,48 @@ def _save(fig, name: str) -> Path:
 
 
 def fig_margin() -> Path:
-    """Powered dwell fraction vs copy time: the robustness margin (SCRUTINY.md C1)."""
+    """The robustness margin vs copy time, both measures (SCRUTINY.md C1).
+
+    Two curves against the same copy-time sweep. The lower is the per-copy ratio f = tau/T100
+    (one dwell as a fraction of the whole fill); the upper is the CUMULATIVE tax, the fractional
+    slowdown of the whole fill from switching the dwell on. The cumulative cost is the physical
+    quantity the ``rounding error'' claim rests on; it crosses the 1% bar about two orders of
+    magnitude sooner than f, because the front pays one dwell per settlement. Both stay far below
+    1% at the nominal copy time.
+    """
     d = load("copy_time_robustness")
     sweep = d["sweep"]
     xs = [s["copy_time_days"] for s in sweep]
-    ys = [s["dwell_fraction"] for s in sweep]
+    y_f = [s["dwell_fraction"] for s in sweep]
+    y_cum = [s["cumulative_tax"] for s in sweep]
     nominal = d["nominal"]
-    be = d["break_even"]
     bar = d["config"]["negligible_bar"]
 
     fig, ax = plt.subplots(figsize=(COLW, COLW * GOLDEN))
-    ax.loglog(xs, ys, "o-", color="#1f4e79", markersize=3.5, zorder=3)
+    ax.loglog(xs, y_cum, "o-", color="#b03a2e", markersize=3.5, zorder=4,
+              label="cumulative fill tax")
+    ax.loglog(xs, y_f, "s--", color="#1f4e79", markersize=3.0, zorder=3,
+              label=r"per-copy ratio $f=\tau/T_{100}$")
 
     # the "no longer negligible" bar
-    ax.axhline(bar, color="#b03a2e", linestyle="--", linewidth=0.9)
-    ax.text(xs[0], bar * 1.4, "1% of the fill", color="#b03a2e", fontsize=7, va="bottom")
+    ax.axhline(bar, color="#555555", linestyle="--", linewidth=0.8)
+    ax.text(xs[-1], bar * 1.5, "1% of the fill", color="#555555", fontsize=7, va="bottom", ha="right")
 
     # nominal copy time
-    ax.axvline(nominal["copy_time_days"], color="#555555", linestyle=":", linewidth=0.9)
+    ax.axvline(nominal["copy_time_days"], color="#999999", linestyle=":", linewidth=0.9)
     ax.annotate(
         f"nominal\n{nominal['copy_time_days']:.0f} d",
-        xy=(nominal["copy_time_days"], nominal["dwell_fraction"]),
-        xytext=(nominal["copy_time_days"] * 1.6, nominal["dwell_fraction"] * 6),
+        xy=(nominal["copy_time_days"], nominal["cumulative_tax"]),
+        xytext=(nominal["copy_time_days"] * 1.7, nominal["cumulative_tax"] * 8),
         fontsize=7,
         color="#333333",
         arrowprops=dict(arrowstyle="-", color="#999999", lw=0.6),
     )
 
-    # break-even marker
-    ax.plot([be["copy_time_days"]], [be["fraction_at"]], "s", color="#b03a2e", markersize=4, zorder=4)
-    ax.annotate(
-        f"break-even\n{be['multiplier']:.0f}x nominal",
-        xy=(be["copy_time_days"], be["fraction_at"]),
-        xytext=(be["copy_time_days"] * 0.02, be["fraction_at"] * 0.18),
-        fontsize=7,
-        color="#b03a2e",
-        arrowprops=dict(arrowstyle="-", color="#b03a2e", lw=0.6),
-    )
-
     ax.set_xlabel("copy time (days, log scale)")
-    ax.set_ylabel("dwell / galactic fill time")
-    ax.set_ylim(min(ys) * 0.3, 0.1)
+    ax.set_ylabel("fraction of galactic fill time")
+    ax.set_ylim(min(y_f) * 0.3, 3.0)
+    ax.legend(loc="upper left", frameon=False, fontsize=7)
     ax.grid(True, which="major", linestyle="-", linewidth=0.3, alpha=0.4)
     return _save(fig, "fig_margin.pdf")
 

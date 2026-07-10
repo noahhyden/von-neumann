@@ -1,5 +1,11 @@
 {
   "break_even": {
+    "copy_time_days": 248395.61971290348,
+    "multiplier": 426.4302484341691,
+    "reached": true,
+    "tax_at": 0.040811506769897136
+  },
+  "break_even_dwell_fraction": {
     "copy_time_days": 9115493.034758305,
     "fraction_at": 0.009999994237320332,
     "multiplier": 15648.915081130139,
@@ -15,58 +21,74 @@
   "measurement": "copy_time_robustness",
   "nominal": {
     "copy_time_days": 582.5,
+    "cumulative_tax": 1.528049424432911e-05,
     "dwell_fraction": 8.489033752492079e-07,
-    "settle_years": 1.594798083504449
+    "settle_years": 1.594798083504449,
+    "t100_years": 1878628.076023038
   },
   "sweep": [
     {
       "copy_time_days": 58.25000000000001,
+      "cumulative_tax": 1.5280494242841871e-06,
       "dwell_fraction": 8.489150497281945e-08,
       "multiplier": 0.1,
       "negligible": true,
-      "settle_years": 0.15947980835044492
+      "settle_years": 0.15947980835044492,
+      "t100_years": 1878630.946659588
     },
     {
       "copy_time_days": 582.5,
+      "cumulative_tax": 1.528049424432911e-05,
       "dwell_fraction": 8.489033752492079e-07,
       "multiplier": 1.0,
       "negligible": true,
-      "settle_years": 1.594798083504449
+      "settle_years": 1.594798083504449,
+      "t100_years": 1878656.782388541
     },
     {
       "copy_time_days": 5825.0,
+      "cumulative_tax": 0.00015280494244477834,
       "dwell_fraction": 8.48786648117434e-06,
       "multiplier": 10.0,
       "negligible": true,
-      "settle_years": 15.94798083504449
+      "settle_years": 15.94798083504449,
+      "t100_years": 1878915.1396780699
     },
     {
       "copy_time_days": 58250.0,
+      "cumulative_tax": 0.001528049424442702,
       "dwell_fraction": 8.476211399173512e-05,
       "multiplier": 100.0,
       "negligible": true,
-      "settle_years": 159.4798083504449
+      "settle_years": 159.4798083504449,
+      "t100_years": 1881498.712573347
     },
     {
       "copy_time_days": 582500.0,
+      "cumulative_tax": 0.050062848795672445,
       "dwell_fraction": 0.0008084433687811906,
       "multiplier": 1000.0,
-      "negligible": true,
-      "settle_years": 1594.798083504449
+      "negligible": false,
+      "settle_years": 1594.798083504449,
+      "t100_years": 1972677.5493362844
     },
     {
       "copy_time_days": 5825000.0,
+      "cumulative_tax": 0.21864014222694342,
       "dwell_fraction": 0.006966095383671158,
       "multiplier": 10000.0,
-      "negligible": true,
-      "settle_years": 15947.980835044491
+      "negligible": false,
+      "settle_years": 15947.980835044491,
+      "t100_years": 2289371.585756244
     },
     {
       "copy_time_days": 58250000.00000001,
+      "cumulative_tax": 1.1924990394940502,
       "dwell_fraction": 0.03871912058434684,
       "multiplier": 100000.0,
       "negligible": false,
-      "settle_years": 159479.80835044492
+      "settle_years": 159479.80835044492,
+      "t100_years": 4118890.2522470662
     }
   ]
 }

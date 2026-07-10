@@ -43,22 +43,43 @@ is stated here and is consistent with N&F's Sun-like field.
 ## The finding this grounds
 
 With the dwell derived rather than zeroed, the front-fill time changes by a *measurable but
-negligible* amount, and the size of that change is ordered by probe speed:
+negligible* amount. Two quantities describe it, and they must be kept apart (a scrutiny finding
+corrected in this pass):
 
-- **powered** (3e-5 c): the ~1.6 yr dwell is ~8.5e-7 of the ~1.9e6 yr fill (event-resolved,
-  1200-star field) - unresolvable by brute force, negligible by orders of magnitude.
+- the **per-copy ratio** `f = tau / T100` - one build cadence against the whole fill. Powered:
+  `f ~ 8.5e-7` (event-resolved, 1200-star field), under one part in a million.
+- the **cumulative tax** `(T100_with - T100_zero) / T100_zero` - the fractional slowdown of the
+  whole fill when the dwell is switched on. This is the physical cost of manufacturing on the
+  timeline, and it is `f` times the number of settlements on the critical path (~18 for powered
+  here). Powered: `~1.5e-5` (under one part in fifty thousand) - still negligible, but ~18x `f`.
+
+The cumulative tax is ordered by probe speed (faster front -> shorter fill -> larger share):
+
+- **powered** (3e-5 c): cumulative tax ~1.5e-5 at nominal; unresolvable by brute force.
 - **slingshot-nearest** (accumulated speed to the 0.05 c cap): the dwell costs a median of
   ~0.32% of the fill (measured A/B over a 24-seed ensemble; IQR 0.26-0.36%). The single-seed
   value quoted earlier (~0.4%) is one draw from this distribution.
 - **slingshot-maxboost**: positive but within seed-to-seed noise at the field size affordable
   here; reported as unresolved rather than as a point estimate.
 
+The **robustness margin** is stated on the cumulative tax, not `f`: for the powered galactic
+fill the cumulative cost stays under 1% until the copy time is ~a few hundred times nominal
+(about two orders of magnitude; `f` alone would suggest ~15,000x, i.e. four orders, which
+overstates it by the critical-path factor). For the fastest slingshot fronts the margin is only
+~3x, because the nominal tax there is already ~0.3%.
+
+**The copy time is machinery-limited at 1 AU.** For the default seed `min(machinery, energy_cap)`
+= min(20 kg/day, ~3700 kg/day) = the 20 kg/day machinery rate; the energy cap is ~190x higher
+(its `1/d^2` branch binds only past ~13.7 AU). So the copy time is set by the machinery build
+rate and `C*m_seed`, and is insensitive to insolation and the [ESTIMATE] array efficiency across
+essentially the whole target population (source: [`../multi-probe/REFERENCES.md`](../multi-probe/REFERENCES.md)).
+
 These derived results are computed and committed by the reproducibility harness under
 `experiments/` (`measure.py` -> `results/*.json`), and welded to the fold by
-`tests/test_measure_results.py`; the robustness margin (the powered dwell stays under 1% of the
-fill until the copy time is ~15,000x nominal) is measured there too. They introduce no new
-physical constant - each is `derive_settle_time_years` fed into `swarm.simulate_swarm`, both
-already sourced above. See [`SCRUTINY.md`](SCRUTINY.md) for the claim-by-claim plan.
+`tests/test_measure_results.py`. They introduce no new physical constant - each is
+`derive_settle_time_years` fed into `swarm.simulate_swarm`, both already sourced above. See
+[`SCRUTINY.md`](SCRUTINY.md) for the claim-by-claim plan and
+[`../papers/spine/SCRUTINY.md`](../papers/spine/SCRUTINY.md) for the post-hoc adversarial review.
 
 The physics: interstellar transit time dwarfs manufacturing time, so the same build cadence
 that *is* the clock for a local fleet (transit is days) is a vanishing tax on galactic

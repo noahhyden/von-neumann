@@ -1056,6 +1056,20 @@ export const SOURCES: Source[] = [
       "The Monte Carlo settlement model most like the swarm's own discrete fold, and a numerical check on its front speed: Jones finds a migration wavefront of ~1.4e-5 pc/yr filling the Galaxy in ~60 Myr, the same order as the swarm's front advancing at a fraction of a probe's cruise speed.",
   },
   {
+    id: "armstrong-sandberg-2013",
+    short: "Armstrong & Sandberg 2013",
+    authors: "S. Armstrong & A. Sandberg",
+    year: "2013",
+    title: "Eternity in six hours: Intergalactic spreading of intelligent life and sharpening the Fermi paradox",
+    venue: "Acta Astronautica 89:1-13, DOI 10.1016/j.actaastro.2013.04.002",
+    url: "https://www.sciencedirect.com/science/article/abs/pii/S0094576513001148",
+    category: "Swarm dynamics and slingshots",
+    strength: "primary",
+    modules: ["swarm", "spine"],
+    grounds:
+      "The canonical modern treatment of self-replicating probes launched by directed energy to settle galactic (indeed intergalactic) volumes, giving settlement timescales short against a galaxy's age; the closest prior art to the spine paper's galactic-settlement framing and its directed-energy regime.",
+  },
+  {
     id: "hart-1975",
     short: "Hart 1975",
     authors: "M. H. Hart",

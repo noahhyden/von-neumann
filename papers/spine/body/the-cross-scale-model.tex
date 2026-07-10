@@ -1,9 +1,10 @@
 \section{The cross-scale model}
+\label{sec:model}
 
 \subsection{One factory, three folds}
 Each scale is a separate, deterministic model that we drive from a single shared factory
 specification. The factory is the sourced lunar-regolith seed of the closure and
-replication literature~\cite{nasa-cp-2255-1980,chirikjian-2004-niac,moses-chirikjian-2020}:
+replication literature~\citep{nasa-cp-2255-1980,metzger-2013,chirikjian-2004-niac,moses-chirikjian-2020}:
 a mass-closure figure $C$ (the fraction of its own mass it can remake locally) and a bill
 of materials whose masses and per-part energies are individually cited. We use it as a
 stand-in for a probe because a probe-specific bill of materials is not yet available in the
@@ -12,27 +13,37 @@ does not matter to the conclusion.
 
 The leverage that motivates the whole programme follows from mass balance alone: if a factory
 must import $(1-C)$~kg of parts for every kilogram it builds, then installed mass per launched
-mass is $1/(1-C)$, and the rocket equation makes shipping a finished installation instead
-exponentially more expensive in propellant~\cite{tsiolkovsky-1903}. Modern seed-factory
-studies place achievable closure in the range of roughly 70 to 96 percent and agree that
-chasing full closure is not worthwhile~\cite{guided-self-replicating-factory-2021,freitas-merkle-2004},
+mass is $1/(1-C)$. At the fixed, very large velocity change of an interstellar transfer the
+rocket equation charges a fixed propellant multiple $e^{\Delta v / v_e}-1$ for every kilogram
+delivered~\citep{tsiolkovsky-1903}, so cutting the delivered mass by the leverage factor
+$1/(1-C)$ cuts the propellant bill by that same factor: a linear saving on a kilogram that is
+exponentially expensive to move. Modern seed-factory studies place achievable closure in the
+range of roughly 70 to 96 percent and agree that chasing full closure is not
+worthwhile~\citep{guided-self-replicating-factory-2021,nasa-cp-2255-1980,freitas-merkle-2004},
 so a high but sub-unity $C$ is the realistic regime.
 
 \subsection{The one derived number}
-The quantity every scale shares is the time to build one copy. At a heliocentric distance
-where the delivered solar power is known, a factory builds at a rate set by the lesser of its
-machinery throughput and the power its collectors can supply, and the time to lay down one
-offspring's worth of local structure is
+The quantity every scale shares is the time to build one copy. A factory builds at a rate set
+by the lesser of its machinery throughput and the power its collectors can supply, and the time
+to lay down one offspring's worth of local structure is
 \begin{equation}
 t_\mathrm{copy} \;=\; \frac{C \, m_\mathrm{seed}}{\min\!\left(\dot{m}_\mathrm{mach},\,\dot{m}_\mathrm{power}\right)},
 \label{eq:copy}
 \end{equation}
 where $m_\mathrm{seed}$ is the seed mass, $\dot{m}_\mathrm{mach}$ the machinery-limited build
 rate, and $\dot{m}_\mathrm{power}$ the rate the available power supports at the per-kilogram
-embodied energy of the bill of materials~\cite{nagapurkar-das-2022}. We evaluate
-\eqref{eq:copy} at 1~AU, where the solar constant is $1361\ \mathrm{W\,m^{-2}}$~\cite{kopp-lean-2011},
-consistent with the Sun-like uniform field the settlement-front model assumes. This is the
-same expression the fleet model already uses for its doubling cadence; nothing is added here.
+embodied energy of the bill of materials (a metals-dominated figure~\citep{ice-coefficients,gutowski-2009},
+with integrated circuits the high-intensity minority~\citep{nagapurkar-das-2022}). We evaluate
+\eqref{eq:copy} at 1~AU around a Sun-like star, consistent with the uniform field the
+settlement-front model assumes, where the solar constant is
+$1361\ \mathrm{W\,m^{-2}}$~\citep{kopp-lean-2011}. It matters which of the two terms binds. For
+the default seed the machinery throughput does: it lays down about 20~kg per day, roughly 190
+times below the rate the 1-AU array could power, so $t_\mathrm{copy}$ is fixed by machinery
+throughput and $C\,m_\mathrm{seed}$ alone, and the power branch would take over only past about
+13.7~AU, where the $1/d^{2}$ insolation has fallen to the machinery rate. The copy time is
+therefore insensitive to insolation across essentially the whole target population, which
+strengthens rather than weakens the cross-scale claim below. This is the same expression the
+fleet model already uses for its doubling cadence; nothing is added here.
 
 The settlement-front model needs this number as a per-star manufacturing dwell in years,
 \begin{equation}
@@ -47,14 +58,21 @@ without any error elsewhere, so we hold it as a machine-checked invariant of the
 
 \subsection{The finding, reduced to one ratio}
 With the dwell derived rather than zeroed, the front is run to completion and yields a
-fill time $T_{100}$, the time for the last star in the field to be settled. The entire
-cross-scale claim is the single dimensionless ratio
+fill time $T_{100}$, the time for the last star in the field to be settled. The cleanest
+single statement of scale separation is the dimensionless ratio
 \begin{equation}
 f \;=\; \tau / T_{100},
 \label{eq:frac}
 \end{equation}
-one manufacturing dwell as a fraction of the whole galactic fill. If $f \ll 1$, the build
-cadence that governs the local fleet, where it is the only clock that matters because transit
-between neighbours is days, is a negligible tax at galactic scale, where transit is
-millennia. The rest of the paper measures $f$, tests how much it can be trusted given that
-$t_\mathrm{copy}$ is a proxy, and measures the dwell's cost on the front directly.
+one manufacturing dwell as a fraction of the whole galactic fill. This is a \emph{per-copy}
+measure, and it is important not to mistake it for the total. The front pays one dwell at every
+settlement, so the manufacturing share of the whole timeline is not $f$ but the cumulative
+slowdown of the fill, which is $f$ multiplied by the number of settlements on the critical path
+from the seed to the last star. We report both: $f$ fixes the order of magnitude and is the
+quantity the robustness margin is stated on, while the cumulative cost is measured directly,
+front against front, in Section~\ref{sec:results}. If $f \ll 1$ and the critical path is not
+astronomically long, both of which we show, the build cadence that governs the local fleet,
+where it is the only clock that matters because transit between neighbours is days, is a
+negligible tax at galactic scale, where transit is millennia. The rest of the paper measures
+$f$, tests how much it can be trusted given that $t_\mathrm{copy}$ is a proxy, and measures the
+dwell's cumulative cost on the front directly.

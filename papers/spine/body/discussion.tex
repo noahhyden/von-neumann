@@ -6,20 +6,33 @@ The load-bearing limitation is the numerator. The copy time of \eqref{eq:copy} i
 from a lunar-regolith seed because no per-module mass and energy breakdown yet exists for a
 concrete interstellar-probe design; the most developed such design reports its architecture
 but not a closed bill of materials at the fidelity this calculation
-needs~\cite{borgue-hein-2020}. We therefore do not present 582~days as a probe's copy time.
-The paper's whole defense against this gap is the margin of Fig.~\ref{fig:margin}: the
-conclusion holds for any copy time within four orders of magnitude of the proxy, which
-comfortably spans the range a heavier, less-closed, or more power-starved probe could plausibly
-occupy. Closing the gap with a sourced probe bill of materials would replace the proxy with a
-measurement, but on the present evidence it cannot change the verdict.
+needs~\citep{borgue-hein-2020}, which is why we stand on a lunar factory rather than its probe
+numbers. We therefore do not present 582~days as a probe's copy time. The paper's defense
+against this gap is the margin of Fig.~\ref{fig:margin}, and it is honest about being bounded:
+for the powered galactic fill the conclusion holds for any copy time within about two orders of
+magnitude of the proxy (the per-copy ratio $f$ survives four orders, but the cumulative cost is
+the binding measure), which comfortably spans the range a heavier, less-closed, or more
+power-starved probe could plausibly occupy; for the fastest slingshot fronts the margin is only
+a few-fold, so there a substantially slower probe could make manufacturing a percent-level
+effect. One omission bears on exactly that boundary: the copy mass $C\,m_\mathrm{seed}$ counts
+the offspring's local structure but not the multi-megawatt power plant the seed scenario treats
+as separate infrastructure, which can outmass the seed itself. Folding it in would raise the
+copy time, plausibly by up to about two orders of magnitude; that stays inside the powered
+margin but would push the fastest slingshot fronts past one percent, consistent with the stated
+boundary. Closing the gap with a sourced probe bill of materials would replace the proxy with a
+measurement, but on the present evidence it cannot change the verdict for the powered galactic
+case.
 
 The dwell is evaluated at 1~AU around a Sun-like star, matching the uniform field the
 settlement-front model assumes but not the real spread of stellar luminosities and material
-availability. Because stellar variation enters only through the numerator, its effect is
-already bounded by the same margin; a fainter or resource-poorer star lengthens the copy time,
-and it would have to do so by four orders of magnitude to matter. We deliberately do not add a
-stellar-population sub-model: it would be a separate slice with its own validation, not a
-parameter of this one, and the margin makes it unnecessary for the present claim. Likewise we
+availability. Because the copy time is machinery-limited at 1~AU, stellar luminosity does not
+enter it at all until the insolation deficit exceeds the roughly 190-fold machinery-to-power
+margin, beyond about 13.7~AU-equivalent, so a fainter star does not lengthen the copy time
+across essentially the whole target population. Material availability enters through the closure
+ratio and the machinery rate, that is, the numerator, so its effect is bounded by the same
+margin. We deliberately do not add a stellar-population sub-model: it would be a separate slice
+with its own validation, not a parameter of this one, and the margin makes it unnecessary for
+the present claim. Likewise we
 inherit the front model's idealizations, chiefly a frozen stellar field, but our claim is a
 ratio in which the dwell enters the same way whether or not those idealizations hold, so it is
 insulated from them in a way an absolute fill time would not be.
@@ -33,9 +46,12 @@ knowable only analytically, through \eqref{eq:frac}, not by brute force.
 The substantive implication is a division of labour between scales. Manufacturing cadence is
 the binding constraint on a local, densely packed fleet, where it sets the doubling time
 outright, and is a negligible tax on a sparse interstellar front, where propulsion policy and
-raw transit time dominate the timeline by six orders of magnitude. A programme that worries
-about how fast its seeds can build is asking the right question for the solar-system phase and
-the wrong one for the galactic phase, where the same effort is better spent on propulsion. The
+raw transit time dominate the timeline by nearly five orders of magnitude for a powered cruise,
+narrowing to about two for the fastest slingshots. A programme that worries about how fast its
+seeds can build is asking the right question for the solar-system phase and, for a powered
+galactic cruise, the wrong one for the galactic phase, where the same effort is better spent on
+propulsion; only when the front is driven to slingshot or directed-energy speeds does the build
+cadence begin to re-enter the galactic ledger. The
 result also illustrates a modelling stance: by keeping the three scales as separate, honestly
 sourced models joined at a clean seam, rather than one fused simulation, we can derive a shared
 quantity in the place it is physically fixed and route it to the place that needs it, and read

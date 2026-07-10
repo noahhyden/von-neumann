@@ -6,9 +6,10 @@ numbers; and ``tests/test_measure_results.py`` re-runs a tiny slice and asserts 
 so the JSON cannot silently drift from the fold. The spine fold is a pure seeded function
 of ``(params, seed)``, so every JSON here is bit-reproducible run to run.
 
-Unlike swarm's driver this is fast (a copy time is instant; the tax A/B is a few hundred
-stars in event mode - seconds, not hours), so it can run anywhere. We still commit the JSON
-and the paper restates only it.
+Unlike swarm's driver this is cheap (a copy time is instant; each tax A/B is a few hundred
+stars in event mode). The full regen is a few minutes, dominated by the powered break-even
+searches (each a run of full 1200-star fills) and the 24-seed x 3-field-size tax ensemble, so
+it runs anywhere. We still commit the JSON and the paper restates only it.
 
 The finding reduces to one inequality (see ``SCRUTINY.md``):
 
@@ -84,9 +85,32 @@ def _t100(
 def _dwell_fraction(
     policy: str, settle_years: float, *, n_stars: int, seed: int
 ) -> float | None:
-    """One dwell as a fraction of the whole fill, event mode (the analytic separation)."""
+    """One dwell as a fraction of the whole fill, event mode (the per-copy separation).
+
+    This is f = tau / T100: the time to build ONE copy against the whole galactic fill. It is
+    NOT the manufacturing cost of the fill - the front pays one dwell per settlement, so the
+    cumulative cost is f times the number of settlements on the critical path (see
+    ``_cumulative_tax``). f fixes the order of magnitude; the cumulative tax is the physical cost.
+    """
     t100 = _t100(policy, settle_years, n_stars=n_stars, seed=seed)
     return (settle_years / t100) if (t100 and t100 > 0) else None
+
+
+def _cumulative_tax(
+    policy: str, settle_years: float, *, n_stars: int, seed: int, zero_t100: float | None
+) -> float | None:
+    """Fractional slowdown of the whole fill from switching the dwell on (A/B, event mode).
+
+    This is the physically meaningful manufacturing cost on exploration: (T100_with -
+    T100_zero) / T100_zero, the extra fill time the derived dwell buys against the old
+    zero-dwell baseline. It equals f multiplied by the number of dwells on the critical path,
+    so it is the quantity the ``rounding error on settlement`` claim must be stated on, not f.
+    ``zero_t100`` is the zero-dwell fill (passed in so it is computed once per policy/field).
+    """
+    if zero_t100 in (None, 0.0):
+        return None
+    withd = _t100(policy, settle_years, n_stars=n_stars, seed=seed)
+    return ((withd - zero_t100) / zero_t100) if withd is not None else None
 
 
 def _break_even_multiplier(
@@ -128,6 +152,44 @@ def _break_even_multiplier(
     }
 
 
+def _break_even_cumulative(
+    policy: str,
+    nominal_settle: float,
+    *,
+    n_stars: int,
+    seed: int,
+    zero_t100: float | None,
+    bar: float = NEGLIGIBLE_BAR,
+) -> dict:
+    """The copy-time multiplier at which the CUMULATIVE A/B tax first reaches ``bar``.
+
+    Identical bisection to ``_break_even_multiplier`` but on the physical quantity: the whole
+    fill's fractional slowdown (``_cumulative_tax``), not the per-copy ratio f. Because the
+    cumulative tax is f times the critical-path length, this crossover sits well below the
+    f-based one - it is the honest margin the ``rounding error`` claim rests on.
+    """
+
+    def frac(mult: float) -> float:
+        f = _cumulative_tax(
+            policy, nominal_settle * mult, n_stars=n_stars, seed=seed, zero_t100=zero_t100
+        )
+        return f if f is not None else 1.0
+
+    lo, hi = 1.0, 1.0
+    while frac(hi) < bar and hi < 1e6:
+        lo, hi = hi, hi * 10.0
+    if frac(hi) < bar:
+        return {"reached": False, "multiplier": None, "copy_time_days": None, "tax_at": frac(hi)}
+    for _ in range(20):
+        mid = (lo * hi) ** 0.5
+        if frac(mid) < bar:
+            lo = mid
+        else:
+            hi = mid
+    mult = (lo * hi) ** 0.5
+    return {"reached": True, "multiplier": mult, "copy_time_days": None, "tax_at": frac(mult)}
+
+
 # --------------------------------------------------------------------------------------
 # C1 (decisive): the robustness margin.
 # --------------------------------------------------------------------------------------
@@ -147,30 +209,46 @@ def m_copy_time_robustness(sc: SpineScenario) -> dict:
     n_stars = sc.n_stars
     seed = sc.seed
 
+    # The zero-dwell baseline fill, computed once: the A of every A/B cumulative tax below, and
+    # the denominator of the headline ratio T100 = tau / f (so the paper need not store it twice).
+    zero_t100 = _t100(policy, 0.0, n_stars=n_stars, seed=seed)
+
     multipliers = [0.1, 1.0, 10.0, 100.0, 1_000.0, 10_000.0, 100_000.0]
     sweep = []
     for m in multipliers:
         settle = nominal * m
-        f = _dwell_fraction(policy, settle, n_stars=n_stars, seed=seed)
+        t100 = _t100(policy, settle, n_stars=n_stars, seed=seed)
+        f = (settle / t100) if (t100 and t100 > 0) else None
+        tax = ((t100 - zero_t100) / zero_t100) if (t100 is not None and zero_t100) else None
         sweep.append(
             {
                 "multiplier": m,
                 "settle_years": settle,
                 "copy_time_days": settle * DAYS_PER_JULIAN_YEAR,
-                "dwell_fraction": f,
-                "negligible": (f is not None and f < NEGLIGIBLE_BAR),
+                "t100_years": t100,
+                "dwell_fraction": f,  # per-copy ratio f = tau / T100
+                "cumulative_tax": tax,  # physical cost: (T100_with - T100_zero) / T100_zero
+                "negligible": (tax is not None and tax < NEGLIGIBLE_BAR),
             }
         )
 
-    be = _break_even_multiplier(policy, nominal, n_stars=n_stars, seed=seed)
-    if be["reached"]:
-        be["copy_time_days"] = nominal_copy_days * be["multiplier"]
+    # The per-copy ratio f crosses 1% far later than the physical cost does; we keep it for
+    # comparison but the headline margin is stated on the cumulative tax.
+    be_f = _break_even_multiplier(policy, nominal, n_stars=n_stars, seed=seed)
+    if be_f["reached"]:
+        be_f["copy_time_days"] = nominal_copy_days * be_f["multiplier"]
+    be_cum = _break_even_cumulative(
+        policy, nominal, n_stars=n_stars, seed=seed, zero_t100=zero_t100
+    )
+    if be_cum["reached"]:
+        be_cum["copy_time_days"] = nominal_copy_days * be_cum["multiplier"]
 
-    # C2 folded in: the binding build-rate regime and the [ESTIMATE] array-input sensitivity.
-    # A change in array efficiency (30% [ESTIMATE]) scales the build rate, hence the copy time,
-    # inversely - so the documented 20-40% efficiency band is a x0.75..x1.5 copy-time move,
-    # which lands well inside the first decade of this sweep. No separate run is needed; it is
-    # a sub-interval of the margin measured here.
+    # C2 folded in: the binding build-rate regime. For the default seed the copy time is
+    # MACHINERY-limited at 1 AU (about 20 kg/day, ~190x below the rate the 1-AU array could
+    # power; the power branch binds only past ~13.7 AU). So the [ESTIMATE] array efficiency
+    # (30%) and the solar input do NOT move the copy time here at all - the load-bearing input
+    # is the machinery build rate and C*m_seed, whose plausible variation is a small
+    # sub-interval of the margin this sweep measures.
     return {
         "measurement": "copy_time_robustness",
         "config": {
@@ -183,10 +261,15 @@ def m_copy_time_robustness(sc: SpineScenario) -> dict:
         "nominal": {
             "settle_years": nominal,
             "copy_time_days": nominal_copy_days,
+            "t100_years": zero_t100,
             "dwell_fraction": _dwell_fraction(policy, nominal, n_stars=n_stars, seed=seed),
+            "cumulative_tax": _cumulative_tax(
+                policy, nominal, n_stars=n_stars, seed=seed, zero_t100=zero_t100
+            ),
         },
         "sweep": sweep,
-        "break_even": be,
+        "break_even": be_cum,  # the headline margin: on the cumulative (physical) tax
+        "break_even_dwell_fraction": be_f,  # kept for comparison: on the per-copy ratio f
     }
 
 
@@ -300,27 +383,36 @@ def m_policy_sweep(sc: SpineScenario) -> dict:
     nominal = derive_settle_time_years(sc)
     nominal_copy_days = nominal * DAYS_PER_JULIAN_YEAR
     # Cross-policy comparison and crossover run on the smaller (tax) field, so all three
-    # policies - including the ~50 break-even fills powered needs - are cheap and on one
-    # footing. The tax is scale-flat (see dwell_tax finite_size), so the crossover ORDERING
-    # is field-size independent; the headline powered fraction and break-even at the full
-    # 1200-star field live in copy_time_robustness.
+    # policies - including the many break-even fills powered needs - are cheap and on one
+    # footing. The tax increases only mildly with field size (0.31->0.34% over 200->800 stars;
+    # see dwell_tax finite_size), so the crossover ORDERING is field-size stable; the headline
+    # powered numbers at the full 1200-star field live in copy_time_robustness.
     n_stars = sc.tax_n_stars
     seed = sc.seed
 
     policies = ["powered", "slingshot_nearest", "slingshot_maxboost"]
     rows = []
     for policy in policies:
+        zero_t100 = _t100(policy, 0.0, n_stars=n_stars, seed=seed)
         t100 = _t100(policy, nominal, n_stars=n_stars, seed=seed)
         frac = (nominal / t100) if (t100 and t100 > 0) else None
-        be = _break_even_multiplier(policy, nominal, n_stars=n_stars, seed=seed)
+        tax = ((t100 - zero_t100) / zero_t100) if (t100 is not None and zero_t100) else None
+        be = _break_even_cumulative(
+            policy, nominal, n_stars=n_stars, seed=seed, zero_t100=zero_t100
+        )
         if be["reached"]:
             be["copy_time_days"] = nominal_copy_days * be["multiplier"]
+        be_f = _break_even_multiplier(policy, nominal, n_stars=n_stars, seed=seed)
+        if be_f["reached"]:
+            be_f["copy_time_days"] = nominal_copy_days * be_f["multiplier"]
         rows.append(
             {
                 "policy": policy,
                 "t100_years": t100,
-                "dwell_fraction": frac,
-                "break_even": be,
+                "dwell_fraction": frac,  # per-copy ratio f = tau / T100
+                "cumulative_tax": tax,  # physical cost at nominal (A/B on this field)
+                "break_even": be,  # copy-time multiplier where the cumulative tax hits 1%
+                "break_even_dwell_fraction": be_f,  # comparison: where f hits 1%
             }
         )
 

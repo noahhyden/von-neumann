@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-from experiments.measure import _dwell_fraction, _t100
+from experiments.measure import _cumulative_tax, _dwell_fraction, _t100
 from spine.run import derive_settle_time_years
 from spine.scenario import SpineScenario
 
@@ -43,9 +43,16 @@ def test_copy_time_robustness_matches_fold() -> None:
     # Guard the nominal point and the first two sweep multipliers (direct fills).
     got = _dwell_fraction(cfg["policy"], nominal, n_stars=cfg["n_stars"], seed=cfg["seed"])
     assert got == pytest.approx(d["nominal"]["dwell_fraction"], rel=1e-9)
+    # the zero-dwell baseline fill (stored as nominal.t100_years) and the cumulative tax
+    zero_t100 = _t100(cfg["policy"], 0.0, n_stars=cfg["n_stars"], seed=cfg["seed"])
+    assert zero_t100 == pytest.approx(d["nominal"]["t100_years"], rel=1e-9)
+    cum = _cumulative_tax(cfg["policy"], nominal, n_stars=cfg["n_stars"], seed=cfg["seed"], zero_t100=zero_t100)
+    assert cum == pytest.approx(d["nominal"]["cumulative_tax"], rel=1e-9)
     for entry in d["sweep"][:3]:
         f = _dwell_fraction(cfg["policy"], entry["settle_years"], n_stars=cfg["n_stars"], seed=cfg["seed"])
         assert f == pytest.approx(entry["dwell_fraction"], rel=1e-9), f"mult {entry['multiplier']}"
+        t = _cumulative_tax(cfg["policy"], entry["settle_years"], n_stars=cfg["n_stars"], seed=cfg["seed"], zero_t100=zero_t100)
+        assert t == pytest.approx(entry["cumulative_tax"], rel=1e-9), f"mult {entry['multiplier']} cum"
 
 
 def test_dwell_tax_matches_fold() -> None:

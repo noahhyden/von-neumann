@@ -11,33 +11,54 @@
   "policies": [
     {
       "break_even": {
+        "copy_time_days": 361112.40463356464,
+        "multiplier": 619.9354585983942,
+        "reached": true,
+        "tax_at": 0.010000005071824301
+      },
+      "break_even_dwell_fraction": {
         "copy_time_days": 5841504.815638452,
         "fraction_at": 0.01000000329907658,
         "multiplier": 10028.334447447985,
         "reached": true
       },
+      "cumulative_tax": 1.6130719630896776e-05,
       "dwell_fraction": 1.1521756739180112e-06,
       "policy": "powered",
       "t100_years": 1384162.2589385922
     },
     {
       "break_even": {
+        "copy_time_days": 1598.9537855340063,
+        "multiplier": 2.7449850395433586,
+        "reached": true,
+        "tax_at": 0.00999999398304409
+      },
+      "break_even_dwell_fraction": {
         "copy_time_days": 35065.37035062985,
         "fraction_at": 0.009999997587075461,
         "multiplier": 60.19806068777657,
         "reached": true
       },
+      "cumulative_tax": 0.00364300491222616,
       "dwell_fraction": 0.00019104113684352629,
       "policy": "slingshot_nearest",
       "t100_years": 8347.930240860536
     },
     {
       "break_even": {
+        "copy_time_days": 1945.9966089565319,
+        "multiplier": 3.3407667106549903,
+        "reached": true,
+        "tax_at": 0.04455730881338153
+      },
+      "break_even_dwell_fraction": {
         "copy_time_days": 345250.2847094025,
         "fraction_at": 0.009809642773422571,
         "multiplier": 592.7043514324506,
         "reached": true
       },
+      "cumulative_tax": -0.007385624187460145,
       "dwell_fraction": 3.3359969363562026e-05,
       "policy": "slingshot_maxboost",
       "t100_years": 47805.74184958315
