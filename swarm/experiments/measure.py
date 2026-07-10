@@ -49,9 +49,12 @@ RESULTS_DIR = Path(__file__).resolve().parent / "results"
 # during the second revision; the version bump makes every committed artifact declare it.
 SCHEMA_VERSION = 3
 
-# Deterministic seed ensemble (paired: every mode shares each seed). 64 available; each
-# measurement uses a prefix sized to its cost.
-SEEDS = [0x9E3779B9 + 2654435761 * k for k in range(64)]
+# Deterministic seed ensemble (paired: every mode shares each seed). 512 available; each
+# measurement uses a prefix sized to its cost. The multiplier is odd (coprime to 2^32), so the
+# 32-bit-masked seeds are all distinct. The headline speed sweep (cheap at N=500, ~1.6 s/seed)
+# uses the full 512; the expensive sweeps (finite_size to N=4800 at ~200 s/seed) use short prefixes.
+# Extending the pool past the old 64 leaves every existing prefix (<= 48) byte-identical.
+SEEDS = [0x9E3779B9 + 2654435761 * k for k in range(512)]
 
 
 # --------------------------------------------------------------------------------------------
@@ -193,8 +196,12 @@ def _tax_block(rows: list[tuple[dict, dict]]) -> dict:
 # --------------------------------------------------------------------------------------------
 
 def m_lambda_sweep() -> None:
-    """Headline: fuel/time/travel/energy tax vs Lambda = v/c (powered, event, lightspeed vs instant)."""
-    seeds = SEEDS[:48]
+    """Headline: fuel/time/travel/energy tax vs Lambda = v/c (powered, event, lightspeed vs instant).
+
+    512 seeds: this is the headline, and at N=500 a paired seed is ~1.6 s, so the ensemble is sized
+    to a precision target (a tight CI on the tax), not to compute - unlike the expensive sweeps.
+    """
+    seeds = SEEDS[:512]
     n_stars = 500
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
     data = {}

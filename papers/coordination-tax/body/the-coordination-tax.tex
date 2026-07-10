@@ -1,7 +1,7 @@
 \section{Results: the coordination tax}
 \label{sec:results}
 
-We measured the cost as a paired ensemble: 48 seeded galaxies of 500 stars, each filled twice on
+We measured the cost as a paired ensemble: 512 seeded galaxies of 500 stars, each filled twice on
 the \emph{identical} field, once with perfect information and once with the light-speed gate of
 (\ref{eq:gate}), all at the resolved event-driven timestep. Reporting the distribution across the
 ensemble follows the seeded Monte Carlo practice of the field \citep{forgan-2009}; we give the
@@ -46,7 +46,7 @@ front advances at the aggregate rate of hundreds of probes settling stars, and l
 them to wasted trips lowers that rate only in proportion, damped by the redundancy. So a fuel tax of
 a fifth does not translate into a fifth of the fill time: at $\Lambda = 0.2$ the fill-time tax is
 a few percent, roughly a third of the fuel tax, and it is present throughout rather than only at the
-end -- a median of $4.2\%$ already at half-fill, $5.1\%$ at 90\%, and $6.6\%$ at completion. The
+end -- a median of $4.0\%$ already at half-fill, $4.7\%$ at 90\%, and $6.0\%$ at completion. The
 population stays near its peak all the way into the final percent (about 480 aloft, and still near
 that at 99\% settled, since branching keeps launching until stars run out; Fig.~\ref{fig:concurrency}),
 and nearly identical between the regimes, so the two fills proceed almost in lockstep and the lag
@@ -67,12 +67,12 @@ same open star and all but the first arrive to find it taken. At the directed-en
 arrivals. The coordination tax is the \emph{extra} waste the delay adds on top of that
 already-wasteful baseline, expressed as a percent of it. Table~\ref{tab:lambda} and
 Fig.~\ref{fig:lambda} give this redundant-travel tax for powered flight swept across the speed axis:
-a median of $0.6\%$ more wasted journeys than perfect information at $\Lambda = 0.01$, rising to
-$19.5\%$ $[17.8, 23.3]$ at $\Lambda = 0.2$, with the confidence interval clear of zero at every speed
-and the per-seed spread widening with $\Lambda$ (Fig.~\ref{fig:byseed}). This 48-seed, 500-star
+a median of $0.7\%$ more wasted journeys than perfect information at $\Lambda = 0.01$, rising to
+$19.3\%$ $[18.8, 20.1]$ at $\Lambda = 0.2$, with the confidence interval clear of zero at every speed
+and the per-seed spread widening with $\Lambda$ (Fig.~\ref{fig:byseed}). This 512-seed, 500-star
 ensemble is our canonical configuration for the $\Lambda = 0.2$ tax; the branching and re-target-cap
 sweeps below use a lighter 32-seed, 400-star setup and report the same quantity as about $18.4\%$,
-well inside this interval. A fifth more wasted trips is what this means -- against an $82\%$ baseline it lifts the wasted fraction from about $82\%$ to about
+consistent with the headline given the smaller field and the lighter ensemble. A fifth more wasted trips is what this means -- against an $82\%$ baseline it lifts the wasted fraction from about $82\%$ to about
 $84\%$ of all journeys, \emph{not} to a fifth. (We count wasted arrivals; Fig.~\ref{fig:floor}
 instead measures redundant travel in parsecs, and the two track each other because the hops are
 near-uniform in length, so a count ratio and a distance ratio agree.)
@@ -80,9 +80,9 @@ near-uniform in length, so a count ratio and a distance ratio agree.)
 These points sit on the line the collision model predicted, and the sharpest evidence is the
 per-point agreement, not a single fitted number: the raw ratio of wasted trips
 $p_{\text{lag}}/p_{\text{perfect}}$ tracks $1 + \Lambda$ to under one percent at four independent
-speeds -- $1.006$, $1.042$, $1.093$, $1.195$ measured against $1.010$, $1.050$, $1.100$, $1.200$
+speeds -- $1.010$, $1.051$, $1.099$, $1.199$ measured against $1.010$, $1.050$, $1.100$, $1.200$
 predicted by (\ref{eq:tax}) at $\Lambda = 0.01, 0.05, 0.1, 0.2$. A through-origin fit of tax $=
-a\,\Lambda$ condenses this to one coefficient, $a = 0.96$; because a through-origin least-squares fit
+a\,\Lambda$ condenses this to one coefficient, $a = 0.95$; because a through-origin least-squares fit
 is weighted by $\Lambda^2$ and so dominated by the single highest-speed point, the more robust
 statement is the interval we can place on the slope, which the clumpy-field sweep supplies at its
 uniform null: $a = 0.97$ $[0.89, 1.19]$ (Section~\ref{sec:clumpy}). The coefficient is therefore
@@ -100,12 +100,10 @@ confirm.
 
 A fill-time tax rides alongside the fuel tax, but only once the swarm is fast, and it is a genuine
 effect rather than a coarse-step artifact. At low speed it is indistinguishable from zero -- a median
-of $0.0\%$ whose bootstrap interval falls inside $[0, 1.3]\%$ for $\Lambda \le 0.03$, i.e. bounded to
-within a $1.3\%$ margin of no delay (and to a clean $1\%$ at $\Lambda = 0.01$, where the interval is
-$[0, 0]$) -- but it is unambiguously nonzero by $\Lambda = 0.1$ and reaches a
-median of $6.6\%$ $[5.2, 10.5]$ at $\Lambda = 0.2$ (Table~\ref{tab:lambda}). The margin here is the
-width the ensemble resolves, not a pre-set tolerance; we report the demonstrated bound rather than
-assert equivalence to an arbitrary threshold. This is why we call the
+of $0.0\%$ with a bootstrap interval of $[0, 0]\%$ for $\Lambda \le 0.03$: with 512 seeds this is a
+genuine null, not a tolerance we merely failed to resolve. It becomes resolvable at $\Lambda = 0.05$
+($0.6\%$ $[0.3, 0.9]$), is unambiguous by $\Lambda = 0.1$, and reaches a
+median of $6.0\%$ $[5.3, 6.8]$ at $\Lambda = 0.2$ (Table~\ref{tab:lambda}). This is why we call the
 cost fuel-\emph{dominated} rather than time-free: at the directed-energy speeds where the fuel tax is
 largest, a secondary time cost of several percent emerges with it. Section~\ref{sec:mechanism}
 explains why the time cost stays a fraction of the fuel cost rather than matching it -- the fill rate
@@ -114,7 +112,7 @@ fifth more wasted journeys slows the fill by only a few percent.
 
 \begin{table}[!t]
   \centering
-  \caption{Coordination tax over the 48-seed paired ensemble at the event-driven timestep, powered
+  \caption{Coordination tax over the 512-seed paired ensemble at the event-driven timestep, powered
     flight, as a function of $\Lambda = v/c$: the redundant-travel (fuel) tax as a percent of the
     wasted journeys under perfect information, and the fill-time tax, each as a median with a
     bootstrap 95\% confidence interval.}
@@ -123,11 +121,11 @@ fifth more wasted journeys slows the fill by only a few percent.
     \toprule
     $\Lambda = v/c$ & Fuel tax (\%) & Fill-time tax (\%) \\
     \midrule
-    0.01 & \mbox{0.6 [0.5, 0.8]}   & \mbox{0.0 [0.0, 0.0]} \\
-    0.03 & \mbox{2.9 [1.8, 4.1]}   & \mbox{0.1 [0.0, 1.3]} \\
-    0.05 & \mbox{4.2 [3.4, 5.8]}   & \mbox{0.3 [0.0, 1.8]} \\
-    0.10 & \mbox{9.3 [7.4, 11.4]}  & \mbox{2.6 [0.9, 4.0]} \\
-    0.20 & \mbox{19.5 [17.8, 23.3]}& \mbox{6.6 [5.2, 10.5]} \\
+    0.01 & \mbox{0.7 [0.7, 0.8]}   & \mbox{0.0 [0.0, 0.0]} \\
+    0.03 & \mbox{2.5 [2.3, 2.7]}   & \mbox{0.0 [0.0, 0.0]} \\
+    0.05 & \mbox{4.5 [4.1, 4.8]}   & \mbox{0.6 [0.3, 0.9]} \\
+    0.10 & \mbox{9.3 [8.9, 9.6]}   & \mbox{2.2 [1.9, 2.8]} \\
+    0.20 & \mbox{19.3 [18.8, 20.1]}& \mbox{6.0 [5.3, 6.8]} \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -235,7 +233,7 @@ at each level (Fig.~\ref{fig:clumpiness}).
 
 The law's \emph{form} survives -- the tax stays linear in $\Lambda$ throughout -- and it is only the
 \emph{coefficient} that moves, in the safe direction. At the uniform limit the slope is $a =
-0.97$ $[0.89, 1.19]$, reproducing the headline $0.96$ -- the generator's built-in check. It stays
+0.97$ $[0.89, 1.19]$, reproducing the headline $0.95$ -- the generator's built-in check. It stays
 statistically consistent with one through moderate clustering ($a = 0.90$, $0.86$, $0.88$ at $R =
 1.03$, $0.97$, $0.78$), and drops resolvably -- the interval disjoint from the uniform one -- only at
 extreme substructure ($a = 0.51$ $[0.41, 0.70]$ at $R = 0.56$, more clumped than a dynamically
@@ -257,7 +255,7 @@ $p_{\text{lag}}/p_{\text{perfect}}$ falls below $1 + \Lambda$. Stratifying that 
 confirms it -- in both the uniform and the clumpy field the ratio declines from about $1.08$ at short
 hops to about $1.00$ at long ones, tracking the baseline per-hop waste probability as it climbs toward
 one, with the same shape in both. So clumpiness rescales the coefficient through saturation; it does
-not introduce a new hop-length dependence. This is also why the uniform fit gives $0.96$ and not a
+not introduce a new hop-length dependence. This is also why the uniform fit gives $0.95$ and not a
 clean $1.0$: even a uniform field has long, already-doomed hops.
 
 \subsection{Where the cost falls}
@@ -318,7 +316,7 @@ shows up as wasted motion, not as an unfilled galaxy.
   \includegraphics[width=0.66\linewidth]{fig_fuel_tax_vs_lambda.pdf}
   \caption{The coordination tax versus probe speed $\Lambda = v/c$ (log axis, so the linear law tax
     $=\Lambda$ appears as an upward curve), powered flight, over the
-    48-seed ensemble at the event-driven timestep (both as a percent over perfect information;
+    512-seed ensemble at the event-driven timestep (both as a percent over perfect information;
     points: medians; bars: bootstrap 95\% confidence
     intervals). The redundant-travel (fuel) tax sits on the derived law tax $=\Lambda$ (grey line,
     Eq.~\ref{eq:tax}) at every speed; the fill-time tax stays near zero at slingshot speeds and
@@ -331,7 +329,7 @@ shows up as wasted motion, not as an unfilled galaxy.
   \includegraphics[width=0.66\linewidth]{fig_fuel_tax_by_seed.pdf}
   \caption{Per-seed distribution of the fuel tax (extra wasted journeys, as a percent of the
     perfect-information waste) at slingshot speed ($\Lambda = 0.01$), $\Lambda = 0.1$, and
-    directed-energy speed ($\Lambda = 0.2$), over the 48-seed ensemble (box: interquartile range and
+    directed-energy speed ($\Lambda = 0.2$), over the 512-seed ensemble (box: interquartile range and
     median; points: individual seeds). The tax is small but consistently positive at slingshot speed
     and unambiguous at directed-energy speed.}
   \label{fig:byseed}
