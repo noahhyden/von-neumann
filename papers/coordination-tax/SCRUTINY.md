@@ -76,16 +76,21 @@ the saturation reading is vindicated; if it flattens, "shrinks with scale" must 
 withdrawn and the section restated as scale-stable-to-mildly-declining over the tested
 range.
 
-**Status:** `[x]` interior-only test run and folded into the paper. Added a read-only wall-distance
-histogram to the fold (`sim.py` `_wall_bin`, `settle_wall_hist`/`wasted_wall_hist`) and a new
-`m_finite_size_interior` measurement; recomputed the paired tax on bulk stars over 300-4800.
-**Result: partially confirmed.** Restricting to targets >= 1 mean-NN distance from any wall halves the
-decline and leaves it unresolved from zero (slope `-1.8 [-6.4, +1.2]` pp/decade vs all-stars
-`-4.4 [-8.2, -2.5]` on the same run); the deep interior (>= 2 NN) gives `+2.0 [-6.6, +9.3]`, consistent
-with no decline. So a substantial part of the "shrinks with scale" trend is a hard-wall boundary
-artifact and the bulk tax is statistically consistent with scale-stable - which *strengthens* the
-paper's no-fixed-percentage-extrapolation conclusion while correcting the mechanism. The scale section
-now reports this.
+**Status:** `[x]` tested two ways; **edge-artifact hypothesis REFUTED - the decline is genuine.**
+Added a read-only wall-distance histogram to the fold (`sim.py` `_wall_bin`,
+`settle_wall_hist`/`wasted_wall_hist`) with an interior-only measurement (`m_finite_size_interior`),
+and an opt-in periodic (toroidal, minimum-image) box with a periodic sweep (`m_finite_size_periodic`).
+The **periodic box is the decisive control** (removes the boundary entirely, no masking-subsample
+bias): the decline survives it almost unchanged - slope `-4.1 [-7.9, -1.3]` pp/decade vs the
+hard-walled `-4.6 [-7.3, -2.6]`, statistically indistinguishable - while the level sits a point or two
+higher at every size (the small edge dilution). So the "shrinks with scale" trend is a **genuine bulk
+effect, not a boundary artifact**; the wall moves the level, not the trend. The interior-only masking
+was underpowered (its small-N interior holds few stars, dragging its point slope toward zero) and is
+consistent within its wide interval. This does not weaken the paper - the headline (fraction does not
+grow -> no fixed-percentage extrapolation) is now *better* supported, since the shrink is real on both
+boxes. Scale section rewritten to report the periodic control as decisive. **An earlier draft of this
+fix wrongly called the decline a boundary artifact on the strength of the interior-only test alone;
+the periodic control corrected it - recorded here because the reversal is the point.**
 
 ### M2 - The headline scale statistic is not reproducible and over-reads a non-linear decline
 
@@ -298,12 +303,13 @@ Applied in this pass (all numbers traced to committed `swarm/experiments/results
   *exact* for the tax, one-frame), m9 (log-axis labels on Figs 1/3/7; Fig 5/branching confirmed
   linear, so left as-is), m10 (already foregrounded).
 
-- **M1 (now done)** added the wall-distance instrumentation and the `finite_size_interior`
-  measurement (`stats_util.loglog_slope_ci` reused for the by-shell regression), regenerated the
-  committed `finite_size_interior.json` over 300-4800 (re-running only the cheap 300-2400 points and
-  reusing the already-computed 4800 point), and rewrote the scale section. A `test_swarm.py` guard
-  pins the accumulator invariants and determinism. Verdict: partially confirmed - substantially an
-  edge artifact; bulk tax consistent with scale-stable.
+- **M1 (now done)** added the wall-distance instrumentation + `finite_size_interior`, and an opt-in
+  periodic box + `finite_size_periodic` (`stats_util.loglog_slope_ci` reused for both regressions);
+  committed `finite_size_interior.json` and `finite_size_periodic.json` over 300-4800; `test_swarm.py`
+  guards the accumulator invariants, determinism, periodic opt-in, and minimum-image metric.
+  **Verdict: the decline is genuine, not an edge artifact** - the periodic (edgeless) box declines at
+  `-4.1 [-7.9, -1.3]`, indistinguishable from the hard-walled `-4.6`. (An interim draft called it an
+  edge artifact from the interior-only test alone; the periodic control reversed that.)
 
 Deferred (need heavy re-runs, not rushed):
 
