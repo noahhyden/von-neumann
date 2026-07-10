@@ -120,11 +120,39 @@ is a scale-free property of a uniform field, exactly what (\ref{eq:tax}) predict
 length cancels, so confirming it holds to the printed digit from $0.14$ to $5$ stars per cubic
 parsec \citep{recons-census} is a consistency check on the derivation, not an independent robustness
 result. The case that would genuinely test density sensitivity is a clumpy, non-uniform field, which
-we do not simulate (a documented limitation). And because the field always fills under
+we examine directly in Section~\ref{sec:clumpy}; what we do not probe is a full galactic disk with a
+large-scale radial density gradient. And because the field always fills under
 both regimes and each settlement launches a fixed number of offspring, the two regimes build
 essentially the same number of probes -- they differ only in a handful of terminal launches as
 targets run out, well under a percent -- so the resource the delay actually moves is the number
 of journeys flown, which is why the coordination cost is a travel cost.
+
+The ensemble size varies by measurement, sized to each one's event-mode cost; Table~\ref{tab:ensembles}
+lists them. Every run is event-driven and paired -- each seed fills the identical field under both
+coordination regimes -- and the seed counts are prefixes of one fixed 64-seed set, so the sweeps share
+seeds and differ only in the stated star count.
+
+\begin{table}[!t]
+  \centering
+  \caption{The paired ensemble used by each measurement. All are event-driven and paired (each seed
+    filled under both coordination regimes on the identical field); seed counts are prefixes of one
+    fixed 64-seed set, sized to each measurement's cost.}
+  \label{tab:ensembles}
+  \begin{tabular}{lccl}
+    \toprule
+    Measurement & Seeds & Stars & Reported in \\
+    \midrule
+    Speed sweep (headline)  & 48 & 500 & Table~\ref{tab:lambda}, Fig.~\ref{fig:lambda} \\
+    Branching sweep         & 32 & 400 & Fig.~\ref{fig:branching} \\
+    Re-target-cap sweep     & 32 & 400 & Section~\ref{sec:results} \\
+    In-flight floor         & 48 & 400 & Fig.~\ref{fig:floor} \\
+    Concurrency             & 16 & 500 & Fig.~\ref{fig:concurrency} \\
+    Finite-size sweep       & 48 (32 at 4{,}800) & 300--4{,}800 & Fig.~\ref{fig:scale} \\
+    Clumpy-field sweep      & 48 & 500 & Fig.~\ref{fig:clumpiness} \\
+    Timestep artifact       & 32 & 300 & Fig.~\ref{fig:dt} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \subsection{Baseline validation}
 By construction the ``instant'' regime is the $c\to\infty$ limit of (\ref{eq:gate}), and it
