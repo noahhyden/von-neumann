@@ -132,6 +132,10 @@ jobs:
               - *shared
               - 'papers/electronics-wall/**'
               - 'closure-sim/**'
+            spine:
+              - *shared
+              - 'papers/spine/**'
+              - 'spine/**'
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -191,6 +195,21 @@ jobs:
         uses: xu-cheng/latex-action@v4
         with:
           working_directory: papers/electronics-wall
+          root_file: main.tex
+      # spine figures RENDER from committed JSON result artifacts (spine/experiments/results/),
+      # not from a live simulation - the same discipline as coordination-tax. The harness
+      # (spine/experiments/measure.py) runs LOCALLY and commits its deterministic seeded output;
+      # CI only plots it (a few seconds), so there is no figure cache here, and the spine pytest
+      # job's drift-guard re-runs a slice to prove the committed JSON still matches the fold.
+      - name: Render spine figures from committed results (spine)
+        if: steps.changed.outputs.spine == 'true'
+        working-directory: spine
+        run: uv run --extra dev python -m experiments.paper_figures
+      - name: Typeset spine (LaTeX) - a broken .tex fails the PR
+        if: steps.changed.outputs.spine == 'true'
+        uses: xu-cheng/latex-action@v4
+        with:
+          working_directory: papers/spine
           root_file: main.tex
 
   frontend:

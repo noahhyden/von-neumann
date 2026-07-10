@@ -96,6 +96,14 @@ jobs:
         working-directory: von-neumann/closure-sim
         run: uv run --extra dev python -m closure_sim.paper_figures
 
+      # spine figures render from committed JSON (spine/experiments/results/), like
+      # coordination-tax: the harness (spine/experiments/measure.py) runs LOCALLY and commits
+      # its deterministic output, and this step only plots it (a few seconds), so no cache.
+      - name: Render spine figures from committed results (spine)
+        continue-on-error: true
+        working-directory: von-neumann/spine
+        run: uv run --extra dev python -m experiments.paper_figures
+
       - name: Typeset the papers (LaTeX)
         uses: xu-cheng/latex-action@v4
         continue-on-error: true
