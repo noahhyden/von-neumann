@@ -32,6 +32,7 @@ Measurements (referee asks in brackets):
 from __future__ import annotations
 
 import json
+import math
 import statistics
 import sys
 from dataclasses import dataclass
@@ -41,7 +42,7 @@ from swarm import SwarmParams, simulate_swarm
 from swarm.models import C_PC_PER_YEAR, KM_S_TO_PC_YR, N_HOP_BINS
 from swarm.sim import initial_state
 
-from experiments.stats_util import bootstrap_median_ci, sign_test_positive
+from experiments.stats_util import bootstrap_median_ci, loglog_slope_ci, sign_test_positive
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 # v3: per-run records carry ``total_arrivals`` (settlements + wasted trips). Added to record()
@@ -73,6 +74,8 @@ def record(r) -> dict:
         "mean_launch_speed_km_s": r.mean_launch_speed_km_s,
         "mean_wasted_speed_km_s": r.mean_wasted_speed_km_s,
         "mean_wasted_hop_pc": r.mean_wasted_hop_pc,
+        "settle_wall_hist": list(r.settle_wall_hist),
+        "wasted_wall_hist": list(r.wasted_wall_hist),
     }
 
 
@@ -270,15 +273,27 @@ def m_finite_size() -> None:
     # dedicated high-seed sweep to resolve whether the large-N tax decline is real or scatter.
     n_seeds_by_n = [(300, 48), (600, 48), (1200, 48), (2400, 48), (4800, 32)]
     data = {}
+    per_n_fuel: dict[int, list[float]] = {}
     for n, k in n_seeds_by_n:
         print(f"    N={n} ({k} seeds)", flush=True)
         rows = _paired("lightspeed", seeds=SEEDS[:k], n_stars=n, policy="powered",
                        probe_speed_c=0.2, speed_cap_c=0.4, stepping="event")
         data[str(n)] = _tax_block(rows)
+        per_n_fuel[n] = [pct_delta(t["wasted_arrivals"], b["wasted_arrivals"]) for b, t in rows]
+    # Scale trend, computed here so it regenerates from source (not only stated in the paper prose):
+    # OLS slope of the median tax on log10(N), with a seeded-bootstrap 95% CI resampling seeds within
+    # each N. The decline is convex (accelerating), so this linear slope is a local summary; the
+    # paper reports the per-step drops for the shape.
+    ns = [n for n, _ in n_seeds_by_n]
+    slope, slope_lo, slope_hi = loglog_slope_ci([math.log10(n) for n in ns],
+                                                [per_n_fuel[n] for n in ns])
     write_result("finite_size",
                  {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
                   "mode_treat": "lightspeed", "stepping": "event"},
-                 {"data": data})
+                 {"data": data,
+                  "scale_regression": {"x": "log10(N)", "unit": "percentage points per decade of N",
+                                       "resample": "seeds within each N",
+                                       "slope": slope, "ci_lo": slope_lo, "ci_hi": slope_hi}})
 
 
 def m_concurrency() -> None:
@@ -310,10 +325,19 @@ def m_concurrency() -> None:
                     series[mode][b].append(r.steps[idx].in_flight)
         print(f"      seed {i + 1}/{len(seeds)}", end="\r", flush=True)
     print(" " * 40, end="\r")
-    data = {mode: {"coverage": bins,
-                   "in_flight_median": [statistics.median(series[mode][b]) if series[mode][b] else None for b in bins],
-                   "peak_in_flight_median": statistics.median(peak[mode])}
-            for mode in ("instant", "lightspeed")}
+    data = {}
+    for mode in ("instant", "lightspeed"):
+        meds, clos, chis = [], [], []
+        for b in bins:
+            xs = series[mode][b]
+            if xs:
+                m, clo, chi = bootstrap_median_ci(xs)
+            else:
+                m = clo = chi = None
+            meds.append(m); clos.append(clo); chis.append(chi)
+        data[mode] = {"coverage": bins, "in_flight_median": meds,
+                      "in_flight_ci_lo": clos, "in_flight_ci_hi": chis,
+                      "peak_in_flight_median": statistics.median(peak[mode])}
     write_result("concurrency",
                  {"policy": "powered", "lambda": lam, "n_stars": n_stars, "n_seeds": len(seeds),
                   "stepping": "event"},
@@ -512,11 +536,103 @@ def m_validation() -> None:
                   "nearest_beats_maxboost_on_time": out["slingshot_nearest"]["t100"] < out["slingshot_maxboost"]["t100"]})
 
 
+def _interior_wasted(rec: dict, start_bin: int) -> int:
+    """Wasted arrivals whose target sits at wall distance >= the shell (bins ``start_bin``..end)."""
+    return sum(rec["wasted_wall_hist"][start_bin:])
+
+
+def _interior_settled(rec: dict, start_bin: int) -> int:
+    return sum(rec["settle_wall_hist"][start_bin:])
+
+
+def m_finite_size_interior() -> None:
+    """Finite-size EDGE test (referee finding M1): does the with-N tax decline survive when the
+    tax is measured on BULK stars only?
+
+    The hard-walled box means edge stars (fewer neighbours, less contention) dilute the tax, and the
+    edge fraction falls as N^(-1/3), so the fraction can shrink with N for a purely geometric reason.
+    Here each contested arrival is tagged by its target's distance to the nearest wall (the read-only
+    ``*_wall_hist`` accumulators), and we recompute the paired fuel tax restricted to interior stars
+    at two shells: >= 1 and >= 2 mean-NN distances from any wall. If the all-stars decline is an edge
+    artifact it flattens under the interior restriction; if it is genuine bulk saturation it persists.
+
+    Spans 300..4800 (32/32/24/16/12 seeds; seeds scaled down as the event-mode O(N^2) cost grows) to
+    cover the same range as the committed ``finite_size`` all-stars sweep, so the interior and
+    all-stars declines are compared over an identical lever arm.
+    """
+    n_seeds_by_n = [(300, 32), (600, 32), (1200, 24), (2400, 16), (4800, 12)]
+    # Shell start-bins for WALL_BIN_EDGES_NN=(0.5,1,1.5,2): shell>=1.0 NN -> bins 2.., shell>=2.0 -> bin 4.
+    shells = {"all": 0, "interior_1nn": 2, "interior_2nn": 4}
+    data = {}
+    per_n: dict[str, dict[int, list]] = {s: {} for s in shells}
+    for n, k in n_seeds_by_n:
+        print(f"    N={n} ({k} seeds)", flush=True)
+        rows = _paired("lightspeed", seeds=SEEDS[:k], n_stars=n, policy="powered",
+                       probe_speed_c=0.2, speed_cap_c=0.4, stepping="event")
+        block = {"n_seeds": k}
+        for name, sb in shells.items():
+            if sb == 0:
+                tax = [pct_delta(t["wasted_arrivals"], b["wasted_arrivals"]) for b, t in rows]
+            else:
+                tax = [pct_delta(_interior_wasted(t, sb), _interior_wasted(b, sb)) for b, t in rows]
+            per_n[name][n] = tax
+            block[name] = summarize(tax)
+        # Interior fraction of the settled field (context: how much of the box is "bulk").
+        interior_frac = [_interior_settled(b, 2) / b["final_settled"] for b, _ in rows]
+        block["interior_2nn_settled_frac"] = summarize(interior_frac)
+        data[str(n)] = block
+    ns = [n for n, _ in n_seeds_by_n]
+    regressions = {}
+    for name in shells:
+        slope, lo, hi = loglog_slope_ci([math.log10(n) for n in ns], [per_n[name][n] for n in ns])
+        regressions[name] = {"slope": slope, "ci_lo": lo, "ci_hi": hi}
+    write_result("finite_size_interior",
+                 {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
+                  "mode_treat": "lightspeed", "stepping": "event",
+                  "shells_nn": {"interior_1nn": 1.0, "interior_2nn": 2.0},
+                  "note": "tax on interior stars only (target >= shell mean-NN distances from any wall)"},
+                 {"data": data,
+                  "scale_regression": {"x": "log10(N)", "unit": "percentage points per decade of N",
+                                       "resample": "seeds within each N", "by_shell": regressions}})
+
+
+def m_finite_size_periodic() -> None:
+    """Finite-size EDGE test, second control (referee finding M1): the periodic-box cross-check.
+
+    The interior-only test (``m_finite_size_interior``) removes edge stars by masking; this removes
+    them by geometry - a periodic (toroidal, minimum-image) box has no walls at all, so every star
+    sits in a full neighbourhood. Same sweep, seeds, and Lambda as the hard-walled ``finite_size``,
+    so the two slopes are directly comparable: if the hard-wall decline is a boundary artifact, the
+    periodic tax stays flat (and higher, since no edge dilutes it); if it is genuine bulk saturation,
+    the periodic tax declines too.
+    """
+    n_seeds_by_n = [(300, 32), (600, 32), (1200, 24), (2400, 16), (4800, 12)]
+    data = {}
+    per_n: dict[int, list[float]] = {}
+    for n, k in n_seeds_by_n:
+        print(f"    N={n} ({k} seeds, periodic)", flush=True)
+        rows = _paired("lightspeed", seeds=SEEDS[:k], n_stars=n, policy="powered",
+                       probe_speed_c=0.2, speed_cap_c=0.4, stepping="event", periodic=True)
+        data[str(n)] = _tax_block(rows)
+        per_n[n] = [pct_delta(t["wasted_arrivals"], b["wasted_arrivals"]) for b, t in rows]
+    ns = [n for n, _ in n_seeds_by_n]
+    slope, lo, hi = loglog_slope_ci([math.log10(n) for n in ns], [per_n[n] for n in ns])
+    write_result("finite_size_periodic",
+                 {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
+                  "mode_treat": "lightspeed", "stepping": "event", "periodic": True},
+                 {"data": data,
+                  "scale_regression": {"x": "log10(N)", "unit": "percentage points per decade of N",
+                                       "resample": "seeds within each N",
+                                       "slope": slope, "ci_lo": lo, "ci_hi": hi}})
+
+
 MEASUREMENTS = {
     "lambda_sweep": m_lambda_sweep,
     "branching": m_branching,
     "energy_tax": m_energy_tax,
     "finite_size": m_finite_size,
+    "finite_size_interior": m_finite_size_interior,
+    "finite_size_periodic": m_finite_size_periodic,
     "concurrency": m_concurrency,
     "floor_bracket": m_floor_bracket,
     "retarget_cap": m_retarget_cap,
@@ -527,7 +643,8 @@ MEASUREMENTS = {
 
 # Cheap-first order so an interrupted run lands the quick wins early.
 ORDER = ["validation", "dt_artifact", "retarget_cap", "energy_tax", "branching",
-         "lambda_sweep", "concurrency", "floor_bracket", "clumpiness", "finite_size"]
+         "lambda_sweep", "concurrency", "floor_bracket", "clumpiness", "finite_size",
+         "finite_size_interior", "finite_size_periodic"]
 
 
 def main(argv: list[str]) -> None:

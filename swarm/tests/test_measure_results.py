@@ -111,3 +111,18 @@ def test_finite_size_json_matches_fold() -> None:
         treat = record(simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=seed))
         _assert_record_matches(base, block["per_seed"][i]["base"], f"finite_size base seed{i}")
         _assert_record_matches(treat, block["per_seed"][i]["treat"], f"finite_size treat seed{i}")
+
+
+def test_finite_size_periodic_json_matches_fold() -> None:
+    # Guard the periodic-box edge control (M1) at the smallest N: same pipeline, periodic=True.
+    d = _load("finite_size_periodic")
+    n = min(int(k) for k in d["data"])
+    block = d["data"][str(n)]
+    for i in range(2):
+        seed = SEEDS[i]
+        common = dict(n_stars=n, policy="powered", probe_speed_c=0.2, speed_cap_c=0.4,
+                      stepping="event", periodic=True)
+        base = record(simulate_swarm(SwarmParams(**common, coordination="instant"), seed=seed))
+        treat = record(simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=seed))
+        _assert_record_matches(base, block["per_seed"][i]["base"], f"finite_size_periodic base seed{i}")
+        _assert_record_matches(treat, block["per_seed"][i]["treat"], f"finite_size_periodic treat seed{i}")

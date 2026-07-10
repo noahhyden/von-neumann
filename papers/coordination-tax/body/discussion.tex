@@ -1,7 +1,7 @@
 \section{Discussion}
 
 The result refines rather than overturns the slingshot picture, and it does so twice over.
-Nicholson and Forgan's speed-up is real, large, and here reproduced quantitatively
+Nicholson and Forgan's speed-up is real, large, and here reproduced to the same order of magnitude
 \citep{nicholson-forgan-2013}; finite light-speed does not erode it, and does not measurably
 delay the fill of the field. What a perfect-information model hides is not lost time but lost
 motion: probes flying to stars that others have already claimed. That redundant travel is the
@@ -49,12 +49,22 @@ reshuffle which stars are near which. One might object that this touches the del
 itself, not just the backdrop: the beacon leaves where the star \emph{was}, so a moving field would
 need retarded positions in (\ref{eq:gate}). But that specific correction is tiny, and for a clean
 reason: during a beacon's light-crossing a star moves only the fraction $v_\star/c$ of the distance
-it is signalling across, and $v_\star/c \approx (40~\mathrm{km/s})/c \approx 10^{-4}$ -- a hundredth
-of a percent, whatever the decision distance -- so the gate reads essentially the right geometry at
-the moment of decision. What the frozen field removes is the slow, Myr-scale drift
+it is signalling across, where $v_\star$ is the \emph{relative} velocity between emitter and
+observer -- the bulk Galactic rotation is common to both and cancels, leaving the peculiar and shear
+velocity, $\sim\!40~\mathrm{km/s}$, so $v_\star/c \approx 10^{-4}$, a hundredth of a percent whatever
+the decision distance (and even the full circular speed, $220~\mathrm{km/s}$, gives $7\times10^{-4}$,
+under a tenth of a percent) -- so the gate reads essentially the right geometry at the moment of
+decision. What the frozen field removes is the slow, Myr-scale drift
 of the layout, and that is exactly what the paired design controls: both coordination regimes run on
 the \emph{identical} frozen field, so the difference still isolates the light-lag cost even where the
-absolute layout is idealized. The absolute fill times, however, do inherit the idealization. The
+absolute layout is idealized. This cancellation extends to the \emph{dynamics}, not just the static
+geometry: what the tax multiplies is the baseline per-hop contention $p_\text{perfect}$, set by the
+local stellar density and the branching factor, both of which are mode-independent and both of which
+see the identical drift under either regime -- so a moving field would perturb the paired difference
+only at second order, through any correlation between a star's motion and its being contended, which
+the global constancy of $v$ and $c$ already suppresses in the same way it suppresses the density
+dependence (Section~\ref{sec:clumpy}). A direct moving-field spot-check would confirm this and is the
+natural next test; the absolute fill times, meanwhile, do inherit the idealization. The
 slingshot is idealized in a second way we inherit from the source models: we track the scalar speed a
 probe gains from an encounter and let it then depart toward its chosen target, rather than resolving
 the outgoing \emph{direction} that a real gravitational assist fixes by geometry. A directional model
@@ -63,10 +73,16 @@ slingshot regime; but because that regime already pays only about a percent, and
 law is driven by the directly-swept powered speed rather than by slingshot mechanics, the
 simplification does not touch the law.
 
-One idealization we do \emph{not} need to correct is relativity. At $0.2\,c$ the Lorentz factor is
-$\gamma \approx 1.02$, and because every target decision and every beacon-emission time is evaluated
-in the one shared galaxy frame, the coordination logic is frame-consistent; the kinematic
-corrections, under $2\%$ at this speed, do not enter the $v/c$ law, which counts journeys in that frame.
+One idealization we do \emph{not} need to correct is relativity, and for a stronger reason than
+smallness. The tax counts journeys, and every quantity that enters it -- the belief gate
+(\ref{eq:gate}), the travel time $d/v$, the light-delay $d/c$, and the in-flight learn time of
+Section~\ref{sec:floor} -- is a coordinate time in the one shared galaxy frame, the frame in which
+the star field is at rest and the beacons are defined. The governing ratio $\Lambda = (d/c)/(d/v) =
+v/c$ is a ratio of two coordinate times in that single frame; no Lorentz transformation to the probe
+frame enters, and $v < c$ throughout, so $\Lambda = v/c$ is \emph{exact} for the coordination tax at
+any sub-luminal speed, not a small-$\beta$ linearization. The Lorentz factor at $0.2\,c$ ($\gamma
+\approx 1.02$, a kinematic correction of about $2\%$) touches only the separate energy weighting,
+where it never enters a headline number, and not the journey count.
 
 Three further bounds on scope. First, the field is uniform by default; changing its density only
 rescales the clock (confirmed), and a clumpy, non-uniform field leaves the law intact -- the
@@ -75,10 +91,11 @@ redundant-travel tax stays $\approx \Lambda$, softening if anything at extreme s
 density gradient. Second, at high $v/c$ the hops are short, so an event-driven run
 generates of order one arrival per star settled many times over and costs roughly $O(N^2)$; this
 bounded the size sweep to a sixteen-fold range. Over it the tax does not grow with scale -- it holds
-near a fifth up to about a thousand stars and then trends downward at the largest fields we can reach
-(Section~\ref{sec:scale}) -- so we make no quantitative extrapolation to galactic ($\sim\!10^{11}$-star)
-scale. A sixteen-fold lever arm cannot support one, and one over which the fraction if anything
-shrinks certainly cannot. Third, the dynamics have no loss term: settled sites never fail, so the field
+near a fifth up to about a thousand stars and then trends downward at the largest fields we can reach,
+a genuine bulk decline that survives a periodic-box control and so is not a hard-wall boundary
+artifact (Section~\ref{sec:scale}) -- so we make no quantitative extrapolation to galactic
+($\sim\!10^{11}$-star) scale. A sixteen-fold lever arm cannot
+support one, and one over which the fraction does not grow certainly cannot. Third, the dynamics have no loss term: settled sites never fail, so the field
 always closes. A
 settlement-death term of the kind that produces the ``Aurora'' steady state
 \citep{carroll-nellenback-2019} is what would be needed to turn coordination failure into a

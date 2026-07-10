@@ -60,7 +60,9 @@ from Nicholson & Forgan (2013); the numbers the paper defers are tagged `[ESTIMA
 
 - **Max boost per encounter** - `Δv_max = u_esc² / ( u_esc²/(2·u_i) + u_i )` (their Eq. 4),
   with `u_i` = the probe's speed relative to the star. This *self-limits*: Δv_max peaks near
-  `u_i ≈ u_esc` and falls off for fast probes, so speed does not run away.
+  `u_i ≈ u_esc/√2` (≈ 437 km/s for solar values) and falls off for fast probes, so speed does not
+  run away. (The implementation uses Eq. 4 directly; only this prose peak-location note is corrected
+  from an earlier "u_i ≈ u_esc".)
 - **Stellar escape velocity `u_esc = 617.5 km/s`** - solar, `u_esc = √(2GM☉/R☉)`. Derived:
   `√(2 · 6.674e-11 · 1.989e30 / 6.957e8) = 6.18×10⁵ m/s`. Sourced (the paper "assumes solar
   values for M∗ and R∗"); constants are IAU/CODATA nominal. **Derived, not a free number.**
@@ -156,7 +158,9 @@ distant star `i` as settled only once the news has arrived -
 - **`Λ = v_probe / c`** - the dimensionless ratio (info-lag-per-hop ÷ travel-time-per-hop =
   (d/c)/(d/v) = v/c). Derived, not free, and hop-length-independent (d cancels). At the powered
   cruise (3×10⁻⁵ c) `Λ ≈ 3×10⁻⁵` → negligible; it grows through the slingshot regime
-  (`Λ ≈ 0.01`) up to directed-energy speeds (`0.1-0.2 c`, Carroll-Nellenback / Lubin). **`Λ` is
+  (`Λ ≈ 0.01`) up to beamed directed-energy speeds (`0.1-0.2 c`, [lubin-2016]; NOT
+  Carroll-Nellenback, whose ships cruise at ~10 km/s ~ 3×10⁻⁵ c - that source grounds the Aurora
+  settlement-death term, not the top-end speed). **`Λ` is
   the governing parameter of the FUEL tax:** at the resolved (event) timestep the fill-TIME tax
   is small at every speed, but the redundant-travel (wasted-journey) tax rises cleanly and
   monotonically with `Λ` - median +0.6% at `Λ=0.01`, +2.9/+4.2/+9.3% at 0.03/0.05/0.1, +19.5%
@@ -270,15 +274,23 @@ wasted journeys as % of the perfect-info waste), median [bootstrap 95% CI], (see
 
   *Fill-time tax: small, regime-dependent, not a tail spike.* A companion fill-time tax rides along:
   median 0.0 / 0.1 / 0.3 / 2.6 / **6.6%** across Λ = 0.01/0.03/0.05/0.1/0.2. It is bounded within the
-  noise of zero for Λ ≤ 0.03 (bootstrap interval inside [0, 1.3]%, an equivalence to no delay at a 1%
-  margin) and unambiguous only from Λ = 0.1. It is present throughout the fill, not concentrated at the
+  noise of zero for Λ ≤ 0.03 (bootstrap interval inside [0, 1.3]%, i.e. equivalence to no delay to
+  within a 1.3% margin - a clean 1% only at Λ=0.01, where the interval is [0,0]) and unambiguous only
+  from Λ = 0.1. It is present throughout the fill, not concentrated at the
   end: at Λ=0.2 it is +4.2 / +5.1 / +5.5 / +6.6% at t50 / t90 / t99 / t100. The near-constant in-flight
   population (~480, still near-peak at 99% coverage) holds it to ~1/3 of the fuel tax rather than zero.
 
-*Contention scales with branching* (`experiments/measure.py::branching`, N=400, 32 seeds). The tax
-grows with the offspring branching factor at high `Λ` then saturates: at `Λ=0.2`, +18.4 / +24.9 /
-+25.5% for offspring = 2/3/4; at `Λ=0.05` it is ~flat (~+6%). The default of 2 is not a floor hiding
-a much larger tax; the whole effect stays within an order of magnitude.
+*Contention scales with branching, without saturating* (`experiments/measure.py::branching`, N=400,
+32 seeds). The tax grows with the offspring branching factor and does NOT level off over the range
+tested (2 to 16 offspring): at `Λ=0.2`, +18.4 / +24.9 / +25.5 / +31.9 / +36.5% for offspring =
+2/3/4/8/16 (the intervals at 8 and 16 are disjoint from those below); at `Λ=0.05` it climbs gently,
++5.8 / +5.6 / +6.0 / +7.8 / +9.6%. The tax keeps rising roughly linearly in the logarithm of the
+branching factor, so the default of 2 is a genuine lower bound, not a plateau - a factory that
+branches harder pays a larger tax, reaching about a third more wasted journeys at 16 offspring. This
+is an honest correction of a round-1 note that read the 24.9-to-25.5% step (offspring 3 to 4) as
+saturation: carrying the sweep to 16 shows that was an artifact of where it stopped. The growth is
+in the tax's coefficient, not its scaling - the whole `Λ=0.2` column stays of order `Λ` (18 to 37%),
+so the `v/c` law holds at fixed branching and the branching factor sets its coefficient.
 
 *Why the time cost stays below the fuel cost: concurrency* (`experiments/measure.py::concurrency`,
 N=500, 16 seeds). A median ~480 probes are in flight at the peak of a fill, and the population stays

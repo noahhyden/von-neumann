@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from experiments.stats_util import bootstrap_median_ci, sign_test_positive
+from experiments.stats_util import bootstrap_median_ci, loglog_slope_ci, sign_test_positive
 
 
 def test_sign_test_all_positive_is_two_over_2n() -> None:
@@ -47,3 +47,25 @@ def test_bootstrap_ci_narrows_with_more_data() -> None:
     _, lo_t, hi_t = bootstrap_median_ci([50.0] * 16)
     assert hi_t - lo_t == 0.0  # identical values -> zero-width CI
     assert hi_w - lo_w > 0.0
+
+
+def test_loglog_slope_recovers_a_known_line() -> None:
+    # Groups whose medians fall exactly on y = 2 + 3x recover slope 3; the CI is deterministic
+    # (seeded) and, with zero within-group spread, collapses onto the point slope.
+    x = [1.0, 2.0, 3.0, 4.0]
+    groups = [[2.0 + 3.0 * xi] * 8 for xi in x]
+    slope, lo, hi = loglog_slope_ci(x, groups)
+    assert slope == pytest.approx(3.0, rel=1e-9)
+    assert lo == pytest.approx(3.0, rel=1e-9) and hi == pytest.approx(3.0, rel=1e-9)
+    # Same call is bit-reproducible (seeded resampling, no wall clock).
+    assert loglog_slope_ci(x, groups) == (slope, lo, hi)
+
+
+def test_loglog_slope_is_negative_for_a_declining_trend() -> None:
+    # A trend that falls as x grows yields a negative slope with an interval clear of zero -
+    # the shape of the finite-size scale check.
+    x = [2.0, 3.0, 4.0]
+    groups = [[20.0, 21.0, 19.0], [17.0, 18.0, 16.0], [12.0, 13.0, 11.0]]
+    slope, lo, hi = loglog_slope_ci(x, groups)
+    assert slope < 0.0
+    assert hi < 0.0  # whole interval below zero
