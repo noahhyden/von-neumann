@@ -239,19 +239,23 @@ from current source before submitting. **Status:** `[x]` rebuilt in this pass.
   default; tax/Lambda runs 0.92/1.24/1.27/1.60/1.83 for offspring 2/3/4/8/16. State it as
   `tax = a(branching) . Lambda, a ~ 1 at default` in the abstract. **Status:** `[x]`.
 - **m2** Lead the linearity evidence with the four-point ratio table (measured
-  1.006/1.042/1.093/1.195 vs 1+Lambda, <1% each), not the through-origin slope, which is
+  1.010/1.051/1.099/1.199 vs 1+Lambda, <1% each at 512 seeds), not the through-origin slope, which is
   ~76% determined by the single Lambda=0.2 point. **Status:** `[x]`.
-- **m3** "The sign is built in" is empirically false - 7/48 seeds at Lambda=0.01 go the
-  other way (retarget cascades make it non-monotone per realization; monotone only in
-  expectation). Rephrase and cite the sign-test the code already computes. **Status:**
-  `[x]`.
+- **m3** "The sign is built in" is empirically false - a minority of seeds at Lambda=0.01 go the
+  other way (68 of 512 at the 512-seed headline; retarget cascades make it non-monotone per
+  realization, monotone only in expectation). Rephrase and cite the sign-test the code already
+  computes (442/512 positive at Lambda=0.01, all 512 at Lambda=0.2). **Status:** `[x]`.
 - **m4** Clumpy-field "law survives" overstated where it resolvably breaks - the
   coefficient halves to 0.51 [0.41, 0.70] at R=0.56, disjoint from the uniform 0.97; and a
   Thomas process has no radial gradient, so it under-tests the real-disk case. **Status:**
   `[x]` softened.
-- **m5** Round headline figures to CI-supported precision ("~20%", not 19.5%); ensemble
-  sizes are compute-driven so CIs are the reportable quantity. **Status:** `[-]` author's
-  call (paper always shows the CI, so imprecision is visible).
+- **m5** Ensemble sizes were compute-driven, not sized to a precision target - worst for the
+  headline, which was only 48 seeds at N=500 despite an N=500 paired seed costing ~1.6 s.
+  **Status:** `[x]` the headline speed sweep was re-run at **512 seeds** (the seed pool extended
+  from 64; expensive sweeps keep their short prefixes). Medians held; the Lambda=0.2 fuel-tax CI
+  tightened from [17.8, 23.3] to [18.8, 20.1] (~4x), the fill-time tax at Lambda<=0.03 resolved to a
+  clean [0,0], and the through-origin slope settled at 0.95. Table 1, the ratio table, the fill-time
+  splits, sign counts, and all figure/caption seed counts were updated to the 512-seed values.
 - **m6** gamma-1 = 2.06% at 0.2c, not "under 2%". **Status:** `[x]`.
 - **m7** REFERENCES.md slingshot peak is at u_esc/sqrt(2) ~ 437 km/s, not "u_i ~ u_esc"
   (implementation is correct; only the prose is off). **Status:** `[x]`.

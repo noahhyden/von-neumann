@@ -163,8 +163,8 @@ distant star `i` as settled only once the news has arrived -
   settlement-death term, not the top-end speed). **`Λ` is
   the governing parameter of the FUEL tax:** at the resolved (event) timestep the fill-TIME tax
   is small at every speed, but the redundant-travel (wasted-journey) tax rises cleanly and
-  monotonically with `Λ` - median +0.6% at `Λ=0.01`, +2.9/+4.2/+9.3% at 0.03/0.05/0.1, +19.5%
-  at 0.2 (powered, N=500, 48 seeds). It is the right group for the right cost.
+  monotonically with `Λ` - median +0.7% at `Λ=0.01`, +2.5/+4.5/+9.3% at 0.03/0.05/0.1, +19.3%
+  at 0.2 (powered, N=500, 512 seeds). It is the right group for the right cost.
 - **Effective speed `v_eff` and hop lengths (derived observables, read-only accumulators).**
   `mean_launch_speed_km_s` is the mean launch speed (so `Λ_eff = v_eff/c` can be checked per
   policy); `mean_wasted_hop_pc` / `mean_settle_hop_pc` are the mean lengths of lost-race and
@@ -253,31 +253,33 @@ speeds and only a few percent at directed-energy speeds (below), far below the r
 
 *The real cost is redundant travel, governed by `Λ = v/c`* (`experiments/measure.py::lambda_sweep`).
 Probes-built is ~mode-independent (above), so the coordination cost is wasted journeys. For powered
-flight swept across the speed axis (N=500, 48 seeds, lightspeed vs instant), the fuel tax (extra
+flight swept across the speed axis (N=500, 512 seeds, lightspeed vs instant; the headline is cheap at
+N=500 (~1.6 s/paired seed), so it is sized to a precision target, not to compute), the fuel tax (extra
 wasted journeys as % of the perfect-info waste), median [bootstrap 95% CI], (seeds positive):
-  - `Λ=0.01`: **+0.6% [0.5, 0.8]** (40/47)
-  - `Λ=0.03`: **+2.9% [1.8, 4.1]** (42/48)
-  - `Λ=0.05`: **+4.2% [3.4, 5.8]** (42/48)
-  - `Λ=0.10`: **+9.3% [7.4, 11.4]** (46/48)
-  - `Λ=0.20`: **+19.5% [17.8, 23.3]** (48/48)
+  - `Λ=0.01`: **+0.7% [0.7, 0.8]** (442/512)
+  - `Λ=0.03`: **+2.5% [2.3, 2.7]** (460/512)
+  - `Λ=0.05`: **+4.5% [4.1, 4.8]** (471/512)
+  - `Λ=0.10`: **+9.3% [8.9, 9.6]** (498/512)
+  - `Λ=0.20`: **+19.3% [18.8, 20.1]** (512/512)
 
-  We do NOT lean on a sign-test p-value: by construction a stale view can only ADD wasted journeys,
-  so the sign is built in - the magnitude and its scaling are the informative part (CIs and sweeps,
-  not significance theatre). Honest correction of a round-1 overclaim.
+  The delay adds wasted journeys IN EXPECTATION; the sign is statistical, not structural - retarget
+  cascades make the paired difference non-monotone per seed (68 of 512 negative at Λ=0.01), so the
+  median and its CI, not a sign test, are the finding. Where informative, a two-sided sign test agrees
+  overwhelmingly (442/512 positive at Λ=0.01, all 512 at Λ=0.2). (Honest correction of a round-1
+  "sign is built in" overclaim.)
 
   *Derived law (collision model), confirmed.* The measured tax follows **`tax ≈ Λ`**: a through-origin
-  fit gives slope **0.96** (the exposure model predicts exactly 1), and the raw ratio
-  `waste_ls / waste_inst` tracks **`1 + Λ`** almost exactly - 1.006 / 1.042 / 1.093 / 1.195 measured
+  fit gives slope **0.95** (the exposure model predicts exactly 1), and the raw ratio
+  `waste_ls / waste_inst` tracks **`1 + Λ`** almost exactly - 1.010 / 1.051 / 1.099 / 1.199 measured
   against 1.010 / 1.050 / 1.100 / 1.200 predicted at Λ = 0.01/0.05/0.1/0.2. The argument (a blind stale
   window `d/c` added to the travel exposure `d/v` gives ratio `1 + v/c`) is in the paper as a numbered
   equation; it also predicts the observed hop-length- and density-independence (both cancel).
 
   *Fill-time tax: small, regime-dependent, not a tail spike.* A companion fill-time tax rides along:
-  median 0.0 / 0.1 / 0.3 / 2.6 / **6.6%** across Λ = 0.01/0.03/0.05/0.1/0.2. It is bounded within the
-  noise of zero for Λ ≤ 0.03 (bootstrap interval inside [0, 1.3]%, i.e. equivalence to no delay to
-  within a 1.3% margin - a clean 1% only at Λ=0.01, where the interval is [0,0]) and unambiguous only
-  from Λ = 0.1. It is present throughout the fill, not concentrated at the
-  end: at Λ=0.2 it is +4.2 / +5.1 / +5.5 / +6.6% at t50 / t90 / t99 / t100. The near-constant in-flight
+  median 0.0 / 0.0 / 0.6 / 2.2 / **6.0%** across Λ = 0.01/0.03/0.05/0.1/0.2. At 512 seeds it is a clean
+  [0,0] for Λ ≤ 0.03 (a genuine null, not an unresolved margin), becomes resolvable at Λ=0.05
+  (0.6% [0.3,0.9]) and is unambiguous by Λ = 0.1. It is present throughout the fill, not concentrated
+  at the end: at Λ=0.2 it is +4.0 / +4.7 / +5.3 / +6.0% at t50 / t90 / t99 / t100. The near-constant in-flight
   population (~480, still near-peak at 99% coverage) holds it to ~1/3 of the fuel tax rather than zero.
 
 *Contention scales with branching, without saturating* (`experiments/measure.py::branching`, N=400,
@@ -333,7 +335,7 @@ genuinely break: hop length and local claim rate can correlate, and the `d`-canc
 scatter `σ/L` from the uniform limit to strong clustering, crossed with `Λ ∈ {0.05, 0.1, 0.2}`.
 Clumpiness is reported by the measured **Clark-Evans aggregation index R** (observed / Poisson mean
 nearest-neighbour distance; `R = 1` uniform, `R < 1` clustered). Result: the through-origin slope `a`
-of `tax = a·Λ` is `0.97 [0.89, 1.19]` at the uniform null (reproducing the headline `0.96` - the
+of `tax = a·Λ` is `0.97 [0.89, 1.19]` at the uniform null (reproducing the headline `0.95` - the
 generator's hard correctness check), stays statistically consistent with 1 up to moderate clustering
 (`a = 0.90, 0.86, 0.88` at `R = 1.03, 0.97, 0.78`), and drops resolvably only at EXTREME substructure
 (`a = 0.51 [0.41, 0.70]` at `R = 0.56`, more clumped than a dynamically-relaxed stellar field). Every
@@ -341,7 +343,7 @@ deviation is DOWNWARD, so **`tax = Λ` is a conservative upper bound**: clumpine
 tax smaller, never larger. Mechanism (the hop-length-stratified wasted-trip ratio in the same JSON):
 the per-hop ratio `p_lag/p_perfect` is squeezed below `1 + Λ` wherever the baseline per-hop waste
 probability approaches 1 (long hops, dense clumps) - a **saturation** effect, identical in shape between
-uniform and clumpy fields, which is also why the measured slope is `0.96` and not a clean `1.0`. Since
+uniform and clumpy fields, which is also why the measured slope is `0.95` and not a clean `1.0`. Since
 `v` and `c` are global constants they factor out of both exposure sums, so the `(d, claim-rate)`
 correlation cancels EXACTLY in the linear regime; clumpiness can bite only through this saturation. The
 knobs are geometry, not measured physical quantities: `n_clumps = 25` (~20 stars/clump at N=500, dense
