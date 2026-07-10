@@ -9,9 +9,9 @@ median with a seeded percentile-bootstrap 95\% confidence interval. A stale view
 probe believe a settled star is still open, never the reverse, so the delay adds wasted journeys
 \emph{in expectation}; but the sign is statistical, not structural, because retarget cascades make
 the paired difference non-monotone from seed to seed (at $\Lambda = 0.01$ a minority of galaxies,
-$8$ of $48$, come out slightly negative). We therefore report the median and its interval, not a
+$68$ of $512$, come out slightly negative). We therefore report the median and its interval, not a
 sign test, as the finding -- though a two-sided sign test, which the pipeline computes, agrees
-overwhelmingly where the effect is real ($40$ of $48$ seeds positive at $\Lambda = 0.01$, all $48$
+overwhelmingly where the effect is real ($442$ of $512$ seeds positive at $\Lambda = 0.01$, all $512$
 at $\Lambda = 0.2$). What is informative is the magnitude and
 its scaling, which the intervals and sweeps below report. (The direction is itself regime-specific:
 the in-flight-relay variant of Section~\ref{sec:floor} can \emph{lower} waste
@@ -202,7 +202,9 @@ the fraction could shrink with $N$ for a purely geometric reason. We test it two
 each contested arrival by its target's distance to the nearest wall and recomputing the tax on
 interior stars only does shift the level up -- edge stars carry a lower tax and dilute the all-stars
 value downward, so at the largest field the interior tax, $14.1\%$ $[11.2, 16.1]$, sits above the
-all-stars $12.8\%$ $[10.5, 14.3]$ -- but this masking is noisy where the interior holds few stars
+all-stars $12.8\%$ $[10.5, 14.3]$ (this masking test runs on the lighter interior-edge sub-ensemble
+of Table~\ref{tab:ensembles}, so its all-stars value sits marginally below the $13.1\%$ of the main
+sweep) -- but this masking is noisy where the interior holds few stars
 (small $N$) and does not on its own resolve the trend. The decisive control is a periodic (toroidal)
 box, which removes the boundary altogether: every star then sits in a full neighbourhood. Rerun that
 way the decline survives almost unchanged -- a slope of $-4.1$ $[-7.9, -1.3]$ percentage points per
@@ -305,7 +307,7 @@ shows up as wasted motion, not as an unfilled galaxy.
   \caption{Probes in flight versus the fraction of the field settled, for perfect information and
     the light-speed gate (medians over 16 seeds with bootstrap 95\% confidence bands, 500-star
     field, $\Lambda = 0.2$). The population
-    stays near its peak of a few hundred all the way into the final percent and the two regimes
+    stays near its peak of about 480 all the way into the final percent and the two regimes
     track each other closely, so the fills run almost in lockstep and the light-lag swarm loses only
     the small productive-rate deficit that keeps the time tax a fraction of the fuel tax.}
   \label{fig:concurrency}
