@@ -19,7 +19,7 @@ independently runnable and tested, and models one slice of the problem. They sha
 concepts (and, over time, data) but not a single giant simulation - the whole point
 is to keep each piece small, honest, and verifiable.
 
-**New here?** [FINDINGS.md](FINDINGS.md) collects what the models have concluded so far -
+**New here?** [FINDINGS.md](docs/FINDINGS.md) collects what the models have concluded so far -
 nine sourced results, from the electronics wall to the light-speed coordination tax -
 as one read. The same findings are live and interactive on the frontend's overview.
 
