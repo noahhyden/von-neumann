@@ -1,0 +1,102 @@
+\section{Results}
+\label{sec:results}
+
+\subsection{The headline ratio}
+For the sourced lunar-regolith seed, \eqref{eq:copy} gives a copy time of about 582~days,
+so the derived dwell of \eqref{eq:dwell} is $\tau \approx 1.59$~years. At fleet scale this
+same 582~days is the doubling clock: neighbours are days apart, so build time is the only
+clock that matters. Run as the settlement-front dwell for a powered cruise across a field of
+1200 Sun-like stars, it sits against a fill time $T_{100} \approx 1.9\times10^{6}$~years,
+reproducing to the same order of magnitude the multi-million-year powered timescales of the
+model we build on~\cite{nicholson-forgan-2013}. The ratio of \eqref{eq:frac} is then
+\begin{equation}
+f \;\approx\; 8.5\times10^{-7},
+\end{equation}
+under one part in a million. The constraint that is the entire clock at fleet scale is, at
+galactic scale, a rounding error.
+
+\subsection{The result survives not knowing the copy time}
+The copy time is a lunar-factory proxy, so the case cannot rest on its exact value; it rests
+on the margin. Fig.~\ref{fig:margin} sweeps the copy time across five orders of magnitude and
+records the resulting dwell fraction of the powered fill. The fraction rises only in step with
+the copy time, and stays below one percent of the fill until the copy time is about
+$1.5\times10^{4}$ times its nominal value, that is, a copy time near 25\,000 years rather than
+582 days. A hypothetical probe whose true build cadence were four orders of magnitude slower
+than the lunar proxy would still leave the verdict unchanged. The conclusion is therefore
+insensitive to the one number we cannot yet source, which is the strongest statement we can
+make given the gap. The documented uncertainty in the collector inputs to \eqref{eq:copy}, of
+order a factor of two, is a small sub-interval of this margin.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_margin.pdf}
+\caption{The manufacturing dwell as a fraction of the powered galactic fill time, swept over
+five orders of magnitude in copy time (log-log; 1200-star field, event-resolved). The nominal
+lunar-seed copy time (582~days, dotted line) gives a fraction under $10^{-6}$. The fraction
+reaches the one-percent bar (dashed) only at a copy time about $1.5\times10^{4}$ times nominal
+(square), so an error of four orders of magnitude in the build cadence does not change the
+verdict.}
+\label{fig:margin}
+\end{figure}
+
+\subsection{The same holds across travel policies}
+The ratio is smallest for the slowest front and largest for the fastest, because a faster
+fill leaves the fixed dwell a larger share of a smaller total. Table~\ref{tab:policy} sweeps
+the three named policies on a common field and reports, for each, the break-even multiplier:
+the factor by which the copy time would have to grow before the dwell reached one percent of
+that policy's fill. Even for the fastest front, nearest-target slingshots, the copy time would
+have to be about sixty times larger, a probe taking a century rather than a year and a half to
+build one copy, before manufacturing became a one-percent effect. The fastest speeds
+contemplated in the literature, beamed directed-energy cruise at 0.1 to 0.2~$c$~\cite{lubin-2016},
+lie beyond the slingshot regime we simulate and would push the crossover nearer still; the
+break-even multipliers bound how much nearer, and none of the simulated policies comes within
+a factor of sixty of it.
+
+\begin{table}[t]
+\caption{Dwell fraction and break-even copy-time multiplier by travel policy, on a common
+400-star field (event-resolved). The break-even multiplier is the factor by which the copy
+time must grow before the dwell reaches one percent of that policy's fill time.}
+\label{tab:policy}
+\centering
+\begin{tabular}{lccc}
+\toprule
+Policy & Fill time (yr) & Dwell fraction & Break-even ($\times$ nominal) \\
+\midrule
+Powered            & $1.4\times10^{6}$ & $1.2\times10^{-6}$ & $\sim$10\,000 \\
+Slingshot max-boost& $4.8\times10^{4}$ & $3.3\times10^{-5}$ & $\sim$590 \\
+Slingshot nearest  & $8.3\times10^{3}$ & $1.9\times10^{-4}$ & $\sim$60 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Measuring the tax directly}
+The ratio $f$ is an analytic separation; we also measure the dwell's cost on the front
+directly, as the fractional increase in fill time when the derived dwell is switched on
+against the old zero-dwell baseline on the same field. For a multi-million-year powered fill
+this difference is far too small to resolve by simulation, which is itself the finding, so we
+measure it for the fast slingshot policies, where it is largest, over a 24-seed ensemble
+(Fig.~\ref{fig:tax}). For nearest-target slingshots the tax is tight and clearly resolved at a
+median of 0.32~percent of exploration time (interquartile range 0.26 to 0.36~percent). For
+max-boost slingshots the per-seed values scatter from about $-6$ to $+10$~percent around a
+median near one percent: at this field size the dwell's effect is within the seed-to-seed
+noise of the fill time, so we report it as positive-but-unresolved rather than as a point
+estimate. Reporting a single seed here, as an earlier draft of the underlying finding did,
+would have hidden that spread.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_dwell_tax.pdf}
+\caption{The measured dwell tax (fractional increase in fill time from switching the derived
+dwell on) per seed for the two slingshot policies, 24 seeds each, event-resolved on a 400-star
+field. Bars are the ensemble median, shaded bands the interquartile range. Nearest-target
+slingshots give a tight, resolved 0.32~percent; max-boost scatters across zero and is within
+seed noise.}
+\label{fig:tax}
+\end{figure}
+
+Two checks confirm the measurement is not an artifact. Halving the integration timestep leaves
+the nearest-slingshot tax stable and converging on the event-resolved value, whereas a timestep
+coarse against the dwell under-resolves it, the same discretization hazard identified for the
+underlying front model; we therefore report event-resolved values throughout. Varying the field
+size over 200, 400, and 800 stars moves the median tax only between 0.31 and 0.34~percent, so
+the small-field measurement is representative over the range tested.

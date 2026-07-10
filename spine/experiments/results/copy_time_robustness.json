@@ -1,0 +1,72 @@
+{
+  "break_even": {
+    "copy_time_days": 9115493.034758305,
+    "fraction_at": 0.009999994237320332,
+    "multiplier": 15648.915081130139,
+    "reached": true
+  },
+  "config": {
+    "n_stars": 1200,
+    "negligible_bar": 0.01,
+    "policy": "powered",
+    "seed": 2654435769,
+    "stepping": "event"
+  },
+  "measurement": "copy_time_robustness",
+  "nominal": {
+    "copy_time_days": 582.5,
+    "dwell_fraction": 8.489033752492079e-07,
+    "settle_years": 1.594798083504449
+  },
+  "sweep": [
+    {
+      "copy_time_days": 58.25000000000001,
+      "dwell_fraction": 8.489150497281945e-08,
+      "multiplier": 0.1,
+      "negligible": true,
+      "settle_years": 0.15947980835044492
+    },
+    {
+      "copy_time_days": 582.5,
+      "dwell_fraction": 8.489033752492079e-07,
+      "multiplier": 1.0,
+      "negligible": true,
+      "settle_years": 1.594798083504449
+    },
+    {
+      "copy_time_days": 5825.0,
+      "dwell_fraction": 8.48786648117434e-06,
+      "multiplier": 10.0,
+      "negligible": true,
+      "settle_years": 15.94798083504449
+    },
+    {
+      "copy_time_days": 58250.0,
+      "dwell_fraction": 8.476211399173512e-05,
+      "multiplier": 100.0,
+      "negligible": true,
+      "settle_years": 159.4798083504449
+    },
+    {
+      "copy_time_days": 582500.0,
+      "dwell_fraction": 0.0008084433687811906,
+      "multiplier": 1000.0,
+      "negligible": true,
+      "settle_years": 1594.798083504449
+    },
+    {
+      "copy_time_days": 5825000.0,
+      "dwell_fraction": 0.006966095383671158,
+      "multiplier": 10000.0,
+      "negligible": true,
+      "settle_years": 15947.980835044491
+    },
+    {
+      "copy_time_days": 58250000.00000001,
+      "dwell_fraction": 0.03871912058434684,
+      "multiplier": 100000.0,
+      "negligible": false,
+      "settle_years": 159479.80835044492
+    }
+  ]
+}
