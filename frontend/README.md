@@ -163,8 +163,27 @@ npm test             # Layer A - node --test - parity against the Python model (
 npm run test:contract# Layer B - node --test - the pimas framework canary (pimas primitives only)
 npm run smoke        # Layer C - headless integration through the pimas graph
 npm run build        # -> dist/ (app.js + index.html), reports gzipped size
+npm run preview      # build, then serve dist/ at http://localhost:8000 (Ctrl-C to stop)
 npx serve dist       # or any static server; open the page
 ```
+
+The page is an ES-module SPA (`<script type="module">`), so browsers refuse to load
+`app.js` over `file://` - opening `dist/index.html` by double-click shows a blank
+page. Serve the folder instead: `npm run preview` (the same build pages.yml deploys,
+then esbuild's static server), or any static server.
+
+## Preview a change before merge
+
+There is no staging deploy: `main` is what publishes (issue #23). So a change is
+checked *before* merge, two ways, and neither needs a merge-to-check:
+
+- **On the PR.** CI uploads the rendered artifacts to the run so a reviewer can
+  download them without merging: `frontend-dist` (this built bundle) and, for any
+  paper the diff touches, `paper-pdfs` (the typeset PDFs). Serve the unzipped
+  `frontend-dist` folder (see the note above); open a `paper-pdfs` PDF directly.
+- **Locally, at CI parity.** `npm run preview` reproduces the exact CI build and
+  serves it. (In-app links to paper PDFs 404 locally: pages.yml injects those into
+  `dist/papers/` only at deploy time; review the PDFs via the `paper-pdfs` artifact.)
 
 ## pimas canary
 

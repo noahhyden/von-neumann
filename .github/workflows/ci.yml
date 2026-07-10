@@ -132,6 +132,10 @@ jobs:
               - *shared
               - 'papers/electronics-wall/**'
               - 'closure-sim/**'
+            spine:
+              - *shared
+              - 'papers/spine/**'
+              - 'spine/**'
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -192,6 +196,48 @@ jobs:
         with:
           working_directory: papers/electronics-wall
           root_file: main.tex
+      # spine figures RENDER from committed JSON (spine/experiments/results/), exactly like
+      # coordination-tax above: the heavy ensemble (spine/experiments/measure.py) runs LOCALLY
+      # and commits its deterministic seeded output; CI only plots it (a few seconds), and the
+      # spine pytest job's drift-guard re-checks that committed JSON against the fold - so no
+      # figure cache here. The spine paper ships on the live site (pages.yml builds every
+      # paper), so a PR that edits it must also be gated and rendered like the other two.
+      - name: Render spine figures from committed results (spine)
+        if: steps.changed.outputs.spine == 'true'
+        working-directory: spine
+        run: uv run --extra dev python -m experiments.paper_figures
+      - name: Typeset spine (LaTeX) - a broken .tex fails the PR
+        if: steps.changed.outputs.spine == 'true'
+        uses: xu-cheng/latex-action@v4
+        with:
+          working_directory: papers/spine
+          root_file: main.tex
+
+      # Reviewable render (issue #23): on a PR, publish each paper the diff actually typeset
+      # above as a downloadable PDF, so a reviewer can eyeball the real render before merge
+      # instead of merging to check. Only affected papers were typeset, so only those are
+      # staged; a PR touching no paper stages nothing (warn, never fail). Review aid only -
+      # pages.yml still builds every paper for the deployed site.
+      - name: Stage typeset PDFs for review
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p pr-render/papers
+          for d in papers/*/; do
+            [ -f "${d}main.tex" ] || continue
+            slug=$(basename "$d")
+            if [ -f "${d}main.pdf" ]; then
+              cp "${d}main.pdf" "pr-render/papers/${slug}.pdf"
+              echo "staged ${slug}.pdf"
+            fi
+          done
+      - name: Upload rendered paper PDFs as a reviewable artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-pdfs
+          path: pr-render/papers/
+          if-no-files-found: warn
+          retention-days: 14
 
   frontend:
     runs-on: ubuntu-latest
@@ -238,3 +284,18 @@ jobs:
       - name: Build the page
         working-directory: von-neumann/frontend
         run: npm run build
+
+      # Reviewable render (issue #23): on a PR, upload the built bundle so a reviewer can
+      # download and serve it locally (the page is an ES-module SPA - it must be served,
+      # not opened via file://; `npm run preview` does the CI-parity build + serve). This
+      # is the same dist/ pages.yml deploys, minus the paper PDFs it injects at deploy time
+      # (those are reviewed as the separate paper-pdfs artifact), so in-app PDF links 404
+      # locally - expected. Review aid only; the live deploy is still pages.yml on main.
+      - name: Upload the built frontend as a reviewable artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: von-neumann/frontend/dist/
+          if-no-files-found: error
+          retention-days: 14
