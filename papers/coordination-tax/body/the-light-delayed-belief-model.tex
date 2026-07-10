@@ -32,7 +32,7 @@ nearest believed-unsettled stars, the target that yields the largest velocity ga
 gravitational boost self-limits (its per-encounter gain falls off once the probe outruns the
 stellar escape speed), so both slingshot policies saturate at a mean speed of a few thousand
 km/s, a few times $10^{-3}$ of $c$. To reach the higher speeds that beamed directed-energy
-concepts target, $0.1$ to $0.2\,c$ \citep{lubin-2016,carroll-nellenback-2019}, a probe must be
+concepts target, $0.1$ to $0.2\,c$ \citep{lubin-2016}, a probe must be
 driven, not slung; we therefore sweep the powered cruise speed as a clean, direct control on
 $v/c$, from the source model's $3\times10^{-5}\,c$ up to $0.2\,c$. Powered flight thus spans the
 whole speed axis, while the two slingshot policies sit near $v/c \approx 0.01$.
@@ -89,8 +89,9 @@ rate cancels, so it cannot depend on the stellar density. This is a leading-orde
 assumes claims of a candidate are independent and locally uniform in time, and it ignores the
 geometry of which stars are in contention -- so it predicts the coefficient of proportionality is
 one, not its small corrections. Section~\ref{sec:results} shows the measured tax follows
-$\Lambda$ with a fitted slope of $0.96$, confirming the law and its near-unit coefficient, and
-confirms the $d$- and density-independence directly.
+$\Lambda$ with a fitted slope of $0.96$, consistent with the predicted unit coefficient within
+uncertainty (a bootstrap interval of $[0.89, 1.19]$ on the slope), and confirms the $d$- and
+density-independence directly.
 
 \subsection{Experimental design and parameters}
 The field is a box of stars at a uniform density of one star per cubic parsec, the convention of
@@ -158,9 +159,12 @@ seeds and differ only in the stated star count.
 By construction the ``instant'' regime is the $c\to\infty$ limit of (\ref{eq:gate}), and it
 reproduces the plain perfect-information fold bit-for-bit. Against Nicholson and Forgan's
 published model \citep{nicholson-forgan-2013} the event-driven fold reproduces both headline
-findings \emph{quantitatively}: gravitational slingshots explore about two orders of magnitude
-faster than powered flight (a factor of about $166$ on a $400$-star field), and their surprising
-result that aiming for the nearest star beats aiming for the largest boost on total exploration
-time holds, while the maximum-boost policy reaches the higher peak speed. A coarse fixed step had
-quantized the boosted hops and undercut this speed-up to about twenty-fold; resolving the step
-recovers the full factor, which is the same correction that removes the spurious fill-time tax.
+findings: gravitational slingshots explore about two orders of magnitude faster than powered
+flight, and their surprising result that aiming for the nearest star beats aiming for the largest
+boost on total exploration time holds, while the maximum-boost policy reaches the higher peak
+speed. The speed-up agrees to the same order of magnitude but not to the digit, as one should
+expect: we measure a factor of about $166$ on a $400$-star field, against their factor of about
+$100$ (a reduction from $\sim\!10^8$ to $\sim\!10^6$ years) on a $200{,}000$-star field, so with a
+field some $500$ times smaller the exact multiple is not expected to match. A coarse fixed step had
+quantized the boosted hops and undercut even this to about twenty-fold; resolving the step recovers
+the full factor, which is the same correction that removes the spurious fill-time tax.

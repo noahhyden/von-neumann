@@ -66,3 +66,46 @@ def bootstrap_median_ci(
     lo = medians[int(0.025 * n_resamples)]
     hi = medians[min(n_resamples - 1, int(0.975 * n_resamples))]
     return statistics.median(xs), lo, hi
+
+
+def _ols_slope(xs: list[float], ys: list[float]) -> float:
+    """Ordinary-least-squares slope of ys on xs (assumes len(xs) == len(ys) >= 2)."""
+    n = len(xs)
+    mx = sum(xs) / n
+    my = sum(ys) / n
+    sxx = sum((x - mx) ** 2 for x in xs)
+    sxy = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    return sxy / sxx if sxx else 0.0
+
+
+def loglog_slope_ci(
+    x_values: list[float], groups: list[list[float]], *, n_resamples: int = 2000, seed: int = 0x5EED1234
+) -> tuple[float, float, float]:
+    """(slope, lo95, hi95) of a regression of per-group median against ``x_values``.
+
+    Used for the finite-size scale trend: ``x_values`` are ``log10(N)`` and ``groups[i]`` is the
+    list of per-seed penalties at that ``N``. The point slope fits OLS through the group medians;
+    the interval resamples seeds *within each group* (the same seeded mulberry32 the median CI uses),
+    refits per resample, and takes the 2.5/97.5 percentiles. This puts the scale regression - a
+    number the paper reports - inside the reproducible pipeline rather than only in the prose.
+    """
+    cleaned = [[v for v in g if v is not None] for g in groups]
+    if len(x_values) < 2 or any(not g for g in cleaned):
+        return 0.0, 0.0, 0.0
+    point = _ols_slope(x_values, [statistics.median(g) for g in cleaned])
+    rng = seed_state(seed)
+    slopes: list[float] = []
+    for _ in range(n_resamples):
+        meds: list[float] = []
+        for g in cleaned:
+            m = len(g)
+            sample: list[float] = []
+            for _ in range(m):
+                u, rng = next_u32(rng)
+                sample.append(g[u % m])
+            meds.append(statistics.median(sample))
+        slopes.append(_ols_slope(x_values, meds))
+    slopes.sort()
+    lo = slopes[int(0.025 * n_resamples)]
+    hi = slopes[min(n_resamples - 1, int(0.975 * n_resamples))]
+    return point, lo, hi

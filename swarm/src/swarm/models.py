@@ -32,6 +32,17 @@ KM_S_TO_PC_YR: float = 3.15576e7 / 3.0856775814913673e13
 HOP_BIN_EDGES: tuple[float, ...] = tuple(round(0.1 * (300.0 ** (k / 12.0)), 6) for k in range(13))
 N_HOP_BINS: int = len(HOP_BIN_EDGES) + 1  # + one underflow (< first edge) and one overflow slot
 
+# Wall-distance bin edges for the finite-size EDGE test (referee finding M1). The scale sweep uses a
+# hard-walled cube, so edge stars (fewer neighbours, less contention) could make the tax fraction
+# shrink with N purely because the edge fraction falls as N^(-1/3). To separate that boundary
+# artifact from genuine bulk saturation we bin each contested (won or wasted) arrival by its target
+# star's distance to the NEAREST wall, in units of the mean nearest-neighbour distance
+# E[NN] = 0.55396 * rho^(-1/3) (Clark & Evans 1954) - a length fixed by density, so the bins are
+# comparable across N. Post-processing then computes the tax restricted to "interior" stars (wall
+# distance >= a shell) at any bin edge, and asks whether the with-N decline survives.
+WALL_BIN_EDGES_NN: tuple[float, ...] = (0.5, 1.0, 1.5, 2.0)  # in units of mean NN distance
+N_WALL_BINS: int = len(WALL_BIN_EDGES_NN) + 1  # bins: [0,.5) [.5,1) [1,1.5) [1.5,2) [2,inf)
+
 # Target-selection / travel policies (Nicholson & Forgan 2013, their three scenarios).
 Policy = Literal["powered", "slingshot_nearest", "slingshot_maxboost"]
 
@@ -58,6 +69,11 @@ class SwarmParams(BaseModel):
     n_stars: int = Field(gt=1, default=500)
     density_stars_per_pc3: float = Field(
         gt=0, default=1.0, description="uniform stellar density (Nicholson & Forgan use 1 star/pc^3)"
+    )
+    periodic: bool = Field(
+        default=False,
+        description="periodic (toroidal, minimum-image) box instead of a hard wall; the finite-size "
+        "edge control (M1) - removes boundary stars so the with-N tax trend has no edge artifact",
     )
     probe_speed_c: float = Field(
         gt=0, le=1, default=3e-5, description="powered cruise speed, fraction of c (N&F: 3e-5 c ≈ 9 km/s)"
@@ -164,6 +180,8 @@ class SwarmState:
     next_probe_id: int
     total_launched: int
     max_speed_pc_yr: float  # fastest probe launched so far (shows accumulated boost)
+    box_side_pc: float = 0.0  # side of the cube (for the periodic minimum-image metric)
+    periodic: bool = False  # torus (minimum-image distances) instead of a hard wall
     # --- coordination observability (the cost of no-coordination; 0 unless probes race) ---
     total_arrivals: int = 0  # every probe arrival processed
     wasted_arrivals: int = 0  # arrivals landing on an already-(truly-)settled star (redundant trips)
@@ -194,6 +212,12 @@ class SwarmState:
     # a clumpy field. Pure counters - no RNG, no decision - so the fold stays bit-identical.
     settle_hop_hist: list[int] = field(default_factory=lambda: [0] * N_HOP_BINS)
     wasted_hop_hist: list[int] = field(default_factory=lambda: [0] * N_HOP_BINS)
+    # --- wall-distance-stratified arrival counts (read-only; the finite-size EDGE test, M1) ---
+    # Won and wasted arrivals binned by the target star's distance to the nearest box wall
+    # (WALL_BIN_EDGES_NN, in mean-NN-distance units). Lets post-processing compute the tax on
+    # interior-only stars at any shell and separate a boundary artifact from bulk saturation.
+    settle_wall_hist: list[int] = field(default_factory=lambda: [0] * N_WALL_BINS)
+    wasted_wall_hist: list[int] = field(default_factory=lambda: [0] * N_WALL_BINS)
 
     def n_settled(self) -> int:
         return sum(1 for y in self.settled_year if y >= 0.0)
@@ -252,4 +276,8 @@ class SwarmResult:
     # test reads these to check the wasted-trip ratio is flat in d even in a non-uniform field.
     settle_hop_hist: list[int] = field(default_factory=list)
     wasted_hop_hist: list[int] = field(default_factory=list)
+    # Won/wasted arrivals binned by target-star distance to nearest wall (WALL_BIN_EDGES_NN, in
+    # mean-NN-distance units) - the finite-size edge test (M1): interior-only tax vs N.
+    settle_wall_hist: list[int] = field(default_factory=list)
+    wasted_wall_hist: list[int] = field(default_factory=list)
     steps: list[SwarmStep] = field(default_factory=list)

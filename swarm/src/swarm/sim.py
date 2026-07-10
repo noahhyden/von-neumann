@@ -25,6 +25,7 @@ from swarm.models import (
     C_PC_PER_YEAR,
     HOP_BIN_EDGES,
     KM_S_TO_PC_YR,
+    WALL_BIN_EDGES_NN,
     Probe,
     SwarmParams,
     SwarmResult,
@@ -108,6 +109,27 @@ def _hop_bin(d: float) -> int:
     return k
 
 
+def _wall_bin(s: SwarmState, params: SwarmParams, star: int) -> int:
+    """Bin star ``star`` by its distance to the nearest box wall, in mean-NN-distance units.
+
+    Pure geometry (no RNG, no decision), so it cannot perturb the fold. The mean nearest-neighbour
+    distance ``E[NN] = 0.55396 * rho^(-1/3)`` (Clark & Evans 1954) is fixed by density, so the bins
+    are comparable across N. Used only by the finite-size edge test (M1): a star deep in the bulk
+    lands in a high bin, one hugging a wall in bin 0.
+    """
+    L = params.box_side_pc
+    wall = min(s.xs[star], L - s.xs[star], s.ys[star], L - s.ys[star], s.zs[star], L - s.zs[star])
+    d_nn = 0.55396 * params.density_stars_per_pc3 ** (-1.0 / 3.0)
+    r = wall / d_nn if d_nn > 0.0 else 0.0
+    k = 0
+    for e in WALL_BIN_EDGES_NN:
+        if r >= e:
+            k += 1
+        else:
+            break
+    return k
+
+
 def _generate_galaxy(
     params: SwarmParams, rng: int
 ) -> tuple[list[float], list[float], list[float], list[float], int]:
@@ -150,6 +172,15 @@ def _dist(s: SwarmState, a: int, b: int) -> float:
     dx = s.xs[a] - s.xs[b]
     dy = s.ys[a] - s.ys[b]
     dz = s.zs[a] - s.zs[b]
+    if s.periodic:
+        # Minimum-image convention on a torus of period L: the shortest separation wraps the box, so
+        # there are no boundary stars. Opt-in (default off); with periodic=False this is a no-op and
+        # the fold is bit-identical to the hard-walled model. The belief gate reads the same wrapped
+        # distance, so light also travels the minimum image.
+        L = s.box_side_pc
+        dx -= L * round(dx / L)
+        dy -= L * round(dy / L)
+        dz -= L * round(dz / L)
     return (dx * dx + dy * dy + dz * dz) ** 0.5
 
 
@@ -328,6 +359,7 @@ def initial_state(params: SwarmParams, *, seed: int) -> SwarmState:
     state = SwarmState(
         rng=rng, year=0.0, xs=xs, ys=ys, zs=zs, star_speed_pc_yr=star_speed, settled_year=settled,
         origin=origin, probes=[], next_probe_id=0, total_launched=0, max_speed_pc_yr=v_max,
+        box_side_pc=L, periodic=params.periodic,
     )
     # Seed probes leave the homeworld at powered cruise, taking the homeworld's slingshot.
     _launch_from(state, origin, params, v_max)
@@ -353,6 +385,7 @@ def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Pro
             state.settle_hop_sum_pc += p.hop_len_pc  # winning-trip hop length (read-only)
             state.settle_hop_count += 1
             state.settle_hop_hist[_hop_bin(p.hop_len_pc)] += 1  # won arrivals by hop-length bin
+            state.settle_wall_hist[_wall_bin(state, params, p.target)] += 1  # won, by wall-distance bin
             state.settle_v_sum_pc_yr += p.speed_pc_yr  # winning-trip flight speed (energy weight)
             state.settle_v2_sum += p.speed_pc_yr * p.speed_pc_yr
             _launch_from(state, p.target, params, p.speed_pc_yr)
@@ -363,6 +396,7 @@ def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Pro
             state.wasted_hop_sum_pc += p.hop_len_pc  # wasted-trip hop length (read-only)
             state.wasted_hop_count += 1
             state.wasted_hop_hist[_hop_bin(p.hop_len_pc)] += 1  # wasted arrivals by hop-length bin
+            state.wasted_wall_hist[_wall_bin(state, params, p.target)] += 1  # wasted, by wall-distance bin
             state.wasted_travel_pc += p.hop_len_pc  # a lost full arrival wastes its whole hop
             state.wasted_v_sum_pc_yr += p.speed_pc_yr  # wasted-trip flight speed (energy weight)
             state.wasted_v2_sum += p.speed_pc_yr * p.speed_pc_yr
@@ -629,5 +663,7 @@ def simulate_swarm(params: SwarmParams, *, seed: int = 0x9E3779B9) -> SwarmResul
         ),
         settle_hop_hist=list(state.settle_hop_hist),
         wasted_hop_hist=list(state.wasted_hop_hist),
+        settle_wall_hist=list(state.settle_wall_hist),
+        wasted_wall_hist=list(state.wasted_wall_hist),
         steps=steps,
     )

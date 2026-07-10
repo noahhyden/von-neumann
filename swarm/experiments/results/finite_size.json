@@ -9879,5 +9879,13 @@
         }
       ]
     }
+  },
+  "scale_regression": {
+    "x": "log10(N)",
+    "unit": "percentage points per decade of N",
+    "resample": "seeds within each N",
+    "slope": -4.577648985303076,
+    "ci_lo": -7.342938122976297,
+    "ci_hi": -2.562354759204453
   }
 }

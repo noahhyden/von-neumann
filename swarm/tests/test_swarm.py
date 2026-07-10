@@ -369,6 +369,44 @@ def test_new_observables_do_not_perturb_the_pinned_fold() -> None:
     assert r.final_settled == 400 and r.t100_years == 1_515_000.0  # test_baseline_regression values
 
 
+def test_periodic_box_is_optin_deterministic_and_uses_minimum_image() -> None:
+    # The periodic (toroidal) box is the finite-size edge control (M1). It must still fill and be
+    # deterministic, actually wrap (a different geometry -> a different wasted count than the hard
+    # wall), and never report a separation longer than the plain metric (minimum image only shortens).
+    # (Opt-in intactness of the default hard-walled fold is covered by the pinned-baseline tests.)
+    from swarm.sim import initial_state, _dist
+    common = dict(n_stars=400, policy="powered", probe_speed_c=0.2, speed_cap_c=0.4,
+                  stepping="event", coordination="lightspeed")
+    hard = simulate_swarm(SwarmParams(**common, periodic=False), seed=7)
+    per_a = simulate_swarm(SwarmParams(**common, periodic=True), seed=7)
+    per_b = simulate_swarm(SwarmParams(**common, periodic=True), seed=7)
+    assert per_a.final_settled == 400  # a torus still fills
+    assert (per_a.t100_years, per_a.wasted_arrivals) == (per_b.t100_years, per_b.wasted_arrivals)
+    assert per_a.wasted_arrivals != hard.wasted_arrivals  # wrapping changes the contention geometry
+    # Minimum image never lengthens a separation: check every pair against the plain metric.
+    sp = initial_state(SwarmParams(n_stars=60, periodic=True), seed=3)
+    sh = initial_state(SwarmParams(n_stars=60, periodic=False), seed=3)
+    assert all(_dist(sp, i, j) <= _dist(sh, i, j) + 1e-9 for i in range(60) for j in range(i + 1, 60))
+
+
+def test_wall_hist_accumulators_are_consistent_and_deterministic() -> None:
+    # The finite-size EDGE test (M1) relies on the wall-distance histograms. They are read-only
+    # accumulators (pure geometry), so: (1) the pinned baseline is unchanged, (2) they partition the
+    # arrivals exactly (wasted_wall_hist sums to wasted_arrivals; settle_wall_hist to the settled
+    # count, which excludes the pre-seeded homeworld), and (3) they are deterministic and populate
+    # the interior bins at directed-energy speed.
+    from swarm.models import N_WALL_BINS
+    p = SwarmParams(n_stars=400, policy="powered", probe_speed_c=0.2, speed_cap_c=0.4,
+                    stepping="event", coordination="lightspeed")
+    a = simulate_swarm(p, seed=BASE_SEED)
+    b = simulate_swarm(p, seed=BASE_SEED)
+    assert len(a.wasted_wall_hist) == N_WALL_BINS and len(a.settle_wall_hist) == N_WALL_BINS
+    assert sum(a.wasted_wall_hist) == a.wasted_arrivals  # every wasted arrival is binned once
+    assert sum(a.settle_wall_hist) == a.final_settled - 1  # all settlements but the seeded homeworld
+    assert a.wasted_wall_hist[-1] > 0  # deep-interior stars do get contested at Lambda=0.2
+    assert a.wasted_wall_hist == b.wasted_wall_hist and a.settle_wall_hist == b.settle_wall_hist
+
+
 def test_energy_observables_are_consistent_and_do_not_perturb_the_fold() -> None:
     # The energy accumulators (Newtonian (1/2)(v/c)^2 per journey) are read-only: the pinned
     # baseline is unchanged, the summed energy is nonnegative, and the mean winning-journey
