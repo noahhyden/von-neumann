@@ -276,6 +276,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
-          path: von-neumann/frontend/dist/
+          path: frontend/dist/
           if-no-files-found: error
           retention-days: 14

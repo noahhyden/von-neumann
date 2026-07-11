@@ -182,7 +182,6 @@ checked *before* merge, two ways, and neither needs a merge-to-check:
   serves it. (In-app links to paper PDFs 404 locally: pages.yml injects those into
   `dist/papers/` only at deploy time; review the PDFs via the `paper-pdfs` artifact.)
 
-## pimas canary
 ## Layered tests (attribution by blame surface)
 
 pimas is first-party and single-maintainer, so telling **framework** breakage apart
