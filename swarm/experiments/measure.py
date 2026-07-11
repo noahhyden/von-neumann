@@ -624,12 +624,13 @@ def m_finite_size_interior() -> None:
     at two shells: >= 1 and >= 2 mean-NN distances from any wall. If the all-stars decline is an edge
     artifact it flattens under the interior restriction; if it is genuine bulk saturation it persists.
 
-    Spans 300..4800 (32/32/24/16/12 seeds) to cover the same range as the committed ``finite_size``
-    all-stars sweep, so the interior and all-stars declines are compared over an identical lever arm.
-    Near-linear since #30 (the k-d tree over the unsettled set), so this ladder can extend to
-    N=200,000; the committed numbers are the pinned artifact - leave them unless regenerating.
+    Spans 300..200,000 (seeds scaled down with N), matching the committed ``finite_size`` all-stars
+    sweep's range so the interior and all-stars declines are compared over an identical ~670x lever
+    arm (near-linear since #30, the k-d tree over the unsettled set). The 300..4800 blocks regenerate
+    byte-identically; the higher-N points are the edge-vs-bulk test at scale.
     """
-    n_seeds_by_n = [(300, 32), (600, 32), (1200, 24), (2400, 16), (4800, 12)]
+    n_seeds_by_n = [(300, 32), (600, 32), (1200, 24), (2400, 16), (4800, 12),
+                    (9600, 12), (24000, 10), (48000, 8), (200000, 6)]
     # Shell start-bins for WALL_BIN_EDGES_NN=(0.5,1,1.5,2): shell>=1.0 NN -> bins 2.., shell>=2.0 -> bin 4.
     shells = {"all": 0, "interior_1nn": 2, "interior_2nn": 4}
     data = {}
@@ -670,12 +671,14 @@ def m_finite_size_periodic() -> None:
 
     The interior-only test (``m_finite_size_interior``) removes edge stars by masking; this removes
     them by geometry - a periodic (toroidal, minimum-image) box has no walls at all, so every star
-    sits in a full neighbourhood. Same sweep, seeds, and Lambda as the hard-walled ``finite_size``,
-    so the two slopes are directly comparable: if the hard-wall decline is a boundary artifact, the
-    periodic tax stays flat (and higher, since no edge dilutes it); if it is genuine bulk saturation,
-    the periodic tax declines too.
+    sits in a full neighbourhood. Same Lambda and N range as the hard-walled ``finite_size`` (now
+    300..200,000 since #30), so the two slopes are directly comparable: if the hard-wall decline is
+    a boundary artifact, the periodic tax stays flat (and higher, since no edge dilutes it); if it is
+    genuine bulk saturation, the periodic tax declines too. The 300..4800 blocks regenerate
+    byte-identically; the higher-N points settle the question at scale.
     """
-    n_seeds_by_n = [(300, 32), (600, 32), (1200, 24), (2400, 16), (4800, 12)]
+    n_seeds_by_n = [(300, 32), (600, 32), (1200, 24), (2400, 16), (4800, 12),
+                    (9600, 12), (24000, 10), (48000, 8), (200000, 6)]
     data = {}
     per_n: dict[int, list[float]] = {}
     for n, k in n_seeds_by_n:

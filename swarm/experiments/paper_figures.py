@@ -15,7 +15,7 @@ Figures (vector PDF, IEEE single-column geometry, serif fonts):
   fig_branching.pdf          - fuel tax vs the replication branching factor (offspring 2/3/4)
   fig_floor_bracket.pdf      - instant/inflight/lightspeed: how much survives in-flight relay
   fig_concurrency.pdf        - probes in flight vs coverage: why a loser is off the critical path
-  fig_fuel_tax_vs_n.pdf      - fuel tax % over a 16x size span (scale-stable, tested range only)
+  fig_fuel_tax_vs_n.pdf      - fuel tax % over a 670x size span (300..200,000); a bulk decline
 
 Run (from the swarm/ package root):
     uv run --extra dev python -m experiments.paper_figures
