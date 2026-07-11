@@ -33,8 +33,10 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import statistics
 import sys
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -55,6 +57,41 @@ SCHEMA_VERSION = 3
 # uses the full 512; the expensive sweeps (finite_size to N=4800 at ~200 s/seed) use short prefixes.
 # Extending the pool past the old 64 leaves every existing prefix (<= 48) byte-identical.
 SEEDS = [0x9E3779B9 + 2654435761 * k for k in range(512)]
+
+
+# --------------------------------------------------------------------------------------------
+# seed-ensemble parallelism (issue #27 item 3)
+# --------------------------------------------------------------------------------------------
+# The fold is a pure, seeded function of (params, seed), so every (seed, mode) run is independent
+# and embarrassingly parallel. We fan the seed loop out over CPU cores with the standard-library
+# ProcessPoolExecutor. This is a WALL-CLOCK aid only and must not change any number: results are
+# always collected back into seed order (executor.map preserves input order), so 1, 4, or N
+# workers produce byte-identical JSON. Set SWARM_WORKERS to override the core count; SWARM_WORKERS=1
+# forces a serial-equivalent loop (also the fallback when a positive count cannot be parsed).
+
+def _worker_count() -> int:
+    """Number of worker processes: SWARM_WORKERS if set to a positive int, else os.cpu_count()."""
+    env = os.environ.get("SWARM_WORKERS")
+    if env is not None:
+        try:
+            n = int(env)
+        except ValueError:
+            n = 0
+        if n >= 1:
+            return n
+    return os.cpu_count() or 1
+
+
+def _paired_worker(args: tuple[str, str, dict, int]) -> tuple[dict, dict]:
+    """One paired (seed, base/treat) run. Top-level so ProcessPoolExecutor can pickle it.
+
+    Takes plain params + seed and returns the two records; SwarmParams is rebuilt inside the
+    worker so nothing framework-specific has to cross the process boundary.
+    """
+    mode_base, mode_treat, params, seed = args
+    b = simulate_swarm(SwarmParams(coordination=mode_base, **params), seed=seed)
+    t = simulate_swarm(SwarmParams(coordination=mode_treat, **params), seed=seed)
+    return (record(b), record(t))
 
 
 # --------------------------------------------------------------------------------------------
@@ -158,13 +195,27 @@ def write_result(name: str, config: dict, payload: dict) -> Path:
 
 
 def _paired(mode_treat: str, *, seeds: list[int], mode_base: str = "instant", **params) -> list[tuple[dict, dict]]:
-    """Fill each seeded galaxy under ``mode_base`` and ``mode_treat`` (same seed); return records."""
+    """Fill each seeded galaxy under ``mode_base`` and ``mode_treat`` (same seed); return records.
+
+    Parallel over seeds (see ``_worker_count``): each (seed, base/treat) run is independent. Results
+    are always collected in seed order, so the returned list is identical to the serial version for
+    any worker count. SWARM_WORKERS=1 takes the serial branch.
+    """
+    args = [(mode_base, mode_treat, params, s) for s in seeds]
+    n = len(args)
     rows: list[tuple[dict, dict]] = []
-    for i, s in enumerate(seeds):
-        b = simulate_swarm(SwarmParams(coordination=mode_base, **params), seed=s)
-        t = simulate_swarm(SwarmParams(coordination=mode_treat, **params), seed=s)
-        rows.append((record(b), record(t)))
-        print(f"      seed {i + 1}/{len(seeds)}", end="\r", flush=True)
+    workers = _worker_count()
+    if workers <= 1:
+        for i, a in enumerate(args):
+            rows.append(_paired_worker(a))
+            print(f"      seed {i + 1}/{n}", end="\r", flush=True)
+    else:
+        # executor.map preserves input order, so rows come back in seed order regardless of which
+        # worker finishes first; iterating it yields each result as it is ready, in that order.
+        with ProcessPoolExecutor(max_workers=workers) as ex:
+            for i, row in enumerate(ex.map(_paired_worker, args)):
+                rows.append(row)
+                print(f"      seed {i + 1}/{n} ({workers} workers)", end="\r", flush=True)
     print(" " * 40, end="\r")
     return rows
 

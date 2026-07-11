@@ -313,7 +313,8 @@ the partial travel flown before a beacon arrives, which grows with `Λ`.
 **Fuel tax vs scale (`experiments/measure.py::finite_size`, powered, `Λ=0.2`, event, high-seed).** As
 a *percent* of the perfect-info waste the tax holds near ~18-19% up to ~1000 stars then DECLINES at
 larger fields - **+19.0 / +18.2 / +17.9 / +16.3 / +13.1%** at N = 300 / 600 / 1200 / 2400 / 4800
-(48 / 48 / 48 / 48 / 32 seeds; the O(N²) event cost caps N, not the seed count) - while the *absolute*
+(48 / 48 / 48 / 48 / 32 seeds; the super-linear per-run cost caps N, not the seed count - see
+**Performance and the scale ceiling** below) - while the *absolute*
 wasted-journey count grows with the field (median +237 / +494 / +1056 / +2228 / +4010). With 32-48
 seeds per point the decline is **resolved, not scatter**: the bootstrap CIs at N=300 ([+16.4,+22.5])
 and N=4800 ([+11.6,+14.0]) do not overlap. This is an honest correction of a round-1 "scale-stable
@@ -371,6 +372,51 @@ overlaid), `fig_fuel_tax_by_seed`, `fig_time_tax_vs_dt`, `fig_concurrency` (mech
 (see the energy-accounting note above). Regenerate the numbers via
 `uv run --extra dev python -m experiments.measure` and the figures via
 `uv run --extra dev python -m experiments.paper_figures`.
+
+## Performance and the scale ceiling (issue #27)
+
+The fold was sped up to push toward Nicholson & Forgan's 200,000-star field, under a hard
+constraint: **every change is bit-identical** - the committed `results/*.json` reproduce to the
+printed digit (`tests/test_measure_results.py` stays green) and the pinned-baseline tests are
+unchanged. Timing never changes a number (the fold is a pure seeded function, CLAUDE.md 7); these
+are wall-clock changes only.
+
+Profiling a large-N run (`experiments/scaling_benchmark.py`) showed the cost was **four** O(N)- or
+O(P)-per-event terms, not the one the nearest-neighbour scan alone. Three were removed outright:
+
+- **Cell-list nearest-neighbour index.** `_nearest_unsettled_at` / `_nearest_k_unsettled_at`
+  replace the O(N) linear scan with a uniform grid of `grid_res = round(N^(1/3))` cells per axis
+  (`grid_res³ ≈ N`, so ~1 star per cell at the paper's 1 star/pc³), built once over the fixed
+  positions. A query expands cell shells outward and stops once the best distance provably beats
+  every unexamined cell. It reproduces the linear scan's `(distance, lowest-index)` result exactly
+  (the equality case expands one more shell so boundary ties keep the lowest index). The plain,
+  non-wrapped metric matches target selection, which never uses the periodic minimum image.
+- **Event heap.** A lazy min-heap of `(actionable_year, probe_id)` plus an id-keyed `probes` dict
+  replaces the O(P) `min`-over-all-probes each event and the O(P) probe-list rebuilds. Under
+  `inflight`, a settled star reschedules the probes still heading to it (the decrease-key: their
+  mid-flight learning time), via a `by_target` index; stale heap entries are discarded on pop.
+- **Incremental snapshot.** `settled_count` and `front_radius` are maintained at the single settle
+  site instead of rescanned O(N) every event. (`n_settled()` / `_front_radius()` remain as the
+  O(N) ground truth used once at the end - a built-in cross-check against the incremental values.)
+
+Together these make the **event loop and bookkeeping near-linear**, and the whole run 5-9x faster
+at N ≈ 2400-4800. The seed ensemble is also parallelised across cores (`experiments/measure.py`,
+`experiments/lightspeed_coordination.py`; `SWARM_WORKERS` env, `=1` forces serial), giving another
+~N_cores, bit-identical because each `(seed, mode)` run is independent and results are re-collected
+in seed order.
+
+**The honest ceiling.** Even so, a single run stays **super-linear (empirically ~O(N²))** in this
+model, and a flat cell list cannot fix it. The reason is intrinsic: a wasted probe re-targets from
+wherever it landed - often deep inside the already-settled core - and the nearest *believed*-
+unsettled star from such a point sits out at the front. That is a genuinely **non-local** query,
+so the ring search must expand out to the front (some queries span the whole box; measured
+`cells/query` grows with N). Under `lightspeed` the target may even be a recently-settled star
+whose beacon is still in transit, so the unsettled set alone is not enough to answer it. Reaching a
+true O(N log N) to 200k needs a **dynamic nearest-over-the-unsettled-set structure** (a k-d tree or
+hierarchical grid that skips settled space, plus news-in-transit handling for `lightspeed`) - a
+well-scoped follow-up, deliberately left out of this change to keep it a bit-identical drop-in.
+The `finite_size` sweep therefore still tops out at a 16x span (N ≤ 4800), now reached far faster
+and extendable a further step or two, but not yet to 200,000.
 
 ## Simplifications still deferred to later slices
 
