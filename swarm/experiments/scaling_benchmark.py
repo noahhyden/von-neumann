@@ -8,16 +8,19 @@ committed artifact, so it is a stopwatch, not a result.
 This is a WALL-CLOCK aid only. The fold is deterministic (CLAUDE.md 7), so timing never changes a
 number - which is exactly why it is safe to time whatever hardware is handy (see docs/HARDWARE.md).
 
-What the numbers show (and do not): the cell-list nearest-neighbour index, the event heap, and the
-incremental snapshot removed the O(N) per-event scans, so the EVENT LOOP itself is now near-linear.
-But the end-to-end run stays SUPER-LINEAR in this model, because a wasted probe re-targets from
-wherever it landed - often deep inside the already-settled core - and the nearest *believed*-
-unsettled star from such a point sits out at the front. That is a genuinely NON-LOCAL query: a
-uniform cell list must still expand rings out to the front (occasionally across the whole box), so
-its cost grows with the settled core. A flat grid cannot linearize that; a dynamic
-nearest-over-the-unsettled-set structure (k-d tree / hierarchical grid, plus news-in-transit
-handling for lightspeed) is the follow-up that would. The measured win here is a large constant
-factor (and full linearity in the simple-frontier regime), not a change of complexity class.
+What the numbers show (and do not): issue #27 removed the O(N)/O(P) per-event scans (cell-list
+nearest-neighbour, event heap, incremental snapshot), but a single run stayed empirically ~O(N^2),
+because a wasted probe re-targets from deep inside the already-settled core and the nearest
+*believed*-unsettled star from there sits out at the front - a genuinely NON-LOCAL query the flat
+cell list answered by expanding rings out to the front (O(core)). Issue #30 replaced the cell list
+with a k-d tree over the unsettled set (sim._nearest_unsettled_at): per-node unsettled-count and
+latest-settle-year aggregates let a query PRUNE whole subtrees that are provably fully
+believed-settled - including the light-delayed "beacon still in transit" case - so it reaches the
+front in O(log N + local). The per-query examination is now near-CONSTANT (a few leaves, ~tens of
+candidates) instead of growing with the core. The residual mild super-linearity is not the index:
+it is (i) the model's own arrival count, which grows ~N^0.09 per star as a larger field breeds more
+stale-view races, and (ii) the O(log N) tree descent. The local exponent settles well below the old
+~2 (toward ~1 as N grows and the polylog flattens), and the finite_size sweep now reaches N=200,000.
 
 Run:  uv run python -m experiments.scaling_benchmark
       uv run python -m experiments.scaling_benchmark 500 1000 2000 4000 8000

@@ -192,15 +192,34 @@ class SwarmState:
     # front radius (max is order-independent, so it is bit-identical to a fresh full rescan).
     settled_count: int = 0
     front_radius: float = 0.0
-    # Uniform-grid cell list over the (fixed) star positions, for O(1)-ish nearest-unsettled
-    # queries instead of an O(N) scan (issue #27, the "scale slice"). Built once in initial_state
-    # from xs/ys/zs (stars never move). grid maps a flat cell id (cz*G + cy)*G + cx to the star
-    # indices in that cell, kept in ascending index order so the ring search reproduces the linear
-    # scan's (distance, lowest-index) tie-break exactly. Pure function of the positions, so it is
-    # reconstructible and does not change any result - it only changes how the nearest is found.
-    grid_res: int = 1  # cells per axis (G)
-    grid_cell: float = 1.0  # cell side length in pc (box_side / G)
-    grid: dict[int, list[int]] = field(default_factory=dict)
+    # Balanced k-d tree over the (fixed) star positions, replacing the flat cell list (issue #30).
+    # A wasted probe re-targets from deep in the settled core, and the nearest *believed*-unsettled
+    # star from there sits out at the front - a genuinely non-local query the flat grid answered in
+    # O(core) (it had to expand rings out to the front). The tree carries two per-node aggregates,
+    # maintained as stars settle, so a query PRUNES whole subtrees that are provably fully
+    # believed-settled and reaches the front in O(log N + local):
+    #   - kd_nuns[node]  = count of still-unsettled stars in the subtree (a deletion counter).
+    #   - kd_tsmax[node] = the latest settled_year in the subtree (-1.0 if none settled yet).
+    # Built once from xs/ys/zs (stars never move); pure function of the positions, so it changes only
+    # HOW the nearest is found, never WHICH star - the branch-and-bound reproduces the linear scan's
+    # (distance, lowest-index) argmin bit-for-bit (see sim._nearest_unsettled_at). Flat arrays indexed
+    # by node id (SoA, the shape a future TypeScript port would use); leaves hold a small star bucket.
+    kd_root: int = -1
+    kd_axis: list[int] = field(default_factory=list)  # split axis 0/1/2 per node, -1 for a leaf
+    kd_split: list[float] = field(default_factory=list)  # split coordinate (internal nodes only)
+    kd_lo: list[int] = field(default_factory=list)  # left child node id (-1 for a leaf)
+    kd_hi: list[int] = field(default_factory=list)  # right child node id (-1 for a leaf)
+    kd_parent: list[int] = field(default_factory=list)  # parent node id (-1 at the root)
+    kd_bucket: list[list[int]] = field(default_factory=list)  # star ids at a leaf (None/[] internal)
+    kd_bxmin: list[float] = field(default_factory=list)  # per-node axis-aligned bounding box
+    kd_bxmax: list[float] = field(default_factory=list)
+    kd_bymin: list[float] = field(default_factory=list)
+    kd_bymax: list[float] = field(default_factory=list)
+    kd_bzmin: list[float] = field(default_factory=list)
+    kd_bzmax: list[float] = field(default_factory=list)
+    kd_nuns: list[int] = field(default_factory=list)  # unsettled-star count in the subtree
+    kd_tsmax: list[float] = field(default_factory=list)  # max settled_year in the subtree (-1 if none)
+    star_leaf: list[int] = field(default_factory=list)  # leaf node id holding each star (O(depth) settle)
     # Event queue (issue #27): a lazy min-heap of (actionable_year, probe_id), so the next event is
     # found in O(log P) instead of an O(P) min-scan over every in-flight probe each event. Entries
     # are validated on pop against `probes` and the probe's CURRENT actionable time; stale ones (a

@@ -373,7 +373,7 @@ overlaid), `fig_fuel_tax_by_seed`, `fig_time_tax_vs_dt`, `fig_concurrency` (mech
 `uv run --extra dev python -m experiments.measure` and the figures via
 `uv run --extra dev python -m experiments.paper_figures`.
 
-## Performance and the scale ceiling (issue #27)
+## Performance and the scale ceiling (issues #27, #30)
 
 The fold was sped up to push toward Nicholson & Forgan's 200,000-star field, under a hard
 constraint: **every change is bit-identical** - the committed `results/*.json` reproduce to the
@@ -405,18 +405,49 @@ at N ≈ 2400-4800. The seed ensemble is also parallelised across cores (`experi
 ~N_cores, bit-identical because each `(seed, mode)` run is independent and results are re-collected
 in seed order.
 
-**The honest ceiling.** Even so, a single run stays **super-linear (empirically ~O(N²))** in this
-model, and a flat cell list cannot fix it. The reason is intrinsic: a wasted probe re-targets from
-wherever it landed - often deep inside the already-settled core - and the nearest *believed*-
-unsettled star from such a point sits out at the front. That is a genuinely **non-local** query,
-so the ring search must expand out to the front (some queries span the whole box; measured
-`cells/query` grows with N). Under `lightspeed` the target may even be a recently-settled star
-whose beacon is still in transit, so the unsettled set alone is not enough to answer it. Reaching a
-true O(N log N) to 200k needs a **dynamic nearest-over-the-unsettled-set structure** (a k-d tree or
-hierarchical grid that skips settled space, plus news-in-transit handling for `lightspeed`) - a
-well-scoped follow-up, deliberately left out of this change to keep it a bit-identical drop-in.
-The `finite_size` sweep therefore still tops out at a 16x span (N ≤ 4800), now reached far faster
-and extendable a further step or two, but not yet to 200,000.
+**The #27 ceiling, and how #30 broke it.** After #27 a single run still stayed **super-linear
+(empirically ~O(N²))**, and a flat cell list could not fix it. The reason is intrinsic: a wasted
+probe re-targets from wherever it landed - often deep inside the already-settled core - and the
+nearest *believed*-unsettled star from such a point sits out at the front. That is a genuinely
+**non-local** query, so the ring search had to expand out to the front (some queries spanning the
+whole box; measured `cells/query` grew with N). Under `lightspeed` the target may even be a
+recently-settled star whose beacon is still in transit, so the truly-unsettled set alone does not
+answer it.
+
+Issue #30 replaced the flat cell list with a **k-d tree over the unsettled set**
+(`sim._build_kdtree`, `sim._nearest_unsettled_at`). It is a balanced median-split tree built once
+over the fixed positions, carrying two aggregates maintained as stars settle (`_kd_mark_settled`,
+O(depth) per settle):
+
+- `kd_nuns[node]` - the count of still-unsettled stars in the subtree (a deletion counter), and
+- `kd_tsmax[node]` - the latest `settled_year` in the subtree.
+
+A branch-and-bound nearest search then prunes two ways, and **each prune only ever skips stars that
+cannot be the answer**, so the argmin over the stars actually examined is bit-identical to the old
+linear scan (same `(distance, lowest-index)` tie-break; verified directly in
+`tests/test_kdtree_oracle.py` against a brute-force reference, and end-to-end by the pinned-baseline
+and JSON drift-guard tests):
+
+- **Distance prune** - skip a subtree whose nearest possible point is strictly farther than the
+  best found (a true lower bound, so nothing skipped could beat or tie it; equality descends, so a
+  same-distance lower-index star is never lost).
+- **Belief prune** - skip a subtree provably entirely *believed*-settled from the query point:
+  every star settled (`kd_nuns == 0`) and, for the light-delayed regimes, the beacon of even the
+  most-recently-settled star (`kd_tsmax`) already reached the box's farthest corner
+  (`kd_tsmax + dhi/c ≤ year`, mirroring the leaf gate's own arithmetic so the bound is exact).
+  This is the **news-in-transit** correctness point: a recently-settled star whose beacon is still
+  in flight is *not* pruned - it is believed-unsettled and a valid target, so it is examined.
+
+The effect is that the settled core is skipped in O(log N) and a deep-core-to-front query examines
+a near-**constant** local patch (a few leaves, ~tens of candidates) instead of O(core). The residual
+mild super-linearity is not the index: it is (i) the model's own arrival count, which grows
+**~N^0.09 per star** as a larger field breeds more stale-view races (a physics/combinatorics
+property of the racing model, unchanged by any index), and (ii) the O(log N) tree descent. The
+local scaling exponent drops from the old ~2 toward ~1 (the doubling-ratios keep shrinking as the
+polylog flattens), and the `finite_size` / `finite_size_interior` / `finite_size_periodic` sweeps
+now reach **N = 200,000** - seeds there are scaled to a precision target, not to compute - and
+reproduce the coordination-tax law (~18-19% fuel tax) at that scale. Out of scope, as in #27: no
+Rust beyond a pure `pyo3` drop-in, no distributed ensemble, no GPU.
 
 ## Simplifications still deferred to later slices
 

@@ -7,12 +7,17 @@ field) and as a PERCENT of the perfect-information waste (which is the scale-fre
 The percent tax stays near ~18-19% across the range, so the cost is a roughly size-independent
 fraction of effort, not a small-box artifact.
 
-Reach is bounded by cost: at high v/c the hops are short, so an event-mode run generates
-~8N arrivals and each event does O(N) bookkeeping, making a run ~O(N^2); N=2400 already costs
-~20 s. We sweep N in {300, 600, 1200} with 16 seeds by default (a 4x span), which is what the
-paper's figure regenerates, plus an N=2400 trend point at fewer seeds.
+Reach: after issue #30 the nearest-believed-unsettled query is a k-d tree over the unsettled set
+(REFERENCES.md, "Performance and the scale ceiling"), so a run is near-linear (the per-query
+examination is near-constant instead of scanning the settled core) rather than the old ~O(N^2).
+The committed default sweep is still N in {300, 600, 1200} with 16 seeds (a 4x span, what the
+paper's figure regenerates) plus an N=2400 trend point - those are the pinned artifact numbers.
+But the sweep now extends **cleanly to N = 200,000**: pass a custom ladder to ``run_finite_size``
+(seeds scaled to a precision target, not to compute), and the ~18-19% fuel tax reproduces at scale.
 
 Run:  uv run python -m experiments.finite_size
+      uv run python -c "from experiments.finite_size import run_finite_size; \
+print(run_finite_size((3000, 12000, 48000, 200000), k=4))"  # the extended-reach ladder (#30)
 """
 
 from __future__ import annotations
