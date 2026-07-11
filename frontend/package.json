@@ -7,6 +7,7 @@
   "scripts": {
     "build": "node build.mjs",
     "serve": "node --watch-path=src build.mjs",
+    "preview": "node build.mjs && node scripts/serve-dist.mjs",
     "test": "node --test src/model.test.ts src/launch-economics.test.ts src/power-budget.test.ts src/probe-sim.test.ts src/mission.test.ts src/multi-probe.test.ts src/swarm.test.ts src/coordination.test.ts src/sources.test.ts src/spine.test.ts src/papers.test.ts",
     "test:contract": "node --test src/pimas-contract.test.ts",
     "smoke": "esbuild src/smoke.ts --bundle --format=esm --platform=node --outfile=/tmp/frontend-smoke.mjs && node /tmp/frontend-smoke.mjs",
