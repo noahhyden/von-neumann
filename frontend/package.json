@@ -14,7 +14,7 @@
     "test:diff": "node scripts/gen-diff.mjs && cd ../closure-sim && uv run python ../frontend/scripts/diff_check.py"
   },
   "dependencies": {
-    "pimas": "file:../../pimas"
+    "pimas": "npm:pimas-ui@^0.1.2"
   },
   "devDependencies": {
     "esbuild": "^0.24.2"

@@ -5,12 +5,10 @@ run live in the browser, built entirely on [**pimas**](https://github.com/noahhy
 (the repo rule is pimas-only - no other reactive framework; see [`../CLAUDE.md`](../CLAUDE.md)).
 The reactive core runs the model *and* renders the page.
 
-> **Building locally:** the frontend consumes pimas as a sibling checkout
-> (`"pimas": "file:../../pimas"`) and pimas ships no `dist/`, so `npm ci` here will
-> fail unless pimas is cloned next to this repo and built first. Clone
-> `https://github.com/noahhyden/pimas` as a sibling, check out the SHA in
-> [`.pimas-good-sha`](.pimas-good-sha), and `npm run build` it. Full steps are in the
-> repo root README under "Reproducing all results".
+> **Building locally:** the frontend consumes pimas from npm as
+> [`pimas-ui`](https://www.npmjs.com/package/pimas-ui) (aliased to the bare `pimas`
+> specifier in [`package.json`](package.json)), so `npm ci` here resolves it like any
+> other registry dependency - no sibling checkout or source build required.
 
 It is organized as a **shell that hosts one surface per model**, so each module
 keeps its own slice - the frontend just presents them. As `power-budget`,
@@ -152,15 +150,14 @@ src/
   chart.tsx              the growth chart, driven by the real sim output
   main.tsx               the page
   smoke.ts               headless integration check (reactive graph + speculate rollback + bridge)
-.pimas-good-sha          last pimas commit this frontend is known-good against (canary baseline)
 ```
 
 ## Develop
 
 ```sh
-npm install          # links pimas via file:../../pimas (build pimas first: cd ../../pimas && npm run build)
+npm install          # resolves pimas from npm (alias -> pimas-ui)
 npm test             # Layer A - node --test - parity against the Python model (no pimas)
-npm run test:contract# Layer B - node --test - the pimas framework canary (pimas primitives only)
+npm run test:contract# Layer B - node --test - the pimas primitive contract
 npm run smoke        # Layer C - headless integration through the pimas graph
 npm run build        # -> dist/ (app.js + index.html), reports gzipped size
 npm run preview      # build, then serve dist/ at http://localhost:8000 (Ctrl-C to stop)
@@ -186,23 +183,22 @@ checked *before* merge, two ways, and neither needs a merge-to-check:
   `dist/papers/` only at deploy time; review the PDFs via the `paper-pdfs` artifact.)
 
 ## pimas canary
+## Layered tests (attribution by blame surface)
 
-pimas is first-party and single-maintainer, linked as a live `file:` symlink to
-its working tree - so this frontend always builds against whatever pimas is checked
-out. To tell **framework** breakage apart from **our** breakage, the tests are
-layered by blame surface:
+pimas is first-party and single-maintainer, so telling **framework** breakage apart
+from **our** breakage matters. The tests are layered:
 
 - **Layer A** (`npm test`) imports only the pure TS model - a failure is *our*
   model logic, never pimas.
 - **Layer B** (`npm run test:contract`) imports *only* pimas primitives
   (`createSignal`/`createMemo`/`speculate`/`untrack`, `createStore`/`onStoreWrite`,
-  `createAgentBridge`) - with A green and our tree unchanged, a failure is **pimas**.
-- `.pimas-good-sha` records the last pimas commit this frontend passed against; CI
-  diffs current pimas HEAD against it and, on the A-green/B-red gate, files an issue
-  in the pimas repo (see [`../.github/workflows/pimas-canary.yml`](../.github/workflows/pimas-canary.yml)).
+  `createAgentBridge`) against the exact `pimas-ui` version pinned by the lockfile -
+  with A green and our tree unchanged, a Layer B failure is **pimas**.
 
-When Layer B fails against a new pimas, that's verified framework breakage - flag
-it in pimas, don't work around it here.
+pimas changes only arrive when we deliberately bump the `pimas-ui` version in
+`package.json`, at which point A/B rerun on that bump in CI. When Layer B fails
+against a new pimas, that's verified framework breakage - flag it in pimas, don't
+work around it here.
 
 Each surface is faithful to its module (parity-tested against the Python). Every
 figure on the page traces to a published source: the consolidated bibliography lives
