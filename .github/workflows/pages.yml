@@ -1,10 +1,10 @@
 name: deploy-pages
 
 # Build and publish the frontend to GitHub Pages (vn.noahhyden.com). The site is a
-# build artifact: frontend/dist/ is gitignored and produced by esbuild after pimas is
-# built, so this workflow builds pimas at the pinned SHA (frontend/.pimas-good-sha),
-# builds the frontend, and deploys dist/. Mirrors the frontend job in ci.yml; pimas is
-# public, so the default GITHUB_TOKEN can check it out (no PAT needed).
+# build artifact: frontend/dist/ is gitignored and produced by esbuild. pimas is
+# consumed from npm as pimas-ui (aliased to the bare "pimas" specifier in
+# frontend/package.json), so `npm ci` alone resolves it - no sibling checkout or
+# source build needed. Mirrors the frontend job in ci.yml.
 
 on:
   push:
@@ -25,21 +25,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out von-neumann
-        uses: actions/checkout@v4
-        with:
-          path: von-neumann
-
-      - name: Resolve pinned pimas SHA
-        id: pin
-        run: echo "sha=$(cat von-neumann/frontend/.pimas-good-sha)" >> "$GITHUB_OUTPUT"
-
-      - name: Check out pimas at the pinned SHA
-        uses: actions/checkout@v4
-        with:
-          repository: noahhyden/pimas
-          ref: ${{ steps.pin.outputs.sha }}
-          path: pimas
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
@@ -49,15 +35,8 @@ jobs:
         with:
           enable-cache: true
 
-      # dist/ is gitignored and pimas has no prepare hook - build pimas before consuming.
-      - name: Build pimas (pinned)
-        working-directory: pimas
-        run: |
-          npm ci
-          npm run build
-
       - name: Install + build the frontend
-        working-directory: von-neumann/frontend
+        working-directory: frontend
         run: |
           npm ci
           npm run build
@@ -67,7 +46,7 @@ jobs:
       # beside the site at /papers/<slug>.pdf. The LaTeX step is best-effort: a broken
       # paper must never block the site deploy (ci.yml gates paper correctness on PRs).
       - name: Generate the paper bibliography from sources.ts
-        working-directory: von-neumann/papers
+        working-directory: papers
         run: node scripts/gen-bib.mjs
 
       # Figures are gitignored vector PDFs generated from the source modules. Best-effort,
@@ -81,37 +60,37 @@ jobs:
       # run that can take minutes, so that one is cached below, keyed on its source.
       - name: Render coordination-tax figures from committed results (swarm)
         continue-on-error: true
-        working-directory: von-neumann/swarm
+        working-directory: swarm
         run: uv run --extra dev python -m experiments.paper_figures
 
       - name: Cache electronics-wall figures
         id: figs-ew
         uses: actions/cache@v4
         with:
-          path: von-neumann/papers/electronics-wall/fig_*.pdf
-          key: figs-electronics-wall-pages-v1-${{ hashFiles('von-neumann/closure-sim/src/**/*.py', 'von-neumann/closure-sim/pyproject.toml', 'von-neumann/closure-sim/uv.lock') }}
+          path: papers/electronics-wall/fig_*.pdf
+          key: figs-electronics-wall-pages-v1-${{ hashFiles('closure-sim/src/**/*.py', 'closure-sim/pyproject.toml', 'closure-sim/uv.lock') }}
       - name: Generate electronics-wall figures (closure-sim)
         if: steps.figs-ew.outputs.cache-hit != 'true'
         continue-on-error: true
-        working-directory: von-neumann/closure-sim
+        working-directory: closure-sim
         run: uv run --extra dev python -m closure_sim.paper_figures
 
       - name: Typeset the papers (LaTeX)
         uses: xu-cheng/latex-action@v4
         continue-on-error: true
         with:
-          working_directory: von-neumann/papers
+          working_directory: papers
           root_file: "*/main.tex"
           work_in_root_file_dir: true
 
       - name: Publish paper PDFs into the site
         run: |
-          mkdir -p von-neumann/frontend/dist/papers
-          for d in von-neumann/papers/*/; do
+          mkdir -p frontend/dist/papers
+          for d in papers/*/; do
             [ -f "${d}main.tex" ] || continue
             slug=$(basename "$d")
             if [ -f "${d}main.pdf" ]; then
-              cp "${d}main.pdf" "von-neumann/frontend/dist/papers/${slug}.pdf"
+              cp "${d}main.pdf" "frontend/dist/papers/${slug}.pdf"
               echo "published ${slug}.pdf"
             else
               echo "WARNING: no PDF for ${slug} (LaTeX compile failed); site deploys without it"
@@ -121,7 +100,7 @@ jobs:
       - name: Upload the built site as the Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: von-neumann/frontend/dist
+          path: frontend/dist
 
   deploy:
     needs: build

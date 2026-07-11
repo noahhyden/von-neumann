@@ -3,10 +3,9 @@
 # suite, then the frontend's two test layers (A: pure model parity vs the Python
 # CLI; B: the pimas contract) and its build. Exits nonzero if any suite fails.
 #
-# The frontend depends on pimas (frontend/package.json -> "pimas": "file:../../pimas"),
-# a separate, first-party repo that must be cloned as a SIBLING of von-neumann and
-# built first. See the README "Reproducing all results" section. If pimas is absent,
-# the Python suites still run and the frontend step is reported as skipped.
+# The frontend consumes pimas from npm as pimas-ui (aliased to "pimas" in
+# frontend/package.json), so `npm ci` in frontend/ resolves it like any other
+# registry dependency - no sibling checkout needed.
 set -uo pipefail
 cd "$(dirname "$0")/.." # repo root
 ROOT="$(pwd)"
@@ -25,31 +24,11 @@ for m in "${PY_MODULES[@]}"; do
 done
 
 echo "== frontend =="
-PIMAS="${ROOT}/../pimas"
-PINNED="$(cat "${ROOT}/frontend/.pimas-good-sha")"
-if [ ! -d "${PIMAS}" ]; then
-  echo "   SKIP: pimas not found at ${PIMAS}"
-  echo "   Clone it as a sibling and check out the pinned SHA, then re-run:"
-  echo "     git clone https://github.com/noahhyden/pimas ../pimas"
-  echo "     git -C ../pimas checkout ${PINNED}"
-  fail=1
+if ( cd "${ROOT}/frontend" && npm ci && npm test && npm run test:contract && npm run build ); then
+  echo "   OK: frontend"
 else
-  head="$(git -C "${PIMAS}" rev-parse HEAD 2>/dev/null || echo unknown)"
-  if [ "${head}" != "${PINNED}" ]; then
-    echo "   NOTE: pimas HEAD ${head} != pinned ${PINNED} (the frontend is pinned to the latter;"
-    echo "         'git -C ../pimas checkout ${PINNED}' to reproduce the pinned build exactly)."
-  fi
-  if ( cd "${PIMAS}" && npm ci && npm run build ); then
-    if ( cd "${ROOT}/frontend" && npm ci && npm test && npm run test:contract && npm run build ); then
-      echo "   OK: frontend"
-    else
-      echo "   FAIL: frontend"
-      fail=1
-    fi
-  else
-    echo "   FAIL: pimas build"
-    fail=1
-  fi
+  echo "   FAIL: frontend"
+  fail=1
 fi
 
 echo

@@ -54,30 +54,20 @@ uv pip install -e ".[dev]"
 ## Reproducing all results
 
 Every result in this repo is meant to be reproducible from a clone. The eight Python
-modules use [`uv`](https://docs.astral.sh/uv/) and stand alone. The **frontend** is the
-one prerequisite worth knowing: it is built on [pimas](https://github.com/noahhyden/pimas),
-a separate first-party repo, and consumes it through `frontend/package.json`'s
-`"pimas": "file:../../pimas"`. So pimas must be cloned as a **sibling of this repo** and
-built first (pimas ships no `dist/`, and the frontend is pinned to a known-good pimas
-commit in [`frontend/.pimas-good-sha`](frontend/.pimas-good-sha)):
+modules use [`uv`](https://docs.astral.sh/uv/) and stand alone. The **frontend** is
+built on [pimas](https://github.com/noahhyden/pimas), consumed from npm as
+[`pimas-ui`](https://www.npmjs.com/package/pimas-ui) (aliased to the bare `pimas`
+specifier in `frontend/package.json`), so `npm ci` in `frontend/` resolves it like any
+ordinary registry dependency - no sibling clone or source build required.
 
-```bash
-# from the directory that contains von-neumann/
-git clone https://github.com/noahhyden/pimas
-git -C pimas checkout "$(cat von-neumann/frontend/.pimas-good-sha)"   # the pinned, reproducible build
-(cd pimas && npm ci && npm run build)
-```
-
-Then run everything - all eight module suites plus the frontend's two test layers and
-build - with one command from the repo root:
+Run everything - all eight module suites plus the frontend's two test layers and build
+- with one command from the repo root:
 
 ```bash
 ./scripts/test-all.sh
 ```
 
-It exits nonzero if any suite fails, and reports the frontend as skipped (rather than
-failing hard) if the pimas sibling is missing, so the Python results still reproduce on
-their own.
+It exits nonzero if any suite fails.
 
 ## Conventions
 

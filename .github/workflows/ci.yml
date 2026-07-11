@@ -1,9 +1,10 @@
 name: ci
 
 # The standard push/PR gate: is OUR code green? Runs closure-sim's pytest suite and
-# the frontend's parity + contract tests + build. The frontend is tested against the
-# PINNED pimas (frontend/.pimas-good-sha) so this job is deterministic and isolates
-# our regressions; catching pimas HEAD regressions is the separate pimas-canary.yml.
+# the frontend's parity + contract tests + build. pimas is consumed from npm as
+# pimas-ui (aliased to the bare "pimas" specifier in frontend/package.json), so the
+# frontend job is deterministic against whatever version the lockfile pins - no
+# sibling checkout or source build required.
 
 on:
   push:
@@ -196,45 +197,24 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out von-neumann
-        uses: actions/checkout@v4
-        with:
-          path: von-neumann
-
-      - name: Resolve pinned pimas SHA
-        id: pin
-        run: echo "sha=$(cat von-neumann/frontend/.pimas-good-sha)" >> "$GITHUB_OUTPUT"
-
-      - name: Check out pimas at the pinned SHA
-        uses: actions/checkout@v4
-        with:
-          repository: noahhyden/pimas
-          ref: ${{ steps.pin.outputs.sha }}
-          path: pimas
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
 
-      # dist/ is gitignored and pimas has no prepare hook - build before consuming.
-      - name: Build pimas
-        working-directory: pimas
-        run: |
-          npm ci
-          npm run build
-
-      - name: Install frontend (resolves file:../../pimas)
-        working-directory: von-neumann/frontend
+      - name: Install frontend (pimas resolves via npm alias to pimas-ui)
+        working-directory: frontend
         run: npm ci
 
       - name: Layer A - model parity vs the Python CLI (no pimas)
-        working-directory: von-neumann/frontend
+        working-directory: frontend
         run: npm test
 
-      - name: Layer B - pimas contract (against the pinned pimas)
-        working-directory: von-neumann/frontend
+      - name: Layer B - pimas contract (against the pinned pimas-ui version)
+        working-directory: frontend
         run: npm run test:contract
 
       - name: Build the page
-        working-directory: von-neumann/frontend
+        working-directory: frontend
         run: npm run build
