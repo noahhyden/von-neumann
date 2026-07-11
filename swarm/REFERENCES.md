@@ -451,18 +451,27 @@ ensemble, no GPU.
 
 **What the 200,000-star reach shows (and it is not what was assumed).** The long lever arm is itself
 a finding: the redundant-travel (fuel) tax as a *fraction* of effort is **not** scale-stable - it
-declines with N, and the decline continues far past the old 16x ceiling. The committed 300..4800
-sweep already falls from ~19% to ~13% (OLS regression -4.6 percentage points per decade of N, 95%
-CI [-7.3, -2.6], and the drop is convex/accelerating). At N = 200,000 the median tax over 3 seeds
-is **~1.6%** (instant vs lightspeed wasted arrivals ~1.788M vs ~1.813M; per seed +1.4/+1.6/+1.8%).
-So reaching galactic scale shows the light-speed coordination fuel tax as a fraction of total effort
-largely *vanishing*, not holding near the small-box ~18-19%. The absolute wasted-journey count still
-grows with the field; it is the fraction that falls. (This is exactly the with-N decline the
-`finite_size` and `finite_size_interior` measurements were built to characterise - see the referee
-finding M1 on edge effects - now resolved over a ~670x span instead of 16x. The finding bears on the
-paper's framing of the tax as a "size-independent fraction of effort"; that framing should be
-revisited against this scale.) These 200k numbers are a wall-clock demonstration, not a committed
-`results/*.json` artifact; regenerating the pinned sweep at this scale is a separate measurement run.
+declines with N, and the decline continues, accelerating, far past the old 16x ceiling. The
+committed `finite_size` sweep now spans a ~670x range (N = 300 .. 200,000) and falls monotonically:
+
+| N | 300 | 600 | 1200 | 2400 | 4800 | 9600 | 24000 | 48000 | 200000 |
+|---|---|---|---|---|---|---|---|---|---|
+| fuel tax % (median) | 19.0 | 18.2 | 17.9 | 16.3 | 13.1 | 11.2 | 6.4 | 3.5 | **1.5** |
+| seeds | 48 | 48 | 48 | 48 | 32 | 32 | 24 | 16 | 8 |
+
+The 300..4800 records are byte-identical to the prior committed sweep (the fold is bit-identical);
+the higher-N points are new. OLS regression of the median tax on log10(N) over the full ladder is
+**-7.0 percentage points per decade** (95% CI [-7.8, -6.4]), and the drop is convex/accelerating. At
+N = 200,000 the median tax over 8 seeds is **+1.5%** (IQR [+1.4, +1.9]; instant vs lightspeed wasted
+arrivals ~1.79M vs ~1.81M). So reaching galactic scale shows the light-speed coordination fuel tax
+as a fraction of total effort largely *vanishing*, not holding near the small-box ~18-19%. The
+absolute wasted-journey count still grows with the field (237 -> 27,073 median); it is the fraction
+that falls. (This is exactly the with-N decline the `finite_size` and `finite_size_interior`
+measurements were built to characterise - see the referee finding M1 on edge effects - now resolved
+over ~670x instead of 16x. The finding bears on the paper's framing of the tax as a
+"size-independent fraction of effort"; that framing should be revisited against this scale. The
+`finite_size_interior` and `finite_size_periodic` edge controls are still committed at the old
+300..4800 range and would want the same extension to test whether the decline is bulk or boundary.)
 
 ## Simplifications still deferred to later slices
 

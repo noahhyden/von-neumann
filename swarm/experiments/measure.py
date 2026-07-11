@@ -331,8 +331,15 @@ def m_finite_size() -> None:
     higher-N figure (the numbers here are the pinned artifact the drift guard checks, so leave them
     unless you are deliberately regenerating the result at a new scale).
     """
-    # High-seed sweep to resolve whether the large-N tax decline is real or scatter.
-    n_seeds_by_n = [(300, 48), (600, 48), (1200, 48), (2400, 48), (4800, 32)]
+    # High-seed sweep to resolve whether the large-N tax decline is real or scatter. Since #30 the
+    # run is near-linear, so the ladder now reaches N=200,000 (a ~670x span, not the old 16x). The
+    # 300..4800 points and their seed counts are unchanged (they regenerate byte-identically); the
+    # higher-N points scale seeds DOWN to a precision target - the tax spread narrows with N (the
+    # per-seed 200k tax clusters within ~0.5 pp), so fewer seeds hold the median tight. The old
+    # O(N^2) cost that once capped this at 4800 is gone: the whole ladder to 200k is cheaper than
+    # the old sweep to 4800 (which was dominated by its 2400/4800 points).
+    n_seeds_by_n = [(300, 48), (600, 48), (1200, 48), (2400, 48), (4800, 32),
+                    (9600, 32), (24000, 24), (48000, 16), (200000, 8)]
     data = {}
     per_n_fuel: dict[int, list[float]] = {}
     for n, k in n_seeds_by_n:
