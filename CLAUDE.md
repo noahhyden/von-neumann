@@ -116,6 +116,11 @@ This is physics-heavy. Grounding is not optional.
 - **Git:** commit or push only when asked. The repo is **private** at
   `noahhyden/von-neumann`. **Never push to `Klarum-Software`** (or anywhere else).
 - New numbers in a change → update that module's `REFERENCES.md` in the same change.
+- **Compute hardware is inventoried in [`docs/HARDWARE.md`](docs/HARDWARE.md).** Consult
+  it whenever you reason about run time, parallelism, or what a machine can handle, and
+  update it when the hardware stack changes (new machine, GPU, cloud ensemble). It is a
+  wall-clock aid only: the folds are deterministic (§7), so hardware never changes a
+  result - which is exactly why the specs live in one shared place, not baked into code.
 
 ---
 
