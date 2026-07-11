@@ -445,9 +445,24 @@ mild super-linearity is not the index: it is (i) the model's own arrival count, 
 property of the racing model, unchanged by any index), and (ii) the O(log N) tree descent. The
 local scaling exponent drops from the old ~2 toward ~1 (the doubling-ratios keep shrinking as the
 polylog flattens), and the `finite_size` / `finite_size_interior` / `finite_size_periodic` sweeps
-now reach **N = 200,000** - seeds there are scaled to a precision target, not to compute - and
-reproduce the coordination-tax law (~18-19% fuel tax) at that scale. Out of scope, as in #27: no
-Rust beyond a pure `pyo3` drop-in, no distributed ensemble, no GPU.
+now reach **N = 200,000** (a single run fills in ~140-170 s; seeds are scaled to a precision target,
+not to compute). Out of scope, as in #27: no Rust beyond a pure `pyo3` drop-in, no distributed
+ensemble, no GPU.
+
+**What the 200,000-star reach shows (and it is not what was assumed).** The long lever arm is itself
+a finding: the redundant-travel (fuel) tax as a *fraction* of effort is **not** scale-stable - it
+declines with N, and the decline continues far past the old 16x ceiling. The committed 300..4800
+sweep already falls from ~19% to ~13% (OLS regression -4.6 percentage points per decade of N, 95%
+CI [-7.3, -2.6], and the drop is convex/accelerating). At N = 200,000 the median tax over 3 seeds
+is **~1.6%** (instant vs lightspeed wasted arrivals ~1.788M vs ~1.813M; per seed +1.4/+1.6/+1.8%).
+So reaching galactic scale shows the light-speed coordination fuel tax as a fraction of total effort
+largely *vanishing*, not holding near the small-box ~18-19%. The absolute wasted-journey count still
+grows with the field; it is the fraction that falls. (This is exactly the with-N decline the
+`finite_size` and `finite_size_interior` measurements were built to characterise - see the referee
+finding M1 on edge effects - now resolved over a ~670x span instead of 16x. The finding bears on the
+paper's framing of the tax as a "size-independent fraction of effort"; that framing should be
+revisited against this scale.) These 200k numbers are a wall-clock demonstration, not a committed
+`results/*.json` artifact; regenerating the pinned sweep at this scale is a separate measurement run.
 
 ## Simplifications still deferred to later slices
 

@@ -1,11 +1,16 @@
 """Experiment: is the fuel tax a scale-stable fraction of the swarm's effort?
 
-The redundant-travel (fuel) tax from light-speed lag is a robust fraction of total journeys
-at directed-energy speed. This sweeps the system size N at Lambda = v/c = 0.2 (powered, event
-mode) and reports the fuel tax both in absolute wasted journeys (which must grow with the
-field) and as a PERCENT of the perfect-information waste (which is the scale-free quantity).
-The percent tax stays near ~18-19% across the range, so the cost is a roughly size-independent
-fraction of effort, not a small-box artifact.
+The redundant-travel (fuel) tax from light-speed lag. This sweeps the system size N at
+Lambda = v/c = 0.2 (powered, event mode) and reports the fuel tax both in absolute wasted
+journeys (which grow with the field) and as a PERCENT of the perfect-information waste.
+
+The committed sweep is small-N (300..4800), where the percent tax runs ~19% down to ~13% - a
+clear, statistically-significant DECLINE with N (regression -4.6 percentage points per decade,
+convex). Since issue #30 the run is near-linear, so the sweep now reaches N=200,000, and the long
+lever arm settles the question the small-N range could not: the fraction is NOT size-independent.
+At N=200,000 the median tax (3 seeds) is only ~1.6%; the fuel tax as a fraction of effort largely
+vanishes at galactic scale (the absolute wasted count still grows; the fraction falls). See
+REFERENCES.md, "What the 200,000-star reach shows".
 
 Reach: after issue #30 the nearest-believed-unsettled query is a k-d tree over the unsettled set
 (REFERENCES.md, "Performance and the scale ceiling"), so a run is near-linear (the per-query
@@ -81,8 +86,9 @@ def main() -> None:
               f"{f'{p.seeds_positive}/{p.seeds}':>10}")
     print(
         "\nReading: the absolute wasted journeys grow with the field (more stars, more traffic),\n"
-        "but as a PERCENT of the perfect-information waste the fuel tax is roughly flat near\n"
-        "~18-19% - a size-independent fraction of effort, not a finite-box artifact."
+        "but as a PERCENT of the perfect-information waste the fuel tax DECLINES with N (~19% at\n"
+        "N=300 down to ~13% at N=4800, and ~1.6% at N=200,000). The fraction is not size-independent;\n"
+        "at galactic scale the coordination fuel tax as a fraction of effort largely vanishes."
     )
 
 
