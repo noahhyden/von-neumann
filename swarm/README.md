@@ -61,6 +61,15 @@ Knobs (`SwarmParams`): `n_stars`, `density_stars_per_pc3`, `probe_speed_c`,
 - **Slingshot dynamics** - the three policies above (this section's boost physics).
 - **Spatial hashing** - the frontend TS port uses a uniform-grid index (proven identical
   to brute force) so the live "Swarm" surface scales to thousands of stars smoothly.
+- **Scale speed-ups (issue #27), all bit-identical.** The Python fold now uses a cell-list
+  nearest-neighbour index, a lazy event heap (no more O(P) min-over-probes per event), and an
+  incremental settled-count / front-radius (no O(N) rescan per event); the seed ensemble runs in
+  parallel across cores (`SWARM_WORKERS`). Every committed result still reproduces to the printed
+  digit. This makes the event loop near-linear and single runs ~5-9x faster, but a run stays
+  super-linear overall because a re-targeting probe's nearest *believed*-unsettled star is a
+  non-local query (out at the front); `experiments/scaling_benchmark.py` measures it, and
+  REFERENCES.md ("Performance and the scale ceiling") records why 200k needs a dynamic
+  unsettled-set structure next.
 - **Light-speed-limited coordination** (FRONTIER issue #1) - *the novel extension*. The
   source paper grants every probe perfect instantaneous global knowledge; we add the
   finite-c gate (`coordination="lightspeed"`): a probe treats a distant star as settled only

@@ -176,12 +176,40 @@ class SwarmState:
     star_speed_pc_yr: list[float]  # per-star speed magnitude (drives the slingshot boost)
     settled_year: list[float]  # -1.0 while unsettled, else the year it was settled
     origin: int  # index of the homeworld star (front radius is measured from here)
-    probes: list[Probe]
+    # In-flight probes keyed by id, insertion-ordered (issue #27). A dict (not a list) so removing
+    # a processed probe and looking one up by id are O(1) instead of an O(P) list rebuild per event.
+    # Membership here is the ground truth of "in flight"; ev_heap entries are validated against it.
+    probes: dict[int, Probe]
     next_probe_id: int
     total_launched: int
     max_speed_pc_yr: float  # fastest probe launched so far (shows accumulated boost)
     box_side_pc: float = 0.0  # side of the cube (for the periodic minimum-image metric)
     periodic: bool = False  # torus (minimum-image distances) instead of a hard wall
+    # Running settled-count and front radius, maintained incrementally at the settle site so the
+    # per-event snapshot need not rescan the whole field (the scale slice, issue #27). The ONLY
+    # writes to settled_year are the origin at init and _process_arrivals, so a counter maintained
+    # there is exactly n_settled(), and a running max of _dist(settled, origin) is exactly the
+    # front radius (max is order-independent, so it is bit-identical to a fresh full rescan).
+    settled_count: int = 0
+    front_radius: float = 0.0
+    # Uniform-grid cell list over the (fixed) star positions, for O(1)-ish nearest-unsettled
+    # queries instead of an O(N) scan (issue #27, the "scale slice"). Built once in initial_state
+    # from xs/ys/zs (stars never move). grid maps a flat cell id (cz*G + cy)*G + cx to the star
+    # indices in that cell, kept in ascending index order so the ring search reproduces the linear
+    # scan's (distance, lowest-index) tie-break exactly. Pure function of the positions, so it is
+    # reconstructible and does not change any result - it only changes how the nearest is found.
+    grid_res: int = 1  # cells per axis (G)
+    grid_cell: float = 1.0  # cell side length in pc (box_side / G)
+    grid: dict[int, list[int]] = field(default_factory=dict)
+    # Event queue (issue #27): a lazy min-heap of (actionable_year, probe_id), so the next event is
+    # found in O(log P) instead of an O(P) min-scan over every in-flight probe each event. Entries
+    # are validated on pop against `probes` and the probe's CURRENT actionable time; stale ones (a
+    # probe removed, or - under "inflight" - one whose target was claimed so its actionable dropped)
+    # are discarded. by_target maps a star to the ids of live probes heading to it; when that star is
+    # settled we push each such probe's now-earlier mid-flight learning time (the inflight
+    # decrease-key). by_target is maintained ONLY under "inflight" (no decrease-key otherwise).
+    ev_heap: list[tuple[float, int]] = field(default_factory=list)
+    by_target: dict[int, list[int]] = field(default_factory=dict)
     # --- coordination observability (the cost of no-coordination; 0 unless probes race) ---
     total_arrivals: int = 0  # every probe arrival processed
     wasted_arrivals: int = 0  # arrivals landing on an already-(truly-)settled star (redundant trips)

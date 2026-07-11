@@ -19,6 +19,7 @@ future TypeScript SoA port can match bit-for-bit. Zero pimas imports.
 
 from __future__ import annotations
 
+import heapq
 import math
 
 from swarm.models import (
@@ -184,6 +185,79 @@ def _dist(s: SwarmState, a: int, b: int) -> float:
     return (dx * dx + dy * dy + dz * dz) ** 0.5
 
 
+def _build_grid(xs: list[float], ys: list[float], zs: list[float], box_side_pc: float) -> tuple[int, float, dict[int, list[int]]]:
+    """Uniform cell list over the fixed star positions (issue #27): (grid_res, cell_size, cells).
+
+    ``grid_res = round(N^(1/3))`` gives ~1 star per cell at the paper's uniform density, so the
+    ring search around a query point touches O(1) cells to find the nearest. Cell size is
+    ``box_side / grid_res``; a star at coordinate ``x`` lands in axis cell ``clamp(int(x/cs), 0,
+    G-1)`` (positions are in ``[0, L]`` - reflection keeps clumpy fields in-box too). Stars are
+    inserted in ascending index order, so each cell's list is index-sorted and the nearest search
+    can break ties by lowest index exactly as the old linear scan did. Plain (non-wrapped) metric,
+    matching the target-selection distance (which never uses the periodic minimum image).
+    """
+    n = len(xs)
+    g = max(1, round(n ** (1.0 / 3.0)))
+    cs = box_side_pc / g if box_side_pc > 0.0 else 1.0
+    cells: dict[int, list[int]] = {}
+    for i in range(n):
+        cx = int(xs[i] / cs)
+        cy = int(ys[i] / cs)
+        cz = int(zs[i] / cs)
+        cx = 0 if cx < 0 else (g - 1 if cx >= g else cx)
+        cy = 0 if cy < 0 else (g - 1 if cy >= g else cy)
+        cz = 0 if cz < 0 else (g - 1 if cz >= g else cz)
+        flat = (cz * g + cy) * g + cx
+        b = cells.get(flat)
+        if b is None:
+            cells[flat] = [i]
+        else:
+            b.append(i)  # ascending index order (i increases), so buckets stay index-sorted
+    return g, cs, cells
+
+
+def _cell_index(s: SwarmState, x: float, y: float, z: float) -> tuple[int, int, int]:
+    """Axis cell coordinates of a point, clamped into the grid (same rule as _build_grid)."""
+    g = s.grid_res
+    cs = s.grid_cell
+    cx = int(x / cs)
+    cy = int(y / cs)
+    cz = int(z / cs)
+    cx = 0 if cx < 0 else (g - 1 if cx >= g else cx)
+    cy = 0 if cy < 0 else (g - 1 if cy >= g else cy)
+    cz = 0 if cz < 0 else (g - 1 if cz >= g else cz)
+    return cx, cy, cz
+
+
+def _shell_cells(g: int, qx: int, qy: int, qz: int, r: int) -> list[int]:
+    """Flat ids of the in-bounds cells at Chebyshev radius ``r`` from ``(qx,qy,qz)`` (the shell surface).
+
+    Enumerates only the surface of the cube (each cell exactly once), not its interior, so a query
+    that has to expand far stays O(r^2) per shell rather than O(r^3).
+    """
+    if r == 0:
+        return [(qz * g + qy) * g + qx]  # in-bounds: q is already clamped
+    out: list[int] = []
+    for dz in range(-r, r + 1):
+        cz = qz + dz
+        if cz < 0 or cz >= g:
+            continue
+        z_face = dz == -r or dz == r
+        for dy in range(-r, r + 1):
+            cy = qy + dy
+            if cy < 0 or cy >= g:
+                continue
+            if z_face or dy == -r or dy == r:
+                xr = range(-r, r + 1)  # full row of x
+            else:
+                xr = (-r, r)  # only the two x edges (interior of this y-row is not on the surface)
+            for dx in xr:
+                cx = qx + dx
+                if 0 <= cx < g:
+                    out.append((cz * g + cy) * g + cx)
+    return out
+
+
 def _believes_settled_at(
     s: SwarmState, px: float, py: float, pz: float, i: int, year: float, coordination: str
 ) -> bool:
@@ -222,21 +296,42 @@ def _nearest_unsettled_at(
 ) -> int | None:
     """Index of the nearest *believed*-unsettled star to point ``(px,py,pz)`` not in ``exclude``.
 
-    O(N) scan; deterministic tie-break by lowest index. (Spatial hashing to make this
-    O(1)-ish is the scale slice.)
+    Cell-list ring search (issue #27): expand shells of grid cells outward from the query point,
+    testing the belief gate + exclude per candidate, and stop once the best distance provably
+    beats every unexamined cell. Bit-identical to the old O(N) linear scan - it returns the same
+    star for every query, including ties (deterministic tie-break by lowest index): after fully
+    covering shells 0..R the nearest unexamined star is >= R*cell away, so once best < R*cell no
+    farther star can tie or beat it, and any star exactly at the bound sits in shell R+1 and is
+    examined before we stop (the equality case continues one more shell).
     """
+    xs, ys, zs = s.xs, s.ys, s.zs
+    g = s.grid_res
+    cs = s.grid_cell
+    grid = s.grid
+    qx, qy, qz = _cell_index(s, px, py, pz)
     best: int | None = None
     best_d2 = float("inf")
-    for i in range(len(s.xs)):
-        if i in exclude or _believes_settled_at(s, px, py, pz, i, year, coordination):
-            continue
-        dx = s.xs[i] - px
-        dy = s.ys[i] - py
-        dz = s.zs[i] - pz
-        d2 = dx * dx + dy * dy + dz * dz
-        if d2 < best_d2:
-            best_d2 = d2
-            best = i
+    r = 0
+    while r < g:
+        for flat in _shell_cells(g, qx, qy, qz, r):
+            bucket = grid.get(flat)
+            if bucket is None:
+                continue
+            for i in bucket:
+                if i in exclude or _believes_settled_at(s, px, py, pz, i, year, coordination):
+                    continue
+                dx = xs[i] - px
+                dy = ys[i] - py
+                dz = zs[i] - pz
+                d2 = dx * dx + dy * dy + dz * dz
+                if d2 < best_d2 or (d2 == best_d2 and best is not None and i < best):
+                    best_d2 = d2
+                    best = i
+        if best is not None:
+            bound = r * cs
+            if best_d2 < bound * bound:
+                return best
+        r += 1
     return best
 
 
@@ -247,15 +342,39 @@ def _nearest_unsettled(s: SwarmState, frm: int, exclude: set[int], params: Swarm
 def _nearest_k_unsettled_at(
     s: SwarmState, px: float, py: float, pz: float, year: float, coordination: str, k: int, exclude: set[int]
 ) -> list[int]:
-    """The ``k`` nearest *believed*-unsettled stars to a point (deterministic order by (distance, index))."""
+    """The ``k`` nearest *believed*-unsettled stars to a point (deterministic order by (distance, index)).
+
+    Cell-list ring search (issue #27), same guarantee as _nearest_unsettled_at: gather candidates
+    shell by shell and stop once we hold >= k of them whose k-th smallest (distance, index) beats
+    every unexamined cell (bound r*cell). The returned top-k (sorted by (d2, index)) is then exactly
+    the linear scan's ``sorted(all_candidates)[:k]`` - no unexamined star can enter the top-k, and
+    boundary ties sit in the next shell and are gathered before we stop.
+    """
+    xs, ys, zs = s.xs, s.ys, s.zs
+    g = s.grid_res
+    cs = s.grid_cell
+    grid = s.grid
+    qx, qy, qz = _cell_index(s, px, py, pz)
     cands: list[tuple[float, int]] = []
-    for i in range(len(s.xs)):
-        if i in exclude or _believes_settled_at(s, px, py, pz, i, year, coordination):
-            continue
-        dx = s.xs[i] - px
-        dy = s.ys[i] - py
-        dz = s.zs[i] - pz
-        cands.append((dx * dx + dy * dy + dz * dz, i))
+    r = 0
+    while r < g:
+        for flat in _shell_cells(g, qx, qy, qz, r):
+            bucket = grid.get(flat)
+            if bucket is None:
+                continue
+            for i in bucket:
+                if i in exclude or _believes_settled_at(s, px, py, pz, i, year, coordination):
+                    continue
+                dx = xs[i] - px
+                dy = ys[i] - py
+                dz = zs[i] - pz
+                cands.append((dx * dx + dy * dy + dz * dz, i))
+        if len(cands) >= k:
+            cands.sort()
+            bound = r * cs
+            if cands[k - 1][0] < bound * bound:
+                return [i for _, i in cands[:k]]
+        r += 1
     cands.sort()
     return [i for _, i in cands[:k]]
 
@@ -325,22 +444,97 @@ def _launch_from(s: SwarmState, star: int, params: SwarmParams, incoming_speed: 
         chosen.add(target)
         hop = _dist(s, star, target)
         travel = hop / departing
-        s.probes.append(
-            Probe(
-                id=s.next_probe_id,
-                target=target,
-                arrive_year=s.year + params.settle_time_years + travel,
-                speed_pc_yr=departing,
-                hop_len_pc=hop,
-                from_x=s.xs[star], from_y=s.ys[star], from_z=s.zs[star],
-                launch_year=s.year + params.settle_time_years,
-            )
-        )
+        _add_probe(s, params, Probe(
+            id=s.next_probe_id,
+            target=target,
+            arrive_year=s.year + params.settle_time_years + travel,
+            speed_pc_yr=departing,
+            hop_len_pc=hop,
+            from_x=s.xs[star], from_y=s.ys[star], from_z=s.zs[star],
+            launch_year=s.year + params.settle_time_years,
+        ))
         s.next_probe_id += 1
         s.total_launched += 1
         # Read-only observability: mean effective launch speed (touches no RNG, no decision).
         s.launch_speed_sum_pc_yr += departing
         s.launch_count += 1
+
+
+def _add_probe(s: SwarmState, params: SwarmParams, p: Probe) -> None:
+    """Register a launched / re-targeted probe: live set, event heap, and (inflight) target index.
+
+    The heap key is the probe's actionable time now (arrival, or - if it is already doomed at birth
+    under inflight - its mid-flight learning time), so a lazy pop later validates against exactly
+    this value. Re-targets reuse the id, so this simply overwrites the live entry and pushes a fresh
+    heap key; the probe's previous (now stale) heap entry is discarded when it surfaces.
+    """
+    s.probes[p.id] = p
+    heapq.heappush(s.ev_heap, (_actionable_year(s, params, p), p.id))
+    if params.coordination == "inflight":
+        s.by_target.setdefault(p.target, []).append(p.id)
+
+
+def _on_settled(s: SwarmState, params: SwarmParams, star: int) -> None:
+    """Reschedule the probes still heading to a star that was just claimed (inflight decrease-key).
+
+    Their target is now settled (ground truth), so under inflight each acquires an earlier
+    actionable time (the beacon overtakes it mid-flight); push that so the heap surfaces it before
+    its arrival. No-op unless inflight - the other modes act only at stars, so a claimed target
+    changes nothing until the probe arrives. The star settles exactly once, so this runs once per
+    star; the list is then cleared (any later probe born toward this settled star schedules its own
+    learning time at birth via _add_probe).
+    """
+    if params.coordination != "inflight":
+        return
+    lst = s.by_target.get(star)
+    if not lst:
+        return
+    for pid in lst:
+        q = s.probes.get(pid)
+        if q is not None and q.target == star:  # still live and still heading here
+            heapq.heappush(s.ev_heap, (_actionable_year(s, params, q), pid))
+    s.by_target[star] = []
+
+
+def _next_valid_event(state: SwarmState, params: SwarmParams) -> float | None:
+    """Peek the earliest VALID actionable time on the heap, discarding stale entries (issue #27).
+
+    A heap entry is stale if its probe is gone (already processed) or its stored key no longer
+    equals the probe's current actionable time (an inflight decrease-key superseded it). Returns
+    None only when no live probe remains. O(log P) amortized - each entry is discarded at most once.
+    """
+    heap = state.ev_heap
+    while heap:
+        key, pid = heap[0]
+        p = state.probes.get(pid)
+        if p is None or _actionable_year(state, params, p) != key:
+            heapq.heappop(heap)
+            continue
+        return key
+    return None
+
+
+def _pop_due(state: SwarmState, params: SwarmParams, cutoff: float) -> list[Probe]:
+    """Pop every live probe whose CURRENT actionable time is <= ``cutoff`` (pre-processing state).
+
+    Exactly reproduces the old ``[p for p in probes if _actionable_year(p) <= cutoff]`` scan: every
+    live probe has a valid heap entry keyed at its actionable time, so all due probes surface here;
+    stale and duplicate (same-id) entries are filtered. The batch order is irrelevant - the caller
+    re-sorts by (arrive_year, id) - so the result is identical regardless of heap tie ordering.
+    """
+    batch: list[Probe] = []
+    seen: set[int] = set()
+    heap = state.ev_heap
+    while heap and heap[0][0] <= cutoff:
+        key, pid = heapq.heappop(heap)
+        p = state.probes.get(pid)
+        if p is None or pid in seen:
+            continue
+        if _actionable_year(state, params, p) != key:
+            continue  # stale entry (superseded or already re-targeted)
+        seen.add(pid)
+        batch.append(p)
+    return batch
 
 
 def initial_state(params: SwarmParams, *, seed: int) -> SwarmState:
@@ -356,10 +550,13 @@ def initial_state(params: SwarmParams, *, seed: int) -> SwarmState:
     settled = [-1.0] * n
     settled[origin] = 0.0
     v_max = params.probe_speed_pc_per_year
+    grid_res, grid_cell, grid = _build_grid(xs, ys, zs, L)  # cell list for nearest queries (issue #27)
     state = SwarmState(
         rng=rng, year=0.0, xs=xs, ys=ys, zs=zs, star_speed_pc_yr=star_speed, settled_year=settled,
-        origin=origin, probes=[], next_probe_id=0, total_launched=0, max_speed_pc_yr=v_max,
+        origin=origin, probes={}, next_probe_id=0, total_launched=0, max_speed_pc_yr=v_max,
         box_side_pc=L, periodic=params.periodic,
+        settled_count=1, front_radius=0.0,  # origin only; d(origin, origin) = 0 (issue #27)
+        grid_res=grid_res, grid_cell=grid_cell, grid=grid,
     )
     # Seed probes leave the homeworld at powered cruise, taking the homeworld's slingshot.
     _launch_from(state, origin, params, v_max)
@@ -373,15 +570,24 @@ def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Pro
     (the cost of stale info); the first to reach an unsettled star settles it and launches
     its offspring. Reads GROUND TRUTH on arrival - what the probe finds, not what it believed.
     """
-    arrived_ids = {p.id for p in arrivals}
-    # Keep non-arrived probes; launches and re-targets append into this same list.
-    state.probes = [p for p in state.probes if p.id not in arrived_ids]
+    # Remove the arriving probes from the live set up front (as the old list rebuild did), so the
+    # settlement sweep below never reschedules a probe that is itself arriving this event. Launches
+    # and re-targets re-add via _add_probe. O(len(arrivals)), not O(P).
+    for p in arrivals:
+        state.probes.pop(p.id, None)
 
     state.total_arrivals += len(arrivals)
     for p in arrivals:
         if state.settled_year[p.target] < 0.0:
             # First to arrive: settle it and spread (slingshot off it, boosting offspring).
             state.settled_year[p.target] = state.year
+            # Maintain the running count + front radius here (the sole settle site besides the
+            # origin), so the per-event snapshot is O(1) instead of an O(N) rescan (issue #27).
+            state.settled_count += 1
+            d_origin = _dist(state, p.target, state.origin)
+            if d_origin > state.front_radius:
+                state.front_radius = d_origin
+            _on_settled(state, params, p.target)  # inflight: reschedule probes now doomed by this claim
             state.settle_hop_sum_pc += p.hop_len_pc  # winning-trip hop length (read-only)
             state.settle_hop_count += 1
             state.settle_hop_hist[_hop_bin(p.hop_len_pc)] += 1  # won arrivals by hop-length bin
@@ -413,14 +619,12 @@ def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Pro
                 state.retarget_count += 1
                 hop = _dist(state, p.target, target)
                 travel = hop / p.speed_pc_yr
-                state.probes.append(
-                    Probe(
-                        id=p.id, target=target, arrive_year=state.year + travel,
-                        speed_pc_yr=p.speed_pc_yr, retargets=p.retargets + 1, hop_len_pc=hop,
-                        from_x=state.xs[p.target], from_y=state.ys[p.target], from_z=state.zs[p.target],
-                        launch_year=state.year,
-                    )
-                )
+                _add_probe(state, params, Probe(
+                    id=p.id, target=target, arrive_year=state.year + travel,
+                    speed_pc_yr=p.speed_pc_yr, retargets=p.retargets + 1, hop_len_pc=hop,
+                    from_x=state.xs[p.target], from_y=state.ys[p.target], from_z=state.zs[p.target],
+                    launch_year=state.year,
+                ))
 
 
 def _learn_year(p: Probe, settled_year: list[float]) -> float:
@@ -458,10 +662,12 @@ def _actionable_year(state: SwarmState, params: SwarmParams, p: Probe) -> float:
 
 
 def _next_event_year(state: SwarmState, params: SwarmParams) -> float | None:
-    """Earliest actionable time over all in-flight probes (arrival or mid-flight learning)."""
-    if not state.probes:
-        return None
-    return min(_actionable_year(state, params, p) for p in state.probes)
+    """Earliest actionable time over all in-flight probes (arrival or mid-flight learning).
+
+    O(log P) via the event heap (issue #27), replacing the old O(P) min-scan. Bit-identical: the
+    heap holds every live probe's actionable time, and stale entries are pruned before the min.
+    """
+    return _next_valid_event(state, params)
 
 
 def _process_learns(state: SwarmState, params: SwarmParams, learns: list[Probe]) -> None:
@@ -474,8 +680,8 @@ def _process_learns(state: SwarmState, params: SwarmParams, learns: list[Probe])
     charged (it did not decelerate). Retires if the re-target cap is hit or nothing is believed
     unsettled from here.
     """
-    learn_ids = {p.id for p in learns}
-    state.probes = [p for p in state.probes if p.id not in learn_ids]
+    for p in learns:
+        state.probes.pop(p.id, None)  # remove the learners up front (as the old list rebuild did)
     for p in learns:
         # Position when the beacon overtook it: interpolate from the launch point to the target.
         span = p.arrive_year - p.launch_year
@@ -498,13 +704,11 @@ def _process_learns(state: SwarmState, params: SwarmParams, learns: list[Probe])
         dz = state.zs[target] - pz
         hop = (dx * dx + dy * dy + dz * dz) ** 0.5
         travel = hop / p.speed_pc_yr
-        state.probes.append(
-            Probe(
-                id=p.id, target=target, arrive_year=state.year + travel,
-                speed_pc_yr=p.speed_pc_yr, retargets=p.retargets + 1, hop_len_pc=hop,
-                from_x=px, from_y=py, from_z=pz, launch_year=state.year,
-            )
-        )
+        _add_probe(state, params, Probe(
+            id=p.id, target=target, arrive_year=state.year + travel,
+            speed_pc_yr=p.speed_pc_yr, retargets=p.retargets + 1, hop_len_pc=hop,
+            from_x=px, from_y=py, from_z=pz, launch_year=state.year,
+        ))
 
 
 def _resolve_events(state: SwarmState, params: SwarmParams, cutoff: float) -> None:
@@ -516,15 +720,26 @@ def _resolve_events(state: SwarmState, params: SwarmParams, cutoff: float) -> No
     For "instant"/"lightspeed" there are never any learns, so this is bit-identical to the
     old arrivals-only path.
     """
+    _resolve_batch(state, params, _pop_due(state, params, cutoff))
+
+
+def _resolve_batch(state: SwarmState, params: SwarmParams, batch: list[Probe]) -> None:
+    """Split a due batch into arrivals and (inflight) mid-flight learns, sort, and process.
+
+    Classification reads the state BEFORE anything in the batch is processed (as the old scan did),
+    so a probe doomed by a settlement within this same batch is still handled as an arrival here and
+    picks up its learning time only on the next event. Arrivals run first (ground-truth settlements
+    become visible), then learns. Both are sorted by (arrive_year, id), so the outcome does not
+    depend on the order the heap popped them.
+    """
     arrivals: list[Probe] = []
     learns: list[Probe] = []
     inflight = params.coordination == "inflight"
-    for p in state.probes:
-        if _actionable_year(state, params, p) <= cutoff:
-            if inflight and _is_doomed(state, p) and _learn_year(p, state.settled_year) < p.arrive_year:
-                learns.append(p)
-            else:
-                arrivals.append(p)
+    for p in batch:
+        if inflight and _is_doomed(state, p) and _learn_year(p, state.settled_year) < p.arrive_year:
+            learns.append(p)
+        else:
+            arrivals.append(p)
     arrivals.sort(key=lambda p: (p.arrive_year, p.id))
     learns.sort(key=lambda p: (p.arrive_year, p.id))
     if arrivals:
@@ -577,10 +792,11 @@ def _front_radius(s: SwarmState) -> float:
 
 
 def _snapshot(s: SwarmState, n_stars: int) -> SwarmStep:
-    n = s.n_settled()
+    # O(1): read the incrementally maintained count + front radius (issue #27), not an O(N) rescan.
+    n = s.settled_count
     return SwarmStep(
         year=s.year, n_settled=n, fraction_settled=n / n_stars,
-        in_flight=len(s.probes), front_radius_pc=_front_radius(s),
+        in_flight=len(s.probes), front_radius_pc=s.front_radius,
     )
 
 
@@ -595,7 +811,7 @@ def simulate_swarm(params: SwarmParams, *, seed: int = 0x9E3779B9) -> SwarmResul
     thresholds = {p: None for p in pcts}  # type: dict[int, float | None]
 
     def record_thresholds() -> None:
-        frac = state.n_settled() / n_stars * 100.0
+        frac = state.settled_count / n_stars * 100.0  # O(1): maintained counter (issue #27)
         for pct in pcts:
             if thresholds[pct] is None and frac >= pct:
                 thresholds[pct] = state.year
@@ -609,7 +825,8 @@ def simulate_swarm(params: SwarmParams, *, seed: int = 0x9E3779B9) -> SwarmResul
             ne = _next_event_year(state, params)
             if ne is None or ne > params.max_years:
                 break
-            step_event(state, params)
+            state.year = ne
+            _resolve_batch(state, params, _pop_due(state, params, ne))
             steps.append(_snapshot(state, n_stars))
             record_thresholds()
     else:

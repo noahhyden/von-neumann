@@ -27,7 +27,9 @@ Run:  uv run python -m experiments.lightspeed_coordination
 
 from __future__ import annotations
 
+import os
 import statistics
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 
 from swarm import SwarmParams, simulate_swarm
@@ -54,24 +56,60 @@ class Paired:
     v_eff_km_s: list[float] = field(default_factory=list)  # mean launch speed (lightspeed run)
 
 
+def _worker_count() -> int:
+    """Number of worker processes: SWARM_WORKERS if set to a positive int, else os.cpu_count()."""
+    env = os.environ.get("SWARM_WORKERS")
+    if env is not None:
+        try:
+            n = int(env)
+        except ValueError:
+            n = 0
+        if n >= 1:
+            return n
+    return os.cpu_count() or 1
+
+
+def _run_paired_worker(args: tuple[dict, int]) -> tuple[float | None, float | None, int, int, float]:
+    """One seed's instant+lightspeed run. Top-level so ProcessPoolExecutor can pickle it.
+
+    Returns the raw per-seed scalars; the caller applies the same conditional appends the serial
+    loop used, so the collected lists (and their order) are byte-identical for any worker count.
+    """
+    common, seed = args
+    i = simulate_swarm(SwarmParams(**common, coordination="instant"), seed=seed)
+    l = simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=seed)
+    return (i.t100_years, l.t100_years, i.wasted_arrivals, l.wasted_arrivals, l.mean_launch_speed_km_s)
+
+
 def run_paired(policy: str, *, n_stars: int = N_STARS, probe_speed_c: float = 3e-5,
                speed_cap_c: float | None = None, seeds: list[int] | None = None,
                max_retargets: int = 8) -> Paired:
-    """Fill each seeded galaxy under instant and lightspeed (event mode); collect paired metrics."""
+    """Fill each seeded galaxy under instant and lightspeed (event mode); collect paired metrics.
+
+    Parallel over seeds (see ``_worker_count``): each seed's run is independent. Per-seed results
+    are collected in seed order (executor.map preserves input order) and the conditional appends
+    are applied here, so the Paired lists are identical to the serial version for any worker count.
+    SWARM_WORKERS=1 takes the serial branch.
+    """
     seeds = seeds if seeds is not None else SEEDS
     cap = speed_cap_c if speed_cap_c is not None else max(0.05, 2.0 * probe_speed_c)
+    common = dict(n_stars=n_stars, policy=policy, probe_speed_c=probe_speed_c,
+                  speed_cap_c=cap, stepping="event", max_retargets=max_retargets)
+    args = [(common, s) for s in seeds]
+    workers = _worker_count()
+    if workers <= 1:
+        results = [_run_paired_worker(a) for a in args]
+    else:
+        with ProcessPoolExecutor(max_workers=workers) as ex:
+            results = list(ex.map(_run_paired_worker, args))
     out = Paired()
-    for s in seeds:
-        common = dict(n_stars=n_stars, policy=policy, probe_speed_c=probe_speed_c,
-                      speed_cap_c=cap, stepping="event", max_retargets=max_retargets)
-        i = simulate_swarm(SwarmParams(**common, coordination="instant"), seed=s)
-        l = simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=s)
-        if i.t100_years and l.t100_years:
-            out.time_pct.append((l.t100_years - i.t100_years) / i.t100_years * 100.0)
-        out.fuel_abs.append(float(l.wasted_arrivals - i.wasted_arrivals))
-        if i.wasted_arrivals:
-            out.fuel_pct.append((l.wasted_arrivals - i.wasted_arrivals) / i.wasted_arrivals * 100.0)
-        out.v_eff_km_s.append(l.mean_launch_speed_km_s)
+    for it100, lt100, iwaste, lwaste, lspeed in results:
+        if it100 and lt100:
+            out.time_pct.append((lt100 - it100) / it100 * 100.0)
+        out.fuel_abs.append(float(lwaste - iwaste))
+        if iwaste:
+            out.fuel_pct.append((lwaste - iwaste) / iwaste * 100.0)
+        out.v_eff_km_s.append(lspeed)
     return out
 
 
