@@ -19,6 +19,7 @@ future TypeScript SoA port can match bit-for-bit. Zero pimas imports.
 
 from __future__ import annotations
 
+import bisect
 import heapq
 import math
 
@@ -185,77 +186,132 @@ def _dist(s: SwarmState, a: int, b: int) -> float:
     return (dx * dx + dy * dy + dz * dz) ** 0.5
 
 
-def _build_grid(xs: list[float], ys: list[float], zs: list[float], box_side_pc: float) -> tuple[int, float, dict[int, list[int]]]:
-    """Uniform cell list over the fixed star positions (issue #27): (grid_res, cell_size, cells).
+_KD_LEAF = 8  # max stars per leaf bucket: small enough that a leaf scan is cheap, large enough
+#               that the tree stays shallow and Python per-node overhead is amortized.
 
-    ``grid_res = round(N^(1/3))`` gives ~1 star per cell at the paper's uniform density, so the
-    ring search around a query point touches O(1) cells to find the nearest. Cell size is
-    ``box_side / grid_res``; a star at coordinate ``x`` lands in axis cell ``clamp(int(x/cs), 0,
-    G-1)`` (positions are in ``[0, L]`` - reflection keeps clumpy fields in-box too). Stars are
-    inserted in ascending index order, so each cell's list is index-sorted and the nearest search
-    can break ties by lowest index exactly as the old linear scan did. Plain (non-wrapped) metric,
-    matching the target-selection distance (which never uses the periodic minimum image).
+
+def _build_kdtree(xs: list[float], ys: list[float], zs: list[float]) -> dict:
+    """Balanced k-d tree over the fixed star positions (issue #30), returned as flat SoA arrays.
+
+    Median-split on the widest axis of each node's bounding box, recursing until a node holds
+    <= ``_KD_LEAF`` stars. Splits break ties by (coordinate, star index) so the tree is a pure,
+    deterministic function of the positions (a future TypeScript port builds the same tree). All
+    stars start unsettled: ``kd_nuns`` = subtree size, ``kd_tsmax`` = -1. The plain (non-wrapped)
+    metric is baked into the bounding boxes, matching target selection (which never uses the
+    periodic minimum image). Only the SHAPE of the search changes here, never which star it returns.
     """
     n = len(xs)
-    g = max(1, round(n ** (1.0 / 3.0)))
-    cs = box_side_pc / g if box_side_pc > 0.0 else 1.0
-    cells: dict[int, list[int]] = {}
-    for i in range(n):
-        cx = int(xs[i] / cs)
-        cy = int(ys[i] / cs)
-        cz = int(zs[i] / cs)
-        cx = 0 if cx < 0 else (g - 1 if cx >= g else cx)
-        cy = 0 if cy < 0 else (g - 1 if cy >= g else cy)
-        cz = 0 if cz < 0 else (g - 1 if cz >= g else cz)
-        flat = (cz * g + cy) * g + cx
-        b = cells.get(flat)
-        if b is None:
-            cells[flat] = [i]
-        else:
-            b.append(i)  # ascending index order (i increases), so buckets stay index-sorted
-    return g, cs, cells
+    axis: list[int] = []
+    split: list[float] = []
+    lo: list[int] = []
+    hi: list[int] = []
+    parent: list[int] = []
+    bucket: list[list[int] | None] = []
+    bxmin: list[float] = []
+    bxmax: list[float] = []
+    bymin: list[float] = []
+    bymax: list[float] = []
+    bzmin: list[float] = []
+    bzmax: list[float] = []
+    nuns: list[int] = []
+    tsmax: list[float] = []
+    star_leaf = [0] * n
+    coords = (xs, ys, zs)
+
+    def new_node() -> int:
+        axis.append(-1)
+        split.append(0.0)
+        lo.append(-1)
+        hi.append(-1)
+        parent.append(-1)
+        bucket.append(None)
+        bxmin.append(0.0)
+        bxmax.append(0.0)
+        bymin.append(0.0)
+        bymax.append(0.0)
+        bzmin.append(0.0)
+        bzmax.append(0.0)
+        nuns.append(0)
+        tsmax.append(-1.0)
+        return len(axis) - 1
+
+    def build(idx: list[int]) -> int:
+        node = new_node()
+        i0 = idx[0]
+        xmn = xmx = xs[i0]
+        ymn = ymx = ys[i0]
+        zmn = zmx = zs[i0]
+        for i in idx:
+            xi = xs[i]
+            if xi < xmn:
+                xmn = xi
+            elif xi > xmx:
+                xmx = xi
+            yi = ys[i]
+            if yi < ymn:
+                ymn = yi
+            elif yi > ymx:
+                ymx = yi
+            zi = zs[i]
+            if zi < zmn:
+                zmn = zi
+            elif zi > zmx:
+                zmx = zi
+        bxmin[node] = xmn
+        bxmax[node] = xmx
+        bymin[node] = ymn
+        bymax[node] = ymx
+        bzmin[node] = zmn
+        bzmax[node] = zmx
+        nuns[node] = len(idx)  # all unsettled at build; origin is marked settled afterwards
+        if len(idx) <= _KD_LEAF:
+            bucket[node] = list(idx)
+            for i in idx:
+                star_leaf[i] = node
+            return node
+        ex = xmx - xmn
+        ey = ymx - ymn
+        ez = zmx - zmn
+        ax = 0 if (ex >= ey and ex >= ez) else (1 if ey >= ez else 2)
+        c = coords[ax]
+        idx.sort(key=lambda i: (c[i], i))  # deterministic: ties broken by star index
+        mid = len(idx) // 2
+        axis[node] = ax
+        split[node] = c[idx[mid]]
+        left = build(idx[:mid])
+        right = build(idx[mid:])
+        parent[left] = node
+        parent[right] = node
+        lo[node] = left
+        hi[node] = right
+        return node
+
+    root = build(list(range(n))) if n else -1
+    return {
+        "root": root, "axis": axis, "split": split, "lo": lo, "hi": hi, "parent": parent,
+        "bucket": bucket, "bxmin": bxmin, "bxmax": bxmax, "bymin": bymin, "bymax": bymax,
+        "bzmin": bzmin, "bzmax": bzmax, "nuns": nuns, "tsmax": tsmax, "star_leaf": star_leaf,
+    }
 
 
-def _cell_index(s: SwarmState, x: float, y: float, z: float) -> tuple[int, int, int]:
-    """Axis cell coordinates of a point, clamped into the grid (same rule as _build_grid)."""
-    g = s.grid_res
-    cs = s.grid_cell
-    cx = int(x / cs)
-    cy = int(y / cs)
-    cz = int(z / cs)
-    cx = 0 if cx < 0 else (g - 1 if cx >= g else cx)
-    cy = 0 if cy < 0 else (g - 1 if cy >= g else cy)
-    cz = 0 if cz < 0 else (g - 1 if cz >= g else cz)
-    return cx, cy, cz
+def _kd_mark_settled(s: SwarmState, star: int) -> None:
+    """Record that ``star`` just settled, updating the subtree aggregates leaf -> root (O(depth)).
 
-
-def _shell_cells(g: int, qx: int, qy: int, qz: int, r: int) -> list[int]:
-    """Flat ids of the in-bounds cells at Chebyshev radius ``r`` from ``(qx,qy,qz)`` (the shell surface).
-
-    Enumerates only the surface of the cube (each cell exactly once), not its interior, so a query
-    that has to expand far stays O(r^2) per shell rather than O(r^3).
+    Decrements the unsettled count and raises ``kd_tsmax`` to the star's settled_year along the
+    whole path to the root. ``state.year`` is non-decreasing, so a fresh settle always carries the
+    largest settled_year in each ancestor subtree - the guarded max keeps that exact regardless.
+    Must be called exactly once per star, right after ``settled_year[star]`` is set.
     """
-    if r == 0:
-        return [(qz * g + qy) * g + qx]  # in-bounds: q is already clamped
-    out: list[int] = []
-    for dz in range(-r, r + 1):
-        cz = qz + dz
-        if cz < 0 or cz >= g:
-            continue
-        z_face = dz == -r or dz == r
-        for dy in range(-r, r + 1):
-            cy = qy + dy
-            if cy < 0 or cy >= g:
-                continue
-            if z_face or dy == -r or dy == r:
-                xr = range(-r, r + 1)  # full row of x
-            else:
-                xr = (-r, r)  # only the two x edges (interior of this y-row is not on the surface)
-            for dx in xr:
-                cx = qx + dx
-                if 0 <= cx < g:
-                    out.append((cz * g + cy) * g + cx)
-    return out
+    y = s.settled_year[star]
+    nuns = s.kd_nuns
+    tsmax = s.kd_tsmax
+    parent = s.kd_parent
+    node = s.star_leaf[star]
+    while node != -1:
+        nuns[node] -= 1
+        if y > tsmax[node]:
+            tsmax[node] = y
+        node = parent[node]
 
 
 def _believes_settled_at(
@@ -296,43 +352,114 @@ def _nearest_unsettled_at(
 ) -> int | None:
     """Index of the nearest *believed*-unsettled star to point ``(px,py,pz)`` not in ``exclude``.
 
-    Cell-list ring search (issue #27): expand shells of grid cells outward from the query point,
-    testing the belief gate + exclude per candidate, and stop once the best distance provably
-    beats every unexamined cell. Bit-identical to the old O(N) linear scan - it returns the same
-    star for every query, including ties (deterministic tie-break by lowest index): after fully
-    covering shells 0..R the nearest unexamined star is >= R*cell away, so once best < R*cell no
-    farther star can tie or beat it, and any star exactly at the bound sits in shell R+1 and is
-    examined before we stop (the equality case continues one more shell).
+    k-d tree branch-and-bound (issue #30). Depth-first, visiting the nearer child first, with two
+    prunes that are provably safe - each skips only stars that CANNOT be the answer, so the argmin
+    over the stars actually examined is bit-identical to the old O(N) linear scan (same
+    (distance, lowest-index) tie-break):
+
+      - Distance prune: skip a subtree whose nearest possible point ``dlo`` is strictly farther
+        than the best found (``dlo^2 > best_d2``). ``dlo`` is a true lower bound on every star's
+        distance, so nothing skipped could beat or tie the best. Equality descends, so a
+        same-distance lower-index star is never missed.
+      - Belief prune: skip a subtree that is provably entirely *believed*-settled from here -
+        every star settled (``kd_nuns == 0``) and, for the light-delayed regimes, the beacon of
+        even the most-recently-settled star (``kd_tsmax``) has reached the box's FARTHEST corner
+        ``dhi`` (``kd_tsmax + dhi/c <= year``). ``dhi >= d_i`` for every star i, so the same gate
+        the leaf scan uses (``settled_year[i] + d_i/c <= year``) then holds for all of them. This
+        is the news-in-transit correctness point: a recently-settled star whose beacon is still in
+        flight is NOT pruned (it is believed-unsettled and a valid target), so it is examined.
+
+    Every star that survives both prunes is tested with the exact ``_believes_settled_at`` gate and
+    exact squared distance, so the returned star matches the linear scan for every query.
     """
     xs, ys, zs = s.xs, s.ys, s.zs
-    g = s.grid_res
-    cs = s.grid_cell
-    grid = s.grid
-    qx, qy, qz = _cell_index(s, px, py, pz)
-    best: int | None = None
+    axis = s.kd_axis
+    split = s.kd_split
+    lo = s.kd_lo
+    hi = s.kd_hi
+    bucket = s.kd_bucket
+    bxmin = s.kd_bxmin
+    bxmax = s.kd_bxmax
+    bymin = s.kd_bymin
+    bymax = s.kd_bymax
+    bzmin = s.kd_bzmin
+    bzmax = s.kd_bzmax
+    nuns = s.kd_nuns
+    tsmax = s.kd_tsmax
+    instant = coordination == "instant"
+    c = C_PC_PER_YEAR
+    best = -1
     best_d2 = float("inf")
-    r = 0
-    while r < g:
-        for flat in _shell_cells(g, qx, qy, qz, r):
-            bucket = grid.get(flat)
-            if bucket is None:
-                continue
-            for i in bucket:
+    stack = [s.kd_root]
+    while stack:
+        node = stack.pop()
+        # Distance lower bound dlo^2: nearest point of the box to (px,py,pz), clamped per axis.
+        dlo2 = 0.0
+        t = bxmin[node] - px
+        if t > 0.0:
+            dlo2 = t * t
+        else:
+            t = px - bxmax[node]
+            if t > 0.0:
+                dlo2 = t * t
+        t = bymin[node] - py
+        if t > 0.0:
+            dlo2 += t * t
+        else:
+            t = py - bymax[node]
+            if t > 0.0:
+                dlo2 += t * t
+        t = bzmin[node] - pz
+        if t > 0.0:
+            dlo2 += t * t
+        else:
+            t = pz - bzmax[node]
+            if t > 0.0:
+                dlo2 += t * t
+        if dlo2 > best_d2:
+            continue  # nothing in this box can beat or tie the best (equality would fall through)
+        if nuns[node] == 0:
+            if instant:
+                continue  # every star settled == every star believed-settled (c -> infinity)
+            # dhi = farthest corner of the box; if that beacon has arrived, all have.
+            a = px - bxmin[node]
+            b = px - bxmax[node]
+            a2 = a * a
+            b2 = b * b
+            dhi2 = a2 if a2 > b2 else b2
+            a = py - bymin[node]
+            b = py - bymax[node]
+            a2 = a * a
+            b2 = b * b
+            dhi2 += a2 if a2 > b2 else b2
+            a = pz - bzmin[node]
+            b = pz - bzmax[node]
+            a2 = a * a
+            b2 = b * b
+            dhi2 += a2 if a2 > b2 else b2
+            if tsmax[node] + dhi2 ** 0.5 / c <= year:
+                continue  # whole box believed-settled; skip
+        ax = axis[node]
+        if ax == -1:
+            for i in bucket[node]:
                 if i in exclude or _believes_settled_at(s, px, py, pz, i, year, coordination):
                     continue
                 dx = xs[i] - px
                 dy = ys[i] - py
                 dz = zs[i] - pz
                 d2 = dx * dx + dy * dy + dz * dz
-                if d2 < best_d2 or (d2 == best_d2 and best is not None and i < best):
+                if d2 < best_d2 or (d2 == best_d2 and best >= 0 and i < best):
                     best_d2 = d2
                     best = i
-        if best is not None:
-            bound = r * cs
-            if best_d2 < bound * bound:
-                return best
-        r += 1
-    return best
+        else:
+            p_ax = px if ax == 0 else (py if ax == 1 else pz)
+            if p_ax < split[node]:
+                stack.append(hi[node])  # far child pushed first -> popped last
+                stack.append(lo[node])
+            else:
+                stack.append(lo[node])
+                stack.append(hi[node])
+    return best if best >= 0 else None
 
 
 def _nearest_unsettled(s: SwarmState, frm: int, exclude: set[int], params: SwarmParams) -> int | None:
@@ -344,39 +471,106 @@ def _nearest_k_unsettled_at(
 ) -> list[int]:
     """The ``k`` nearest *believed*-unsettled stars to a point (deterministic order by (distance, index)).
 
-    Cell-list ring search (issue #27), same guarantee as _nearest_unsettled_at: gather candidates
-    shell by shell and stop once we hold >= k of them whose k-th smallest (distance, index) beats
-    every unexamined cell (bound r*cell). The returned top-k (sorted by (d2, index)) is then exactly
-    the linear scan's ``sorted(all_candidates)[:k]`` - no unexamined star can enter the top-k, and
-    boundary ties sit in the next shell and are gathered before we stop.
+    k-d tree branch-and-bound (issue #30), the k-nearest analogue of _nearest_unsettled_at. Keeps
+    the current k best as a (d2, index)-sorted list; the distance prune skips a subtree whose
+    nearest point is strictly farther than the current k-th best, and the belief prune skips a
+    provably fully-believed-settled subtree (same news-in-transit-safe rule). Equality descends, so
+    a same-distance lower-index star still displaces the k-th. The result is bit-identical to the
+    linear scan's ``sorted(all_candidates)[:k]``: no pruned star could enter the top-k, and every
+    survivor is tested with the exact belief gate and squared distance.
     """
     xs, ys, zs = s.xs, s.ys, s.zs
-    g = s.grid_res
-    cs = s.grid_cell
-    grid = s.grid
-    qx, qy, qz = _cell_index(s, px, py, pz)
-    cands: list[tuple[float, int]] = []
-    r = 0
-    while r < g:
-        for flat in _shell_cells(g, qx, qy, qz, r):
-            bucket = grid.get(flat)
-            if bucket is None:
+    axis = s.kd_axis
+    split = s.kd_split
+    lo = s.kd_lo
+    hi = s.kd_hi
+    bucket = s.kd_bucket
+    bxmin = s.kd_bxmin
+    bxmax = s.kd_bxmax
+    bymin = s.kd_bymin
+    bymax = s.kd_bymax
+    bzmin = s.kd_bzmin
+    bzmax = s.kd_bzmax
+    nuns = s.kd_nuns
+    tsmax = s.kd_tsmax
+    instant = coordination == "instant"
+    c = C_PC_PER_YEAR
+    bestk: list[tuple[float, int]] = []  # k smallest (d2, index) so far, sorted ascending
+    thresh = float("inf")  # d2 of the current k-th best (inf until we hold k)
+    stack = [s.kd_root]
+    while stack:
+        node = stack.pop()
+        dlo2 = 0.0
+        t = bxmin[node] - px
+        if t > 0.0:
+            dlo2 = t * t
+        else:
+            t = px - bxmax[node]
+            if t > 0.0:
+                dlo2 = t * t
+        t = bymin[node] - py
+        if t > 0.0:
+            dlo2 += t * t
+        else:
+            t = py - bymax[node]
+            if t > 0.0:
+                dlo2 += t * t
+        t = bzmin[node] - pz
+        if t > 0.0:
+            dlo2 += t * t
+        else:
+            t = pz - bzmax[node]
+            if t > 0.0:
+                dlo2 += t * t
+        if dlo2 > thresh:
+            continue  # box cannot enter the top-k (equality descends)
+        if nuns[node] == 0:
+            if instant:
                 continue
-            for i in bucket:
+            a = px - bxmin[node]
+            b = px - bxmax[node]
+            a2 = a * a
+            b2 = b * b
+            dhi2 = a2 if a2 > b2 else b2
+            a = py - bymin[node]
+            b = py - bymax[node]
+            a2 = a * a
+            b2 = b * b
+            dhi2 += a2 if a2 > b2 else b2
+            a = pz - bzmin[node]
+            b = pz - bzmax[node]
+            a2 = a * a
+            b2 = b * b
+            dhi2 += a2 if a2 > b2 else b2
+            if tsmax[node] + dhi2 ** 0.5 / c <= year:
+                continue
+        ax = axis[node]
+        if ax == -1:
+            for i in bucket[node]:
                 if i in exclude or _believes_settled_at(s, px, py, pz, i, year, coordination):
                     continue
                 dx = xs[i] - px
                 dy = ys[i] - py
                 dz = zs[i] - pz
-                cands.append((dx * dx + dy * dy + dz * dz, i))
-        if len(cands) >= k:
-            cands.sort()
-            bound = r * cs
-            if cands[k - 1][0] < bound * bound:
-                return [i for _, i in cands[:k]]
-        r += 1
-    cands.sort()
-    return [i for _, i in cands[:k]]
+                d2 = dx * dx + dy * dy + dz * dz
+                # Insert if we still need candidates, or (d2, i) ranks ahead of the current k-th -
+                # the full-tuple compare lets a same-distance lower-index star displace it exactly
+                # as sorted(all_candidates)[:k] would.
+                if len(bestk) < k or (d2, i) < bestk[-1]:
+                    bisect.insort(bestk, (d2, i))
+                    if len(bestk) > k:
+                        bestk.pop()
+                    if len(bestk) == k:
+                        thresh = bestk[-1][0]
+        else:
+            p_ax = px if ax == 0 else (py if ax == 1 else pz)
+            if p_ax < split[node]:
+                stack.append(hi[node])
+                stack.append(lo[node])
+            else:
+                stack.append(lo[node])
+                stack.append(hi[node])
+    return [i for _, i in bestk]
 
 
 def _select_target_at(
@@ -550,14 +744,18 @@ def initial_state(params: SwarmParams, *, seed: int) -> SwarmState:
     settled = [-1.0] * n
     settled[origin] = 0.0
     v_max = params.probe_speed_pc_per_year
-    grid_res, grid_cell, grid = _build_grid(xs, ys, zs, L)  # cell list for nearest queries (issue #27)
+    kd = _build_kdtree(xs, ys, zs)  # dynamic nearest-over-the-unsettled-set index (issue #30)
     state = SwarmState(
         rng=rng, year=0.0, xs=xs, ys=ys, zs=zs, star_speed_pc_yr=star_speed, settled_year=settled,
         origin=origin, probes={}, next_probe_id=0, total_launched=0, max_speed_pc_yr=v_max,
         box_side_pc=L, periodic=params.periodic,
         settled_count=1, front_radius=0.0,  # origin only; d(origin, origin) = 0 (issue #27)
-        grid_res=grid_res, grid_cell=grid_cell, grid=grid,
+        kd_root=kd["root"], kd_axis=kd["axis"], kd_split=kd["split"], kd_lo=kd["lo"], kd_hi=kd["hi"],
+        kd_parent=kd["parent"], kd_bucket=kd["bucket"], kd_bxmin=kd["bxmin"], kd_bxmax=kd["bxmax"],
+        kd_bymin=kd["bymin"], kd_bymax=kd["bymax"], kd_bzmin=kd["bzmin"], kd_bzmax=kd["bzmax"],
+        kd_nuns=kd["nuns"], kd_tsmax=kd["tsmax"], star_leaf=kd["star_leaf"],
     )
+    _kd_mark_settled(state, origin)  # origin is settled at year 0; fold its aggregates in
     # Seed probes leave the homeworld at powered cruise, taking the homeworld's slingshot.
     _launch_from(state, origin, params, v_max)
     return state
@@ -581,6 +779,7 @@ def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Pro
         if state.settled_year[p.target] < 0.0:
             # First to arrive: settle it and spread (slingshot off it, boosting offspring).
             state.settled_year[p.target] = state.year
+            _kd_mark_settled(state, p.target)  # remove from the unsettled set (issue #30)
             # Maintain the running count + front radius here (the sole settle site besides the
             # origin), so the per-event snapshot is O(1) instead of an O(N) rescan (issue #27).
             state.settled_count += 1

@@ -1,18 +1,27 @@
 """Experiment: is the fuel tax a scale-stable fraction of the swarm's effort?
 
-The redundant-travel (fuel) tax from light-speed lag is a robust fraction of total journeys
-at directed-energy speed. This sweeps the system size N at Lambda = v/c = 0.2 (powered, event
-mode) and reports the fuel tax both in absolute wasted journeys (which must grow with the
-field) and as a PERCENT of the perfect-information waste (which is the scale-free quantity).
-The percent tax stays near ~18-19% across the range, so the cost is a roughly size-independent
-fraction of effort, not a small-box artifact.
+The redundant-travel (fuel) tax from light-speed lag. This sweeps the system size N at
+Lambda = v/c = 0.2 (powered, event mode) and reports the fuel tax both in absolute wasted
+journeys (which grow with the field) and as a PERCENT of the perfect-information waste.
 
-Reach is bounded by cost: at high v/c the hops are short, so an event-mode run generates
-~8N arrivals and each event does O(N) bookkeeping, making a run ~O(N^2); N=2400 already costs
-~20 s. We sweep N in {300, 600, 1200} with 16 seeds by default (a 4x span), which is what the
-paper's figure regenerates, plus an N=2400 trend point at fewer seeds.
+Since issue #30 the run is near-linear, so the committed sweep now spans N = 300 .. 200,000 (a
+~670x range, not the old 16x), and the long lever arm settles the question the small-N range could
+not: the fraction is NOT size-independent. The percent tax declines monotonically and convexly -
+~19% at N=300 -> ~13% at 4800 -> ~1.5% at 200,000 (OLS -7.0 percentage points per decade). The
+fuel tax as a fraction of effort largely vanishes at galactic scale (the absolute wasted count
+still grows; the fraction falls). See REFERENCES.md, "What the 200,000-star reach shows".
+
+Reach: after issue #30 the nearest-believed-unsettled query is a k-d tree over the unsettled set
+(REFERENCES.md, "Performance and the scale ceiling"), so a run is near-linear (the per-query
+examination is near-constant instead of scanning the settled core) rather than the old ~O(N^2).
+The committed default sweep is still N in {300, 600, 1200} with 16 seeds (a 4x span, what the
+paper's figure regenerates) plus an N=2400 trend point - those are the pinned artifact numbers.
+But the sweep now extends **cleanly to N = 200,000**: pass a custom ladder to ``run_finite_size``
+(seeds scaled to a precision target, not to compute), and the ~18-19% fuel tax reproduces at scale.
 
 Run:  uv run python -m experiments.finite_size
+      uv run python -c "from experiments.finite_size import run_finite_size; \
+print(run_finite_size((3000, 12000, 48000, 200000), k=4))"  # the extended-reach ladder (#30)
 """
 
 from __future__ import annotations
@@ -76,8 +85,9 @@ def main() -> None:
               f"{f'{p.seeds_positive}/{p.seeds}':>10}")
     print(
         "\nReading: the absolute wasted journeys grow with the field (more stars, more traffic),\n"
-        "but as a PERCENT of the perfect-information waste the fuel tax is roughly flat near\n"
-        "~18-19% - a size-independent fraction of effort, not a finite-box artifact."
+        "but as a PERCENT of the perfect-information waste the fuel tax DECLINES with N (~19% at\n"
+        "N=300 down to ~13% at N=4800, and ~1.5% at N=200,000). The fraction is not size-independent;\n"
+        "at galactic scale the coordination fuel tax as a fraction of effort largely vanishes."
     )
 
 

@@ -180,43 +180,51 @@ before the relatively slower news catches up.
 \subsection{Does the tax hold at scale?}
 \label{sec:scale}
 A tax measured on a few-hundred-star field is only interesting if it survives to larger ones, so we
-sweep the system size at $\Lambda = 0.2$ over a sixteen-fold range, from 300 to 4{,}800 stars, with
-32 to 48 seeds at every size (Fig.~\ref{fig:scale}). The absolute count of wasted journeys grows with
-the field, as it must, from a median of about 240 extra trips at 300 stars to about 4{,}000 at
-4{,}800. As a fraction of the perfect-information waste the tax does the opposite: it holds near 18
-to 19\% up to about a thousand stars and then declines gently, to $16.3\%$ $[15.3, 17.8]$ at 2{,}400
-stars and $13.1\%$ $[11.6, 14.0]$ at 4{,}800. With this many seeds the decline is resolved rather
-than suspected: a regression of the median tax on $\log_{10} N$ across all five sizes gives a slope of
-$-4.6$ percentage points per decade of $N$, with a seeded-bootstrap 95\% interval of $[-7.3, -2.6]$
-that is clear of zero (the fit and its interval are computed in the measurement pipeline alongside
-the per-$N$ medians, so they regenerate from source), and the confidence intervals at 300 and
-4{,}800 stars do not overlap. The decline is not uniform in $\log N$, moreover, but accelerates with
-field size -- the drop per doubling of $N$ runs about $0.8$, $0.3$, $1.6$, $3.1$ percentage points
-across the four steps -- so the single slope is a local summary of a convex, monotone decline. It is
-a real trend, not finite-sample scatter, though the event-mode $O(N^2)$ cost still caps how far we
-can push it.
+sweep the system size at $\Lambda = 0.2$ over a range of about $670\times$, from 300 to 200{,}000
+stars, with 8 to 48 seeds per size (fewer at the largest fields, where the per-seed spread is tight;
+Fig.~\ref{fig:scale}). This reach is what lets the question be answered rather than gestured at: it
+opens up once the nearest-not-yet-settled query -- the one non-local step in the fold -- is served by
+a dynamic spatial index over the unsettled set that skips already-settled space, which makes a single
+run near-linear in $N$ rather than the quadratic cost that previously capped the sweep at a
+sixteen-fold range. The absolute count of wasted journeys grows with the field, as it must, from a
+median of about 240 extra trips at 300 stars to about 27{,}000 at 200{,}000. As a fraction of the
+perfect-information waste the tax does the opposite, and does so decisively: it holds near 18 to 19\%
+up to about a thousand stars, then falls to $16.3\%$ $[15.3, 17.8]$ at 2{,}400 stars, $13.1\%$
+$[11.6, 14.0]$ at 4{,}800, $11.2\%$ $[9.0, 11.6]$ at 9{,}600, $6.4\%$ $[5.7, 7.1]$ at 24{,}000,
+$3.5\%$ $[3.2, 6.2]$ at 48{,}000, and $1.5\%$ $[1.4, 1.8]$ at 200{,}000. A regression of the median
+tax on $\log_{10} N$ across all nine sizes gives a slope of $-7.0$ percentage points per decade of
+$N$, with a seeded-bootstrap 95\% interval of $[-7.8, -6.4]$ well clear of zero (the fit and its
+interval are computed in the measurement pipeline alongside the per-$N$ medians, so they regenerate
+from source), and the confidence intervals at the ends of the range are separated by an order of
+magnitude. The decline is convex and monotone -- gentle to a thousand stars, then steepening through
+the mid-range -- so the single slope is a conservative local summary of a fall that carries the tax
+from roughly a fifth of the perfect-information waste to about one part in seventy.
 
 Is that decline physical, or an artifact of the hard wall of a finite box? Edge stars have fewer
 neighbours and so draw less contention, and the edge fraction falls as $N^{-1/3}$, so in principle
 the fraction could shrink with $N$ for a purely geometric reason. We test it two ways. First, tagging
 each contested arrival by its target's distance to the nearest wall and recomputing the tax on
 interior stars only does shift the level up -- edge stars carry a lower tax and dilute the all-stars
-value downward, so at the largest field the interior tax, $14.1\%$ $[11.2, 16.1]$, sits above the
-all-stars $12.8\%$ $[10.5, 14.3]$ (this masking test runs on the lighter interior-edge sub-ensemble
-of Table~\ref{tab:ensembles}, so its all-stars value sits marginally below the $13.1\%$ of the main
-sweep) -- but this masking is noisy where the interior holds few stars
-(small $N$) and does not on its own resolve the trend. The decisive control is a periodic (toroidal)
-box, which removes the boundary altogether: every star then sits in a full neighbourhood. Rerun that
-way the decline survives almost unchanged -- a slope of $-4.1$ $[-7.9, -1.3]$ percentage points per
-decade, statistically indistinguishable from the hard-walled $-4.6$ $[-7.3, -2.6]$ -- while the level
-sits a point or two higher at every size, exactly the small upward shift the edge dilution predicts.
-So the shrinkage is a genuine, bulk effect, not a boundary artifact: the wall moves the level, not
-the trend.
+value downward, so the interior tax sits above the all-stars value at every size: $14.1\%$
+$[11.2, 16.1]$ against $12.8\%$ $[10.5, 14.3]$ at 4{,}800 stars, and $3.0\%$ $[2.3, 3.8]$ against
+$1.5\%$ $[1.3, 2.2]$ at 200{,}000 (this masking test runs on the lighter interior-edge sub-ensemble
+of Table~\ref{tab:ensembles}). Crucially the interior tax declines just as steeply -- a bulk-only
+slope of $-6.2$ $[-8.0, -5.3]$ percentage points per decade at the one-nearest-neighbour shell -- so
+the shrinkage is not carried by the edge. The decisive control is a periodic (toroidal) box, which
+removes the boundary altogether: every star then sits in a full neighbourhood. Rerun that way the
+decline survives essentially unchanged in trend -- a slope of $-7.1$ $[-8.1, -6.3]$ percentage points
+per decade, statistically indistinguishable from the hard-walled $-7.0$ $[-7.8, -6.4]$ -- while the
+level sits a point or two higher at every size ($20.3\%$ against $19.0\%$ at 300 stars, $1.7\%$
+against $1.5\%$ at 200{,}000), exactly the small upward shift the edge dilution predicts. So the
+shrinkage is a genuine, bulk effect, not a boundary artifact: the wall moves the level, not the
+trend, and the effect holds over a $670\times$ span with the boundary present, masked, and removed.
 
 The direction is what matters for the one extrapolation a reader might be tempted to make: the
-fraction does not grow with scale -- it genuinely shrinks, on both a hard-walled and a periodic box
--- so nothing here supports carrying a fixed-percentage tax out to a $10^{11}$-star galaxy. We report
-the scale behaviour over the range we can measure and make no claim beyond it.
+fraction does not grow with scale -- it genuinely shrinks, on a hard-walled box, an interior-only
+sub-field, and a periodic box alike -- so nothing here supports carrying a fixed-percentage tax out
+to a $10^{11}$-star galaxy. A $670\times$ lever arm is far longer than we had, but it is still five
+orders of magnitude short of a real galaxy, so we report the scale behaviour over the range we can
+measure and make no quantitative claim beyond it.
 
 \subsection{Does the law survive a clumpy field?}
 \label{sec:clumpy}

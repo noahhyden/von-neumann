@@ -61,15 +61,20 @@ Knobs (`SwarmParams`): `n_stars`, `density_stars_per_pc3`, `probe_speed_c`,
 - **Slingshot dynamics** - the three policies above (this section's boost physics).
 - **Spatial hashing** - the frontend TS port uses a uniform-grid index (proven identical
   to brute force) so the live "Swarm" surface scales to thousands of stars smoothly.
-- **Scale speed-ups (issue #27), all bit-identical.** The Python fold now uses a cell-list
-  nearest-neighbour index, a lazy event heap (no more O(P) min-over-probes per event), and an
-  incremental settled-count / front-radius (no O(N) rescan per event); the seed ensemble runs in
-  parallel across cores (`SWARM_WORKERS`). Every committed result still reproduces to the printed
-  digit. This makes the event loop near-linear and single runs ~5-9x faster, but a run stays
-  super-linear overall because a re-targeting probe's nearest *believed*-unsettled star is a
-  non-local query (out at the front); `experiments/scaling_benchmark.py` measures it, and
-  REFERENCES.md ("Performance and the scale ceiling") records why 200k needs a dynamic
-  unsettled-set structure next.
+- **Scale speed-ups (issues #27, #30), all bit-identical.** The Python fold uses a lazy event
+  heap (no more O(P) min-over-probes per event), an incremental settled-count / front-radius (no
+  O(N) rescan per event), and a **k-d tree over the unsettled set** for the nearest-*believed*-
+  unsettled query; the seed ensemble runs in parallel across cores (`SWARM_WORKERS`). Every
+  committed result still reproduces to the printed digit. #27 removed the per-event O(N)/O(P)
+  scans but a run stayed ~O(N²), because a re-targeting probe's nearest believed-unsettled star is
+  a *non-local* query (deep-core to front) that a flat cell list answered by scanning the settled
+  core. #30's k-d tree carries per-node unsettled-count and latest-settle-year aggregates that let
+  a query prune whole believed-settled subtrees - including the light-delayed "beacon still in
+  transit" case - so it reaches the front in O(log N + local), examining a near-constant patch
+  instead of the core. Runs are now near-linear (the residual is the model's own ~N^0.09-per-star
+  arrival growth, not the index), the `finite_size` sweeps reach **N = 200,000**, and
+  `tests/test_kdtree_oracle.py` pins the tree to the brute-force scan star-for-star. See
+  `experiments/scaling_benchmark.py` and REFERENCES.md ("Performance and the scale ceiling").
 - **Light-speed-limited coordination** (FRONTIER issue #1) - *the novel extension*. The
   source paper grants every probe perfect instantaneous global knowledge; we add the
   finite-c gate (`coordination="lightspeed"`): a probe treats a distant star as settled only

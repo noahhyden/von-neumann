@@ -54,7 +54,7 @@ SCHEMA_VERSION = 3
 # Deterministic seed ensemble (paired: every mode shares each seed). 512 available; each
 # measurement uses a prefix sized to its cost. The multiplier is odd (coprime to 2^32), so the
 # 32-bit-masked seeds are all distinct. The headline speed sweep (cheap at N=500, ~1.6 s/seed)
-# uses the full 512; the expensive sweeps (finite_size to N=4800 at ~200 s/seed) use short prefixes.
+# uses the full 512; the larger sweeps (finite_size, near-linear since #30) use short prefixes.
 # Extending the pool past the old 64 leaves every existing prefix (<= 48) byte-identical.
 SEEDS = [0x9E3779B9 + 2654435761 * k for k in range(512)]
 
@@ -324,12 +324,22 @@ def m_energy_tax() -> None:
 def m_finite_size() -> None:
     """Fuel tax % vs system size over a 16x span (300..4800), powered, Lambda=0.2, event.
 
-    Seeds are scaled down as N grows (event-mode cost is ~O(N^2) at high Lambda). This is the
-    honest lever arm for the scale discussion: a 16x span, NOT an extrapolation to 1e11 stars.
+    Seeds are scaled down as N grows. This is the honest lever arm for the scale discussion: a 16x
+    span, NOT an extrapolation to 1e11 stars. Since issue #30 the run is near-linear (the k-d tree
+    over the unsettled set, REFERENCES.md), so this committed ladder is no longer compute-bound and
+    the sweep extends cleanly to N=200,000 - raise the ladder below when regenerating for a
+    higher-N figure (the numbers here are the pinned artifact the drift guard checks, so leave them
+    unless you are deliberately regenerating the result at a new scale).
     """
-    # Many seeds even at large N (per-seed cost ~42 s at N=2400, ~198 s at N=4800): this is a
-    # dedicated high-seed sweep to resolve whether the large-N tax decline is real or scatter.
-    n_seeds_by_n = [(300, 48), (600, 48), (1200, 48), (2400, 48), (4800, 32)]
+    # High-seed sweep to resolve whether the large-N tax decline is real or scatter. Since #30 the
+    # run is near-linear, so the ladder now reaches N=200,000 (a ~670x span, not the old 16x). The
+    # 300..4800 points and their seed counts are unchanged (they regenerate byte-identically); the
+    # higher-N points scale seeds DOWN to a precision target - the tax spread narrows with N (the
+    # per-seed 200k tax clusters within ~0.5 pp), so fewer seeds hold the median tight. The old
+    # O(N^2) cost that once capped this at 4800 is gone: the whole ladder to 200k is cheaper than
+    # the old sweep to 4800 (which was dominated by its 2400/4800 points).
+    n_seeds_by_n = [(300, 48), (600, 48), (1200, 48), (2400, 48), (4800, 32),
+                    (9600, 32), (24000, 24), (48000, 16), (200000, 8)]
     data = {}
     per_n_fuel: dict[int, list[float]] = {}
     for n, k in n_seeds_by_n:
@@ -614,11 +624,13 @@ def m_finite_size_interior() -> None:
     at two shells: >= 1 and >= 2 mean-NN distances from any wall. If the all-stars decline is an edge
     artifact it flattens under the interior restriction; if it is genuine bulk saturation it persists.
 
-    Spans 300..4800 (32/32/24/16/12 seeds; seeds scaled down as the event-mode O(N^2) cost grows) to
-    cover the same range as the committed ``finite_size`` all-stars sweep, so the interior and
-    all-stars declines are compared over an identical lever arm.
+    Spans 300..200,000 (seeds scaled down with N), matching the committed ``finite_size`` all-stars
+    sweep's range so the interior and all-stars declines are compared over an identical ~670x lever
+    arm (near-linear since #30, the k-d tree over the unsettled set). The 300..4800 blocks regenerate
+    byte-identically; the higher-N points are the edge-vs-bulk test at scale.
     """
-    n_seeds_by_n = [(300, 32), (600, 32), (1200, 24), (2400, 16), (4800, 12)]
+    n_seeds_by_n = [(300, 32), (600, 32), (1200, 24), (2400, 16), (4800, 12),
+                    (9600, 12), (24000, 10), (48000, 8), (200000, 6)]
     # Shell start-bins for WALL_BIN_EDGES_NN=(0.5,1,1.5,2): shell>=1.0 NN -> bins 2.., shell>=2.0 -> bin 4.
     shells = {"all": 0, "interior_1nn": 2, "interior_2nn": 4}
     data = {}
@@ -659,12 +671,14 @@ def m_finite_size_periodic() -> None:
 
     The interior-only test (``m_finite_size_interior``) removes edge stars by masking; this removes
     them by geometry - a periodic (toroidal, minimum-image) box has no walls at all, so every star
-    sits in a full neighbourhood. Same sweep, seeds, and Lambda as the hard-walled ``finite_size``,
-    so the two slopes are directly comparable: if the hard-wall decline is a boundary artifact, the
-    periodic tax stays flat (and higher, since no edge dilutes it); if it is genuine bulk saturation,
-    the periodic tax declines too.
+    sits in a full neighbourhood. Same Lambda and N range as the hard-walled ``finite_size`` (now
+    300..200,000 since #30), so the two slopes are directly comparable: if the hard-wall decline is
+    a boundary artifact, the periodic tax stays flat (and higher, since no edge dilutes it); if it is
+    genuine bulk saturation, the periodic tax declines too. The 300..4800 blocks regenerate
+    byte-identically; the higher-N points settle the question at scale.
     """
-    n_seeds_by_n = [(300, 32), (600, 32), (1200, 24), (2400, 16), (4800, 12)]
+    n_seeds_by_n = [(300, 32), (600, 32), (1200, 24), (2400, 16), (4800, 12),
+                    (9600, 12), (24000, 10), (48000, 8), (200000, 6)]
     data = {}
     per_n: dict[int, list[float]] = {}
     for n, k in n_seeds_by_n:
