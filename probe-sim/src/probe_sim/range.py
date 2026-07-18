@@ -21,12 +21,21 @@ from closure_sim.models import Factory, ReplicationParams
 from closure_sim.replication import simulate
 from pydantic import BaseModel
 
-from probe_sim.environment import SolarArray
+from probe_sim.environment import SOLAR_CONSTANT_1AU_W_M2, SolarArray
 
 
-def available_power_kw(array: SolarArray, distance_au: float) -> float:
-    """Electrical power (kW) the array delivers at a heliocentric distance (AU)."""
-    return array.power_w(distance_au) / 1000.0
+def available_power_kw(
+    array: SolarArray,
+    distance_au: float,
+    solar_constant: float = SOLAR_CONSTANT_1AU_W_M2,
+) -> float:
+    """Electrical power (kW) the array delivers at a heliocentric distance (AU).
+
+    ``solar_constant`` is exposed so UQ (issue #35) can push a sampled S0 through
+    the fold - otherwise range.py would silently pin to the module default and
+    any sampled S0 would be dropped en route to the finding.
+    """
+    return array.power_w(distance_au, solar_constant) / 1000.0
 
 
 def is_viable_at(
@@ -34,13 +43,15 @@ def is_viable_at(
     factory: Factory,
     rep: ReplicationParams,
     distance_au: float,
+    *,
+    solar_constant: float = SOLAR_CONSTANT_1AU_W_M2,
 ) -> bool:
     """True if the probe reaches its target output at this heliocentric distance.
 
     Runs closure-sim's replication with the array's delivered power substituted in
     for ``available_power_kw``; viability is "does output ever reach the target".
     """
-    power_kw = available_power_kw(array, distance_au)
+    power_kw = available_power_kw(array, distance_au, solar_constant)
     if power_kw <= 0:
         return False
     params = rep.model_copy(update={"available_power_kw": power_kw})
@@ -64,6 +75,7 @@ def operational_range(
     lo_au: float = 0.3,
     hi_au: float = 40.0,
     tol_au: float = 1e-3,
+    solar_constant: float = SOLAR_CONSTANT_1AU_W_M2,
 ) -> RangeResult:
     """Max heliocentric distance (AU) at which the probe still reaches its target.
 
@@ -71,11 +83,11 @@ def operational_range(
     the probe is underpowered even at ``lo_au``, and ``saturated=True`` if it is still
     viable at ``hi_au`` (the true range lies beyond the search ceiling).
     """
-    if not is_viable_at(array, factory, rep, lo_au):
+    if not is_viable_at(array, factory, rep, lo_au, solar_constant=solar_constant):
         return RangeResult(
             operational_range_au=None, saturated=False, lo_au=lo_au, hi_au=hi_au
         )
-    if is_viable_at(array, factory, rep, hi_au):
+    if is_viable_at(array, factory, rep, hi_au, solar_constant=solar_constant):
         return RangeResult(
             operational_range_au=hi_au, saturated=True, lo_au=lo_au, hi_au=hi_au
         )
@@ -83,7 +95,7 @@ def operational_range(
     lo, hi = lo_au, hi_au
     while hi - lo > tol_au:
         mid = 0.5 * (lo + hi)
-        if is_viable_at(array, factory, rep, mid):
+        if is_viable_at(array, factory, rep, mid, solar_constant=solar_constant):
             lo = mid
         else:
             hi = mid

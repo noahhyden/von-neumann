@@ -32,6 +32,10 @@ from pathlib import Path
 
 import pytest
 
+from closure_sim.models import Factory, ReplicationParams, Subsystem
+
+from probe_sim.environment import SolarArray
+from probe_sim.range import is_viable_at, operational_range
 from probe_sim.uq.distributions import Fixed, Normal, Uniform
 from probe_sim.uq.sample import monte_carlo
 from probe_sim.uq.sobol import sobol_total_order
@@ -166,6 +170,79 @@ def test_normal_extreme_tail_stays_finite():
         v = d.quantile(u)
         assert math.isfinite(v)
         assert v > 0.0
+
+
+def _synthetic_factory() -> Factory:
+    return Factory(
+        name="synthetic-uq-probe",
+        subsystems=[
+            Subsystem(
+                name="structure",
+                mass_kg=1000.0,
+                category="structure",
+                producible_locally=True,
+                energy_to_produce_kwh_per_kg=100.0,
+            ),
+            Subsystem(
+                name="chips",
+                mass_kg=100.0,
+                category="electronics",
+                producible_locally=False,
+            ),
+        ],
+    )
+
+
+def _synthetic_rep() -> ReplicationParams:
+    return ReplicationParams(
+        seed_mass_kg=1000.0,
+        local_build_rate_kg_per_day=10.0,
+        vitamin_resupply_mass_kg=1000.0,
+        resupply_cadence_days=30.0,
+        available_power_kw=1000.0,
+        target_output_kg_per_day=50.0,
+        duration_days=3650,
+        dt_days=1.0,
+    )
+
+
+def test_range_solar_constant_actually_reaches_the_fold():
+    # BUG-CATCH TEST: if solar_constant is not threaded end-to-end through
+    # is_viable_at -> available_power_kw -> array.power_w, then doubling it
+    # would silently change nothing (default is used) and the assertion below
+    # would trip. This is exactly the "UQ is a filter" property from issue #35:
+    # a UQ test surfaced this class of bug in the point-valued fold, and the
+    # test below makes sure it does not silently regress.
+    array = SolarArray(area_m2=200.0, efficiency=0.30)
+    factory, rep = _synthetic_factory(), _synthetic_rep()
+
+    # At a distance where the default TSI leaves the probe underpowered, but a
+    # 4x TSI would push it into viability. If the parameter isn't threaded, the
+    # 4x variant will still return False and the assert trips.
+    # At 1.5 AU with default TSI the array delivers ~36 kW, below the 208 kW
+    # viability threshold from the synthetic factory. An 8x TSI boost pushes
+    # delivered power to ~290 kW, over the threshold. If solar_constant does
+    # not thread through, the boost is silently dropped and the second call
+    # still returns False.
+    d_marginal_high = 1.5  # AU: past the default-TSI viability crossover
+    assert not is_viable_at(array, factory, rep, d_marginal_high)
+    assert is_viable_at(array, factory, rep, d_marginal_high, solar_constant=8 * 1360.8)
+
+
+def test_operational_range_moves_with_solar_constant():
+    # Same idea, one level up: the bisection endpoint (operational_range_au)
+    # must scale with sqrt(solar_constant) - a doubled TSI gives a sqrt(2)~=1.414
+    # further reach. If any level of the range.py -> environment.py chain forgot
+    # to pass solar_constant through, this scaling would break.
+    array = SolarArray(area_m2=200.0, efficiency=0.30)
+    factory, rep = _synthetic_factory(), _synthetic_rep()
+
+    base = operational_range(array, factory, rep, tol_au=1e-3).operational_range_au
+    doubled = operational_range(
+        array, factory, rep, tol_au=1e-3, solar_constant=2 * 1360.8
+    ).operational_range_au
+    assert base is not None and doubled is not None
+    assert doubled == pytest.approx(math.sqrt(2.0) * base, rel=0.01)
 
 
 def test_uq_module_imports_no_pimas():
