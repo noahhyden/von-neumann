@@ -7,6 +7,7 @@ from closure_sim import (
     Regime,
     ReplicationParams,
     Subsystem,
+    reaches_target,
     simulate,
 )
 
@@ -53,9 +54,11 @@ def test_material_limited_doubling_matches_analytic():
     assert r.regime_timeline[0].regime == Regime.MATERIAL
     # analytic doubling = ln2 * C / alpha ; alpha = 10/1000 = 0.01
     assert r.analytic_doubling_time_days == pytest.approx(math.log(2) * C / 0.01)
-    # empirical (Euler, small dt) should track analytic within a couple percent
+    # With the shared adaptive solver (issue #38) the empirical doubling time
+    # tracks the analytic one to well under 0.1% - the forward-Euler version was
+    # only good to a couple percent, a step-size artefact this removes.
     assert r.empirical_doubling_time_days == pytest.approx(
-        r.analytic_doubling_time_days, rel=0.02
+        r.analytic_doubling_time_days, rel=1e-3
     )
 
 
@@ -63,6 +66,38 @@ def test_growth_is_monotonic():
     r = simulate(factory(0.9), params())
     masses = [s.factory_mass_kg for s in r.steps]
     assert all(b >= a for a, b in zip(masses, masses[1:]))
+
+
+def test_reaches_target_matches_simulate_across_configs():
+    """The cheap viability path (issue #38 Phase 2) must equal the full sim's
+    `time_to_target_days is not None` on every regime - it is only a shortcut, not
+    a different answer."""
+    cases = [
+        # (closure, param overrides) spanning reachable and unreachable regimes.
+        (0.9, {}),                                           # material, reaches
+        (0.9, {"target_output_kg_per_day": 1e9}),            # target never reached
+        (0.5, {"available_power_kw": 0.05}),                 # energy-starved
+        (0.5, {"vitamin_resupply_mass_kg": 0.0}),            # resupply-starved, stuck
+        (0.99, {"target_output_kg_per_day": 50.0}),          # near-full closure
+        (0.2, {"target_output_kg_per_day": 3.0}),            # low closure, low target
+        (0.9, {"duration_days": 50}),                        # too little time
+    ]
+    for closure, kw in cases:
+        f, p = factory(closure), params(**kw)
+        expected = simulate(f, p).time_to_target_days is not None
+        assert reaches_target(f, p) is expected, f"mismatch at closure={closure}, kw={kw}"
+
+
+def test_reaches_target_is_faster_than_full_sim():
+    """Sanity that the shortcut is actually cheaper (it skips the daily grid)."""
+    import time
+
+    f, p = factory(0.9), params()
+    # warm up both paths
+    simulate(f, p); reaches_target(f, p)
+    t0 = time.perf_counter(); simulate(f, p); t_full = time.perf_counter() - t0
+    t0 = time.perf_counter(); reaches_target(f, p); t_fast = time.perf_counter() - t0
+    assert t_fast < t_full  # weak, timing-robust assertion; real gain is ~36x
 
 
 # --- Resupply-limited regime: linear ceiling at R/(1-C) ---

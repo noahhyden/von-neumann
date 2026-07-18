@@ -18,7 +18,7 @@ deterministic fold with zero pimas imports (§7).
 from __future__ import annotations
 
 from closure_sim.models import Factory, ReplicationParams
-from closure_sim.replication import simulate
+from closure_sim.replication import reaches_target
 from pydantic import BaseModel
 
 from probe_sim.environment import SOLAR_CONSTANT_1AU_W_M2, SolarArray
@@ -55,7 +55,10 @@ def is_viable_at(
     if power_kw <= 0:
         return False
     params = rep.model_copy(update={"available_power_kw": power_kw})
-    return simulate(factory, params).time_to_target_days is not None
+    # reaches_target is the cheap, timeline-free equivalent of
+    # `simulate(...).time_to_target_days is not None` (issue #38 Phase 2): this is
+    # a bisection hot path, so skipping the per-day SimStep grid is ~36x faster.
+    return reaches_target(factory, params)
 
 
 class RangeResult(BaseModel):

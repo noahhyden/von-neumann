@@ -104,10 +104,12 @@ def test_aurora_equilibrium_formula():
 
 def test_aurora_ode_converges_to_equilibrium():
     t_l, t_s = 1000.0, 5000.0
-    x_final = aurora_integrate(0.01, t_l, t_s, dt=10.0, steps=5000)
+    # t_end = 50000 is ~10 spread-times, long past the plateau (approach constant
+    # ~min(T_l, T_s) = 1000). The adaptive solver picks its own step.
+    x_final = aurora_integrate(0.01, t_l, t_s, t_end=50000.0)
     assert x_final == pytest.approx(aurora_equilibrium(t_l, t_s), rel=1e-3)
     # When lifetime <= spread time, the fraction decays toward zero.
-    x_decay = aurora_integrate(0.5, 5000.0, 1000.0, dt=10.0, steps=5000)
+    x_decay = aurora_integrate(0.5, 5000.0, 1000.0, t_end=50000.0)
     assert x_decay == pytest.approx(0.0, abs=1e-3)
 
 

@@ -10,7 +10,10 @@ requires-python = ">=3.12"
 dependencies = []
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+# scipy is a TEST-ONLY oracle for the ODE validation gate (issue #38): we compare
+# vn_core.ode against scipy.integrate.solve_ivp. It is never a runtime dependency
+# - vn-core itself stays `dependencies = []` and pure Python.
+dev = ["pytest>=8.0", "scipy>=1.11"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
