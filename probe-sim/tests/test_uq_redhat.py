@@ -64,30 +64,26 @@ def test_mc_bytes_survive_a_fresh_subprocess():
 
 
 def test_mc_golden_head_of_stream():
-    # Golden: a fixed (n, seed, inputs, finding) must produce this exact head.
-    # Any change to the RNG threading, quantile math, or iteration order will
-    # trip this - the intent is precisely to catch such changes.
+    # TRUE golden: pre-recorded values. Any change to the RNG threading,
+    # quantile math, or iteration order will trip this - which is exactly the
+    # intent. Regenerate deliberately, never by accident. If Python's random.Random
+    # (Mersenne Twister since 2.3) or math.erf ever changes bit-level output on
+    # any supported platform this will also catch it, so a "green" refactor cannot
+    # silently break the RNG stream.
     r = monte_carlo(
         {"S0": Normal(1360.8, 0.5), "d": Fixed(5.203)},
         lambda s: s["S0"] / s["d"] ** 2,
         n=10,
         seed=42,
     )
-    # Recorded once on a green suite; regenerate on purpose only.
-    golden = r.values[:3]
-    # Reproduce with a fresh call to prove idempotence, then also snapshot the
-    # bit-level values so a future change is caught.
-    r2 = monte_carlo(
-        {"S0": Normal(1360.8, 0.5), "d": Fixed(5.203)},
-        lambda s: s["S0"] / s["d"] ** 2,
-        n=10,
-        seed=42,
+    expected_head = (
+        50.27401855363882,
+        50.256387288382896,
+        50.27910840695209,
+        50.29029554653985,
+        50.26378800768964,
     )
-    assert r2.values[:3] == golden
-    # Sanity check on shape - the head should be tightly near S0/d^2 with a
-    # tiny spread; a wildly off value would signal a broken quantile.
-    for v in golden:
-        assert 50.0 < v < 51.0
+    assert r.values[:5] == expected_head
 
 
 def test_sobol_bounds_are_respected_on_a_zero_contribution_case():
@@ -170,6 +166,55 @@ def test_normal_extreme_tail_stays_finite():
         v = d.quantile(u)
         assert math.isfinite(v)
         assert v > 0.0
+
+
+def test_mc_propagates_finding_exception():
+    # If a finding raises on a particular sample, MC should NOT swallow it. Two
+    # ways this could go wrong: (1) catching everything and returning some
+    # sentinel value, (2) suppressing all errors and reporting a mean over
+    # partial values. Both would silently corrupt papers. The right behavior is
+    # to re-raise so the caller notices immediately.
+    class Sentinel(Exception):
+        pass
+
+    def brittle(sample):
+        if sample["x"] > 0.99:
+            raise Sentinel("this input is impossible")
+        return sample["x"]
+
+    # Uniform(0, 1) hits >0.99 with prob 0.01, so n=1000 makes at least one
+    # trigger virtually certain. Assert the exception surfaces.
+    with pytest.raises(Sentinel):
+        monte_carlo({"x": Uniform(0.0, 1.0)}, brittle, n=1000, seed=61)
+
+
+def test_mc_quantile_boundary_values_are_exact():
+    # A degenerate check on the internal quantile helper via a full MC call:
+    # the min/max of a monotone finding over sampled inputs must equal the
+    # (approximate) analytic min/max. If the interpolation is off at the
+    # endpoints, q05 or q95 will drift outside the true value range and no
+    # cooperative test would notice.
+    # For a Uniform(0, 1) input pushed through the identity, min is very close
+    # to 0 and max very close to 1 at n=5000.
+    r = monte_carlo({"x": Uniform(0.0, 1.0)}, lambda s: s["x"], n=5000, seed=71)
+    assert min(r.values) < 0.01
+    assert max(r.values) > 0.99
+    # q05 and q95 should bracket the true 0.05 / 0.95 quantiles of Uniform(0,1).
+    assert r.q05 == pytest.approx(0.05, abs=0.02)
+    assert r.q95 == pytest.approx(0.95, abs=0.02)
+
+
+def test_sobol_all_fixed_inputs_are_zero_not_nan():
+    # If every input is Fixed, variance is 0 and each S_Ti is 0/0. A wrong
+    # implementation might return nan (silently poisoning downstream reports)
+    # or divide-by-zero. The right answer is zeros - honest label of "no
+    # sensitivity because no spread".
+    inputs = {"a": Fixed(1.0), "b": Fixed(2.0), "c": Fixed(3.0)}
+    r = sobol_total_order(inputs, lambda s: s["a"] + s["b"] * s["c"], n=100, seed=73)
+    assert r.variance == 0.0
+    for v in r.total_order.values():
+        assert v == 0.0
+        assert not math.isnan(v)
 
 
 def _synthetic_factory() -> Factory:
