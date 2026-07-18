@@ -39,6 +39,22 @@ class MCResult:
         """The 90% central credible interval (q05, q95) - the usual "error bar"."""
         return (self.q05, self.q95)
 
+    @property
+    def stderr_of_mean(self) -> float:
+        """Standard error of the empirical mean = std / sqrt(N).
+
+        A convergence diagnostic separate from the error bar itself: the
+        90% CI reports the finding's own spread, while this reports how well
+        the *mean* is pinned down by the current sample size. If a caller
+        wants a Ndigit-of-mean claim they can trust, they should keep N large
+        enough that stderr_of_mean is well below whatever precision they
+        want to claim - the honest counterpart to "n=1000 is enough because
+        it feels round".
+        """
+        if self.n < 2:
+            return 0.0
+        return self.std / math.sqrt(self.n)
+
 
 def monte_carlo(
     inputs: Mapping[str, Distribution],

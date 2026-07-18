@@ -169,6 +169,27 @@ def test_probe_range_headline_uq_delivers_a_useful_error_bar():
     assert lo > 0.55 and hi < 0.70
 
 
+def test_stderr_of_mean_shrinks_as_one_over_sqrt_n():
+    # Central-limit-theorem property: doubling N shrinks stderr_of_mean by
+    # sqrt(2). Same distribution, two seeds, two Ns - stderr scales as
+    # 1/sqrt(N) to within a few percent at these sample sizes.
+    inputs = {"x": Uniform(0.0, 1.0)}
+    finding = lambda s: s["x"]  # noqa: E731
+    small = monte_carlo(inputs, finding, n=1000, seed=201)
+    big = monte_carlo(inputs, finding, n=4000, seed=201)
+    # Expected ratio: sqrt(4000 / 1000) = 2.
+    assert small.stderr_of_mean / big.stderr_of_mean == pytest.approx(2.0, rel=0.10)
+    # Absolute check against the analytic std of U(0, 1) = 1/sqrt(12).
+    analytic = 1.0 / math.sqrt(12.0) / math.sqrt(4000.0)
+    assert big.stderr_of_mean == pytest.approx(analytic, rel=0.05)
+
+
+def test_stderr_zero_when_finding_is_constant():
+    inputs = {"x": Fixed(3.14)}
+    r = monte_carlo(inputs, lambda s: s["x"], n=100, seed=1)
+    assert r.stderr_of_mean == 0.0
+
+
 def test_probe_range_narrow_efficiency_shrinks_error_bar():
     # Same shape as above but with efficiency pinned. Error bar collapses to the
     # (tiny) TSI contribution only. This is the second half of the shrink-spread
