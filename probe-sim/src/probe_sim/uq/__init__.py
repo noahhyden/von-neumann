@@ -17,6 +17,7 @@ from probe_sim.uq.distributions import (
     Normal,
     Uniform,
 )
+from probe_sim.uq.report import one_line_finding
 from probe_sim.uq.sample import MCResult, monte_carlo
 from probe_sim.uq.sobol import SobolResult, sobol_total_order
 
@@ -30,4 +31,5 @@ __all__ = [
     "monte_carlo",
     "SobolResult",
     "sobol_total_order",
+    "one_line_finding",
 ]

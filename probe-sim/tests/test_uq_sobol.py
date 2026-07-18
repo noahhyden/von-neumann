@@ -155,6 +155,26 @@ def test_degenerate_constant_finding_returns_zero_indices():
     assert all(v == 0.0 for v in r.total_order.values())
 
 
+def test_sobol_ranking_stable_across_seeds():
+    # If the ranking flipped between two seeds at n=1500, it would mean the
+    # sample size is too small to trust *any* ordering the module reports. On
+    # a case with a clear ~10x variance gap between the two inputs the ranking
+    # must be stable across independent seeds. Value-level agreement within a
+    # noticeable slack is the more useful "converged enough" property.
+    inputs = {
+        "big": Uniform(low=-3.0, high=3.0),   # var 3.0
+        "small": Uniform(low=-0.3, high=0.3),  # var 0.03
+    }
+    finding = lambda s: s["big"] + s["small"]  # noqa: E731
+    r1 = sobol_total_order(inputs, finding, n=1500, seed=131)
+    r2 = sobol_total_order(inputs, finding, n=1500, seed=139)
+    assert r1.ranked()[0][0] == "big"
+    assert r2.ranked()[0][0] == "big"
+    # Each S_T agrees across seeds to within 5%.
+    for name in inputs:
+        assert r1.total_order[name] == pytest.approx(r2.total_order[name], abs=0.05)
+
+
 def test_sobol_rejects_bad_n_and_empty_inputs():
     with pytest.raises(ValueError):
         sobol_total_order({"a": Uniform(0, 1)}, lambda s: s["a"], n=1, seed=1)
