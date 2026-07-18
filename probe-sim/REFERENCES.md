@@ -15,6 +15,12 @@ math from ones that do. Units are explicit throughout.
   - **`REPLICATED_MASS_FRACTION = 0.70`**: the probe "replicat[es] 70% of its mass";
     the non-replicated ~30% is microchips and complex electronics carried along
     (closure-sim's "vitamins" framing). Solid.
+    - **UQ distribution (issue #35): `Fixed(0.70)` `[GAP]` on spread.** Borgue &
+      Hein report the 70% figure as a design target and do not publish a spread.
+      Rather than invent a Gaussian, `probe_sim.distributions.REPLICATED_MASS_FRACTION_DIST`
+      stays `Fixed` and Sobol reads it as zero-contribution - the honest label
+      for "we know the mean, not the spread". Widen this to `Normal`/`Uniform`
+      when a defensible source lands.
   - **< 100 kg, CubeSat-module scale**: small-satellite-scale, assembled from
     CubeSat form-factor units (3U/6U/18U). Solid (used as a bound, not a point mass).
   - **Solar-flux range gating**: "solar radiation decreases from 1,374 Watts/m²
@@ -44,6 +50,10 @@ math from ones that do. Units are explicit throughout.
 - **`AU_DISTANCE`** (mean heliocentric distance, AU): earth 1.000, mars 1.524,
   jupiter 5.203 - NASA Planetary Fact Sheet,
   https://nssdc.gsfc.nasa.gov/planetary/factsheet/ . Solid.
+  - **UQ distribution (issue #35): `Fixed(value)`, deterministic.** These are
+    mean orbital-radius definitions at the fidelity probe-sim uses; the
+    instantaneous distance varies with orbital phase but the *mean* is not a
+    random variable in the UQ sense. `Fixed` is correct, not a `[GAP]`.
 - **Solar-cell efficiency** - a per-scenario input on `SolarArray`, not a hardcoded
   constant. Representative space multi-junction cells are ~28–32% (e.g. Spectrolab
   XTJ ~30% AM0); tests use 0.30 as a stand-in input. When a real scenario fixes a
