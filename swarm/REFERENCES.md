@@ -474,6 +474,45 @@ extrapolation caution ("a sixteen-fold lever arm cannot support" a galactic-scal
 against a much longer arm. The `finite_size_interior` and `finite_size_periodic` edge controls are
 regenerated to the same 200,000-star range so the bulk-vs-boundary comparison holds at scale.
 
+**Scale companions: every fixed-N sweep repeated at 200,000 stars.** With the k-d tree unlocking the
+sweep at 200,000 stars, we also repeat each fixed-N measurement of `tab:ensembles` at that scale
+(`*_scale.json`, seed count set to the finite-size sweep's precision target). This turns each
+small-N result into a paired claim: the fixed-N number for a tight CI on the coefficient, and the
+scale companion to test whether the number was a scale-dependent artifact.
+
+- `concurrency_scale.json` - the median peak in-flight rises to ~75,500 (instant) and ~69,500
+  (lightspeed) at N=200,000 (up from ~480 at N=500), and stays above 47,000 at the 99% coverage
+  tail bin. The two regimes still track. The "loser is not on the critical path" mechanism the
+  fill-time claim rests on scales.
+- `lambda_sweep_scale.json` - the through-origin slope `a` of tax = a*Lambda drops from
+  ~0.97 at N=500 to ~0.076 at N=200,000, a ~13x reduction that matches the finite-size
+  decline of the tax at fixed Lambda. Linearity persists (fuel taxes: -0.13, 0.16, 0.40, 0.82, 1.52
+  percent at Lambda = 0.01, 0.03, 0.05, 0.1, 0.2 respectively); only the coefficient rescales.
+- `floor_bracket_scale.json` - at N=200,000 the wasted-arrival count under `inflight` is exactly zero
+  at every Lambda in {0.05, 0.1, 0.2} across all eight seeds. The N=400 result "recovers nearly all
+  of it" tightens to "recovers all of it" at scale. Wasted travel drops 80-96% (probes still burn
+  distance before aborting).
+- `clumpiness_scale.json` - the slope `a` is flat across the Thomas-clump ladder at N=200,000:
+  0.078, 0.076, 0.088, 0.072, 0.076 across uniform / sigma=0.30 / 0.15 / 0.08 / 0.05 (matching the
+  speed-sweep-companion uniform slope within noise). The exposure-cancellation argument holds over
+  the ~670x scale span crossed with a ~4.5x span in Clark-Evans R. Note: `n_clumps=25` is held
+  fixed with N, so at 200,000 the tightest sigma has ~8,000-star mega-clumps by design.
+- `retarget_cap_scale.json` - the fixed-N insensitivity plateau at cap>=8 (N=400: 18.4%, 20.4%,
+  20.5% at caps 8, 16, 32) moves right at scale. At N=200,000 the tax climbs monotonically from
+  0.27% (cap=2) to 9.11% (cap=32) and does not saturate over the tested ladder. This is a
+  bookkeeping-cap sensitivity, not a physical claim: the finite-size number the paper reports uses
+  the same default cap=8, so the 1.5% headline at N=200,000 is unchanged. But the paper's operating
+  claim "the tax is insensitive to the cap" is a statement about being on the small-N plateau, not
+  a general one; at 200,000 stars we sit on the ascending part of the curve, and how far the
+  plateau extends at galactic scale is a natural next question.
+- `branching_scale.json` - **not committed**: at offspring=16 with N=200,000, the per-worker
+  SwarmResult footprint (~1.2-2 GB peak from the ~8x more arrivals) x 4 concurrent paired workers
+  saturates k02's 27 GB RAM + 8 GB swap. The at-scale branching claim is a `[GAP]` for k02 as
+  written; running to offspring=8 was clean, but that alone doesn't test the paper's
+  "up to sixteen without saturating" claim, so the artifact is deferred until either a wider-RAM
+  machine or an intra-run memory reduction (do not retain `steps` in `SwarmResult`, or subsample it
+  per bin) lands.
+
 ## Simplifications still deferred to later slices
 
 - **Uniform cube star field** by default, not a galactic disk with a density gradient (the

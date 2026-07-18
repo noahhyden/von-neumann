@@ -137,7 +137,10 @@ seeds and differ only in the stated star count.
   \centering
   \caption{The paired ensemble used by each measurement. All are event-driven and paired (each seed
     filled under both coordination regimes on the identical field); seed counts are prefixes of one
-    fixed 64-seed set, sized to each measurement's cost.}
+    fixed 512-seed set, sized to each measurement's cost. The lower block repeats each
+    fixed-$N$ sweep at $N = 200{,}000$ using the finite-size arm's precision-target seed count, so
+    every claim rests on a scale companion in addition to its headline result -- discussed together
+    in Section~\ref{sec:scale-companions}.}
   \label{tab:ensembles}
   \begin{tabular}{lccl}
     \toprule
@@ -153,6 +156,13 @@ seeds and differ only in the stated star count.
     Finite-size, periodic control   & 32 down to 6 & 300--200{,}000 & Section~\ref{sec:scale} \\
     Clumpy-field sweep      & 48 & 500 & Fig.~\ref{fig:clumpiness} \\
     Timestep artifact       & 32 & 300 & Fig.~\ref{fig:dt} \\
+    \midrule
+    \multicolumn{4}{l}{\emph{Scale companions at $N = 200{,}000$, precision-target seed count (Section~\ref{sec:scale-companions})}} \\
+    Speed sweep, at scale   & 8  & 200{,}000 & Section~\ref{sec:scale-companions} \\
+    Re-target-cap, at scale & 8  & 200{,}000 & Section~\ref{sec:scale-companions} \\
+    In-flight floor, at scale & 8 & 200{,}000 & Section~\ref{sec:scale-companions} \\
+    Concurrency, at scale   & 8  & 200{,}000 & Section~\ref{sec:scale-companions} \\
+    Clumpy-field, at scale  & 8  & 200{,}000 & Section~\ref{sec:scale-companions} \\
     \bottomrule
   \end{tabular}
 \end{table}

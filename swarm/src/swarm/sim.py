@@ -999,8 +999,19 @@ def _snapshot(s: SwarmState, n_stars: int) -> SwarmStep:
     )
 
 
-def simulate_swarm(params: SwarmParams, *, seed: int = 0x9E3779B9) -> SwarmResult:
-    """Run the settlement front to completion (or ``max_years``) and summarize."""
+def simulate_swarm(
+    params: SwarmParams, *, seed: int = 0x9E3779B9, record_steps: bool = True
+) -> SwarmResult:
+    """Run the settlement front to completion (or ``max_years``) and summarize.
+
+    ``record_steps`` controls only whether the per-event ``SwarmStep`` trace is retained
+    (one snapshot per event, ~millions at N=200k in event mode). It is a memory knob, NOT
+    a physics knob: every reported number is maintained on incremental ``state`` counters,
+    so the aggregates are bit-identical with it on or off. Set it ``False`` for large
+    ensembles that only read the summary (the paired/single sweeps in ``experiments/``);
+    leave it ``True`` (the default) when a caller walks ``result.steps`` (the concurrency
+    sweep, the tests). When ``False`` the trace holds only the initial snapshot.
+    """
     state = initial_state(params, seed=seed)
     n_stars = len(state.xs)
     steps = [_snapshot(state, n_stars)]
@@ -1026,7 +1037,8 @@ def simulate_swarm(params: SwarmParams, *, seed: int = 0x9E3779B9) -> SwarmResul
                 break
             state.year = ne
             _resolve_batch(state, params, _pop_due(state, params, ne))
-            steps.append(_snapshot(state, n_stars))
+            if record_steps:
+                steps.append(_snapshot(state, n_stars))
             record_thresholds()
     else:
         n_steps = int(round(params.max_years / params.dt_years))
@@ -1034,7 +1046,8 @@ def simulate_swarm(params: SwarmParams, *, seed: int = 0x9E3779B9) -> SwarmResul
             if not state.probes:
                 break  # front has stalled or the reachable field is exhausted
             step(state, params)
-            steps.append(_snapshot(state, n_stars))
+            if record_steps:
+                steps.append(_snapshot(state, n_stars))
             record_thresholds()
 
     return SwarmResult(

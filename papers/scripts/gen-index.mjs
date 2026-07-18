@@ -28,8 +28,9 @@ function citesInTex(tex) {
 /**
  * Canonicalize an abstract so the LaTeX copy (main.tex) and the plain-text copy
  * (paper.json, shown on the site) compare equal when they say the same thing.
- * Unwraps simple markup, drops inline-math delimiters, and folds "N percent" and
- * "N\%" to a single "%" form (the one legitimate LaTeX-vs-plaintext difference).
+ * Unwraps simple markup, drops inline-math delimiters, folds "N percent" and
+ * "N\%" to a single "%" form, and strips the LaTeX thin-space `{,}` used inside
+ * digit groupings (200{,}000 in main.tex vs 200,000 in paper.json).
  */
 function normAbstract(s) {
   return String(s)
@@ -37,6 +38,7 @@ function normAbstract(s) {
     .replace(/\\%/g, "%")
     .replace(/\$/g, "")
     .replace(/~/g, " ")
+    .replace(/(\d)\{,\}(\d)/g, "$1,$2")
     .replace(/\bper\s?cent\b/gi, "%")
     .replace(/\s*%/g, "%")
     .replace(/\s+/g, " ")

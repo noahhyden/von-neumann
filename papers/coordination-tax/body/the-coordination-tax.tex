@@ -268,6 +268,68 @@ one, with the same shape in both. So clumpiness rescales the coefficient through
 not introduce a new hop-length dependence. This is also why the uniform fit gives $0.95$ and not a
 clean $1.0$: even a uniform field has long, already-doomed hops.
 
+\subsection{The scale companions: what else survives to $N = 200{,}000$}
+\label{sec:scale-companions}
+The finite-size sweep (Section~\ref{sec:scale}) settles one question at scale -- the tax as a
+fraction of effort shrinks with $N$ and does not extrapolate flat -- but says nothing about whether
+each fixed-$N$ subsidiary result also survives that reach. The dynamic spatial index that lets the
+finite-size sweep run to 200{,}000 stars also lets the other fixed-$N$ sweeps of
+Table~\ref{tab:ensembles} be repeated there at their precision-target seed count. The picture is
+uniform: the qualitative shape of every result holds, and the redundant-travel tax rescales in step
+with the finite-size decline. The one nuance is bookkeeping-side and does not touch a physical claim.
+
+\emph{Linearity in $\Lambda$ persists (Speed sweep at scale).} Repeating the paired ensemble at
+$N = 200{,}000$ over the same $\Lambda$ ladder returns fuel taxes of $-0.13\%$, $0.16\%$, $0.40\%$,
+$0.82\%$, and $1.52\%$ at $\Lambda = 0.01, 0.03, 0.05, 0.1, 0.2$ respectively; the $\Lambda = 0.01$
+point is noise-consistent with zero and the rest track linearly, giving a through-origin coefficient
+of $a \approx 0.076$ (in the same fractional units as the $a = 0.97$ at $N = 500$). The $\sim\!13\times$
+reduction in $a$ matches the same-lever-arm decline of the fuel tax itself, so the linearity is
+preserved and only the slope rescales; the collision derivation remains the correct first-order
+description at scale, with the coefficient now the one that tracks the finite-size shrinkage.
+
+\emph{In-flight relay recovers everything (In-flight floor at scale).} At $N = 400$ the ``inflight''
+regime already recovered nearly all of the decision-site tax; at $N = 200{,}000$ the wasted-arrival
+count under inflight is exactly zero at every $\Lambda \in \{0.05, 0.1, 0.2\}$ across all eight seeds
+-- every one of about 1.79 million wasted arrivals suffered under perfect information disappears
+when a probe redirects the instant an overtaking beacon reaches its current position. Some wasted
+\emph{travel} remains (probes still burn distance before aborting; median wasted travel drops by
+about 80\% to 96\% versus perfect information across $\Lambda$), but no probe ever completes a
+journey to an already-claimed star under inflight at this scale. So the light-speed number is an
+upper bound that a physical relay collapses to zero, over a wide enough field that beacons routinely
+overtake in-flight probes.
+
+\emph{More probes aloft, in step with the field (Concurrency at scale).} The N=500 sweep reported a
+median of about 480 probes in flight at peak, and the fills' near-lockstep behaviour was the
+mechanism behind ``no fill-time tax.'' At $N = 200{,}000$ the median peak in-flight rises to about
+$75{,}500$ under perfect information and about $69{,}500$ under the light-speed gate, and stays above
+$47{,}000$ even at the 99\%-coverage tail bin where the fill's critical path lives; the two regimes
+still track. So the wasted trip really is one of tens of thousands aloft at the mid-fill, and the
+loser-not-on-critical-path argument -- the concurrency mechanism the paper's fill-time claim rests
+on -- scales.
+
+\emph{Clumpiness robustness holds (Clumpy-field at scale).} At $N = 200{,}000$ with the same
+$n_{\text{clumps}} = 25$ Thomas layout (so the clumps become dense mega-clumps of about
+$8{,}000$ stars each at the tightest scatter), the through-origin slope is flat across the
+clumpiness ladder: $a = 0.078$ at the uniform null, $0.076$, $0.088$, $0.072$, $0.076$ across the
+four Thomas levels, all with overlapping bootstrap intervals. The uniform-level slope matches the
+speed-sweep companion's $0.076$ within noise. The exposure-cancellation argument for the $v/c$ form
+therefore holds over a $670\times$ span in field size crossed with a $4.5\times$ span in
+Clark-Evans $R$: clumpiness rescales the coefficient at fixed $N$ but does not break the form, at
+the smaller field or at scale.
+
+\emph{The re-target cap becomes a real knob at scale (Re-target-cap at scale).} At $N = 400$ the
+fuel tax was insensitive to the bookkeeping cap on how many times a probe may switch target from
+about $\text{cap} = 8$ upward: $18.4\%$, $20.4\%$, $20.5\%$ at caps $8, 16, 32$ -- a clean plateau
+that we operate on. At $N = 200{,}000$ the plateau moves right and we no longer sit on it: the tax
+grows from $0.27\%$ at $\text{cap} = 2$ to $9.11\%$ at $\text{cap} = 32$, monotone through the ladder
+and still climbing. The default cap of 8 sits well below the new plateau. This does not touch the
+main tax number (the finite-size sweep uses the same default and matches its
+value here at $1.5\%$), but it does mean the operating claim ``the tax is insensitive to the cap''
+that the paper made from the small-$N$ measurement is a statement about being on the plateau, not
+a general claim, and at 200{,}000 stars we are on the ascending part of the curve. A field several
+orders of magnitude larger needs several more retargets before saturating; whether the plateau
+continues to move right or stops is a natural next question.
+
 \subsection{Where the cost falls}
 Table~\ref{tab:regime} places the physical propulsion concepts on the speed axis. The source model's
 powered cruise ($3\times10^{-5}\,c$) is far too slow for any race to matter, and pays nothing. The
