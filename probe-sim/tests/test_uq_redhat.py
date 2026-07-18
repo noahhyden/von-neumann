@@ -36,7 +36,7 @@ from closure_sim.models import Factory, ReplicationParams, Subsystem
 
 from probe_sim.environment import SolarArray
 from probe_sim.range import is_viable_at, operational_range
-from probe_sim.uq.distributions import Fixed, Normal, Uniform
+from probe_sim.uq.distributions import Fixed, LogNormal, Normal, Uniform
 from probe_sim.uq.sample import monte_carlo
 from probe_sim.uq.sobol import sobol_total_order
 
@@ -288,6 +288,63 @@ def test_operational_range_moves_with_solar_constant():
     ).operational_range_au
     assert base is not None and doubled is not None
     assert doubled == pytest.approx(math.sqrt(2.0) * base, rel=0.01)
+
+
+def test_honest_null_point_answer_is_overconfident():
+    # THE POINT of issue #35, stated in one test: "UQ is a filter, not polish".
+    # Some point-valued findings would collapse into honest nulls under real
+    # uncertainty - this asserts we can *detect* that case.
+    #
+    # Scenario: does a 200 m^2, ~0.30 efficient probe reach 0.63 AU while
+    # meeting a 208 kW build demand? At the point value (eff=0.30, TSI=1360.8)
+    # the answer is d ~ 0.626 AU < 0.63, i.e., NO, cleanly. Under real spreads
+    # (efficiency Uniform(0.28, 0.32); TSI Kopp & Lean std=0.5), the 90% CI
+    # spans both sides of 0.63, and the true probability of reaching is
+    # roughly a coin flip - so the point answer "NO" is over-confident.
+    threshold_au = 0.63
+
+    def d_max(s):
+        return math.sqrt(
+            s["S0"] * s["area_m2"] * s["efficiency"] / s["required_power_w"]
+        )
+
+    point = math.sqrt(1360.8 * 200.0 * 0.30 / 208_000.0)
+    assert point < threshold_au, "test scenario requires the point answer to say NO"
+
+    r = monte_carlo(
+        {
+            "S0": Normal(1360.8, 0.5),
+            "efficiency": Uniform(0.28, 0.32),
+            "area_m2": Fixed(200.0),
+            "required_power_w": Fixed(208_000.0),
+        },
+        d_max,
+        n=10_000,
+        seed=91,
+    )
+    # The 95th percentile must sit above the threshold - i.e., a plausible
+    # realization DOES reach 0.63. If it did not, uncertainty would agree with
+    # the point answer and there would be no honest-null story to tell.
+    assert r.q95 > threshold_au
+    # Empirical P(d >= threshold) far from 0 or 1: the honest-null test.
+    p_reaches = sum(1 for v in r.values if v >= threshold_au) / r.n
+    assert 0.20 < p_reaches < 0.60, (
+        f"expected the answer to be genuinely uncertain; got P(reach)={p_reaches:.2f}"
+    )
+
+
+def test_monte_carlo_over_lognormal_gives_finite_result():
+    # LogNormal is exercised at the quantile level in test_uq_distributions
+    # but never through a full MC. Cover the integration path here: sampling
+    # from LogNormal via inverse-CDF through the seeded RNG must produce
+    # positive, finite values whose empirical geometric mean approximates
+    # the LogNormal's gmean.
+    inputs = {"x": LogNormal(gmean=100.0, gstd=1.10)}
+    r = monte_carlo(inputs, lambda s: s["x"], n=5000, seed=93)
+    assert all(math.isfinite(v) and v > 0 for v in r.values)
+    # Geometric mean of the samples estimates gmean.
+    geo_mean = math.exp(sum(math.log(v) for v in r.values) / r.n)
+    assert geo_mean == pytest.approx(100.0, rel=0.02)
 
 
 def test_uq_module_imports_no_pimas():
