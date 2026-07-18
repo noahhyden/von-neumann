@@ -13,7 +13,7 @@ because the fold is deterministic*. That criterion is the lens for every step be
 
 ### 0. `closure-sim` - the factory (done)
 
-Bill-of-materials closure ratio + discrete-time replication + the electronics wall.
+Bill-of-materials closure ratio + adaptive-ODE replication + the electronics wall.
 The pure fold (`model.ts` / `closure_sim`) and the pattern (`reactive-model.ts`:
 store + signals + memos + `speculate` + agent bridge) that everything else reuses.
 

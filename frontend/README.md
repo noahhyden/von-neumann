@@ -100,7 +100,7 @@ ceiling* is binding. The whole page is ~11 KB gzipped.
 | closure-sim concept | how it shows up here | pimas power |
 | --- | --- | --- |
 | the closure ratio, doubling time, time-to-target | live readouts | `createMemo` over the same pure functions |
-| the discrete-time replication sim | the growth chart (real `sim().steps`) | fine-grained subscribe - only changed outputs re-render |
+| the replication sim (adaptive ODE, sampled daily) | the growth chart (real `sim().steps`) | fine-grained subscribe - only changed outputs re-render |
 | the electronics-wall analysis (`analysis.py`) | "speculate: make its own chips" | **`speculate`** - exact what-if, free rollback, no commit |
 | the emergent binding regime | the regime timeline + a causal sentence | **explain** (model-derived) |
 | - | the "agent surface" panel | `pimas/agent` - subscribe / speculate / explain, zero extra wiring |
