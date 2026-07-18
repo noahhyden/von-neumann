@@ -14,6 +14,7 @@ from vn_core.uq.distributions import (
     Distribution,
     Fixed,
     LogNormal,
+    LogUniform,
     Normal,
     Uniform,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "Uniform",
     "Normal",
     "LogNormal",
+    "LogUniform",
     "MCResult",
     "monte_carlo",
     "SobolResult",

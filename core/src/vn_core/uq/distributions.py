@@ -106,6 +106,38 @@ class Normal:
 
 
 @dataclass(frozen=True)
+class LogUniform:
+    """LogUniform on [low, high]: each order of magnitude is equally likely.
+
+    The honest read on sources that give a *range* spanning multiple orders
+    of magnitude (e.g. sintered regolith strength ~2.5-355 MPa across
+    techniques, compute-chip embodied energy 3000-15000 kWh/kg): each decade
+    is equally likely, matching how the source presents the choice of
+    technique / basis rather than the linear numeric distance.
+
+    quantile(u) = low * (high/low)^u.
+    """
+
+    low: float
+    high: float
+
+    def __post_init__(self) -> None:
+        if not self.low > 0:
+            raise ValueError(f"LogUniform low must be > 0, got {self.low!r}")
+        if not self.high > self.low:
+            raise ValueError(f"LogUniform requires high > low, got [{self.low}, {self.high}]")
+
+    @property
+    def mean(self) -> float:
+        # Analytic mean: (high - low) / ln(high / low).
+        return (self.high - self.low) / math.log(self.high / self.low)
+
+    def quantile(self, u: float) -> float:
+        _check_u(u)
+        return self.low * math.exp(u * math.log(self.high / self.low))
+
+
+@dataclass(frozen=True)
 class LogNormal:
     """LogNormal with the geometric mean and geometric std (ratio) as parameters.
 
