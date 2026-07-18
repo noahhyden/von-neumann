@@ -42,7 +42,7 @@ class Subsystem(BaseModel):
 
 
 class ReplicationParams(BaseModel):
-    """Inputs to the discrete-time replication simulator.
+    """Inputs to the replication simulator.
 
     ``seed_mass_kg`` is the factory mass landed from Earth and ``local_build_rate_kg_per_day``
     is that seed's initial local-material output. Their ratio defines productivity
@@ -57,6 +57,9 @@ class ReplicationParams(BaseModel):
     available_power_kw: float = Field(gt=0)
     target_output_kg_per_day: float = Field(gt=0, default=1000.0)
     duration_days: int = Field(gt=0, default=3650)
+    # Reporting cadence, not an integration step: the mass ODE is integrated
+    # adaptively by vn_core.ode (issue #38); dt_days only sets the spacing of the
+    # SimStep timeline the result is sampled onto.
     dt_days: float = Field(gt=0, default=1.0)
 
     @property

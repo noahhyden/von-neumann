@@ -2,8 +2,8 @@
 
 Every number plotted here is either produced by the validated closure-sim fold
 (CLAUDE.md 1) or a pure-math derivation stated inline - nothing is hardcoded or
-invented. closure-sim is a deterministic forward-Euler fold with no RNG, so all
-three PDFs are bit-reproducible run to run.
+invented. closure-sim is a deterministic ODE fold (adaptive RK45 via vn_core.ode,
+no RNG), so all three PDFs are bit-reproducible run to run.
 
 Figures (vector PDF, IEEE single-column geometry, serif fonts):
   (a) fig_leverage.pdf       - launch-mass leverage 1/(1-C) vs closure C (pure math).
