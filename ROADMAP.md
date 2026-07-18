@@ -245,3 +245,90 @@ reconciling) is *new work*, not a port - and a natural fit for `speculate`
   swarm is a paradigm jump (deterministic BoM model → stochastic spatial ABM + a
   performance engine). The deterministic multi-probe step (3) exists to avoid taking
   both on at once.
+
+## Depth tracks (cross-cutting)
+
+The modules above answer the physics question. These tracks cut *across* all of them
+and each one buys the project a specific correctness or performance gain while also
+being a deep, transferable fundamental. They are ranked and sequenced deliberately -
+not written as six peers - because §3 is binding here too: **depth is a liability**,
+and a flat wish-list of six parallel efforts is exactly the trap it warns against.
+Each track is scored on two axes that do *not* coincide: **(a)** does it make the
+papers more correct or more publishable, and **(b)** does it teach a fundamental. We
+let (a) drive the ordering and refuse to let (b) smuggle in work (a) would not
+justify.
+
+### Tier 1 - these *complete* the rigor, so they are research, not extras
+
+**UQ: error bars + sensitivity.** Every number in the repo is sourced but
+point-valued. Propagating that uncertainty (Monte Carlo, or analytic where the model
+is linear) and running a global sensitivity analysis (Sobol indices) is the honest
+completion of the cardinal rule: it turns "X" into "X, ±Y, and Y is 80% driven by
+this one input." Highest leverage for the papers, and it upgrades every module at
+once. Three things to hold in view:
+- The real cost is **not** the Monte Carlo, it is that every entry in every
+  `REFERENCES.md` now needs a **distribution, not just a source** - a spread is a
+  citable claim in its own right, and this is a sourcing project across all modules
+  before it is a compute project.
+- Sobol needs many model evaluations; cheap for most modules, a design constraint for
+  any that are not.
+- **UQ is a filter, not polish.** Some current findings' error bars will straddle
+  their threshold and collapse into honest nulls. That is a feature, not a failure -
+  it is the same "proven null over unproven claim" discipline the papers already
+  hold. Frame UQ as "find out which findings survive," not "add error bars."
+
+**Explicit optimization: make the implicit LP visible.** Several modules currently
+solve constrained-optimization problems by hand-tuning (splitting a solar-power budget
+across manufacturing / compute / housekeeping to maximise replication; the minimum
+import set for closure). Reframed as proper programs, the **dual / shadow prices**
+tell you *which constraint binds and by how much* - the "electronics wall" framing is
+informal shadow-price reasoning, made rigorous and publishable. The power-budget side
+is linear/convex duality; the closure side ("minimum imports for self-replication"
+over the bill-of-materials dependency graph) is a min-hitting-set / ILP problem, the
+exact gap the O(N!)-query incident exposed - so the algorithms/complexity work is not
+a bonus, it is half of this track. Caveats:
+- **Check the structure before promising duality.** Replication rate vs. watts is
+  probably nonlinear (thresholds, diminishing returns). If it is convex the shadow
+  prices are still clean; if nonconvex they are only local, and the "it *is* LP
+  duality" claim has to soften to match.
+- Watch the §3 tension: a solver can *hide* physics behind an optimum. The win here is
+  the interpretation (which constraint binds), not the optimum itself.
+
+### Tier 2 - mostly done; rescope, do not restart
+
+**Swarm performance + GPU.** The premise that the swarm is "a CPU spatial-hash at
+~4,800 stars" is **stale**: the module already runs at **200k stars** on a dynamic
+k-d tree over the unsettled set with a near-linear event loop (issues #27, #30), and
+has already produced a finding (the coordination tax at 200k). The CPU-depth
+curriculum largely happened. What is genuinely open:
+- WebGPU **rendering / fill** and the parked frontend engine - squarely the §Design
+  notes ladder (Canvas 2D → WebGL instanced → WebGPU compute), rendering reading the
+  fold's flat buffers, never a reactive scene graph.
+- **Red flag on moving the *fold itself* to the GPU.** §7 makes determinism binding
+  and `docs/HARDWARE.md` leans on it ("folds are deterministic, so hardware never
+  changes a result"). Cross-GPU floating-point determinism is hard; a GPU fold could
+  silently break replay and `speculate`. Scope GPU to the **skin** (rendering) and
+  keep the deterministic seeded fold on the CPU - or treat "deterministic GPU fold" as
+  its own large, explicitly-flagged project, not a free byproduct of the render work.
+
+### Tier 3 - learning-only, NOT on the paper critical path
+
+These are worth doing for their own sake, but neither is justified by (a) today, so
+they are parked here honestly rather than dressed up as research. Each has a cheap
+near-term substitute that captures most of the value.
+
+- **Physical units as types.** The dream ("every number sourced" becomes "every
+  number dimensioned by the compiler") is beautiful and exactly the repo's ethos, but
+  a compile-time units DSL is a **mini-compiler** - a large standalone build with zero
+  research output and a new single-maintainer surface (the same burden as pimas).
+  **Near-term substitute:** adopt runtime dimensional analysis (e.g. `astropy.units`,
+  already plausible in this domain) now - it catches "cannot add mass to energy" and
+  forgotten conversions immediately, at a fraction of the cost. The DSL stays a pure
+  learning project for later.
+- **Numerical methods (RK4 / symplectic integrators).** Classic and worth knowing, but
+  gate it on §3: **does any finding actually depend on integrator accuracy?**
+  Symplectic integrators earn their keep only over long horizons where energy drift
+  would corrupt a result. If orbital mechanics is incidental to a module's question,
+  higher-fidelity integration is precisely the "process nested in a process" §3 warns
+  against. Trigger this track from an observed drift in a real result, not from
+  curiosity.
