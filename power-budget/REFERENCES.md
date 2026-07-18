@@ -32,6 +32,27 @@ math from ones that do. Units: energy in joules, power in watts, temperature in 
   orders of magnitude.** Used only as a scale marker for `brain_equivalents()`, never
   as a precise ratio.
 
+## UQ distributions (issue #35)
+
+`src/power_budget/distributions.py` gives each number above a citable companion:
+
+- `BOLTZMANN_DIST = Fixed(1.380649e-23)`, `REFERENCE_TEMPERATURE_K_DIST = Fixed(300.0)` -
+  definitional / documented choice, respectively; `Fixed` is correct, not a `[GAP]`.
+- `HUMAN_BRAIN_POWER_DIST = Uniform(15, 25) W` - the ~20 W resting figure sits inside
+  the broader task-dependent 15-25 W band recorded in the literature.
+- `BRAIN_COMPUTE_FLOPS_DIST = LogUniform(1e15, 1e20)` - directly reads the "estimates
+  span 1e15 to 1e20; uncertainty ~+/- 2 orders of magnitude" annotation on
+  `BRAIN_COMPUTE_FLOPS_ESTIMATE`. Each order of magnitude equally likely, matching how
+  the source presents the uncertainty.
+- `COMPUTE_EFFICIENCY_FLOPS_PER_W_DIST = LogUniform(1e10, 1e12)` - H100-class hardware
+  centred around 1e11 FLOPS/W; the LogUniform band covers the Koomey-trend spread.
+  Scenarios that pin a specific device should narrow this.
+
+A first UQ finding: brain-equivalents of a 1e18 FLOPS compute budget spans **more than
+three orders of magnitude** at 90% CI, dominated by the brain-FLOPS estimate rather
+than the compute-side spread - so any "we hit a brain" claim without stating which
+brain-FLOPS number was used is under-specified.
+
 ## Per-scenario inputs (not constants)
 
 - **Compute efficiency (FLOPS/W)** - an input to `compute_capacity_flops`, not a
