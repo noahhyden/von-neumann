@@ -32,6 +32,11 @@ math from ones that do. Units are explicit throughout.
   - *Reasonable?* Yes - this is the accepted modern TSI. Borgue & Hein's 1374 is an
     older/AM0-style figure; the ~1% difference does not change any conclusion. We use
     the measured TSI and derive the rest.
+  - **UQ distribution (issue #35): Normal(mean=1360.8, std=0.5) W/m²**, exported as
+    `SOLAR_CONSTANT_1AU_W_M2_STD = 0.5` alongside the point value. The +/- 0.5 is
+    Kopp & Lean's own reported uncertainty on the measurement, so the spread cites
+    the same source as the mean (CLAUDE.md §1: a spread is a citable claim in its
+    own right). Solid.
 - **Inverse-square law**, `S(d) = S0 / d²` - first principles (flux through a sphere
   of radius d). Deriving from it: at Jupiter's 5.203 AU, `1360.8 / 5.203² = 50.3
   W/m²`, which matches Borgue & Hein's "~50 W/m² near Jupiter" - an independent check
@@ -43,6 +48,13 @@ math from ones that do. Units are explicit throughout.
   constant. Representative space multi-junction cells are ~28–32% (e.g. Spectrolab
   XTJ ~30% AM0); tests use 0.30 as a stand-in input. When a real scenario fixes a
   value it must cite the specific cell. `[ESTIMATE]` until a scenario pins one.
+  - **UQ distribution (issue #35): Uniform(low=0.28, high=0.32).** The range is
+    Landis & Bailey (2002) space-multi-junction performance, treated as a uniform
+    over the reported band since the source gives an interval, not a shape. The
+    UQ end-to-end script (`scripts/uq_probe_range.py`) uses this as its dominant
+    input, and Sobol confirms it drives >0.95 of the variance in the max-reach
+    finding. `[ESTIMATE]` remains until a specific cell is chosen for a scenario;
+    the distribution then narrows to that cell's manufacturer datasheet range.
 
 ## Open gaps
 

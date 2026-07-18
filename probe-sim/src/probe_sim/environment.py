@@ -21,6 +21,13 @@ from pydantic import BaseModel, Field
 # accepted TSI and note the difference in REFERENCES.md.)
 SOLAR_CONSTANT_1AU_W_M2: float = 1360.8
 
+# The same quantity as a distribution for UQ (issue #35 / Depth track Tier 1).
+# Kopp & Lean (2011) report 1360.8 +/- 0.5 W/m^2, so a narrow Gaussian is the
+# honest spread. Callers reach for this in Monte Carlo + Sobol; the point-valued
+# constant above stays for scalar / analytic use so no fold is forced to import
+# probe_sim.uq unless it actually samples.
+SOLAR_CONSTANT_1AU_W_M2_STD: float = 0.5
+
 # Mean heliocentric distances, AU (NASA planetary fact sheets). See REFERENCES.md.
 AU_DISTANCE: dict[str, float] = {
     "earth": 1.000,
@@ -54,11 +61,25 @@ class SolarArray(BaseModel):
         gt=0, le=1, description="sunlight->electric conversion efficiency, 0-1"
     )
 
-    def power_w(self, distance_au: float) -> float:
-        """Electrical power (W) delivered at a heliocentric distance (AU)."""
-        return solar_irradiance_w_m2(distance_au) * self.area_m2 * self.efficiency
+    def power_w(
+        self,
+        distance_au: float,
+        solar_constant: float = SOLAR_CONSTANT_1AU_W_M2,
+    ) -> float:
+        """Electrical power (W) delivered at a heliocentric distance (AU).
 
-    def max_distance_au(self, required_power_w: float) -> float:
+        ``solar_constant`` is exposed as a parameter so callers can substitute a
+        different TSI - the measurement carries its own +/- 0.5 W/m^2 uncertainty
+        (Kopp & Lean 2011), and issue #35 needs to propagate that through the
+        fold rather than have it silently pinned to the module default.
+        """
+        return solar_irradiance_w_m2(distance_au, solar_constant) * self.area_m2 * self.efficiency
+
+    def max_distance_au(
+        self,
+        required_power_w: float,
+        solar_constant: float = SOLAR_CONSTANT_1AU_W_M2,
+    ) -> float:
         """Farthest heliocentric distance (AU) at which the array still meets a demand.
 
         Solving required = S0/d^2 * area * eff for d gives
@@ -67,5 +88,5 @@ class SolarArray(BaseModel):
         if required_power_w <= 0:
             raise ValueError("required_power_w must be positive")
         return math.sqrt(
-            SOLAR_CONSTANT_1AU_W_M2 * self.area_m2 * self.efficiency / required_power_w
+            solar_constant * self.area_m2 * self.efficiency / required_power_w
         )

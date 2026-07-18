@@ -42,6 +42,23 @@ The *shape* of this result is solid; the probe-specific magnitude waits on the m
 `[GAP]` below (the range machinery currently runs on a synthetic fixture, not invented
 masses).
 
+## Uncertainty quantification (issue #35)
+
+- **`probe_sim/uq/`** - the Tier-1 depth-track prototype. `Fixed`/`Uniform`/
+  `Normal`/`LogNormal` distributions ([`distributions.py`](src/probe_sim/uq/distributions.py))
+  carry a **spread** for each input, seeded Monte Carlo ([`sample.py`](src/probe_sim/uq/sample.py))
+  propagates it into an error bar on the finding, and Saltelli / Jansen Sobol
+  total-order indices ([`sobol.py`](src/probe_sim/uq/sobol.py)) rank which
+  sourced inputs drive the finding. Pure Python, seeded RNG threaded through, zero
+  numpy, zero pimas - stays a fold (CLAUDE.md §7).
+- **End-to-end validation:** [`scripts/uq_probe_range.py`](scripts/uq_probe_range.py)
+  runs the full pipeline on the max-reach finding and asserts the four properties
+  from the issue (error-bar shrinkage, additive-model index sum, dominant-input
+  ranking, seeded determinism). Run: `uv run --extra dev python scripts/uq_probe_range.py`.
+- **Distributions land in REFERENCES.md.** TSI is `Normal(1360.8, 0.5)` (Kopp &
+  Lean's own +/- 0.5), solar-cell efficiency is `Uniform(0.28, 0.32)` (Landis &
+  Bailey range); both spreads cite the same source as the mean.
+
 ## What's next (see [`../ROADMAP.md`](../ROADMAP.md))
 
 Instantiate the real Borgue & Hein probe factory once the per-module mass `[GAP]` is
