@@ -35,6 +35,27 @@ def test_baseline_regression() -> None:
     assert len(r.steps) == 521
 
 
+def test_record_steps_is_a_memory_knob_not_a_physics_knob() -> None:
+    # record_steps=False drops the per-event trace to save RAM on large ensembles (the
+    # OOM fix for the branching_scale sweep). It must not change a single reported number.
+    from dataclasses import fields
+
+    def summary(r):  # every field except the trace itself
+        return {f.name: getattr(r, f.name) for f in fields(r) if f.name != "steps"}
+
+    for stepping in ("event", "fixed"):
+        # offspring=8 in event mode is the heavy branching path that used to blow up RAM.
+        p = SwarmParams(n_stars=400, offspring_per_settlement=8, stepping=stepping)
+        on = simulate_swarm(p, seed=BASE_SEED, record_steps=True)
+        off = simulate_swarm(p, seed=BASE_SEED, record_steps=False)
+        # Aggregates are bit-identical: state counters, not the trace, produce them.
+        assert summary(off) == summary(on)
+        # The trace is what differs: full when on, just the initial snapshot when off.
+        assert len(on.steps) > 1
+        assert len(off.steps) == 1
+        assert off.steps[0].n_settled == on.steps[0].n_settled  # initial snapshot preserved
+
+
 def test_same_seed_is_bit_identical() -> None:
     p = SwarmParams(n_stars=300)
     a = simulate_swarm(p, seed=123)

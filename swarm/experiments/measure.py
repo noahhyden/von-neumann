@@ -42,7 +42,7 @@ from pathlib import Path
 
 from swarm import SwarmParams, simulate_swarm
 from swarm.models import C_PC_PER_YEAR, KM_S_TO_PC_YR, N_HOP_BINS
-from swarm.sim import initial_state
+from swarm.sim import _build_kdtree, initial_state
 
 from experiments.stats_util import bootstrap_median_ci, loglog_slope_ci, sign_test_positive
 
@@ -89,9 +89,92 @@ def _paired_worker(args: tuple[str, str, dict, int]) -> tuple[dict, dict]:
     worker so nothing framework-specific has to cross the process boundary.
     """
     mode_base, mode_treat, params, seed = args
-    b = simulate_swarm(SwarmParams(coordination=mode_base, **params), seed=seed)
-    t = simulate_swarm(SwarmParams(coordination=mode_treat, **params), seed=seed)
+    # record_steps=False: this worker only reads scalar aggregates via record(), never the
+    # per-event trace. Dropping it is what keeps two paired N=200k event runs (e.g. the heavy
+    # branching_scale sweep) inside a worker's RAM instead of OOMing. Numbers are unchanged.
+    b = simulate_swarm(SwarmParams(coordination=mode_base, **params), seed=seed, record_steps=False)
+    t = simulate_swarm(SwarmParams(coordination=mode_treat, **params), seed=seed, record_steps=False)
     return (record(b), record(t))
+
+
+def _single_worker(args: tuple[str, dict, int]) -> dict:
+    """One single-mode run at a seed. Top-level for pickling. Used by the non-paired sweeps
+    (floor_bracket, dt_artifact_extra, ...) that need N modes for the SAME seed but do not fit
+    the strict base/treat shape of ``_paired_worker``.
+    """
+    mode, params, seed = args
+    r = simulate_swarm(SwarmParams(coordination=mode, **params), seed=seed, record_steps=False)
+    return record(r)
+
+
+def _concurrency_worker(args: tuple[str, dict, int, tuple[float, ...]]) -> tuple[str, int, int, dict[float, int]]:
+    """One (mode, seed) concurrency run. Returns (mode, seed, peak_in_flight, {bin: in_flight}).
+
+    The `series` walk that used to happen in the main loop is done inside the worker so nothing
+    but small scalars crosses the process boundary (each SwarmResult holds one SwarmStep per event,
+    which at N=200k is ~2M records; keeping that in the worker keeps IPC cheap).
+    """
+    mode, params, seed, bins = args
+    r = simulate_swarm(SwarmParams(coordination=mode, **params), seed=seed)
+    peak = max(st.in_flight for st in r.steps)
+    per_bin: dict[float, int] = {}
+    idx = 0
+    for b in bins:
+        while idx < len(r.steps) and r.steps[idx].fraction_settled < b:
+            idx += 1
+        if idx < len(r.steps):
+            per_bin[b] = r.steps[idx].in_flight
+    return (mode, seed, peak, per_bin)
+
+
+def _clumpy_paired_worker(args: tuple[dict, int]) -> tuple[dict, dict, list[int], list[int], list[int], list[int]]:
+    """Paired instant/lightspeed clumpy run. Returns (record_b, record_t, hop_hists).
+
+    Clumpiness needs the SwarmResult's ``settle_hop_hist``/``wasted_hop_hist`` arrays for the
+    stratified-by-hop-length cancellation test; ``record()`` does not carry them, so this worker
+    is a specialised paired variant that returns the histograms alongside the records.
+    """
+    params, seed = args
+    # Hop histograms come from state counters (carried on the record/result), not from the
+    # per-event trace, so record_steps=False is safe here too.
+    b = simulate_swarm(SwarmParams(coordination="instant", **params), seed=seed, record_steps=False)
+    t = simulate_swarm(SwarmParams(coordination="lightspeed", **params), seed=seed, record_steps=False)
+    return (record(b), record(t),
+            list(b.settle_hop_hist), list(b.wasted_hop_hist),
+            list(t.settle_hop_hist), list(t.wasted_hop_hist))
+
+
+def _dt_paired_worker(args: tuple[dict, int]) -> tuple[float | None, float | None]:
+    """Paired instant/lightspeed dt-artifact run. Returns (t100_instant, t100_lightspeed)."""
+    params, seed = args
+    i = simulate_swarm(SwarmParams(coordination="instant", **params), seed=seed, record_steps=False)
+    l = simulate_swarm(SwarmParams(coordination="lightspeed", **params), seed=seed, record_steps=False)
+    return (i.t100_years, l.t100_years)
+
+
+def _parallel_map(worker, args_list: list, *, label: str = ""):
+    """ProcessPoolExecutor.map with the same determinism + progress conventions as ``_paired``.
+
+    Executor.map preserves input order, so 1, 4, or N workers produce byte-identical output. When
+    SWARM_WORKERS<=1 (or CPU=1) the loop runs serially and is thus a drop-in for the old for-loops.
+    """
+    n = len(args_list)
+    workers = _worker_count()
+    results = []
+    if workers <= 1:
+        for i, a in enumerate(args_list):
+            results.append(worker(a))
+            if label:
+                print(f"      {label} {i + 1}/{n}", end="\r", flush=True)
+    else:
+        with ProcessPoolExecutor(max_workers=workers) as ex:
+            for i, r in enumerate(ex.map(worker, args_list)):
+                results.append(r)
+                if label:
+                    print(f"      {label} {i + 1}/{n} ({workers} workers)", end="\r", flush=True)
+    if label:
+        print(" " * 60, end="\r")
+    return results
 
 
 # --------------------------------------------------------------------------------------------
@@ -157,28 +240,96 @@ def through_origin_slope(xs: list[float], ys: list[float]) -> float | None:
     return sum(x * y for x, y in pairs) / denom
 
 
+def _kd_nn_other_d2(kd: dict, xs: list[float], ys: list[float], zs: list[float], i: int) -> float:
+    """Squared distance from point ``i`` to its nearest OTHER point, via k-d branch-and-bound.
+
+    Standalone NN over the fixed positions (no unsettled/beacon state), so it is the diagnostic
+    analogue of ``swarm.sim._nearest_unsettled_at`` for Clark-Evans R. Tie-break is lowest index
+    (matches the naive O(N^2) scan): a same-d2 point displaces the best only when its index is
+    lower, so bit-identical to the pairwise-loop version on tied inputs (continuous coordinates
+    tie only with probability zero).
+    """
+    px, py, pz = xs[i], ys[i], zs[i]
+    axis = kd["axis"]
+    split = kd["split"]
+    lo = kd["lo"]
+    hi = kd["hi"]
+    bucket = kd["bucket"]
+    bxmin = kd["bxmin"]
+    bxmax = kd["bxmax"]
+    bymin = kd["bymin"]
+    bymax = kd["bymax"]
+    bzmin = kd["bzmin"]
+    bzmax = kd["bzmax"]
+    best = -1
+    best_d2 = float("inf")
+    stack = [kd["root"]]
+    while stack:
+        node = stack.pop()
+        dlo2 = 0.0
+        t = bxmin[node] - px
+        if t > 0.0:
+            dlo2 = t * t
+        else:
+            t = px - bxmax[node]
+            if t > 0.0:
+                dlo2 = t * t
+        t = bymin[node] - py
+        if t > 0.0:
+            dlo2 += t * t
+        else:
+            t = py - bymax[node]
+            if t > 0.0:
+                dlo2 += t * t
+        t = bzmin[node] - pz
+        if t > 0.0:
+            dlo2 += t * t
+        else:
+            t = pz - bzmax[node]
+            if t > 0.0:
+                dlo2 += t * t
+        if dlo2 > best_d2:
+            continue
+        ax = axis[node]
+        if ax == -1:
+            for j in bucket[node]:
+                if j == i:
+                    continue
+                dx = xs[j] - px
+                dy = ys[j] - py
+                dz = zs[j] - pz
+                d2 = dx * dx + dy * dy + dz * dz
+                if d2 < best_d2 or (d2 == best_d2 and best >= 0 and j < best):
+                    best_d2 = d2
+                    best = j
+        else:
+            p_ax = px if ax == 0 else (py if ax == 1 else pz)
+            if p_ax < split[node]:
+                stack.append(hi[node])
+                stack.append(lo[node])
+            else:
+                stack.append(lo[node])
+                stack.append(hi[node])
+    return best_d2
+
+
 def clark_evans_R(xs: list[float], ys: list[float], zs: list[float], box_side_pc: float) -> float:
     """Clark-Evans aggregation index R = observed mean NN distance / Poisson expectation (3D).
 
     R = 1 Poisson (uniform), R < 1 clustered, R > 1 regular. The Poisson 3D nearest-neighbour
     expectation is 0.55396 * rho^(-1/3) with rho = N / L^3 (Clark & Evans 1954, the 3D form).
     Used comparatively across fields at the SAME N and box, so the (mild, constant) box edge bias
-    cancels. O(N^2) - cheap next to the sim, and computed on a modest seed subset.
+    cancels. Near-O(N log N) via the same k-d tree the sim uses (a standalone NN branch-and-bound
+    over ``_build_kdtree``, no settle/beacon state), so the diagnostic no longer gates a large-N
+    clumpy-field sweep.
     """
     n = len(xs)
     if n < 2 or box_side_pc <= 0:
         return 1.0
+    kd = _build_kdtree(xs, ys, zs)
     total = 0.0
     for i in range(n):
-        best = float("inf")
-        xi, yi, zi = xs[i], ys[i], zs[i]
-        for j in range(n):
-            if i == j:
-                continue
-            d2 = (xi - xs[j]) ** 2 + (yi - ys[j]) ** 2 + (zi - zs[j]) ** 2
-            if d2 < best:
-                best = d2
-        total += best ** 0.5
+        total += _kd_nn_other_d2(kd, xs, ys, zs, i) ** 0.5
     observed = total / n
     rho = n / (box_side_pc ** 3)
     expected = 0.55396 / (rho ** (1.0 / 3.0))
@@ -268,6 +419,32 @@ def m_lambda_sweep() -> None:
                  {"data": data})
 
 
+def m_lambda_sweep_scale() -> None:
+    """N=200k companion to the headline speed sweep: does tax ~ v/c linearity hold at scale?
+
+    The base sweep runs at N=500 for a tight CI on the tax slope (a = 0.97 [0.89, 1.19]). At N=200k
+    the total tax is a fifth of the small-N value (the fuel-tax bulk decline), so the natural question
+    is not the magnitude but whether the SHAPE stays linear in Lambda - i.e. whether the collision
+    argument that gives tax ~ v/c is still the right first-order description at the finite-size arm's
+    tip. Same Lambda ladder as the base; seeds drop to 8 (the same precision target the ``finite_size``
+    sweep uses at N=200k).
+    """
+    seeds = SEEDS[:8]
+    n_stars = 200_000
+    lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
+    data = {}
+    for lam in lambdas:
+        print(f"    Lambda={lam}", flush=True)
+        rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy="powered",
+                       probe_speed_c=lam, speed_cap_c=max(0.05, 2 * lam), stepping="event")
+        data[str(lam)] = _tax_block(rows)
+    write_result("lambda_sweep_scale",
+                 {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                  "lambdas": lambdas, "mode_base": "instant", "mode_treat": "lightspeed",
+                  "stepping": "event"},
+                 {"data": data})
+
+
 def m_branching() -> None:
     """Fuel/time/energy tax vs the replication branching factor (offspring per settlement)."""
     seeds = SEEDS[:32]
@@ -288,6 +465,37 @@ def m_branching() -> None:
                            offspring_per_settlement=off, stepping="event")
             data[key] = _tax_block(rows)
     write_result("branching",
+                 {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                  "lambdas": lambdas, "offspring": offspring, "mode_treat": "lightspeed",
+                  "stepping": "event"},
+                 {"data": data})
+
+
+def m_branching_scale() -> None:
+    """N=200k companion to the branching sweep: does the tax-grows-with-branching claim hold at scale?
+
+    The base sweep (N=400) shows tax rising monotonically up to offspring=16 without saturating. Since
+    the same-N fuel tax at N=200k is only ~1.5% (down from ~19% at N=300), the paper's ``does the
+    tax also grow with offspring at scale'' question is a real open one - a larger field breeds more
+    simultaneous races per settlement, but each race has a larger neighbourhood so the marginal
+    collision rate could saturate. Offspring ladder stops at 8 (offspring=16 at N=200k over-subscribes
+    RAM on k02 - roughly 6x the arrivals of offspring=4 means ~1.2 GB per worker peak, and even 4
+    concurrent workers push into swap); seeds drop to 6. See docs/HARDWARE.md.
+    """
+    seeds = SEEDS[:6]
+    n_stars = 200_000
+    offspring = [2, 3, 4, 8]
+    lambdas = [0.05, 0.2]
+    data = {}
+    for lam in lambdas:
+        for off in offspring:
+            key = f"lam{lam}_off{off}"
+            print(f"    Lambda={lam} offspring={off}", flush=True)
+            rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy="powered",
+                           probe_speed_c=lam, speed_cap_c=max(0.05, 2 * lam),
+                           offspring_per_settlement=off, stepping="event")
+            data[key] = _tax_block(rows)
+    write_result("branching_scale",
                  {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
                   "lambdas": lambdas, "offspring": offspring, "mode_treat": "lightspeed",
                   "stepping": "event"},
@@ -364,6 +572,47 @@ def m_finite_size() -> None:
                                        "slope": slope, "ci_lo": slope_lo, "ci_hi": slope_hi}})
 
 
+def _concurrency_ensemble(seeds: list[int], n_stars: int, lam: float,
+                          bins: list[float]) -> dict:
+    """Run the paired instant/lightspeed concurrency ensemble in parallel over (seed, mode).
+
+    Shared between the N=500 headline sweep (``m_concurrency``) and the N=200k scale companion
+    (``m_concurrency_scale``); executor.map preserves input order so this is byte-identical to the
+    old serial version at any worker count.
+    """
+    modes = ("instant", "lightspeed")
+    params = dict(n_stars=n_stars, policy="powered", probe_speed_c=lam,
+                  speed_cap_c=max(0.05, 2 * lam), stepping="event")
+    args = [(mode, params, s, tuple(bins)) for s in seeds for mode in modes]
+    results = _parallel_map(_concurrency_worker, args, label="seed")
+    # Bucket back per mode, preserving seed order (args are emitted seed-then-mode, so the mode
+    # sub-lists reflect the input seed order regardless of worker completion order).
+    series = {m: {b: [] for b in bins} for m in modes}
+    peak = {m: [] for m in modes}
+    seen: dict[str, set[int]] = {m: set() for m in modes}
+    for mode, seed, p, per_bin in results:
+        if seed in seen[mode]:
+            continue  # defensive: never expected, executor.map is one-to-one
+        seen[mode].add(seed)
+        peak[mode].append(p)
+        for b, v in per_bin.items():
+            series[mode][b].append(v)
+    data = {}
+    for mode in modes:
+        meds, clos, chis = [], [], []
+        for b in bins:
+            xs = series[mode][b]
+            if xs:
+                m, clo, chi = bootstrap_median_ci(xs)
+            else:
+                m = clo = chi = None
+            meds.append(m); clos.append(clo); chis.append(chi)
+        data[mode] = {"coverage": bins, "in_flight_median": meds,
+                      "in_flight_ci_lo": clos, "in_flight_ci_hi": chis,
+                      "peak_in_flight_median": statistics.median(peak[mode]) if peak[mode] else None}
+    return data
+
+
 def m_concurrency() -> None:
     """In-flight probe count vs coverage fraction: the mechanism behind 'no fill-time tax'.
 
@@ -377,36 +626,30 @@ def m_concurrency() -> None:
     # coverage fractions to 0.90 in steps of 0.05, then fine tail bins into the final few percent
     # (referee: the last-star metric lives at 99%+, where the in-flight population thins).
     bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
-    series = {"instant": {b: [] for b in bins}, "lightspeed": {b: [] for b in bins}}
-    peak = {"instant": [], "lightspeed": []}
-    for i, s in enumerate(seeds):
-        for mode in ("instant", "lightspeed"):
-            r = simulate_swarm(SwarmParams(n_stars=n_stars, policy="powered", probe_speed_c=lam,
-                                           speed_cap_c=0.4, stepping="event", coordination=mode), seed=s)
-            peak[mode].append(max(st.in_flight for st in r.steps))
-            # for each coverage bin, the in_flight at the first step reaching that fraction
-            idx = 0
-            for b in bins:
-                while idx < len(r.steps) and r.steps[idx].fraction_settled < b:
-                    idx += 1
-                if idx < len(r.steps):
-                    series[mode][b].append(r.steps[idx].in_flight)
-        print(f"      seed {i + 1}/{len(seeds)}", end="\r", flush=True)
-    print(" " * 40, end="\r")
-    data = {}
-    for mode in ("instant", "lightspeed"):
-        meds, clos, chis = [], [], []
-        for b in bins:
-            xs = series[mode][b]
-            if xs:
-                m, clo, chi = bootstrap_median_ci(xs)
-            else:
-                m = clo = chi = None
-            meds.append(m); clos.append(clo); chis.append(chi)
-        data[mode] = {"coverage": bins, "in_flight_median": meds,
-                      "in_flight_ci_lo": clos, "in_flight_ci_hi": chis,
-                      "peak_in_flight_median": statistics.median(peak[mode])}
+    data = _concurrency_ensemble(seeds, n_stars, lam, bins)
     write_result("concurrency",
+                 {"policy": "powered", "lambda": lam, "n_stars": n_stars, "n_seeds": len(seeds),
+                  "stepping": "event"},
+                 {"data": data})
+
+
+def m_concurrency_scale() -> None:
+    """N=200k companion to the concurrency sweep: does the many-probes-in-flight mechanism hold
+    at the honest lever arm?
+
+    Same paired instant/lightspeed structure and coverage bins as ``m_concurrency`` at N=500, but at
+    the N=200,000 finite-size scale where the fuel tax is only ~1.5%. If the mechanism claim is
+    right, the median in-flight population should scale roughly with N (the field is exponentially
+    branching until stars run out); this is the at-scale figure for the paper's Section 5 argument
+    that a wasted trip is one of hundreds (thousands, at 200k) aloft and never sits on the critical
+    path. Seeds are scaled down to 8 (the same precision-target logic as ``m_finite_size`` at 200k).
+    """
+    seeds = SEEDS[:8]
+    n_stars = 200_000
+    lam = 0.2
+    bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
+    data = _concurrency_ensemble(seeds, n_stars, lam, bins)
+    write_result("concurrency_scale",
                  {"policy": "powered", "lambda": lam, "n_stars": n_stars, "n_seeds": len(seeds),
                   "stepping": "event"},
                  {"data": data})
@@ -423,19 +666,17 @@ def m_floor_bracket() -> None:
     n_stars = 400
     lambdas = [0.05, 0.1, 0.2]
     data = {}
+    modes = ("instant", "lightspeed", "inflight")
     for lam in lambdas:
         print(f"    Lambda={lam}", flush=True)
         cap = max(0.05, 2 * lam)
-        runs = {}
-        for mode in ("instant", "lightspeed", "inflight"):
-            recs = []
-            for i, s in enumerate(seeds):
-                r = simulate_swarm(SwarmParams(n_stars=n_stars, policy="powered", probe_speed_c=lam,
-                                               speed_cap_c=cap, stepping="event", coordination=mode), seed=s)
-                recs.append(record(r))
-                print(f"      {mode} seed {i + 1}/{len(seeds)}", end="\r", flush=True)
-            runs[mode] = recs
-        print(" " * 50, end="\r")
+        params = dict(n_stars=n_stars, policy="powered", probe_speed_c=lam,
+                      speed_cap_c=cap, stepping="event")
+        # Parallel over (mode, seed): three modes at each seed are independent, and executor.map
+        # preserves input order so ``runs[mode][i]`` still refers to ``seeds[i]``.
+        args = [(mode, params, s) for mode in modes for s in seeds]
+        recs = _parallel_map(_single_worker, args, label=f"lam={lam}")
+        runs = {mode: recs[i * len(seeds):(i + 1) * len(seeds)] for i, mode in enumerate(modes)}
         # paired summaries relative to instant
         def rel(mode: str, field: str) -> dict:
             return summarize([pct_delta(runs[mode][i][field], runs["instant"][i][field]) for i in range(len(seeds))])
@@ -449,6 +690,45 @@ def m_floor_bracket() -> None:
             "per_seed": {m: runs[m] for m in runs},
         }
     write_result("floor_bracket",
+                 {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                  "lambdas": lambdas, "modes": ["instant", "lightspeed", "inflight"], "stepping": "event"},
+                 {"data": data})
+
+
+def m_floor_bracket_scale() -> None:
+    """N=200k companion to the floor bracket: how much of the (already tiny, ~1.5%) tax survives
+    in-flight relay at scale?
+
+    The base result (N=400) shows the inflight mode recovers essentially all of the decision-site
+    tax. At N=200k the wasted-arrival tax itself is only ~1.5%, so the interesting question is
+    whether the floor is still 0 at scale or whether some irreducible residue survives. Same 3 x 3
+    (lambdas x modes) shape; seeds drop to 8.
+    """
+    seeds = SEEDS[:8]
+    n_stars = 200_000
+    lambdas = [0.05, 0.1, 0.2]
+    data = {}
+    modes = ("instant", "lightspeed", "inflight")
+    for lam in lambdas:
+        print(f"    Lambda={lam}", flush=True)
+        cap = max(0.05, 2 * lam)
+        params = dict(n_stars=n_stars, policy="powered", probe_speed_c=lam,
+                      speed_cap_c=cap, stepping="event")
+        args = [(mode, params, s) for mode in modes for s in seeds]
+        recs = _parallel_map(_single_worker, args, label=f"lam={lam}")
+        runs = {mode: recs[i * len(seeds):(i + 1) * len(seeds)] for i, mode in enumerate(modes)}
+        def rel(mode: str, field: str) -> dict:
+            return summarize([pct_delta(runs[mode][i][field], runs["instant"][i][field]) for i in range(len(seeds))])
+        data[str(lam)] = {
+            "wasted_arrivals_median": {m: statistics.median([r["wasted_arrivals"] for r in runs[m]]) for m in runs},
+            "wasted_travel_pc_median": {m: statistics.median([r["wasted_travel_pc"] for r in runs[m]]) for m in runs},
+            "t100_median": {m: statistics.median([r["t100"] for r in runs[m] if r["t100"]]) for m in runs},
+            "midflight_aborts_median": {m: statistics.median([r["midflight_aborts"] for r in runs[m]]) for m in runs},
+            "travel_pct_over_instant": {m: rel(m, "wasted_travel_pc") for m in ("lightspeed", "inflight")},
+            "time_pct_over_instant": {m: rel(m, "t100") for m in ("lightspeed", "inflight")},
+            "per_seed": {m: runs[m] for m in runs},
+        }
+    write_result("floor_bracket_scale",
                  {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
                   "lambdas": lambdas, "modes": ["instant", "lightspeed", "inflight"], "stepping": "event"},
                  {"data": data})
@@ -471,6 +751,29 @@ def m_retarget_cap() -> None:
                  {"data": data})
 
 
+def m_retarget_cap_scale() -> None:
+    """N=200k companion to the re-target-cap sweep: does insensitivity to the bookkeeping cap
+    hold at scale?
+
+    The base (N=400) sweep pins the tax as invariant across caps=2..32. At N=200k there are ~10x
+    more retarget events per fill (a bigger core, more late-arriving beacons), so if the cap ever
+    bites it would bite hardest here. Same cap ladder; seeds drop to 8.
+    """
+    seeds = SEEDS[:8]
+    n_stars = 200_000
+    caps = [2, 4, 8, 16, 32]
+    data = {}
+    for cap in caps:
+        print(f"    max_retargets={cap}", flush=True)
+        rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy="powered",
+                       probe_speed_c=0.2, speed_cap_c=0.4, stepping="event", max_retargets=cap)
+        data[str(cap)] = _tax_block(rows)
+    write_result("retarget_cap_scale",
+                 {"policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
+                  "caps": caps, "mode_treat": "lightspeed", "stepping": "event"},
+                 {"data": data})
+
+
 def m_dt_artifact() -> None:
     """Fill-time tax vs fixed timestep, collapsing to ~0 at the event (dt->0) limit."""
     seeds = SEEDS[:32]
@@ -480,21 +783,82 @@ def m_dt_artifact() -> None:
     for dt in dts + [None]:
         label = f"dt={dt:.0f}" if dt is not None else "event"
         print(f"    {label}", flush=True)
-        pens = []
-        seeds_pos = 0
-        for s in seeds:
-            common = dict(n_stars=n_stars, policy="slingshot_nearest")
-            common.update({"stepping": "event"} if dt is None else {"stepping": "fixed", "dt_years": dt})
-            i = simulate_swarm(SwarmParams(**common, coordination="instant"), seed=s)
-            l = simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=s)
-            if i.t100_years and l.t100_years:
-                pens.append((l.t100_years - i.t100_years) / i.t100_years * 100.0)
+        common = dict(n_stars=n_stars, policy="slingshot_nearest")
+        common.update({"stepping": "event"} if dt is None else {"stepping": "fixed", "dt_years": dt})
+        # Parallel over seeds: each seed spawns a paired instant/lightspeed run in the worker.
+        args = [(common, s) for s in seeds]
+        pairs = _parallel_map(_dt_paired_worker, args, label=label)
+        pens = [((l - i) / i * 100.0) for (i, l) in pairs if i and l]
         kpos, nnz, _ = sign_test_positive(pens)
         rows_out.append({"dt": dt, "label": label, "time_pct": summarize(pens),
                          "seeds_pos": kpos, "seeds_nonzero": nnz})
     write_result("dt_artifact",
                  {"policy": "slingshot_nearest", "n_stars": n_stars, "n_seeds": len(seeds), "dts": dts},
                  {"rows": rows_out})
+
+
+def _clumpiness_run(seeds: list[int], n_stars: int, lambdas: list[float],
+                    n_clumps: int, levels: list[tuple[str, dict]], r_seed_count: int = 16) -> dict:
+    """Shared clumpy-field sweep body, used by ``m_clumpiness`` (N=500) and its scale companion.
+
+    Runs the paired instant/lightspeed ensemble across (level, Lambda), computes the per-seed
+    through-origin slope for the tax=a*Lambda fit, and aggregates hop-length histograms. Clark-Evans
+    R is measured on the first ``r_seed_count`` seeds (near-O(N log N) since the k-d tree rewrite).
+    """
+    data = {}
+    for label, field_kw in levels:
+        print(f"    level={label}", flush=True)
+        # Measured clumpiness (Clark-Evans R), median over a seed subset (near-O(N log N) via k-d tree).
+        r_vals = []
+        for s in seeds[:r_seed_count]:
+            st = initial_state(SwarmParams(n_stars=n_stars, policy="powered", **field_kw), seed=s)
+            r_vals.append(clark_evans_R(st.xs, st.ys, st.zs, SwarmParams(n_stars=n_stars).box_side_pc))
+        clumpiness_R = statistics.median(r_vals)
+        per_lambda = {}
+        # Per-seed fuel tax at each Lambda, to fit a through-origin slope per seed afterwards.
+        seed_tax = {i: {} for i in range(len(seeds))}
+        for lam in lambdas:
+            print(f"      Lambda={lam}", flush=True)
+            # Aggregate hop-length histograms across seeds (for the stratified d-cancellation test).
+            hist = {m: {"settle": [0] * N_HOP_BINS, "wasted": [0] * N_HOP_BINS}
+                    for m in ("instant", "lightspeed")}
+            base_waste_frac = []
+            params = dict(n_stars=n_stars, policy="powered", probe_speed_c=lam,
+                          speed_cap_c=max(0.05, 2 * lam), stepping="event", **field_kw)
+            # Parallel over seeds: each worker runs the paired instant/lightspeed pair AND returns
+            # the hop histograms (which record() does not carry). executor.map preserves seed order.
+            args = [(params, s) for s in seeds]
+            results = _parallel_map(_clumpy_paired_worker, args, label=f"lam={lam}")
+            rows: list[tuple[dict, dict]] = []
+            for i, (rec_b, rec_t, b_settle, b_wasted, t_settle, t_wasted) in enumerate(results):
+                rows.append((rec_b, rec_t))
+                for k in range(N_HOP_BINS):
+                    hist["instant"]["settle"][k] += b_settle[k]
+                    hist["instant"]["wasted"][k] += b_wasted[k]
+                    hist["lightspeed"]["settle"][k] += t_settle[k]
+                    hist["lightspeed"]["wasted"][k] += t_wasted[k]
+                if rec_b["total_arrivals"]:
+                    base_waste_frac.append(rec_b["wasted_arrivals"] / rec_b["total_arrivals"] * 100.0)
+                seed_tax[i][lam] = pct_delta(rec_t["wasted_arrivals"], rec_b["wasted_arrivals"])
+            block = _tax_block(rows)
+            block["baseline_waste_frac_pct"] = summarize(base_waste_frac)  # perfect-info waste / all journeys
+            block["hop_hist"] = hist
+            per_lambda[str(lam)] = block
+        # Per-seed through-origin slope a of tax = a*Lambda (predicted 1), then bootstrap over seeds.
+        # Fit on FRACTIONAL tax (percent/100) so a ~ 1 means "tax = Lambda" cleanly.
+        slopes = [through_origin_slope(
+                    lambdas,
+                    [(seed_tax[i][lam] / 100.0 if seed_tax[i][lam] is not None else None) for lam in lambdas])
+                  for i in range(len(seeds))]
+        slopes = [a for a in slopes if a is not None]
+        smed, slo, shi = bootstrap_median_ci(slopes)
+        data[label] = {
+            "clumpiness_R": clumpiness_R,
+            "slope_median": smed, "slope_ci_lo": slo, "slope_ci_hi": shi,
+            "slope_per_seed": slopes,
+            "per_lambda": per_lambda,
+        }
+    return data
 
 
 def m_clumpiness() -> None:
@@ -529,60 +893,37 @@ def m_clumpiness() -> None:
         ("sigma0.08", {"n_clumps": n_clumps, "clump_sigma_frac": 0.08}),
         ("sigma0.05", {"n_clumps": n_clumps, "clump_sigma_frac": 0.05}),
     ]
-    data = {}
-    for label, field_kw in levels:
-        print(f"    level={label}", flush=True)
-        # Measured clumpiness (Clark-Evans R), median over a seed subset (the field is O(N^2)).
-        r_vals = []
-        for s in seeds[:16]:
-            st = initial_state(SwarmParams(n_stars=n_stars, policy="powered", **field_kw), seed=s)
-            r_vals.append(clark_evans_R(st.xs, st.ys, st.zs, SwarmParams(n_stars=n_stars).box_side_pc))
-        clumpiness_R = statistics.median(r_vals)
-        per_lambda = {}
-        # Per-seed fuel tax at each Lambda, to fit a through-origin slope per seed afterwards.
-        seed_tax = {i: {} for i in range(len(seeds))}
-        for lam in lambdas:
-            print(f"      Lambda={lam}", flush=True)
-            rows: list[tuple[dict, dict]] = []
-            # Aggregate hop-length histograms across seeds (for the stratified d-cancellation test).
-            hist = {m: {"settle": [0] * N_HOP_BINS, "wasted": [0] * N_HOP_BINS}
-                    for m in ("instant", "lightspeed")}
-            base_waste_frac = []
-            for i, s in enumerate(seeds):
-                common = dict(n_stars=n_stars, policy="powered", probe_speed_c=lam,
-                              speed_cap_c=max(0.05, 2 * lam), stepping="event", **field_kw)
-                b = simulate_swarm(SwarmParams(**common, coordination="instant"), seed=s)
-                t = simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=s)
-                rows.append((record(b), record(t)))
-                for k in range(N_HOP_BINS):
-                    hist["instant"]["settle"][k] += b.settle_hop_hist[k]
-                    hist["instant"]["wasted"][k] += b.wasted_hop_hist[k]
-                    hist["lightspeed"]["settle"][k] += t.settle_hop_hist[k]
-                    hist["lightspeed"]["wasted"][k] += t.wasted_hop_hist[k]
-                if b.total_arrivals:
-                    base_waste_frac.append(b.wasted_arrivals / b.total_arrivals * 100.0)
-                seed_tax[i][lam] = pct_delta(t.wasted_arrivals, b.wasted_arrivals)
-                print(f"        seed {i + 1}/{len(seeds)}", end="\r", flush=True)
-            print(" " * 50, end="\r")
-            block = _tax_block(rows)
-            block["baseline_waste_frac_pct"] = summarize(base_waste_frac)  # perfect-info waste / all journeys
-            block["hop_hist"] = hist
-            per_lambda[str(lam)] = block
-        # Per-seed through-origin slope a of tax = a*Lambda (predicted 1), then bootstrap over seeds.
-        # Fit on FRACTIONAL tax (percent/100) so a ~ 1 means "tax = Lambda" cleanly.
-        slopes = [through_origin_slope(
-                    lambdas,
-                    [(seed_tax[i][lam] / 100.0 if seed_tax[i][lam] is not None else None) for lam in lambdas])
-                  for i in range(len(seeds))]
-        slopes = [a for a in slopes if a is not None]
-        smed, slo, shi = bootstrap_median_ci(slopes)
-        data[label] = {
-            "clumpiness_R": clumpiness_R,
-            "slope_median": smed, "slope_ci_lo": slo, "slope_ci_hi": shi,
-            "slope_per_seed": slopes,
-            "per_lambda": per_lambda,
-        }
+    data = _clumpiness_run(seeds, n_stars, lambdas, n_clumps, levels)
     write_result("clumpiness",
+                 {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                  "lambdas": lambdas, "n_clumps": n_clumps, "levels": [lb for lb, _ in levels],
+                  "mode_base": "instant", "mode_treat": "lightspeed", "stepping": "event"},
+                 {"data": data})
+
+
+def m_clumpiness_scale() -> None:
+    """N=200k companion to the clumpy-field sweep: does tax = Lambda still hold on non-uniform
+    fields at scale?
+
+    Same Thomas-cluster levels and Lambda ladder as the base, at N=200k with 8 seeds. Because the
+    base measurement keeps ``n_clumps`` fixed at 25 to sweep sigma, at N=200k the clumps become
+    dense mega-clusters (~8k stars each at sigma=0.05); the clumpiness_R the measurement records
+    quantifies where each level actually lands in R-space, so the tax-vs-R curve is the comparable
+    quantity across scales. The uniform level is still the hard null (must return ~0.96).
+    """
+    seeds = SEEDS[:8]
+    n_stars = 200_000
+    lambdas = [0.05, 0.1, 0.2]
+    n_clumps = 25
+    levels = [
+        ("uniform", {}),
+        ("sigma0.30", {"n_clumps": n_clumps, "clump_sigma_frac": 0.30}),
+        ("sigma0.15", {"n_clumps": n_clumps, "clump_sigma_frac": 0.15}),
+        ("sigma0.08", {"n_clumps": n_clumps, "clump_sigma_frac": 0.08}),
+        ("sigma0.05", {"n_clumps": n_clumps, "clump_sigma_frac": 0.05}),
+    ]
+    data = _clumpiness_run(seeds, n_stars, lambdas, n_clumps, levels, r_seed_count=8)
+    write_result("clumpiness_scale",
                  {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
                   "lambdas": lambdas, "n_clumps": n_clumps, "levels": [lb for lb, _ in levels],
                   "mode_base": "instant", "mode_treat": "lightspeed", "stepping": "event"},
@@ -700,23 +1041,31 @@ def m_finite_size_periodic() -> None:
 
 MEASUREMENTS = {
     "lambda_sweep": m_lambda_sweep,
+    "lambda_sweep_scale": m_lambda_sweep_scale,
     "branching": m_branching,
+    "branching_scale": m_branching_scale,
     "energy_tax": m_energy_tax,
     "finite_size": m_finite_size,
     "finite_size_interior": m_finite_size_interior,
     "finite_size_periodic": m_finite_size_periodic,
     "concurrency": m_concurrency,
+    "concurrency_scale": m_concurrency_scale,
     "floor_bracket": m_floor_bracket,
+    "floor_bracket_scale": m_floor_bracket_scale,
     "retarget_cap": m_retarget_cap,
+    "retarget_cap_scale": m_retarget_cap_scale,
     "dt_artifact": m_dt_artifact,
     "clumpiness": m_clumpiness,
+    "clumpiness_scale": m_clumpiness_scale,
     "validation": m_validation,
 }
 
 # Cheap-first order so an interrupted run lands the quick wins early.
 ORDER = ["validation", "dt_artifact", "retarget_cap", "energy_tax", "branching",
          "lambda_sweep", "concurrency", "floor_bracket", "clumpiness", "finite_size",
-         "finite_size_interior", "finite_size_periodic"]
+         "finite_size_interior", "finite_size_periodic",
+         "concurrency_scale", "retarget_cap_scale", "lambda_sweep_scale",
+         "floor_bracket_scale", "clumpiness_scale", "branching_scale"]
 
 
 def main(argv: list[str]) -> None:
