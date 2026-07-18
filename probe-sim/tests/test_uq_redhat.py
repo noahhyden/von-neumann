@@ -36,9 +36,9 @@ from closure_sim.models import Factory, ReplicationParams, Subsystem
 
 from probe_sim.environment import SolarArray
 from probe_sim.range import is_viable_at, operational_range
-from probe_sim.uq.distributions import Fixed, LogNormal, Normal, Uniform
-from probe_sim.uq.sample import monte_carlo
-from probe_sim.uq.sobol import sobol_total_order
+from vn_core.uq.distributions import Fixed, LogNormal, Normal, Uniform
+from vn_core.uq.sample import monte_carlo
+from vn_core.uq.sobol import sobol_total_order
 
 
 def test_mc_bytes_survive_a_fresh_subprocess():
@@ -46,8 +46,8 @@ def test_mc_bytes_survive_a_fresh_subprocess():
     # would silently drift results between runs. Runs a fresh interpreter that
     # imports the code from scratch, so import-time state can't cheat.
     script = (
-        "from probe_sim.uq.distributions import Normal, Fixed;"
-        "from probe_sim.uq.sample import monte_carlo;"
+        "from vn_core.uq.distributions import Normal, Fixed;"
+        "from vn_core.uq.sample import monte_carlo;"
         "r = monte_carlo({'S0': Normal(1360.8, 0.5), 'd': Fixed(5.203)},"
         " lambda s: s['S0'] / s['d']**2, n=200, seed=42);"
         "import sys; sys.stdout.write(repr(r.values[:5]))"

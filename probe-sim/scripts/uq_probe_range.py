@@ -24,9 +24,9 @@ import math
 import sys
 
 from probe_sim.environment import SOLAR_CONSTANT_1AU_W_M2, SOLAR_CONSTANT_1AU_W_M2_STD
-from probe_sim.uq.distributions import Fixed, Normal, Uniform
-from probe_sim.uq.sample import monte_carlo
-from probe_sim.uq.sobol import sobol_total_order
+from vn_core.uq.distributions import Fixed, Normal, Uniform
+from vn_core.uq.sample import monte_carlo
+from vn_core.uq.sobol import sobol_total_order
 
 
 def max_reach_au(sample: dict[str, float]) -> float:

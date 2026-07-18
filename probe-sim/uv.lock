@@ -122,6 +122,7 @@ dependencies = [
     { name = "closure-sim" },
     { name = "power-budget" },
     { name = "pydantic" },
+    { name = "vn-core" },
 ]
 
 [package.optional-dependencies]
@@ -135,6 +136,7 @@ requires-dist = [
     { name = "power-budget", editable = "../power-budget" },
     { name = "pydantic", specifier = ">=2.6" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "vn-core", editable = "../core" },
 ]
 provides-extras = ["dev"]
 
@@ -356,3 +358,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/55/e3/70399cb7dd41c10ac
 wheels = [
     { url = "https://files.pythonhosted.org/packages/dc/9b/47798a6c91d8bdb567fe2698fe81e0c6b7cb7ef4d13da4114b41d239f65d/typing_inspection-0.4.2-py3-none-any.whl", hash = "sha256:4ed1cacbdc298c220f1bd249ed5287caa16f34d44ef4e9c3d0cbad5b521545e7", size = 14611, upload-time = "2025-10-01T02:14:40.154Z" },
 ]
+
+[[package]]
+name = "vn-core"
+version = "0.1.0"
+source = { editable = "../core" }
+
+[package.metadata]
+requires-dist = [{ name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" }]
+provides-extras = ["dev"]

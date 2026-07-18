@@ -10,7 +10,7 @@ import math
 
 import pytest
 
-from probe_sim.uq.distributions import (
+from vn_core.uq.distributions import (
     Fixed,
     LogNormal,
     Normal,

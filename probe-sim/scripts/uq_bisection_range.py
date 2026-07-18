@@ -25,9 +25,9 @@ from probe_sim.environment import (
     SolarArray,
 )
 from probe_sim.range import operational_range
-from probe_sim.uq.distributions import Fixed, Normal, Uniform
-from probe_sim.uq.sample import monte_carlo
-from probe_sim.uq.sobol import sobol_total_order
+from vn_core.uq.distributions import Fixed, Normal, Uniform
+from vn_core.uq.sample import monte_carlo
+from vn_core.uq.sobol import sobol_total_order
 
 
 def _factory() -> Factory:

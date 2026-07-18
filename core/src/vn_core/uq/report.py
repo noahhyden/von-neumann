@@ -8,8 +8,8 @@ script or paper. Pure formatting, zero pimas.
 
 from __future__ import annotations
 
-from probe_sim.uq.sample import MCResult
-from probe_sim.uq.sobol import SobolResult
+from vn_core.uq.sample import MCResult
+from vn_core.uq.sobol import SobolResult
 
 
 def one_line_finding(

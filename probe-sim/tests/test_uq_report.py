@@ -10,10 +10,10 @@ import math
 
 import pytest
 
-from probe_sim.uq.distributions import Fixed, Normal, Uniform
-from probe_sim.uq.report import one_line_finding
-from probe_sim.uq.sample import monte_carlo
-from probe_sim.uq.sobol import sobol_total_order
+from vn_core.uq.distributions import Fixed, Normal, Uniform
+from vn_core.uq.report import one_line_finding
+from vn_core.uq.sample import monte_carlo
+from vn_core.uq.sobol import sobol_total_order
 
 
 def d_max(sample):

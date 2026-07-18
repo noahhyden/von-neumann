@@ -1,25 +1,25 @@
-"""Uncertainty quantification for probe-sim - issue #35, Depth track Tier 1.
+"""Compatibility shim - the UQ primitives now live in [`vn_core.uq`](../../../../../core/src/vn_core/uq).
 
-Every REFERENCES.md number is sourced, but point-valued. This subpackage completes
-the cardinal rule (CLAUDE.md §1) by giving each number a **spread** (a citable
-distribution, [[distributions]]), propagating it through the pure fold via seeded
-Monte Carlo ([[sample]]), and attributing the resulting variance to individual
-inputs via Sobol total-order indices ([[sobol]]).
-
-Zero pimas imports; the fold in probe_sim.environment / range / autonomy is
-untouched. This is the "reactive-skin-free" wrapper described in CLAUDE.md §7.
+Every von-neumann module reuses the same distributions, seeded MC, and Sobol
+estimator; keeping a copy per module was the wrong shape once issue #35's
+generalization scope kicked in (issue #35 explicitly asks for "then generalize
+the interface across the other modules"). All new code should import from
+`vn_core.uq` directly; this shim is kept only so probe-sim's own tests and
+scripts do not have to move in the same PR.
 """
 
-from probe_sim.uq.distributions import (
+from vn_core.uq import (
     Distribution,
     Fixed,
     LogNormal,
+    MCResult,
     Normal,
+    SobolResult,
     Uniform,
+    monte_carlo,
+    one_line_finding,
+    sobol_total_order,
 )
-from probe_sim.uq.report import one_line_finding
-from probe_sim.uq.sample import MCResult, monte_carlo
-from probe_sim.uq.sobol import SobolResult, sobol_total_order
 
 __all__ = [
     "Distribution",

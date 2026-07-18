@@ -23,7 +23,7 @@ import statistics
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
-from probe_sim.uq.distributions import Distribution
+from vn_core.uq.distributions import Distribution
 
 
 @dataclass(frozen=True)

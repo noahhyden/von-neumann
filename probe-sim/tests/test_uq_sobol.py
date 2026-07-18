@@ -15,8 +15,8 @@ import math
 
 import pytest
 
-from probe_sim.uq.distributions import Fixed, Normal, Uniform
-from probe_sim.uq.sobol import sobol_total_order
+from vn_core.uq.distributions import Fixed, Normal, Uniform
+from vn_core.uq.sobol import sobol_total_order
 
 
 def linear_additive(sample):

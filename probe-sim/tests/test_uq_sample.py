@@ -11,8 +11,8 @@ import math
 import pytest
 
 from probe_sim.environment import solar_irradiance_w_m2
-from probe_sim.uq.distributions import Fixed, Normal, Uniform
-from probe_sim.uq.sample import monte_carlo
+from vn_core.uq.distributions import Fixed, Normal, Uniform
+from vn_core.uq.sample import monte_carlo
 
 
 def irradiance_at_jupiter(sample):
