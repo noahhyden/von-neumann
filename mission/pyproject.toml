@@ -13,6 +13,7 @@ dependencies = [
     "power-budget",
     "launch-economics",
     "probe-sim",
+    "vn-core",
 ]
 
 [project.optional-dependencies]
@@ -24,6 +25,7 @@ closure-sim = { path = "../closure-sim", editable = true }
 power-budget = { path = "../power-budget", editable = true }
 launch-economics = { path = "../launch-economics", editable = true }
 probe-sim = { path = "../probe-sim", editable = true }
+vn-core = { path = "../core", editable = true }
 
 [tool.setuptools.packages.find]
 where = ["src"]
