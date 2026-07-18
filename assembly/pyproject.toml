@@ -9,10 +9,14 @@ description = "Robotic build rate derived from published metal-AM deposition rat
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.6",
+    "vn-core",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+
+[tool.uv.sources]
+vn-core = { path = "../core", editable = true }
 
 [tool.setuptools.packages.find]
 where = ["src"]
