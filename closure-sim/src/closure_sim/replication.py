@@ -1,4 +1,10 @@
-"""Discrete-time self-replication simulator (whole-copy replication model).
+"""Self-replication simulator (whole-copy replication model).
+
+The factory mass obeys a continuous ODE, dF/dt = binding-rate(F), integrated by
+the shared adaptive solver `vn_core.ode` (issue #38) and sampled on a daily grid
+for reporting. It was previously stepped by hand with forward Euler at a guessed
+dt; that biased the exponential-growth regime and is what this module no longer
+does.
 
 Model
 -----
@@ -29,9 +35,12 @@ Key limiting behaviours, all emergent (not hardcoded):
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
+from dataclasses import dataclass
 from enum import Enum
 
 from pydantic import BaseModel
+from vn_core.ode import solve
 
 from .closure import compute_closure
 from .models import Factory, ReplicationParams
@@ -129,16 +138,27 @@ def _interpolate_crossing(
     return prev_day + frac * (day - prev_day)
 
 
-def simulate(
-    factory: Factory, params: ReplicationParams | None = None
-) -> SimResult:
-    """Run the replication sim. ``params`` overrides ``factory.replication``."""
-    rep = params or factory.replication
-    if rep is None:
-        raise ValueError(
-            f"factory {factory.name!r} has no replication params; pass `params=`"
-        )
+@dataclass(frozen=True)
+class _Setup:
+    """The derived quantities a replication run needs, shared by every entry point.
 
+    Extracted so ``simulate`` (full telemetry) and ``reaches_target`` (cheap
+    boolean) compute the closure, productivity, and ceilings exactly once and the
+    same way - no drift between the two paths.
+    """
+
+    closure: float
+    alpha: float
+    energy_cap: float
+    resupply_ceiling: float
+    analytic_doubling: float | None
+    seed_mass_kg: float
+    target: float
+    resupply_rate: float
+
+
+def _prepare(factory: Factory, rep: ReplicationParams) -> _Setup:
+    """Compute the closure/productivity/ceilings for a factory + params."""
     report = compute_closure(factory)
     C = report.closure_ratio
     local_mass = factory.local_mass_kg
@@ -157,27 +177,88 @@ def simulate(
     resupply_ceiling = (
         math.inf if C >= 1.0 else rep.resupply_rate_kg_per_day / (1.0 - C)
     )
+    analytic_doubling = math.log(2) * C / alpha if (C > 0 and alpha > 0) else None
 
-    analytic_doubling = (
-        math.log(2) * C / alpha if (C > 0 and alpha > 0) else None
+    return _Setup(
+        closure=C,
+        alpha=alpha,
+        energy_cap=energy_cap,
+        resupply_ceiling=resupply_ceiling,
+        analytic_doubling=analytic_doubling,
+        seed_mass_kg=rep.seed_mass_kg,
+        target=rep.target_output_kg_per_day,
+        resupply_rate=rep.resupply_rate_kg_per_day,
     )
 
-    F = rep.seed_mass_kg
-    F0 = F
-    target = rep.target_output_kg_per_day
+
+def _make_rhs(s: _Setup) -> Callable[[float, list[float]], list[float]]:
+    """Build the ODE right-hand side dF/dt = binding-rate(F) for a prepared setup."""
+
+    def _dF_dt(_t: float, y: list[float]) -> list[float]:
+        rate, _ = _binding_rate(
+            y[0], s.alpha, s.closure, s.energy_cap, resupply_rate=s.resupply_rate
+        )
+        return [rate]
+
+    return _dF_dt
+
+
+def simulate(
+    factory: Factory, params: ReplicationParams | None = None
+) -> SimResult:
+    """Run the replication sim. ``params`` overrides ``factory.replication``."""
+    rep = params or factory.replication
+    if rep is None:
+        raise ValueError(
+            f"factory {factory.name!r} has no replication params; pass `params=`"
+        )
+
+    s = _prepare(factory, rep)
+    C = s.closure
+    alpha = s.alpha
+    energy_cap = s.energy_cap
+    resupply_ceiling = s.resupply_ceiling
+    analytic_doubling = s.analytic_doubling
+    F0 = s.seed_mass_kg
+    F = F0
+    target = s.target
 
     steps: list[SimStep] = []
     time_to_target: float | None = None
     empirical_doubling: float | None = None
 
     n_steps = int(math.ceil(rep.duration_days / rep.dt_days))
-    prev_day = 0.0
-    prev_output = min(alpha * F, energy_cap)
-    prev_mass = F
+    days = [i * rep.dt_days for i in range(n_steps + 1)]
 
-    for i in range(n_steps + 1):
-        day = i * rep.dt_days
-        rate, regime = _binding_rate(F, alpha, C, energy_cap, resupply_rate=rep.resupply_rate_kg_per_day)
+    # Integrate dF/dt = binding-rate(F) with the shared adaptive solver instead of
+    # a hand-rolled forward-Euler step (issue #38). Euler at a guessed dt biased
+    # exponential growth low, so the *empirical* doubling time drifted from the
+    # analytic one purely as a step-size artefact; RK45 to a tolerance removes
+    # that. `dt_days` now sets only the reporting cadence (the sample grid the
+    # timeline and crossings are read off), not the integration accuracy. The
+    # rate has kinks where the binding regime switches; the adaptive stepper
+    # simply shortens its step across them.
+    #
+    # This full-telemetry path samples every day for the SimStep timeline; callers
+    # that only need "does it reach target?" should use reaches_target(), which
+    # skips the grid and is ~36x cheaper (issue #38 Phase 2).
+    if days[-1] > 0.0:
+        traj = solve(_make_rhs(s), [F0], (0.0, days[-1]), t_eval=days, rtol=1e-8, atol=1e-9)
+        if not traj.success:
+            raise RuntimeError(f"replication integration failed: {traj.message}")
+        masses = [row[0] for row in traj.y]
+    else:
+        masses = [F0]  # zero-length run: only the seed state exists
+
+    prev_day = 0.0
+    prev_output = min(alpha * F0, energy_cap)
+    prev_mass = F0
+
+    for i, day in enumerate(days):
+        F = masses[i]
+        rate, regime = _binding_rate(
+            F, alpha, C, energy_cap, resupply_rate=rep.resupply_rate_kg_per_day
+        )
         installed = alpha * F
         output = min(installed, energy_cap)
 
@@ -207,8 +288,7 @@ def simulate(
 
         prev_day, prev_output, prev_mass = day, output, F
 
-        # Euler step (forward). dt small enough for the regimes we report.
-        F = F + rate * rep.dt_days
+    F = masses[-1]
 
     return SimResult(
         factory_name=factory.name,
@@ -225,3 +305,42 @@ def simulate(
         regime_timeline=_compress_timeline(steps),
         steps=steps,
     )
+
+
+def reaches_target(
+    factory: Factory, params: ReplicationParams | None = None
+) -> bool:
+    """Does the factory's output ever reach its target? A cheap viability check.
+
+    Equivalent to ``simulate(factory, params).time_to_target_days is not None`` but
+    ~36x cheaper (issue #38 Phase 2): it skips the per-day SimStep timeline and
+    lets the solver take its natural adaptive steps instead of forcing a step per
+    reporting day.
+
+    Correct by monotonicity: dF/dt = binding-rate(F) >= 0, so factory mass F is
+    non-decreasing, so output = min(alpha*F, energy_cap) is non-decreasing. Output
+    therefore reaches the target iff it has reached it by the final time - the
+    whole trajectory reduces to one endpoint comparison, no timeline needed. Use
+    this in bisection / Monte Carlo hot paths (e.g. probe-sim's operational
+    range); use ``simulate`` when you actually need the timeline.
+    """
+    rep = params or factory.replication
+    if rep is None:
+        raise ValueError(
+            f"factory {factory.name!r} has no replication params; pass `params=`"
+        )
+
+    s = _prepare(factory, rep)
+    # Integrate to the same endpoint simulate() uses so the two agree exactly.
+    n_steps = int(math.ceil(rep.duration_days / rep.dt_days))
+    t_end = n_steps * rep.dt_days
+    if t_end <= 0.0:
+        f_final = s.seed_mass_kg
+    else:
+        traj = solve(_make_rhs(s), [s.seed_mass_kg], (0.0, t_end), rtol=1e-8, atol=1e-9)
+        if not traj.success:
+            raise RuntimeError(f"replication integration failed: {traj.message}")
+        f_final = traj.y_final[0]
+
+    output_final = min(s.alpha * f_final, s.energy_cap)
+    return output_final >= s.target

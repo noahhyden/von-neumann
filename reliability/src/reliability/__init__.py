@@ -15,7 +15,7 @@ number traces to a source; see REFERENCES.md.
 from reliability.aurora import (
     aurora_equilibrium,
     aurora_integrate,
-    aurora_step,
+    aurora_rate,
 )
 from reliability.degradation import (
     ARRAY_DEGRADATION_BAND_PER_YR,
@@ -36,7 +36,7 @@ __all__ = [
     # aurora
     "aurora_equilibrium",
     "aurora_integrate",
-    "aurora_step",
+    "aurora_rate",
     # degradation
     "ARRAY_DEGRADATION_BAND_PER_YR",
     "ARRAY_DEGRADATION_PER_YR",

@@ -6,6 +6,16 @@ Distributed as the `vn-core` package (Python name `vn_core`). Currently holds:
   `Normal`, `LogNormal`), seeded Monte Carlo, Sobol total-order sensitivity, a
   paper-ready one-line reporter. Every von-neumann module reaches for this so
   no one re-implements the RNG discipline or the propagation loop.
+- **`vn_core.ode`** - ordinary differential equation solvers (issue
+  [#38](https://github.com/noahhyden/von-neumann/issues/38)). One entry point,
+  `solve(f, y0, t_span, ...)`, with two methods: `"rk45"` (Dormand-Prince,
+  explicit adaptive - the default, non-stiff workhorse) and `"bdf1"` (backward
+  Euler, implicit L-stable - for stiff systems). It replaces the hand-rolled
+  forward-Euler loops that had picked a timestep "small enough for the regimes we
+  report" - an unjustified number by CLAUDE.md §1 - with a tolerance-driven,
+  validated integrator. Method constants are cited in
+  [`REFERENCES.md`](REFERENCES.md); the 5-point validation gate is
+  `tests/test_ode_validation.py`.
 
 ## Why a core/ package
 
