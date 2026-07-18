@@ -17,7 +17,7 @@ from power_budget.budget import PowerBudget, compute_capacity_flops
 from power_budget.physics import brain_equivalents
 from pydantic import BaseModel
 
-from probe_sim.environment import SolarArray
+from probe_sim.environment import SOLAR_CONSTANT_1AU_W_M2, SolarArray
 
 
 class ComputeHeadroom(BaseModel):
@@ -36,14 +36,16 @@ def compute_headroom_at(
     *,
     compute_fraction: float,
     efficiency_flops_per_w: float,
+    solar_constant: float = SOLAR_CONSTANT_1AU_W_M2,
 ) -> ComputeHeadroom:
     """Compute headroom at one heliocentric distance.
 
     ``compute_fraction`` is the share of delivered power given to computation (the rest
     is manufacturing/housekeeping/margin); ``efficiency_flops_per_w`` is the compute
     hardware efficiency (a sourced scenario input - see power-budget/REFERENCES.md).
+    ``solar_constant`` is exposed so UQ can push a sampled S0 through the fold.
     """
-    delivered = array.power_w(distance_au)
+    delivered = array.power_w(distance_au, solar_constant)
     budget = PowerBudget(total_w=delivered, fraction_compute=compute_fraction)
     flops = compute_capacity_flops(budget.compute_w, efficiency_flops_per_w)
     return ComputeHeadroom(
@@ -61,6 +63,7 @@ def max_distance_for_compute(
     *,
     compute_fraction: float,
     efficiency_flops_per_w: float,
+    solar_constant: float = SOLAR_CONSTANT_1AU_W_M2,
 ) -> float:
     """Farthest heliocentric distance (AU) at which the probe still affords ``required_flops``.
 
@@ -75,4 +78,4 @@ def max_distance_for_compute(
     if efficiency_flops_per_w <= 0:
         raise ValueError("efficiency_flops_per_w must be positive")
     required_total_w = (required_flops / efficiency_flops_per_w) / compute_fraction
-    return array.max_distance_au(required_total_w)
+    return array.max_distance_au(required_total_w, solar_constant)

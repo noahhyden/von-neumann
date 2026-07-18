@@ -97,6 +97,23 @@ Sources:
 - Why the chip supply chain is the deepest on Earth (400+ steps, 9N-pure materials,
   EUV monopoly): CSIS https://www.csis.org/analysis/mapping-semiconductor-supply-chain-critical-role-indo-pacific-region
 
+## UQ distributions (issue #35)
+
+Every entry in the per-part energy table now has a companion `Uniform(low, high)`
+distribution in `src/closure_sim/distributions.py` (`PART_ENERGY_KWH_PER_KG_DIST`),
+using the LCA min-max endpoints exactly as reported in the table above. The
+sintered-regolith strength range - explicitly labelled here as "carry as a band,
+never a point" (>100x span across techniques) - lands as `LogUniform(2.49, 355.0)`
+so each order of magnitude is equally likely, matching how the source presents the
+choice of technique rather than the linear numeric distance.
+
+A first UQ finding surfaced by MC + Sobol over the per-part bands: for the ratio
+leverage = chip_kWh_per_kg / metal_kWh_per_kg (the electronics-wall driver),
+**metal energy dominates the Sobol total-order ranking**, not chip energy - the
+small denominator amplifies proportionally-small changes into larger changes in
+the ratio than the wide chip numerator does. This is exactly the "which input
+actually drives this finding" attribution issue #35 asks the papers to report.
+
 ## Structural strength (the `structures` decision - `structures.py`)
 
 `ROADMAP-PROPOSAL.md` weighed making `structures` its own module vs a parameter here. The

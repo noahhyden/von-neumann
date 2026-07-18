@@ -11,6 +11,7 @@ dependencies = [
     "pydantic>=2.6",
     "power-budget",
     "probe-sim",
+    "vn-core",
 ]
 
 [project.optional-dependencies]
@@ -20,6 +21,7 @@ dev = ["pytest>=8.0"]
 [tool.uv.sources]
 power-budget = { path = "../power-budget", editable = true }
 probe-sim = { path = "../probe-sim", editable = true }
+vn-core = { path = "../core", editable = true }
 
 [tool.setuptools.packages.find]
 where = ["src"]

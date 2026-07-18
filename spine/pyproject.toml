@@ -12,6 +12,7 @@ dependencies = [
     "closure-sim",
     "multi-probe",
     "swarm",
+    "vn-core",
 ]
 
 [project.optional-dependencies]
@@ -23,6 +24,7 @@ dev = ["pytest>=8.0", "matplotlib>=3.8"]
 closure-sim = { path = "../closure-sim", editable = true }
 multi-probe = { path = "../multi-probe", editable = true }
 swarm = { path = "../swarm", editable = true }
+vn-core = { path = "../core", editable = true }
 
 [tool.setuptools.packages.find]
 where = ["src"]

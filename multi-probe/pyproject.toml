@@ -11,6 +11,7 @@ dependencies = [
     "pydantic>=2.6",
     "closure-sim",
     "probe-sim",
+    "vn-core",
 ]
 
 [project.optional-dependencies]
@@ -20,6 +21,7 @@ dev = ["pytest>=8.0"]
 [tool.uv.sources]
 closure-sim = { path = "../closure-sim", editable = true }
 probe-sim = { path = "../probe-sim", editable = true }
+vn-core = { path = "../core", editable = true }
 
 [tool.setuptools.packages.find]
 where = ["src"]
