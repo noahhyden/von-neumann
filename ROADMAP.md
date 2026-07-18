@@ -260,7 +260,16 @@ justify.
 
 ### Tier 1 - these *complete* the rigor, so they are research, not extras
 
-**UQ: error bars + sensitivity.** Every number in the repo is sourced but
+**UQ: error bars + sensitivity. (done - issue #35 closed)** Delivered: the shared
+`vn_core.uq` package (distributions, seeded Monte Carlo, Sobol total-order
+sensitivity, a one-line reporter) plus a `distributions.py` companion in all 18
+modules, giving every sourced `REFERENCES.md` number a citable spread. The
+headline behavioral checks the track promised are asserted in tests (error bars
+shrink when an input's spread shrinks; Sobol total-order dominant input > 0.95
+while a phantom input reads ~0; stderr-of-mean falls as 1/sqrt(N)). Kept for the
+record, the original framing was:
+
+Every number in the repo is sourced but
 point-valued. Propagating that uncertainty (Monte Carlo, or analytic where the model
 is linear) and running a global sensitivity analysis (Sobol indices) is the honest
 completion of the cardinal rule: it turns "X" into "X, ±Y, and Y is 80% driven by
