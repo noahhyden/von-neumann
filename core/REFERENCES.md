@@ -66,6 +66,30 @@ error-estimate weights `E*`) is the standard explicit RK5(4) pair.
   nonlinear solve is not the accuracy bottleneck. Verdict: reasonable - loose by
   design, tightening it would only cost iterations.
 
+## UQ: Sobol sensitivity estimators (`vn_core.uq.sobol`)
+
+Method choices, not physical numbers - each is a published variance-based
+sensitivity estimator computed from the shared Saltelli design.
+
+- **Total-order index (Jansen 1999).** `S_Ti = (1/2N) sum_j (f(A)_j - f(AB^i)_j)^2
+  / Var`.
+  - **Jansen, M. J. W. (1999), "Analysis of variance designs for model output",
+    Computer Physics Communications 117, 35-43.**
+    - https://doi.org/10.1016/S0010-4655(98)00154-4
+- **First-order index (Saltelli et al. 2010).** `S_i = (1/N) sum_j f(B)_j (f(AB^i)_j
+  - f(A)_j) / Var`. Free: it reuses the exact A, B, AB^i evaluations the total-order
+  estimator already needs.
+  - **Saltelli, A. et al. (2010), "Variance based sensitivity analysis of model
+    output. Design and estimator for the total sensitivity index", Computer Physics
+    Communications 181, 259-270.**
+    - https://doi.org/10.1016/j.cpc.2009.09.018
+- **Confidence intervals.** Default is asymptotic: each index is a sample mean of
+  per-row terms, so `stderr = pstdev(terms)/sqrt(N)` and the 90% CI is `estimate +-
+  z * stderr` with `z = 1.6448536269514722` (the 0.95 standard-normal quantile, a
+  derived math constant). Opt-in bootstrap uses percentile CIs over resampled rows.
+  Verdict: on the Ishigami benchmark the two agree to 2-3 decimals; asymptotic is
+  the free default, bootstrap the costlier robustness check.
+
 ## UQ: polynomial chaos (`vn_core.uq.pce`)
 
 Like the ODE solver, PCE carries no physical constants - only numerical-method

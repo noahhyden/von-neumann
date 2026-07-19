@@ -3,7 +3,9 @@
 Distributed as the `vn-core` package (Python name `vn_core`). Currently holds:
 
 - **`vn_core.uq`** - uncertainty quantification. Distributions (`Fixed`, `Uniform`,
-  `Normal`, `LogNormal`), seeded Monte Carlo, Sobol total-order sensitivity, a
+  `Normal`, `LogNormal`), seeded Monte Carlo, Sobol first- and total-order
+  sensitivity (each with a confidence interval, so an index that is within noise
+  reads as a CI straddling zero rather than a false-confident number), a
   paper-ready one-line reporter. `uq_and_gsa` runs both propagation and sensitivity
   off one Saltelli design (the UQ is free from the Sobol evaluations). `pce_fit`
   is a polynomial-chaos surrogate for **smooth, low-dimensional** findings: it
