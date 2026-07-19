@@ -1,0 +1,20 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "swarm_rust"
+description = "Bit-identical Rust drop-in for the swarm nearest-unsettled k-d tree query (issue #33, Phase 1)."
+version = "0.1.0"
+requires-python = ">=3.12"
+# Runtime deps are declared in Cargo.toml (pyo3, numpy). This file exists so
+# `maturin develop` / `maturin build` can drive the build, and so the wheel
+# ships with the same version bump as the crate.
+classifiers = ["Programming Language :: Rust"]
+
+[tool.maturin]
+# Pure Rust extension - no Python source alongside the crate. The compiled
+# extension imports as top-level `swarm_rust`; swarm/kd_backends.py catches
+# ImportError, so a checkout without the Rust toolchain still runs against
+# numba / pure Python (issue #33: the fast path is optional).
+module-name = "swarm_rust"

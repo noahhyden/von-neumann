@@ -381,16 +381,33 @@ def _believes_settled(s: SwarmState, frm: int, i: int, params: SwarmParams) -> b
     return _believes_settled_at(s, s.xs[frm], s.ys[frm], s.zs[frm], i, s.year, params.coordination)
 
 
-# Module-init: decide which path once. `SWARM_NO_NJIT=1` forces the pure-Python
-# reference; if numba is unavailable, kd_njit.HAS_NJIT is False and we also fall
-# back. The check runs at import time so per-query calls have zero import cost.
+# Module-init: pick the nearest-unsettled backend once at import time (issue #33,
+# Phase 1). Priority: Rust (pyo3, ~10-50x over numba) -> numba (@njit) -> pure
+# Python. Env-var overrides skip a tier without breaking others:
+#   - SWARM_NO_RUST=1  -> Rust off (numba or Python)
+#   - SWARM_NO_NJIT=1  -> numba off (Rust or Python)
+#   - SWARM_NO_RUST=1 SWARM_NO_NJIT=1  -> pure Python (the reference)
+# All three paths are bit-identical (`test_kdtree_backends.py` in swarm/tests
+# runs the A/B/C oracle for the two compiled backends against the Python
+# reference); a checkout without either compiled extension still runs.
 try:
     from swarm.kd_njit import HAS_NJIT as _HAS_NJIT, nearest_unsettled_njit as _NJIT_KERNEL
 except ImportError:
     _HAS_NJIT = False
     _NJIT_KERNEL = None
 
-_USE_NJIT = _HAS_NJIT and os.environ.get("SWARM_NO_NJIT") != "1"
+try:
+    import swarm_rust as _swarm_rust  # type: ignore[import-not-found]
+    _HAS_RUST = True
+    _RUST_KERNEL = _swarm_rust.nearest_unsettled
+except ImportError:
+    _HAS_RUST = False
+    _RUST_KERNEL = None
+
+_USE_RUST = _HAS_RUST and os.environ.get("SWARM_NO_RUST") != "1"
+_USE_NJIT = (not _USE_RUST) and _HAS_NJIT and os.environ.get("SWARM_NO_NJIT") != "1"
+_USE_FAST = _USE_RUST or _USE_NJIT
+_FAST_KERNEL = _RUST_KERNEL if _USE_RUST else _NJIT_KERNEL
 
 _EXCLUDE_SCRATCH = np.zeros(64, dtype=np.int32)  # reused per query to avoid alloc
 
@@ -400,14 +417,15 @@ def _nearest_unsettled_at(
 ) -> int | None:
     """Index of the nearest *believed*-unsettled star to point ``(px,py,pz)`` not in ``exclude``.
 
-    Numba-jitted k-d tree branch-and-bound (#27 Part 4, on top of #30). The jitted hot
-    loop is `swarm.kd_njit.nearest_unsettled_njit`; a `SWARM_NO_NJIT=1` env var forces
-    the pure-Python fallback below (used for debugging and no-numba environments).
-    The two paths are bit-identical: same DFS order (preallocated int32 stack in the
-    njit version reproduces list append/pop semantics), same (d^2, lowest-index)
-    tie-break, same inlined `_believes_settled_at` gate. See kd_njit.py for the flags.
+    Compiled k-d tree branch-and-bound. Three bit-identical backends:
+    Rust/pyo3 (issue #33 Phase 1, ``swarm_rust.nearest_unsettled``), numba jit
+    (#27 Part 4, ``swarm.kd_njit.nearest_unsettled_njit``), and the pure-Python
+    reference below. Same DFS order, same ``(d^2, lowest-index)`` tie-break,
+    same inlined ``_believes_settled_at`` gate. The Rust and numba kernels
+    share one Python-visible calling convention, so the routing is a plain
+    function-pointer swap at module import.
     """
-    if _USE_NJIT:
+    if _USE_FAST:
         # Pack the exclude set into a small numpy array (typical len 0-2 in the powered
         # policy; capped at max_boost_candidates ~30 upstream). Skip work when empty.
         n_ex = len(exclude)
@@ -416,7 +434,7 @@ def _nearest_unsettled_at(
                 raise ValueError(f"exclude set too large ({n_ex} > {_EXCLUDE_SCRATCH.size})")
             for j, e in enumerate(exclude):
                 _EXCLUDE_SCRATCH[j] = e
-        r = _NJIT_KERNEL(
+        r = _FAST_KERNEL(
             px, py, pz, year, coordination == "instant",
             *s._njit_args,
             _EXCLUDE_SCRATCH, n_ex,

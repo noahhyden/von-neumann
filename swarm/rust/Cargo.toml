@@ -1,0 +1,35 @@
+[package]
+name = "swarm_rust"
+version = "0.1.0"
+edition = "2021"
+description = "Bit-identical Rust drop-in for the swarm nearest-unsettled k-d tree query (issue #33, Phase 1)."
+license = "MIT"
+
+[lib]
+name = "swarm_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+# pyo3 for Python bindings, numpy for zero-copy ndarray access. Pinned to a
+# specific minor so `maturin develop` builds identically on any developer's
+# machine and in CI. Extension-module feature keeps us out of the manylinux
+# libpython-link dance (we resolve Python symbols at runtime, like every other
+# native Python extension).
+pyo3 = { version = "0.22", features = ["extension-module"] }
+numpy = "0.22"
+
+[profile.release]
+# The point of Rust here is a bit-identical, deterministic accelerator (issue
+# #33 acceptance: SAME SwarmResult to the printed digit). Every profile choice
+# below is about killing sources of nondeterminism:
+#
+# - opt-level = 3: standard release optimization; no reassociation of floats.
+# - lto = "off": link-time optimization is fine for determinism but slows the
+#   build; nothing here justifies it yet.
+# - codegen-units = 1: single codegen unit removes an rng in the inliner's
+#   input, which in principle could pick different arithmetic. Belt+braces.
+# - panic = "abort": smaller binary, no unwinding. Deterministic panics.
+opt-level = 3
+lto = "off"
+codegen-units = 1
+panic = "abort"

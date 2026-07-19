@@ -15,6 +15,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "matplotlib>=3.8"]
+# Rust fast path (issue #33, Phase 1). Optional at runtime - swarm/sim.py's
+# backend routing skips the Rust kernel if `swarm_rust` fails to import - so a
+# checkout without Rust toolchain still runs. `uv run --extra rust maturin
+# develop --manifest-path rust/Cargo.toml` builds and installs it.
+rust = ["maturin>=1.7"]
 
 [tool.uv.sources]
 vn-core = { path = "../core", editable = true }

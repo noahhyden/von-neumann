@@ -24,3 +24,7 @@ htmlcov/
 
 # Agent tooling (never commit local settings, paths, or scheduled-task state)
 .claude/
+
+# Rust build artifacts (issue #33, swarm/rust/ pyo3 extension). Cargo.lock is
+# committed for reproducible builds; target/ is derived and huge.
+target/

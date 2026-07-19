@@ -86,7 +86,18 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - name: pytest (deterministic settlement-front assertions)
+      # Rust toolchain + maturin for the pyo3 fast-path (issue #33). Optional at
+      # runtime (swarm/kd_backends.py falls back to numba or pure Python if the
+      # extension is not importable), but CI builds it so the 3-way A/B/C oracle
+      # in tests/test_kdtree_backends.py actually exercises all three backends
+      # rather than skipping the Rust cases.
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build the swarm_rust pyo3 extension into swarm's venv
+        working-directory: swarm
+        run: |
+          uv sync --extra dev --extra rust
+          uv run --extra rust maturin develop --release --manifest-path rust/Cargo.toml
+      - name: pytest (deterministic settlement-front assertions, all 3 backends)
         working-directory: swarm
         run: uv run --extra dev pytest -q
 
