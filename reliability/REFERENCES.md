@@ -92,3 +92,35 @@ asserts, so ensemble runs pay zero cost. Positive + negative tests live in
 - **[inv:rl-day-monotone]** `after.day == before.day + 1`. Time advances exactly one day per step.
 - **[inv:rl-rng-advances]** If `before.alive > 0`, `after.rng != before.rng`. Guards against a
   bug where `step` forgets to thread the RNG (a §7 hazard).
+
+## Analytical companion: Aurora dynamics (issue #50, Phase 2)
+
+`docs/FINDINGS_CLASSIFICATION.md` #11 restates the CN-2019 equilibrium
+`X_eq = 1 - T_l/T_s`. Two derived properties beyond the equilibrium value:
+
+**Approach time constant.** Linearizing the Aurora RHS around X_eq with
+`delta = X - X_eq`:
+
+    d delta / dt = delta * [(1 - 2*X_eq)/T_l - 1/T_s]
+
+Substituting `X_eq = 1 - T_l/T_s` gives
+
+    d delta / dt = delta * (1/T_s - 1/T_l)
+
+so for T_l < T_s (existence condition), delta decays with time constant
+
+    tau = T_l * T_s / (T_s - T_l)
+
+**Collapse in the T_l >= T_s regime.** X = 0 is always a fixed point.
+Linear coefficient of the RHS at X = 0 is `1/T_l - 1/T_s`. Stable when
+T_l >= T_s; any initial X decays exponentially (or, at the critical
+T_l = T_s, sub-exponentially, dominated by the -x^2/T_l term).
+
+**Time symmetry.** X_eq depends only on the ratio T_l/T_s. Rescaling both
+times by a common factor stretches the approach but leaves the plateau
+identical - the Aurora dynamics are scale-invariant in time.
+
+Tests in `tests/test_aurora_analytical.py` verify: the 1/e decay at
+t = tau (linearization tolerance ~5%), scale invariance of X_eq under
+common rescaling, linear scaling of tau, exponential collapse when
+T_l > T_s, and sub-exponential decay at the critical T_l = T_s.
