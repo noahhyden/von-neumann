@@ -95,3 +95,14 @@ build_rate = manipulators * deposition_rate * hours_per_day * duty_cycle * yield
   quantitative concept and this module's upper anchor.
 - **Nakajima 1988** - S. Nakajima, *Introduction to TPM: Total Productive Maintenance*.
   The origin of the 85% world-class OEE benchmark used for duty_cycle x yield.
+
+## Invariants (issue #48, phase B)
+
+`BuildRateBand` is a frozen dataclass with a `__post_init__` postcondition. Unlike
+the fold-module assertions, this one runs in release too (no `if __debug__:`): a
+band that violates it is a malformed value that callers must not silently see.
+
+- **[inv:as-band]** `low_kg_per_day > 0` and `low_kg_per_day <= anchor_kg_per_day
+  <= high_kg_per_day`. Uncertainty bands must be well-formed.
+
+Tests: `tests/test_invariants.py`.

@@ -62,6 +62,20 @@ class BuildRateBand:
     anchor_kg_per_day: float
     high_kg_per_day: float
 
+    def __post_init__(self) -> None:
+        # [inv:as-band] low > 0, and low <= anchor <= high. Never gated: a band that
+        # violates this is malformed and callers must not silently see it in release.
+        if self.low_kg_per_day <= 0:
+            raise ValueError(
+                f"[inv:as-band] low_kg_per_day={self.low_kg_per_day} must be > 0"
+            )
+        if not (self.low_kg_per_day <= self.anchor_kg_per_day <= self.high_kg_per_day):
+            raise ValueError(
+                f"[inv:as-band] must have low <= anchor <= high; got "
+                f"low={self.low_kg_per_day}, anchor={self.anchor_kg_per_day}, "
+                f"high={self.high_kg_per_day}"
+            )
+
 
 def machinery_build_rate_kg_per_day(
     manipulators: int,

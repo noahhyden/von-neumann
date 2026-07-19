@@ -115,3 +115,14 @@ the project bibliography (`frontend/src/sources.ts`) and not new numbers in the 
 - **IAU 2015 Resolution B3** - IAU (2015). Nominal solar and planetary conversion
   constants. https://www.iau.org/static/resolutions/IAU2015_English.pdf . The nominal
   GM_sun and the AU definition.
+
+## Invariants (issue #48, phase B)
+
+`HohmannResult` is a frozen dataclass with a `__post_init__` postcondition. Runs
+in release (never gated).
+
+- **[inv:tr-hohmann]** `dv_total_m_s >= 0` and `dv_total_m_s == |dv1| + |dv2|`
+  (within `1e-9` relative); `transfer_time_days > 0`. `dv1` and `dv2` signs carry
+  meaning (departure vs. circularization burn) and are not constrained.
+
+Tests: `tests/test_invariants.py`.

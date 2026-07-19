@@ -117,6 +117,42 @@ def derive_settle_time_years(scenario: SpineScenario) -> float:
     return copy_time_days / DAYS_PER_JULIAN_YEAR
 
 
+def _verify_spine_result(r: SpineResult) -> None:
+    """Assert composite invariants on a completed spine run. See REFERENCES.md.
+
+    Called under `if __debug__:` at the end of `run_spine`.
+    """
+    assert 0.0 <= r.closure_ratio <= 1.0, (
+        f"[inv:sp-scale-order] closure_ratio={r.closure_ratio} outside [0, 1]"
+    )
+    assert r.copy_time_days > 0, (
+        f"[inv:sp-scale-order] copy_time_days={r.copy_time_days} must be > 0"
+    )
+    assert r.settle_time_years > 0, (
+        f"[inv:sp-scale-order] settle_time_years={r.settle_time_years} must be > 0"
+    )
+    # The two are strictly linked by the day/year conversion.
+    expected_years = r.copy_time_days / DAYS_PER_JULIAN_YEAR
+    assert abs(r.settle_time_years - expected_years) <= 1e-9 * max(1.0, expected_years), (
+        f"[inv:sp-scale-order] settle_time_years={r.settle_time_years} "
+        f"!= copy_time_days/{DAYS_PER_JULIAN_YEAR}={expected_years}"
+    )
+    assert r.fleet_final_population >= 0, (
+        f"[inv:sp-scale-order] fleet_final_population={r.fleet_final_population} must be >= 0"
+    )
+    assert 0 <= r.final_settled <= r.n_stars, (
+        f"[inv:sp-scale-order] final_settled={r.final_settled} outside [0, n_stars={r.n_stars}]"
+    )
+    if r.swarm_t100_years is not None:
+        assert r.swarm_t100_years > 0, (
+            f"[inv:sp-dwell-nonneg] swarm_t100_years={r.swarm_t100_years} must be > 0"
+        )
+    if r.dwell_fraction_of_t100 is not None:
+        assert r.dwell_fraction_of_t100 >= 0.0, (
+            f"[inv:sp-dwell-nonneg] dwell_fraction={r.dwell_fraction_of_t100} must be >= 0"
+        )
+
+
 def run_spine(scenario: SpineScenario) -> SpineResult:
     """Run all three scales on one factory, with the swarm dwell derived from it."""
     factory = scenario.factory
@@ -158,7 +194,7 @@ def run_spine(scenario: SpineScenario) -> SpineResult:
         dwell_frac=dwell_frac,
     )
 
-    return SpineResult(
+    result = SpineResult(
         closure_ratio=closure_ratio,
         single_factory_time_to_target_days=single.time_to_target_days,
         copy_time_days=copy_time_days,
@@ -173,6 +209,9 @@ def run_spine(scenario: SpineScenario) -> SpineResult:
         dwell_fraction_of_t100=dwell_frac,
         verdict=verdict,
     )
+    if __debug__:
+        _verify_spine_result(result)
+    return result
 
 
 def measure_dwell_tax(scenario: SpineScenario) -> DwellTax:

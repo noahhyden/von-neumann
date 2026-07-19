@@ -62,6 +62,25 @@ class HohmannResult:
     dv_total_m_s: float
     transfer_time_days: float
 
+    def __post_init__(self) -> None:
+        # [inv:tr-hohmann] dv_total is a magnitude sum (>= 0), and the transfer takes
+        # positive time. dv1/dv2 signs are meaningful (departure and circularization)
+        # and are not constrained here.
+        if self.dv_total_m_s < 0:
+            raise ValueError(
+                f"[inv:tr-hohmann] dv_total_m_s={self.dv_total_m_s} must be >= 0"
+            )
+        eps = 1e-9 * (abs(self.dv1_m_s) + abs(self.dv2_m_s) + 1.0)
+        expected_total = abs(self.dv1_m_s) + abs(self.dv2_m_s)
+        if abs(self.dv_total_m_s - expected_total) > eps:
+            raise ValueError(
+                f"[inv:tr-hohmann] dv_total={self.dv_total_m_s} != |dv1|+|dv2|={expected_total}"
+            )
+        if self.transfer_time_days <= 0:
+            raise ValueError(
+                f"[inv:tr-hohmann] transfer_time_days={self.transfer_time_days} must be > 0"
+            )
+
 
 def circular_orbital_speed_m_s(radius_au: float) -> float:
     """Circular heliocentric orbital speed (m/s) at a radius: v = sqrt(GM_sun / r)."""
