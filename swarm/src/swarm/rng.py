@@ -1,34 +1,15 @@
 """A tiny seeded PRNG, threaded through the fold - never ambient (CLAUDE.md §7).
 
-mulberry32, identical to `multi_probe/rng.py` and `frontend/scripts/gen-diff.mjs`, so a
-future TypeScript SoA port of the swarm produces the same star fields and choices. Each
-module stays independently runnable (§4), so this 15-line standard generator is
-deliberately duplicated rather than shared through a cross-module dependency.
+Thin re-export of :mod:`vn_core.rng` (issue #29, descoped to just the RNG). The
+mulberry32 body used to live here as a hand-copy of the same generator in
+``multi_probe/rng.py`` and ``frontend/scripts/gen-diff.mjs``; the JS parity is
+now pinned by ``core/tests/test_rng.py`` against a committed fixture, so there
+is exactly one Python source of truth. Existing call sites (``from swarm.rng
+import next_float, seed_state``, etc.) keep working unchanged.
 """
 
 from __future__ import annotations
 
-_MASK32 = 0xFFFFFFFF
+from vn_core.rng import next_float, next_u32, seed_state
 
-
-def _imul(a: int, b: int) -> int:
-    return (a * b) & _MASK32
-
-
-def next_u32(state: int) -> tuple[int, int]:
-    """Draw one uint32 from ``state``; return ``(value, new_state)`` (pure)."""
-    s = (state + 0x6D2B79F5) & _MASK32
-    t = _imul(s ^ (s >> 15), 1 | s)
-    t = (((t + _imul(t ^ (t >> 7), 61 | t)) & _MASK32) ^ t) & _MASK32
-    value = (t ^ (t >> 14)) & _MASK32
-    return value, s
-
-
-def next_float(state: int) -> tuple[float, int]:
-    """Draw one float in [0, 1); return ``(value, new_state)``."""
-    value, new_state = next_u32(state)
-    return value / 4294967296.0, new_state
-
-
-def seed_state(seed: int) -> int:
-    return seed & _MASK32
+__all__ = ["next_float", "next_u32", "seed_state"]

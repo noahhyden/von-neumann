@@ -22,7 +22,7 @@ export type Policy = "powered" | "slingshot_nearest" | "slingshot_maxboost";
 // only once the news-light has arrived. See swarm/REFERENCES.md.
 export type Coordination = "instant" | "lightspeed";
 
-// ── mulberry32, threaded - mirrors swarm/rng.py ────────────────────────────────
+// ── mulberry32, threaded - mirrors vn_core.rng (pinned by core/tests/test_rng.py) ─
 function nextFloat(state: number): [number, number] {
   const s = (state + 0x6d2b79f5) | 0;
   let t = Math.imul(s ^ (s >>> 15), 1 | s);

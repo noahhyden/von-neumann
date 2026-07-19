@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "vn-core"
 version = "0.1.0"
-description = "Shared core primitives for the von-neumann repo. Currently: uncertainty quantification (distributions, seeded Monte Carlo, Sobol total-order sensitivity) reused across every module. Pure Python today; the layout leaves room for a future core/ rust/pyo3 speed drop-in without moving imports."
+description = "Shared core primitives for the von-neumann repo. Currently: seeded mulberry32 RNG (byte-identical to the JS mirror), uncertainty quantification (distributions, seeded Monte Carlo, Sobol total-order sensitivity), and an ODE solver. Pure Python today; the layout leaves room for a future core/ rust/pyo3 speed drop-in without moving imports."
 requires-python = ">=3.12"
 dependencies = []
 
