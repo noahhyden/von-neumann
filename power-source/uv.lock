@@ -355,6 +355,7 @@ source = { editable = "../thermal" }
 dependencies = [
     { name = "probe-sim" },
     { name = "pydantic" },
+    { name = "vn-core" },
 ]
 
 [package.metadata]
@@ -362,6 +363,7 @@ requires-dist = [
     { name = "probe-sim", editable = "../probe-sim" },
     { name = "pydantic", specifier = ">=2.6" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "vn-core", editable = "../core" },
 ]
 provides-extras = ["dev"]
 
@@ -407,5 +409,8 @@ version = "0.1.0"
 source = { editable = "../core" }
 
 [package.metadata]
-requires-dist = [{ name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" }]
+requires-dist = [
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "scipy", marker = "extra == 'dev'", specifier = ">=1.11" },
+]
 provides-extras = ["dev"]

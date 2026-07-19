@@ -79,6 +79,18 @@ def monte_carlo(
         # distribution's inverse CDF. This is the one place the RNG is used.
         sample = {name: inputs[name].quantile(rng.random()) for name in names}
         values.append(finding(sample))
+    return summarize(values, names)
+
+
+def summarize(values: list[float], input_names: tuple[str, ...]) -> MCResult:
+    """Build an MCResult (mean/std/quantiles) from a list of finding evaluations.
+
+    Shared by ``monte_carlo`` and by ``uq_and_gsa`` (which hands it the A+B
+    Saltelli samples), so the UQ readout is defined in exactly one place and the
+    two entry points can never drift. Rejects nonfinite values here rather than
+    downstream: a nan/inf sample is not honest UQ (CLAUDE.md §1).
+    """
+    n = len(values)
     if any(math.isnan(v) or math.isinf(v) for v in values):
         raise ValueError("finding returned nan/inf - a nonfinite draw is not honest UQ")
     mean = statistics.fmean(values)
@@ -95,7 +107,7 @@ def monte_carlo(
         q05=q05,
         q50=q50,
         q95=q95,
-        input_names=names,
+        input_names=input_names,
     )
 
 

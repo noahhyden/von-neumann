@@ -19,8 +19,8 @@ from vn_core.uq.distributions import (
     Uniform,
 )
 from vn_core.uq.report import one_line_finding
-from vn_core.uq.sample import MCResult, monte_carlo
-from vn_core.uq.sobol import SobolResult, sobol_total_order
+from vn_core.uq.sample import MCResult, monte_carlo, summarize
+from vn_core.uq.sobol import Analysis, SobolResult, sobol_total_order, uq_and_gsa
 
 __all__ = [
     "Distribution",
@@ -31,7 +31,10 @@ __all__ = [
     "LogUniform",
     "MCResult",
     "monte_carlo",
+    "summarize",
     "SobolResult",
     "sobol_total_order",
+    "Analysis",
+    "uq_and_gsa",
     "one_line_finding",
 ]
