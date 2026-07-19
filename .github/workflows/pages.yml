@@ -12,7 +12,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # contents: write so the archive step can push rendered PDFs to the paper-pdfs
+  # orphan branch (issue #7). That branch is the out-of-main-tree binary store; it is
+  # never merged and never triggers this workflow (push trigger is main only) nor the
+  # repo-level GitHub->Zenodo webhook (that fires on Releases, not branches).
+  contents: write
   pages: write
   id-token: write
 
@@ -26,6 +30,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history: gen-versions derives each paper's version list from every
+          # commit touching papers/<slug>/, and the archive step resolves each paper's
+          # latest commit sha. A shallow clone would truncate both.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -35,11 +44,14 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Install + build the frontend
+      # Install the frontend deps now, but BUILD it later (after the paper PDFs are
+      # archived). The build runs papers/scripts/gen-versions.mjs, which reads the
+      # paper-pdfs branch to decide which versions have a rendered PDF; archiving the
+      # current build's PDF to that branch first means the newest version is marked
+      # present in the same deploy that produces it.
+      - name: Install the frontend
         working-directory: frontend
-        run: |
-          npm ci
-          npm run build
+        run: npm ci
 
       # Papers: generate the .bib from sources.ts (the single bibliography source of
       # truth), typeset each paper with the IEEE LaTeX template, and publish the PDFs
@@ -75,6 +87,14 @@ jobs:
         working-directory: closure-sim
         run: uv run --extra dev python -m closure_sim.paper_figures
 
+      # spine figures render from committed JSON (spine/experiments/results/), like
+      # coordination-tax: the harness (spine/experiments/measure.py) runs LOCALLY and commits
+      # its deterministic output, and this step only plots it (a few seconds), so no cache.
+      - name: Render spine figures from committed results (spine)
+        continue-on-error: true
+        working-directory: spine
+        run: uv run --extra dev python -m experiments.paper_figures
+
       - name: Typeset the papers (LaTeX)
         uses: xu-cheng/latex-action@v4
         continue-on-error: true
@@ -83,15 +103,82 @@ jobs:
           root_file: "*/main.tex"
           work_in_root_file_dir: true
 
+      # Archive each freshly built PDF to the paper-pdfs orphan branch at
+      # <slug>/<shortSha>.pdf, where shortSha is the latest commit touching that paper
+      # (its version id, matching gen-versions). Immutable: a version already archived
+      # is left untouched, so the branch only grows when a genuinely new version is
+      # built and never recompiles history (issue #7 uses release-archive, not
+      # historical rebuilds). Best-effort: a paper whose LaTeX failed has no main.pdf
+      # and is simply skipped. Runs BEFORE the frontend build so gen-versions sees it.
+      - name: Archive rendered PDFs to the paper-pdfs branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Bring the branch local if it exists on the remote; otherwise start it as an
+          # orphan (no shared history with main - it holds only binaries). The orphan
+          # is created with the portable --detach + checkout --orphan form (no reliance
+          # on `git worktree add --orphan` argument order, which varies by git version).
+          if git fetch origin paper-pdfs:paper-pdfs 2>/dev/null; then
+            git worktree add ../ppdfs paper-pdfs
+          else
+            echo "no existing paper-pdfs branch; creating it as an orphan"
+            git worktree add --detach ../ppdfs
+            git -C ../ppdfs checkout --orphan paper-pdfs
+            git -C ../ppdfs rm -rf . >/dev/null 2>&1 || true
+          fi
+          changed=0
+          for d in papers/*/; do
+            [ -f "${d}main.tex" ] || continue
+            [ -f "${d}main.pdf" ] || { echo "no PDF for ${d} (compile failed); skip archive"; continue; }
+            slug=$(basename "$d")
+            sha=$(git log -1 --format=%h -- "papers/${slug}/")
+            [ -n "$sha" ] || { echo "no commit history for ${slug}; skip archive"; continue; }
+            dest="../ppdfs/${slug}/${sha}.pdf"
+            if [ -f "$dest" ]; then
+              echo "already archived ${slug}/${sha}.pdf (immutable, skip)"
+            else
+              mkdir -p "../ppdfs/${slug}"
+              cp "${d}main.pdf" "$dest"
+              echo "archived ${slug}/${sha}.pdf"
+              changed=1
+            fi
+          done
+          if [ "$changed" = "1" ]; then
+            git -C ../ppdfs add -A
+            git -C ../ppdfs commit -m "archive: paper PDFs at ${GITHUB_SHA}"
+            git -C ../ppdfs push origin paper-pdfs
+          else
+            echo "no new versions to archive"
+          fi
+
+      # Now build the frontend. gen-versions (run by build.mjs) reads the local
+      # paper-pdfs branch created above, so every archived version - including the one
+      # just built - is marked present in papers-versions.ts.
+      - name: Build the frontend
+        working-directory: frontend
+        run: npm run build
+
+      # Assemble PDFs into the site: every archived version at
+      # /papers/<slug>/<shortSha>.pdf, plus the latest-alias /papers/<slug>.pdf that
+      # the index links as "latest". The build recreates dist/, so this must run after.
       - name: Publish paper PDFs into the site
         run: |
           mkdir -p frontend/dist/papers
+          # Every version PDF from the archive branch, at its <slug>/<shortSha>.pdf path.
+          if [ -d ../ppdfs ]; then
+            for f in $(git -C ../ppdfs ls-files '*.pdf'); do
+              mkdir -p "frontend/dist/papers/$(dirname "$f")"
+              cp "../ppdfs/$f" "frontend/dist/papers/$f"
+              echo "published papers/$f"
+            done
+          fi
+          # Latest alias: the current build, linked by papers-index.ts as papers/<slug>.pdf.
           for d in papers/*/; do
             [ -f "${d}main.tex" ] || continue
             slug=$(basename "$d")
             if [ -f "${d}main.pdf" ]; then
               cp "${d}main.pdf" "frontend/dist/papers/${slug}.pdf"
-              echo "published ${slug}.pdf"
+              echo "published ${slug}.pdf (latest alias)"
             else
               echo "WARNING: no PDF for ${slug} (LaTeX compile failed); site deploys without it"
             fi

@@ -44,6 +44,41 @@ test("pdf path matches the slug convention", () => {
   }
 });
 
+test("doi field is well-formed (null until minted; sandbox flagged)", () => {
+  for (const p of PAPERS_INDEX) {
+    assert.ok(p.doi === null || typeof p.doi === "string", `${p.slug}: doi is neither null nor string`);
+    assert.equal(typeof p.doiIsSandbox, "boolean", `${p.slug}: doiIsSandbox is not a boolean`);
+    // A sandbox flag is meaningless without a DOI to flag.
+    if (p.doiIsSandbox) assert.ok(p.doi, `${p.slug}: doiIsSandbox true but doi is empty`);
+  }
+});
+
+// The version manifest (papers-versions.ts) is generated from git history at build
+// time and is gitignored, so it may be absent when `npm test` runs before a build
+// (the CI frontend job does exactly that). Import it defensively: if present, its
+// shape must hold; if absent, this test is a no-op rather than a load failure.
+test("version manifest, when generated, is well-formed", async () => {
+  let PAPER_VERSIONS: Record<string, Array<Record<string, unknown>>> | null = null;
+  try {
+    ({ PAPER_VERSIONS } = await import("./papers-versions.ts"));
+  } catch {
+    return; // not generated in this environment; nothing to assert
+  }
+  assert.ok(PAPER_VERSIONS && typeof PAPER_VERSIONS === "object", "PAPER_VERSIONS is not an object");
+  const slugs = new Set(PAPERS_INDEX.map((p) => p.slug));
+  for (const [slug, versions] of Object.entries(PAPER_VERSIONS)) {
+    assert.ok(slugs.has(slug), `version manifest names unknown paper slug "${slug}"`);
+    assert.ok(Array.isArray(versions), `${slug}: versions is not an array`);
+    for (const v of versions) {
+      assert.match(String(v.shortSha), /^[0-9a-f]{7,}$/, `${slug}: bad shortSha "${v.shortSha}"`);
+      assert.match(String(v.date), /^\d{4}-\d{2}-\d{2}$/, `${slug}: version date not ISO (${v.date})`);
+      assert.equal(v.pdf, `papers/${slug}/${v.shortSha}.pdf`, `${slug}: version pdf path mismatch (${v.pdf})`);
+      assert.equal(typeof v.hasPdf, "boolean", `${slug}: hasPdf is not a boolean`);
+      assert.ok(String(v.sourceUrl).startsWith("https://github.com/"), `${slug}: bad sourceUrl`);
+    }
+  }
+});
+
 test("dates are ISO YYYY-MM-DD and slugs are unique", () => {
   const slugs = PAPERS_INDEX.map((p) => p.slug);
   assert.equal(new Set(slugs).size, slugs.length, "duplicate paper slug");
