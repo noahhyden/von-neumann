@@ -388,5 +388,8 @@ version = "0.1.0"
 source = { editable = "../core" }
 
 [package.metadata]
-requires-dist = [{ name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" }]
+requires-dist = [
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "scipy", marker = "extra == 'dev'", specifier = ">=1.11" },
+]
 provides-extras = ["dev"]
