@@ -34,10 +34,17 @@ recurrence, a classical Jacobi eigensolver - pure Python, zero deps), so they ar
 *derived* numbers, not fitted black-box weights. Deterministic (§7): fixed nodes,
 and the validation sample uses a threaded seed, no wall clock.
 
-Scope (kept small per §2/§3): Uniform and Normal inputs; total-degree truncation;
-tensor quadrature (cost (degree+1)^d - fine for the low d here, sparse grids are
-the follow-up for higher d). LogNormal/LogUniform raise until a documented
-transformation lands.
+Distributions: Uniform (Legendre) and Normal (Hermite) use the exact Askey
+families; any other distribution (LogNormal, LogUniform) uses *arbitrary* PCE - the
+orthonormal basis is built from the distribution's own moments via the Stieltjes
+recurrence. One caveat carries over and is worth stating: PCE still needs the
+finding to be well approximated by a low-degree polynomial in the (standardized)
+*physical* variable. A LogUniform finding whose natural smoothness is in log space
+(e.g. 1/x over several decades) is not low-degree in x, so the fit is poor - but
+the fit_residual catches it and is_trustworthy() reads False, never a silent wrong
+answer. Fitting: tensor quadrature (cost (degree+1)^d) or least-squares regression
+(method="regression", polynomial in dimension); sparse grids remain the follow-up
+for very high dimension.
 """
 
 from __future__ import annotations
@@ -49,11 +56,22 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from itertools import product
 
-from vn_core.uq.distributions import Distribution, Fixed, Normal, Uniform
+from vn_core.uq.distributions import (
+    Distribution,
+    Fixed,
+    LogNormal,
+    LogUniform,
+    Normal,
+    Uniform,
+)
 
 # Polynomial families keyed by the distribution they are orthogonal to.
 _LEGENDRE = "legendre"  # Uniform
 _HERMITE = "hermite"  # Normal (probabilists' He_n, standard-normal weight)
+_ARBITRARY = "arbitrary"  # any distribution: basis built from its moments (aPCE)
+
+# Points used to discretize an arbitrary distribution for the Stieltjes procedure.
+_STIELTJES_DISC = 4000
 
 
 # --- Gauss quadrature: Golub-Welsch nodes/weights on the reference domain ------
@@ -174,35 +192,145 @@ def _basis_values(family: str, max_degree: int, xi: float) -> list[float]:
 # --- Input adapters: family + physical<->reference map per distribution ---------
 
 
-def _adapt(dist: Distribution) -> tuple[str, float, float]:
-    """Return (family, p0, p1) so a physical x maps to the reference variable xi.
+@dataclass(frozen=True)
+class _Adapter:
+    """How one input maps to its orthonormal-polynomial reference variable.
 
-    Legendre (Uniform[low, high]): xi = 2 (x - low)/(high - low) - 1, x in [-1, 1].
-    Hermite  (Normal[mean, std]):  xi = (x - mean)/std, standard normal.
+    ``kind`` is the polynomial family: "legendre" (Uniform), "hermite" (Normal),
+    or "arbitrary" (any other distribution - basis built from its moments). The
+    standardization is affine: reference = (x - p0)/p1 for hermite/arbitrary, and
+    the [-1,1] map for legendre. For "arbitrary", ``alpha``/``beta`` carry the
+    three-term recurrence of the polynomials orthonormal to the distribution.
+    """
+
+    kind: str
+    p0: float
+    p1: float
+    alpha: tuple[float, ...] = ()
+    beta: tuple[float, ...] = ()
+
+
+def _stieltjes(
+    dist: Distribution, max_degree: int, n_disc: int = _STIELTJES_DISC
+) -> tuple[float, float, tuple[float, ...], tuple[float, ...]]:
+    """Recurrence (alpha_k, beta_k) of the polynomials orthonormal to ``dist``.
+
+    Arbitrary polynomial chaos (Oladyshkin & Nowak 2012): build the basis from the
+    input's own moments instead of a fixed Askey family. Computed by the
+    *discretized Stieltjes* procedure (Gautschi) - a stable route via the
+    distribution's ``quantile``: approximate the measure by ``n_disc`` equal-weight
+    quantile points of the standardized variable z = (x - mu)/sigma, then generate
+    the recurrence by successive orthogonalization. Deterministic (fixed points, no
+    RNG). ``beta[0]`` is the total mass (1); ``beta[k]`` = <p_k,p_k>/<p_{k-1},p_{k-1}>.
+    """
+    us = [(i + 0.5) / n_disc for i in range(n_disc)]
+    xs = [dist.quantile(u) for u in us]
+    mu = statistics.fmean(xs)
+    sigma = statistics.pstdev(xs)
+    if sigma <= 0:
+        raise ValueError("arbitrary-PCE input has zero spread; model it as Fixed")
+    z = [(x - mu) / sigma for x in xs]
+    w = 1.0 / n_disc
+    alpha: list[float] = []
+    beta: list[float] = [1.0]
+    p_prev = [0.0] * n_disc
+    p_cur = [1.0] * n_disc
+    inner_prev = 1.0
+    inner_cur = sum(w * p_cur[i] ** 2 for i in range(n_disc))  # = 1
+    for k in range(max_degree + 1):
+        num = sum(w * z[i] * p_cur[i] ** 2 for i in range(n_disc))
+        alpha.append(num / inner_cur)
+        if k == max_degree:
+            break
+        b_recur = (inner_cur / inner_prev) if k >= 1 else 0.0
+        p_next = [(z[i] - alpha[k]) * p_cur[i] - b_recur * p_prev[i] for i in range(n_disc)]
+        inner_next = sum(w * p_next[i] ** 2 for i in range(n_disc))
+        beta.append(inner_next / inner_cur)
+        p_prev, p_cur = p_cur, p_next
+        inner_prev, inner_cur = inner_cur, inner_next
+    return mu, sigma, tuple(alpha), tuple(beta)
+
+
+def _basis_from_recurrence(
+    alpha: tuple[float, ...], beta: tuple[float, ...], max_degree: int, z: float
+) -> list[float]:
+    """[phi_0..phi_max_degree](z) for the arbitrary family's orthonormal basis."""
+    p = [0.0] * (max_degree + 1)
+    p[0] = 1.0
+    if max_degree >= 1:
+        p[1] = z - alpha[0]
+    for k in range(1, max_degree):
+        p[k + 1] = (z - alpha[k]) * p[k] - beta[k] * p[k - 1]
+    out: list[float] = []
+    norm2 = 1.0
+    for k in range(max_degree + 1):
+        if k > 0:
+            norm2 *= beta[k]  # <p_k,p_k> = prod_{j<=k} beta_j (beta_0 = 1)
+        out.append(p[k] / math.sqrt(norm2))
+    return out
+
+
+def _gauss_from_recurrence(
+    alpha: tuple[float, ...], beta: tuple[float, ...], m: int
+) -> tuple[list[float], list[float]]:
+    """m-point Gauss nodes/weights for the arbitrary family (Golub-Welsch)."""
+    jac = [[0.0] * m for _ in range(m)]
+    for k in range(m):
+        jac[k][k] = alpha[k]
+    for k in range(1, m):
+        b = math.sqrt(beta[k])
+        jac[k - 1][k] = b
+        jac[k][k - 1] = b
+    eigenvalues, v = _jacobi_eigen(jac)
+    order = sorted(range(m), key=lambda i: eigenvalues[i])
+    return [eigenvalues[i] for i in order], [v[0][i] ** 2 for i in order]
+
+
+def _adapt(dist: Distribution, max_degree: int) -> _Adapter:
+    """Build the reference-variable adapter for one input distribution.
+
+    Uniform -> Legendre, Normal -> Hermite (exact Askey families). Any other
+    distribution (LogNormal, LogUniform) -> an "arbitrary" basis built from its
+    moments via the Stieltjes recurrence, so PCE is no longer limited to the two
+    Askey cases. ``max_degree`` sets how many recurrence terms are computed.
     """
     if isinstance(dist, Uniform):
-        return (_LEGENDRE, dist.low, dist.high)
+        return _Adapter(_LEGENDRE, dist.low, dist.high)
     if isinstance(dist, Normal):
         if dist.std <= 0:
             raise ValueError("PCE needs a Normal with std > 0 (a zero-std Normal is Fixed)")
-        return (_HERMITE, dist.mean, dist.std)
+        return _Adapter(_HERMITE, dist.mean, dist.std)
+    if isinstance(dist, (LogNormal, LogUniform)):
+        mu, sigma, alpha, beta = _stieltjes(dist, max_degree)
+        return _Adapter(_ARBITRARY, mu, sigma, alpha, beta)
     raise NotImplementedError(
-        f"PCE supports Uniform and Normal inputs; got {type(dist).__name__}. "
-        "LogNormal/LogUniform need a documented transformation (follow-up); use "
-        "monte_carlo / uq_and_gsa for those."
+        f"PCE does not support {type(dist).__name__} inputs; use monte_carlo / "
+        "uq_and_gsa, or add a distribution with a quantile() for the arbitrary path."
     )
 
 
-def _to_reference(family: str, p0: float, p1: float, x: float) -> float:
-    if family == _LEGENDRE:
-        return 2.0 * (x - p0) / (p1 - p0) - 1.0
-    return (x - p0) / p1  # Hermite: (x - mean)/std
+def _to_reference(ad: _Adapter, x: float) -> float:
+    if ad.kind == _LEGENDRE:
+        return 2.0 * (x - ad.p0) / (ad.p1 - ad.p0) - 1.0
+    return (x - ad.p0) / ad.p1  # Hermite (mean,std) / arbitrary (mu,sigma)
 
 
-def _to_physical(family: str, p0: float, p1: float, xi: float) -> float:
-    if family == _LEGENDRE:
-        return p0 + (p1 - p0) * (xi + 1.0) / 2.0
-    return p0 + p1 * xi  # Hermite: mean + std*xi
+def _to_physical(ad: _Adapter, ref: float) -> float:
+    if ad.kind == _LEGENDRE:
+        return ad.p0 + (ad.p1 - ad.p0) * (ref + 1.0) / 2.0
+    return ad.p0 + ad.p1 * ref
+
+
+def _basis_at(ad: _Adapter, max_degree: int, ref: float) -> list[float]:
+    if ad.kind == _ARBITRARY:
+        return _basis_from_recurrence(ad.alpha, ad.beta, max_degree, ref)
+    return _basis_values(ad.kind, max_degree, ref)
+
+
+def _gauss_for(ad: _Adapter, m: int) -> tuple[list[float], list[float]]:
+    if ad.kind == _ARBITRARY:
+        return _gauss_from_recurrence(ad.alpha, ad.beta, m)
+    return _gauss_nodes_weights(ad.kind, m)
 
 
 # --- Result --------------------------------------------------------------------
@@ -226,7 +354,7 @@ class PCEResult:
 
     # Private surrogate state for predict(); underscored to signal "not the API".
     coefficients: dict[tuple[int, ...], float]
-    _adapters: tuple[tuple[str, float, float], ...]
+    _adapters: tuple["_Adapter", ...]
     _fixed: tuple[tuple[str, float], ...]
 
     def is_trustworthy(self, tol: float = 1e-2) -> bool:
@@ -246,14 +374,11 @@ class PCEResult:
         variance); missing active inputs raise via the mapping lookup.
         """
         xis = [
-            _to_reference(fam, p0, p1, sample[name])
-            for name, (fam, p0, p1) in zip(self.input_names, self._adapters)
+            _to_reference(ad, sample[name])
+            for name, ad in zip(self.input_names, self._adapters)
         ]
         max_deg = self.degree
-        tables = [
-            _basis_values(fam, max_deg, xi)
-            for (fam, _p0, _p1), xi in zip(self._adapters, xis)
-        ]
+        tables = [_basis_at(ad, max_deg, xi) for ad, xi in zip(self._adapters, xis)]
         total = 0.0
         for alpha, c in self.coefficients.items():
             term = c
@@ -272,11 +397,11 @@ def _check_finite(y: float) -> None:
 
 
 def _split_inputs(
-    inputs: Mapping[str, Distribution],
-) -> tuple[list[str], list[tuple[str, float, float]], list[tuple[str, float]]]:
-    """Partition inputs into active (Uniform/Normal) and Fixed; adapt the active."""
+    inputs: Mapping[str, Distribution], max_degree: int
+) -> tuple[list[str], list[_Adapter], list[tuple[str, float]]]:
+    """Partition inputs into active and Fixed; adapt the active for ``max_degree``."""
     active: list[str] = []
-    adapters: list[tuple[str, float, float]] = []
+    adapters: list[_Adapter] = []
     fixed: list[tuple[str, float]] = []
     for name in inputs:
         dist = inputs[name]
@@ -284,7 +409,7 @@ def _split_inputs(
             fixed.append((name, dist.value))
         else:
             active.append(name)
-            adapters.append(_adapt(dist))
+            adapters.append(_adapt(dist, max_degree))
     return active, adapters, fixed
 
 
@@ -350,7 +475,7 @@ def _fit_quadrature(
     inputs: Mapping[str, Distribution],
     finding: Callable[[Mapping[str, float]], float],
     active: list[str],
-    adapters: list[tuple[str, float, float]],
+    adapters: list[_Adapter],
     fixed_sample: dict[str, float],
     degree: int,
     d: int,
@@ -365,11 +490,11 @@ def _fit_quadrature(
     per_dim_nodes: list[list[float]] = []
     per_dim_weights: list[list[float]] = []
     per_dim_basis: list[list[list[float]]] = []
-    for fam, _p0, _p1 in adapters:
-        nodes, weights = _gauss_nodes_weights(fam, m)
+    for ad in adapters:
+        nodes, weights = _gauss_for(ad, m)
         per_dim_nodes.append(nodes)
         per_dim_weights.append(weights)
-        per_dim_basis.append([_basis_values(fam, degree, xi) for xi in nodes])
+        per_dim_basis.append([_basis_at(ad, degree, xi) for xi in nodes])
 
     idx_grid = list(product(*[range(m) for _ in range(d)]))
     ys: list[float] = []
@@ -377,8 +502,7 @@ def _fit_quadrature(
     for idx in idx_grid:
         sample = dict(fixed_sample)
         for dim, node_i in enumerate(idx):
-            fam, p0, p1 = adapters[dim]
-            sample[active[dim]] = _to_physical(fam, p0, p1, per_dim_nodes[dim][node_i])
+            sample[active[dim]] = _to_physical(adapters[dim], per_dim_nodes[dim][node_i])
         y = finding(sample)
         _check_finite(y)
         ys.append(y)
@@ -403,7 +527,7 @@ def _fit_regression(
     inputs: Mapping[str, Distribution],
     finding: Callable[[Mapping[str, float]], float],
     active: list[str],
-    adapters: list[tuple[str, float, float]],
+    adapters: list[_Adapter],
     fixed_sample: dict[str, float],
     degree: int,
     d: int,
@@ -434,10 +558,10 @@ def _fit_regression(
         sample = dict(fixed_sample)
         tables: list[list[float]] = []
         for dim in range(d):
-            fam, p0, p1 = adapters[dim]
+            ad = adapters[dim]
             x = inputs[active[dim]].quantile(rng.random())
             sample[active[dim]] = x
-            tables.append(_basis_values(fam, degree, _to_reference(fam, p0, p1, x)))
+            tables.append(_basis_at(ad, degree, _to_reference(ad, x)))
         design.append([math.prod(tables[dim][a[dim]] for dim in range(d)) for a in alphas])
         y = finding(sample)
         _check_finite(y)
@@ -483,7 +607,7 @@ def pce_fit(
     if method not in ("quadrature", "regression"):
         raise ValueError(f"method must be 'quadrature' or 'regression', got {method!r}")
 
-    active, adapters, fixed = _split_inputs(inputs)
+    active, adapters, fixed = _split_inputs(inputs, degree)
     fixed_sample = {name: value for name, value in fixed}
 
     if not active:

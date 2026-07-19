@@ -25,7 +25,6 @@ import pytest
 
 from vn_core.uq import (
     Fixed,
-    LogNormal,
     Normal,
     Uniform,
     monte_carlo,
@@ -211,8 +210,16 @@ def test_all_fixed_inputs_is_a_constant():
 
 
 def test_unsupported_distribution_raises():
-    with pytest.raises(NotImplementedError, match="Uniform and Normal"):
-        pce_fit({"a": LogNormal(gmean=1.0, gstd=1.5)}, lambda s: s["a"], degree=3)
+    # LogNormal/LogUniform ARE supported now (arbitrary PCE); a distribution the
+    # adapter does not recognize at all still raises.
+    class Weird:
+        mean = 0.0
+
+        def quantile(self, u):
+            return u
+
+    with pytest.raises(NotImplementedError, match="does not support"):
+        pce_fit({"a": Weird()}, lambda s: s["a"], degree=3)
 
 
 def test_nonfinite_finding_raises():

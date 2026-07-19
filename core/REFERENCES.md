@@ -119,6 +119,21 @@ sensitivity estimator computed from the shared Saltelli design.
 Like the ODE solver, PCE carries no physical constants - only numerical-method
 constants, each a mathematical identity, not an assumption.
 
+- **Arbitrary distributions (aPCE via the Stieltjes recurrence).** For inputs
+  outside the Askey scheme (LogNormal, LogUniform), the orthonormal basis is built
+  from the distribution's own moments instead of a fixed family, by the
+  *discretized Stieltjes* procedure (a stable route via the distribution's
+  quantile). Caveat: the finding must still be low-degree-polynomial in the
+  physical variable - the fit_residual flags cases (e.g. 1/x over decades) where it
+  is not.
+  - **Oladyshkin, S. and Nowak, W. (2012), "Data-driven uncertainty quantification
+    using the arbitrary polynomial chaos expansion", Reliability Engineering &
+    System Safety 106, 179-190.** The moment-based (arbitrary) PCE.
+    - https://doi.org/10.1016/j.ress.2012.05.002
+  - **Gautschi, W. (1994), "Algorithm 726: ORTHPOL", ACM TOMS 20(1), 21-62.** The
+    discretized Stieltjes procedure for recurrence coefficients. Verdict:
+    reasonable - reproduces the analytic Legendre nodes on a Uniform to ~1e-4 and
+    recovers LogUniform's closed-form mean/variance to ~1e-6.
 - **Wiener-Askey basis choice (Uniform -> Legendre, Normal -> Hermite).**
   - **Xiu, D. and Karniadakis, G. E. (2002), "The Wiener-Askey polynomial chaos
     for stochastic differential equations", SIAM J. Sci. Comput. 24(2), 619-644.**

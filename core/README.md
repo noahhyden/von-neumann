@@ -12,7 +12,9 @@ Distributed as the `vn-core` package (Python name `vn_core`). Currently holds:
   returns the moments, closed-form Sobol indices, and a cheap `predict()` surrogate
   in far fewer model evaluations than Monte Carlo (`method="quadrature"` in low
   dimension, `method="regression"` - least squares, ~2*n_terms runs - when the
-  input count would make tensor quadrature explode), and carries a `fit_residual`
+  input count would make tensor quadrature explode; Uniform/Normal use the exact
+  Askey families, any other distribution uses arbitrary PCE built from its
+  moments), and carries a `fit_residual`
   that flags non-smooth findings so it never silently lies (fall back to
   `monte_carlo`/`uq_and_gsa` there). Two variance-reduction mean estimators sit
   alongside for when the mean is the headline number: `qmc_mean` (randomized
