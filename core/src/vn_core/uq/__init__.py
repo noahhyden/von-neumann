@@ -18,7 +18,8 @@ from vn_core.uq.distributions import (
     Normal,
     Uniform,
 )
-from vn_core.uq.pce import PCEResult, pce_fit
+from vn_core.uq.pce import CVResult, PCEResult, pce_control_variate, pce_fit
+from vn_core.uq.qmc import QMCMean, qmc_mean
 from vn_core.uq.report import one_line_finding
 from vn_core.uq.sample import MCResult, monte_carlo, summarize
 from vn_core.uq.sobol import Analysis, SobolResult, sobol_total_order, uq_and_gsa
@@ -39,5 +40,9 @@ __all__ = [
     "uq_and_gsa",
     "PCEResult",
     "pce_fit",
+    "CVResult",
+    "pce_control_variate",
+    "QMCMean",
+    "qmc_mean",
     "one_line_finding",
 ]
