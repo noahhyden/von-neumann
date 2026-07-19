@@ -661,3 +661,33 @@ committed artifact (`test_measure_results.py`) and the whole test suite. The
 `_nearest_unsettled_at` cumulative time drops ~8x on a small N=2000 event
 run (0.30 s -> 0.036 s); overall wall clock for a fresh run drops ~40-60%
 because Python overhead outside the kernel remains.
+
+## Per-arrival hot-loop speed-up (post-#27)
+
+Follow-up to #27 Part 4. After the njit kernel landed, `_nearest_unsettled_at`
+dropped from ~60% self-time to a wrapper cost; the leading cost shifted to
+`_process_arrivals` (~15% self-time in the profile). Three small changes shave
+another ~2x off the residual:
+
+- **Tuple storage for the fixed star field.** `xs, ys, zs,
+  star_speed_pc_yr` become tuples of Python floats. Numpy mirrors
+  (`xs_np, ys_np, zs_np`) exist alongside for the njit kernel. Per-element
+  scalar access is ~40% faster than numpy in the tight loop and, unlike
+  numpy scalars, does not implicitly return `np.float64` (avoids downstream
+  numpy overhead).
+- **Inlined `_wall_bin` and `_hop_bin` inside `_process_arrivals`.** Two
+  function calls per arrival * 40k arrivals per N=5000 run were the leading
+  per-loop cost. The inlined version also caches `1/d_nn`
+  (~`density^(1/3)` constant) rather than recomputing per call.
+- **`@dataclass(slots=True)` on `SwarmState`** and a pre-built `_njit_args`
+  tuple. Attribute lookups compress from ~20 per query to one lookup + one
+  tuple unpack.
+
+Full monorepo tests remain green (drift-guard bit-identical). Wall-clock
+speedups vs. pre-#27 baseline, event mode, warm JIT:
+
+| N     | pre-#27 (list) | this state | overall |
+|-------|----------------|------------|---------|
+| 1000  | 0.088 s        | 0.043 s    | 2.0x    |
+| 2000  | 0.163 s        | 0.081 s    | 2.0x    |
+| 5000  | 0.542 s        | 0.259 s    | 2.1x    |

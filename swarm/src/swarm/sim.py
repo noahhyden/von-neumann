@@ -124,7 +124,10 @@ def _wall_bin(s: SwarmState, params: SwarmParams, star: int) -> int:
     lands in a high bin, one hugging a wall in bin 0.
     """
     L = params.box_side_pc
-    wall = min(s.xs[star], L - s.xs[star], s.ys[star], L - s.ys[star], s.zs[star], L - s.zs[star])
+    x = s.xs[star]
+    y = s.ys[star]
+    z = s.zs[star]
+    wall = min(x, L - x, y, L - y, z, L - z)
     d_nn = 0.55396 * params.density_stars_per_pc3 ** (-1.0 / 3.0)
     r = wall / d_nn if d_nn > 0.0 else 0.0
     k = 0
@@ -356,16 +359,16 @@ def _believes_settled_at(
     info) this collapses to ``settled_year[i] >= 0`` - bit-identical to slices 1-3. Pure
     function of state (positions + settled_year + the sourced ``C_PC_PER_YEAR``); no RNG.
     """
-    sy = float(s.settled_year[i])
+    sy = float(s.settled_year[i])  # numpy scalar -> Python float
     if sy < 0.0:
         return False
     if coordination == "instant":
         return True
-    dx = float(s.xs[i]) - px
-    dy = float(s.ys[i]) - py
-    dz = float(s.zs[i]) - pz
+    dx = s.xs[i] - px  # tuples of Python floats since #27 Part 4 speed-up
+    dy = s.ys[i] - py
+    dz = s.zs[i] - pz
     d = (dx * dx + dy * dy + dz * dz) ** 0.5
-    return bool(sy + d / C_PC_PER_YEAR <= year)
+    return sy + d / C_PC_PER_YEAR <= year
 
 
 def _believes_settled(s: SwarmState, frm: int, i: int, params: SwarmParams) -> bool:
@@ -415,11 +418,7 @@ def _nearest_unsettled_at(
                 _EXCLUDE_SCRATCH[j] = e
         r = _NJIT_KERNEL(
             px, py, pz, year, coordination == "instant",
-            s.xs, s.ys, s.zs, s.settled_year,
-            s.kd_root, s.kd_axis, s.kd_split, s.kd_lo, s.kd_hi,
-            s.kd_bxmin, s.kd_bxmax, s.kd_bymin, s.kd_bymax, s.kd_bzmin, s.kd_bzmax,
-            s.kd_nuns, s.kd_tsmax,
-            s.kd_bucket_flat, s.kd_bucket_offsets,
+            *s._njit_args,
             _EXCLUDE_SCRATCH, n_ex,
         )
         return int(r) if r >= 0 else None
@@ -807,28 +806,43 @@ def initial_state(params: SwarmParams, *, seed: int) -> SwarmState:
         range(n),
         key=lambda i: (xs[i] - cx) ** 2 + (ys[i] - cy) ** 2 + (zs[i] - cz) ** 2,
     )
-    # Convert positions and per-star arrays to numpy so the njit kernel reads them
-    # directly (#27 Part 4). No behaviour change; numpy fixed-index assignment matches
-    # Python list assignment element-wise.
+    # Two representations of the fixed star field: tuples for the per-arrival hot Python
+    # loop (~40% faster scalar access than numpy), and numpy mirrors for the njit kernel.
+    # The tuples are immutable so the mirrors stay valid without any sync work. settled_year
+    # is numpy (it mutates per settle) and read with `float()` at hot Python sites.
+    xs_t = tuple(xs)
+    ys_t = tuple(ys)
+    zs_t = tuple(zs)
+    star_speed_t = tuple(star_speed)
     xs_np = np.asarray(xs, dtype=np.float64)
     ys_np = np.asarray(ys, dtype=np.float64)
     zs_np = np.asarray(zs, dtype=np.float64)
-    star_speed_np = np.asarray(star_speed, dtype=np.float64)
     settled = np.full(n, -1.0, dtype=np.float64)
     settled[origin] = 0.0
     v_max = params.probe_speed_pc_per_year
     kd = _build_kdtree(xs, ys, zs)  # dynamic nearest-over-the-unsettled-set index (issue #30)
     state = SwarmState(
-        rng=rng, year=0.0, xs=xs_np, ys=ys_np, zs=zs_np, star_speed_pc_yr=star_speed_np,
+        rng=rng, year=0.0, xs=xs_t, ys=ys_t, zs=zs_t, star_speed_pc_yr=star_speed_t,
         settled_year=settled,
         origin=origin, probes={}, next_probe_id=0, total_launched=0, max_speed_pc_yr=v_max,
         box_side_pc=L, periodic=params.periodic,
         settled_count=1, front_radius=0.0,  # origin only; d(origin, origin) = 0 (issue #27)
+        xs_np=xs_np, ys_np=ys_np, zs_np=zs_np,
         kd_root=kd["root"], kd_axis=kd["axis"], kd_split=kd["split"], kd_lo=kd["lo"], kd_hi=kd["hi"],
         kd_parent=kd["parent"], kd_bucket_flat=kd["bucket_flat"], kd_bucket_offsets=kd["bucket_offsets"],
         kd_bxmin=kd["bxmin"], kd_bxmax=kd["bxmax"],
         kd_bymin=kd["bymin"], kd_bymax=kd["bymax"], kd_bzmin=kd["bzmin"], kd_bzmax=kd["bzmax"],
         kd_nuns=kd["nuns"], kd_tsmax=kd["tsmax"], star_leaf=kd["star_leaf"],
+    )
+    # Cache the njit-arg tuple: 1 attribute lookup + tuple unpack per query instead of ~20
+    # attribute chains (issue #27 speed-up on top of Part 4). Elements are references, so
+    # in-place mutations to settled_year / kd_nuns / kd_tsmax are visible immediately.
+    state._njit_args = (
+        state.xs_np, state.ys_np, state.zs_np, state.settled_year,
+        state.kd_root, state.kd_axis, state.kd_split, state.kd_lo, state.kd_hi,
+        state.kd_bxmin, state.kd_bxmax, state.kd_bymin, state.kd_bymax, state.kd_bzmin, state.kd_bzmax,
+        state.kd_nuns, state.kd_tsmax,
+        state.kd_bucket_flat, state.kd_bucket_offsets,
     )
     _kd_mark_settled(state, origin)  # origin is settled at year 0; fold its aggregates in
     # Seed probes leave the homeworld at powered cruise, taking the homeworld's slingshot.
@@ -846,58 +860,117 @@ def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Pro
     # Remove the arriving probes from the live set up front (as the old list rebuild did), so the
     # settlement sweep below never reschedules a probe that is itself arriving this event. Launches
     # and re-targets re-add via _add_probe. O(len(arrivals)), not O(P).
+    probes = state.probes
     for p in arrivals:
-        state.probes.pop(p.id, None)
+        probes.pop(p.id, None)
 
+    # Hoist per-call constants and state fields so the per-arrival loop makes local lookups
+    # instead of attribute chains (issue #27 speed-up; identical semantics).
     state.total_arrivals += len(arrivals)
+    xs = state.xs
+    ys = state.ys
+    zs = state.zs
+    settled_year = state.settled_year
+    year = state.year
+    origin = state.origin
+    front_radius = state.front_radius
+    settle_hop_hist = state.settle_hop_hist
+    settle_wall_hist = state.settle_wall_hist
+    wasted_hop_hist = state.wasted_hop_hist
+    wasted_wall_hist = state.wasted_wall_hist
+    hop_edges = HOP_BIN_EDGES
+    wall_edges = WALL_BIN_EDGES_NN
+    box_side = params.box_side_pc
+    d_nn = 0.55396 * params.density_stars_per_pc3 ** (-1.0 / 3.0)
+    inv_d_nn = 1.0 / d_nn if d_nn > 0.0 else 0.0
+    max_retargets = params.max_retargets
+    periodic = state.periodic
+
     for p in arrivals:
-        if state.settled_year[p.target] < 0.0:
+        target = p.target
+        hop_len = p.hop_len_pc
+        v = p.speed_pc_yr
+        # Inline hop_bin (was a per-arrival function call).
+        hb = 0
+        for e in hop_edges:
+            if hop_len >= e:
+                hb += 1
+            else:
+                break
+        # Inline wall_bin.
+        x = xs[target]; y = ys[target]; z = zs[target]
+        wall = x if x < box_side - x else box_side - x
+        yy = y if y < box_side - y else box_side - y
+        if yy < wall:
+            wall = yy
+        zz = z if z < box_side - z else box_side - z
+        if zz < wall:
+            wall = zz
+        r = wall * inv_d_nn
+        wb = 0
+        for e in wall_edges:
+            if r >= e:
+                wb += 1
+            else:
+                break
+
+        if settled_year[target] < 0.0:
             # First to arrive: settle it and spread (slingshot off it, boosting offspring).
-            state.settled_year[p.target] = state.year
-            _kd_mark_settled(state, p.target)  # remove from the unsettled set (issue #30)
+            settled_year[target] = year
+            _kd_mark_settled(state, target)  # remove from the unsettled set (issue #30)
             # Maintain the running count + front radius here (the sole settle site besides the
             # origin), so the per-event snapshot is O(1) instead of an O(N) rescan (issue #27).
             state.settled_count += 1
-            d_origin = _dist(state, p.target, state.origin)
-            if d_origin > state.front_radius:
+            # Inline _dist to origin (no periodic wrap for origin distance is used elsewhere;
+            # keep periodic handling for correctness).
+            dx = x - xs[origin]
+            dy = y - ys[origin]
+            dz = z - zs[origin]
+            if periodic:
+                dx -= box_side * round(dx / box_side)
+                dy -= box_side * round(dy / box_side)
+                dz -= box_side * round(dz / box_side)
+            d_origin = (dx * dx + dy * dy + dz * dz) ** 0.5
+            if d_origin > front_radius:
+                front_radius = d_origin
                 state.front_radius = d_origin
-            _on_settled(state, params, p.target)  # inflight: reschedule probes now doomed by this claim
-            state.settle_hop_sum_pc += p.hop_len_pc  # winning-trip hop length (read-only)
+            _on_settled(state, params, target)  # inflight: reschedule probes now doomed by this claim
+            state.settle_hop_sum_pc += hop_len
             state.settle_hop_count += 1
-            state.settle_hop_hist[_hop_bin(p.hop_len_pc)] += 1  # won arrivals by hop-length bin
-            state.settle_wall_hist[_wall_bin(state, params, p.target)] += 1  # won, by wall-distance bin
-            state.settle_v_sum_pc_yr += p.speed_pc_yr  # winning-trip flight speed (energy weight)
-            state.settle_v2_sum += p.speed_pc_yr * p.speed_pc_yr
-            _launch_from(state, p.target, params, p.speed_pc_yr)
+            settle_hop_hist[hb] += 1
+            settle_wall_hist[wb] += 1
+            state.settle_v_sum_pc_yr += v
+            state.settle_v2_sum += v * v
+            _launch_from(state, target, params, v)
         else:
             # Raced and lost: a wasted trip (the cost of stale info). Re-target (by policy,
             # from this arrival star's belief), keeping this probe's speed - up to the cap.
             state.wasted_arrivals += 1
-            state.wasted_hop_sum_pc += p.hop_len_pc  # wasted-trip hop length (read-only)
+            state.wasted_hop_sum_pc += hop_len
             state.wasted_hop_count += 1
-            state.wasted_hop_hist[_hop_bin(p.hop_len_pc)] += 1  # wasted arrivals by hop-length bin
-            state.wasted_wall_hist[_wall_bin(state, params, p.target)] += 1  # wasted, by wall-distance bin
-            state.wasted_travel_pc += p.hop_len_pc  # a lost full arrival wastes its whole hop
-            state.wasted_v_sum_pc_yr += p.speed_pc_yr  # wasted-trip flight speed (energy weight)
-            state.wasted_v2_sum += p.speed_pc_yr * p.speed_pc_yr
+            wasted_hop_hist[hb] += 1
+            wasted_wall_hist[wb] += 1
+            state.wasted_travel_pc += hop_len
+            state.wasted_v_sum_pc_yr += v
+            state.wasted_v2_sum += v * v
             # Retire a probe after too many lost races (a bounce-chain bound). Applied to BOTH
             # coordination modes: instant also loses in-transit races and re-targets (a probe
             # aims at a truly-unsettled star but another can settle it before it arrives), so it
             # is NOT bounce-free. Capping only lightspeed would inflate instant's wasted-trip
             # count and bias the paired fuel comparison. Bookkeeping, not physics; the results
             # are shown insensitive to the threshold.
-            if p.retargets >= params.max_retargets:
+            if p.retargets >= max_retargets:
                 continue  # bounce chain exhausted → retire the probe as wasted
-            target = _select_target(state, p.target, set(), params)
-            if target is not None:
+            new_target = _select_target(state, target, set(), params)
+            if new_target is not None:
                 state.retarget_count += 1
-                hop = _dist(state, p.target, target)
-                travel = hop / p.speed_pc_yr
+                hop = _dist(state, target, new_target)
+                travel = hop / v
                 _add_probe(state, params, Probe(
-                    id=p.id, target=target, arrive_year=state.year + travel,
-                    speed_pc_yr=p.speed_pc_yr, retargets=p.retargets + 1, hop_len_pc=hop,
-                    from_x=state.xs[p.target], from_y=state.ys[p.target], from_z=state.zs[p.target],
-                    launch_year=state.year,
+                    id=p.id, target=new_target, arrive_year=year + travel,
+                    speed_pc_yr=v, retargets=p.retargets + 1, hop_len_pc=hop,
+                    from_x=x, from_y=y, from_z=z,
+                    launch_year=year,
                 ))
 
 
