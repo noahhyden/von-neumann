@@ -125,33 +125,18 @@ def _saltelli_evaluate(
 _Z90 = 1.6448536269514722
 
 
-def _total_row(ev: _SaltelliEvals, name: str, var: float, j: int) -> float:
-    """Per-sample contribution to the Jansen total-order estimator."""
-    return (ev.y_a[j] - ev.y_ab[name][j]) ** 2 / (2.0 * var)
-
-
-def _first_row(ev: _SaltelliEvals, name: str, var: float, j: int) -> float:
-    """Per-sample contribution to the Saltelli-2010 first-order estimator."""
-    return ev.y_b[j] * (ev.y_ab[name][j] - ev.y_a[j]) / var
-
-
 def _asymptotic_ci(
-    ev: _SaltelliEvals,
-    var: float,
-    center: dict[str, float],
-    row: Callable[[_SaltelliEvals, str, float, int], float],
+    rows_by_name: dict[str, list[float]], center: dict[str, float], n: int
 ) -> dict[str, tuple[float, float]]:
-    """90% CI from the estimator's own standard error (index is a mean of rows).
+    """90% CI from the estimator's own standard error (each index is a mean of rows).
 
     stderr = pstdev(per-row terms)/sqrt(N); CI = estimate +- z_0.95 * stderr. O(N),
     so it is effectively free - and matches the bootstrap CI to 2-3 decimals on the
     Ishigami benchmark. Approximate (treats var as fixed, assumes near-normal), the
     documented trade for being cheap enough to always compute.
     """
-    n = ev.n
     out: dict[str, tuple[float, float]] = {}
-    for name in ev.names:
-        rows = [row(ev, name, var, j) for j in range(n)]
+    for name, rows in rows_by_name.items():
         se = statistics.pstdev(rows) / math.sqrt(n) if n >= 2 else 0.0
         half = _Z90 * se
         out[name] = (center[name] - half, center[name] + half)
@@ -159,19 +144,21 @@ def _asymptotic_ci(
 
 
 def _bootstrap_ci(
-    ev: _SaltelliEvals, var: float, n_boot: int, seed: int
+    ev: _SaltelliEvals, mean: float, n_boot: int, seed: int
 ) -> tuple[dict[str, tuple[float, float]], dict[str, tuple[float, float]]]:
     """90% percentile CIs by resampling the N design rows with replacement.
 
     More robust than the asymptotic CI (no normality/fixed-var assumption) but O(N
     * n_boot) with no new model evaluations - opt-in because that is slow at large
     N (measured ~4 s at N=8000, n_boot=500). Uses its own RNG stream, so the point
-    estimates stay byte-identical.
+    estimates stay byte-identical. Var and the first-order mean are re-estimated per
+    resample (the first-order estimator is centered - see _sobol_from_evals).
     """
     rng = random.Random(seed)
     n = ev.n
-    t_rows = {nm: [(ev.y_a[j] - ev.y_ab[nm][j]) ** 2 for j in range(n)] for nm in ev.names}
-    f_rows = {nm: [ev.y_b[j] * (ev.y_ab[nm][j] - ev.y_a[j]) for j in range(n)] for nm in ev.names}
+    t_num = {nm: [(ev.y_a[j] - ev.y_ab[nm][j]) ** 2 for j in range(n)] for nm in ev.names}
+    fb = {nm: [ev.y_b[j] * (ev.y_ab[nm][j] - ev.y_a[j]) for j in range(n)] for nm in ev.names}
+    diff = {nm: [ev.y_ab[nm][j] - ev.y_a[j] for j in range(n)] for nm in ev.names}
     boot_total = {nm: [] for nm in ev.names}
     boot_first = {nm: [] for nm in ev.names}
     for _ in range(n_boot):
@@ -180,9 +167,12 @@ def _bootstrap_ci(
         var_b = statistics.pvariance(comb)
         if var_b == 0.0:
             continue
+        mean_b = statistics.fmean(comb)
         for nm in ev.names:
-            boot_total[nm].append(sum(t_rows[nm][j] for j in idx) / (2.0 * n * var_b))
-            boot_first[nm].append(sum(f_rows[nm][j] for j in idx) / (n * var_b))
+            boot_total[nm].append(sum(t_num[nm][j] for j in idx) / (2.0 * n * var_b))
+            # Centered first-order: sum (y_b - mean_b)(y_ab - y_a) = sum fb - mean_b sum diff.
+            first_num = sum(fb[nm][j] for j in idx) - mean_b * sum(diff[nm][j] for j in idx)
+            boot_first[nm].append(first_num / (n * var_b))
 
     def ci(vals: list[float]) -> tuple[float, float]:
         if not vals:
@@ -222,24 +212,34 @@ def _sobol_from_evals(
             variance=0.0, mean=mean, n=ev.n, n_evaluations=n_eval, ci_method="none",
         )
 
+    n = ev.n
     total_order: dict[str, float] = {}
     first_order: dict[str, float] = {}
+    total_rows: dict[str, list[float]] = {}
+    first_rows: dict[str, list[float]] = {}
     for name in ev.names:
         y_ab = ev.y_ab[name]
         # Jansen total-order estimator (arithmetic kept exactly as before - the
         # point estimate must stay byte-identical to the pre-CI implementation).
-        s = sum((ev.y_a[j] - y_ab[j]) ** 2 for j in range(ev.n))
-        total_order[name] = s / (2.0 * ev.n * var)
-        # Saltelli-2010 first-order estimator (free: reuses y_a/y_b/y_ab).
-        s_f = sum(ev.y_b[j] * (y_ab[j] - ev.y_a[j]) for j in range(ev.n))
-        first_order[name] = s_f / (ev.n * var)
+        s = sum((ev.y_a[j] - y_ab[j]) ** 2 for j in range(n))
+        total_order[name] = s / (2.0 * n * var)
+        # Saltelli-2010 first-order estimator, CENTERED: subtract the output mean
+        # from y_B. Without it the estimator carries the full output mean and, when
+        # the mean is large relative to the spread (low coefficient of variation),
+        # catastrophic cancellation makes it wildly noisy - it read 2.459 (and 0.384
+        # at N=6000) on a real finding with mean/std ~ 52, where the true value is
+        # ~1. Centering fixes it; total-order is immune (it uses differences).
+        s_f = sum((ev.y_b[j] - mean) * (y_ab[j] - ev.y_a[j]) for j in range(n))
+        first_order[name] = s_f / (n * var)
+        total_rows[name] = [(ev.y_a[j] - y_ab[j]) ** 2 / (2.0 * var) for j in range(n)]
+        first_rows[name] = [(ev.y_b[j] - mean) * (y_ab[j] - ev.y_a[j]) / var for j in range(n)]
 
     if bootstrap > 0:
-        total_ci, first_ci = _bootstrap_ci(ev, var, bootstrap, seed)
+        total_ci, first_ci = _bootstrap_ci(ev, mean, bootstrap, seed)
         ci_method = "bootstrap"
     else:
-        total_ci = _asymptotic_ci(ev, var, total_order, _total_row)
-        first_ci = _asymptotic_ci(ev, var, first_order, _first_row)
+        total_ci = _asymptotic_ci(total_rows, total_order, n)
+        first_ci = _asymptotic_ci(first_rows, first_order, n)
         ci_method = "asymptotic"
 
     return SobolResult(
