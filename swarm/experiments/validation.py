@@ -14,7 +14,7 @@ stand-in for Nicholson & Forgan's model. Two levels of validation:
    dt=5000 yr quantized the boosted hops and undercut the speedup to ~20x; the event fold
    removes that and recovers the full ~two-orders-of-magnitude figure.
 
-Run:  uv run python -m experiments.validation
+Run:  uv run python -O -m experiments.validation  # ensemble; -O strips debug invariants
 """
 
 from __future__ import annotations
@@ -51,4 +51,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    from experiments._run import warn_if_no_optimize
+
+    warn_if_no_optimize("experiments.validation")
     main()

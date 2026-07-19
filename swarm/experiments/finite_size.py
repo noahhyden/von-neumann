@@ -19,7 +19,7 @@ paper's figure regenerates) plus an N=2400 trend point - those are the pinned ar
 But the sweep now extends **cleanly to N = 200,000**: pass a custom ladder to ``run_finite_size``
 (seeds scaled to a precision target, not to compute), and the ~18-19% fuel tax reproduces at scale.
 
-Run:  uv run python -m experiments.finite_size
+Run:  uv run python -O -m experiments.finite_size  # ensemble; -O strips debug invariants
       uv run python -c "from experiments.finite_size import run_finite_size; \
 print(run_finite_size((3000, 12000, 48000, 200000), k=4))"  # the extended-reach ladder (#30)
 """
@@ -92,4 +92,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    from experiments._run import warn_if_no_optimize
+
+    warn_if_no_optimize("experiments.finite_size")
     main()

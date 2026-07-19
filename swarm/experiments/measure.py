@@ -13,9 +13,13 @@ recompute, or name specific measurements to run a subset), so a long run is resu
 committed incrementally - progress survives an interrupted session.
 
 Run:
-    uv run --extra dev python -m experiments.measure            # all measurements (skip existing)
-    uv run --extra dev python -m experiments.measure --force    # recompute all
-    uv run --extra dev python -m experiments.measure lambda_sweep floor_bracket   # a subset
+    uv run --extra dev python -O -m experiments.measure            # all measurements (skip existing)
+    uv run --extra dev python -O -m experiments.measure --force    # recompute all
+    uv run --extra dev python -O -m experiments.measure lambda_sweep floor_bracket   # a subset
+
+The ``-O`` strips ``if __debug__:`` invariant checks; ensemble runs get a ~2-3x
+wall-clock win at bit-identical results (see docs/HARDWARE.md "Assertion mode").
+Omit ``-O`` while iterating - you'll get a stderr warning on each run.
 
 Measurements (referee asks in brackets):
     lambda_sweep   - fuel/time/energy tax vs Lambda = v/c, powered, event [headline]
@@ -1086,4 +1090,7 @@ def main(argv: list[str]) -> None:
 
 
 if __name__ == "__main__":
+    from experiments._run import warn_if_no_optimize
+
+    warn_if_no_optimize("experiments.measure")
     main(sys.argv[1:])

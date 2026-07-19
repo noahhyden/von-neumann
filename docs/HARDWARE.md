@@ -34,6 +34,10 @@ The fold modules carry `if __debug__:` invariant checks at each `step` call site
 - **Ensemble runs** (Sobol sweeps, 200k-star swarm ensembles, anything measuring wall
   clock) should invoke Python with `-O`: it strips both the `if __debug__:` prologue
   and every `assert` statement, restoring bit-identical results at zero overhead.
+  The swarm ensemble scripts (`swarm/experiments/*.py`) print a one-line stderr
+  warning if they are run without `-O`, so the discipline surfaces even when
+  someone bypasses `make sweep` (which already passes `-O`). See
+  `swarm/experiments/_run.py`.
 - **Everything else** runs with assertions on. Losing a bug because it violated an
   invariant we forgot to check in release is a §2 failure mode; keep the guard on
   unless the specific run needs the speed.

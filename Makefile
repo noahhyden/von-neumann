@@ -67,10 +67,13 @@ frontend:
 
 # Worker cap keeps big-N sweeps (e.g. branching_scale at 200k) inside RAM. Blank WORKERS
 # uses all cores. Determinism is unaffected: executor.map preserves order at any count.
+# `-O` strips debug invariants (~2-3x wall-clock win at bit-identical results, see
+# docs/HARDWARE.md "Assertion mode" and swarm/experiments/_run.py). Sweep is by
+# definition an ensemble run; invariants are on for tests + dev iteration only.
 sweep:
 	@test -n "$(NAME)" || { echo "usage: make sweep NAME=<experiment> [WORKERS=N]"; exit 2; }
 	@echo ">> sweep: $(NAME)$(if $(WORKERS), (SWARM_WORKERS=$(WORKERS)))"
-	@cd swarm/experiments && $(if $(WORKERS),SWARM_WORKERS=$(WORKERS) )uv run python measure.py $(NAME)
+	@cd swarm/experiments && $(if $(WORKERS),SWARM_WORKERS=$(WORKERS) )uv run python -O measure.py $(NAME)
 
 papers:
 	@cd papers && npm run check
