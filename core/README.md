@@ -2,6 +2,18 @@
 
 Distributed as the `vn-core` package (Python name `vn_core`). Currently holds:
 
+- **`vn_core.rng`** - the shared seeded mulberry32, threaded through the fold
+  (CLAUDE.md §7). `next_u32`, `next_float`, `seed_state`. Extracted from
+  `swarm/rng.py` and `multi_probe/rng.py` under issue
+  [#29](https://github.com/noahhyden/von-neumann/issues/29) once the second
+  consumer (multi-probe) confirmed the "extract on second consumer" trigger had
+  fired. Both modules now re-export from here, so there is one Python source of
+  truth. Byte-identical to the mulberry32 in `frontend/src/swarm.ts`,
+  `frontend/src/multi-probe.ts`, and `frontend/scripts/gen-diff.mjs`; that JS
+  parity is pinned by a committed fixture (`tests/rng_js_fixture/`), so a
+  drift in either language is a test failure and not a downstream simulation
+  puzzle. Reliability's `splitmix64` is a *different* generator - it does not
+  belong here.
 - **`vn_core.uq`** - uncertainty quantification. Distributions (`Fixed`, `Uniform`,
   `Normal`, `LogNormal`), seeded Monte Carlo, Sobol first- and total-order
   sensitivity (each with a confidence interval, so an index that is within noise

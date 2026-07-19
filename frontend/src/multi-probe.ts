@@ -17,7 +17,7 @@ import { computeClosure } from "./model.ts";
 import type { Factory } from "./model.ts";
 import { solarArrayPowerW } from "./probe-sim.ts";
 
-// ── mulberry32, threaded (never ambient) - mirrors multi_probe/rng.py ──────────
+// ── mulberry32, threaded (never ambient) - mirrors vn_core.rng (pinned by core/tests/test_rng.py) ─
 export function nextFloat(state: number): [number, number] {
   const s = (state + 0x6d2b79f5) | 0;
   let t = Math.imul(s ^ (s >>> 15), 1 | s);

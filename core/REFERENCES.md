@@ -1,10 +1,34 @@
 # Where the numbers come from
 
 `core/` (the `vn-core` package) is shared infrastructure, not a physics model, so
-most of it has no physical constants. The one place numbers appear is the ODE
-solver (`vn_core.ode`), where every coefficient is a published numerical-methods
-constant, not a physical quantity. They are transcribed here so each can be
+most of it has no physical constants. The two places numbers appear are the RNG
+(`vn_core.rng`), where the constants are the mulberry32 algorithm's own tabulated
+values, and the ODE solver (`vn_core.ode`), where every coefficient is a
+published numerical-methods constant. They are transcribed here so each can be
 checked against its source.
+
+## Seeded RNG (`vn_core.rng`, issue #29)
+
+Mulberry32, a 32-bit-state PRNG in the "small fast RNG" family. Deterministic,
+threaded through the fold, byte-identical across Python and JavaScript so a
+Python fold and its TypeScript port replay bit-for-bit.
+
+- **mulberry32 (Tommy Ettinger, 2017, public domain).** The reference version is a
+  15-line JavaScript snippet. The Python impl here mirrors it exactly, with a
+  32-bit mask on every intermediate to reproduce JS's `Math.imul` / `| 0` /
+  `>>>` semantics under Python's unbounded ints.
+  - https://github.com/bryc/code/blob/master/jshash/PRNGs.md#mulberry32
+  - Verdict: reasonable - a small, well-tested PRNG appropriate for scientific
+    reproducibility. It is not cryptographic and is not for that. Statistical
+    quality is enough for the paper-scale ensembles the repo runs (verified
+    downstream in the drift-guard tests, which pin exact result JSONs).
+- **Constants (`0x6D2B79F5`, shift widths 15/7/14, `1 | s`, `61 | t`).** These
+  are the mulberry32 algorithm's own tabulated values from the reference above,
+  not tuning parameters. Changing any of them yields a different PRNG.
+- **Parity is a test contract, not a hope.** `tests/rng_js_fixture/fixture.json`
+  is regenerated from `tests/rng_js_fixture/gen.mjs`, and Python's u32 and
+  float streams are asserted equal to the JS values in `tests/test_rng.py`. If
+  the Python or JS implementation ever drifts, that test fails.
 
 ## ODE solver (`vn_core.ode`, issue #38)
 
