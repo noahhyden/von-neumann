@@ -120,8 +120,8 @@ export const PAPERS: PaperMeta[] = [
       "amigoni-2017"
     ],
     "pdf": "papers/coordination-tax.pdf",
-    "doi": null,
-    "doiIsSandbox": false
+    "doi": "10.5072/zenodo.568808",
+    "doiIsSandbox": true
   },
   {
     "slug": "electronics-wall",
@@ -171,7 +171,7 @@ export const PAPERS: PaperMeta[] = [
       "jones-2018-launch-cost"
     ],
     "pdf": "papers/electronics-wall.pdf",
-    "doi": null,
-    "doiIsSandbox": false
+    "doi": "10.5072/zenodo.568806",
+    "doiIsSandbox": true
   }
 ];
