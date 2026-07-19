@@ -179,3 +179,24 @@ Sources that ground this module's ideas or cross-check its numbers, consolidated
 - **DeMeo & Carry 2014** - F. E. DeMeo & B. Carry (2014). Solar System evolution from compositional mapping of the asteroid belt. Nature 505:629-634, DOI 10.1038/nature12908. https://doi.org/10.1038/nature12908. The composition of the asteroid feedstock by taxonomic class and how it is distributed by mass and heliocentric distance. Grounds what a resource-harvesting module can expect to find where - which raw materials are actually available at a given mining destination.
 - **Lunar Sourcebook** - G. H. Heiken, D. T. Vaniman & B. M. French (eds.) (1991). Lunar Sourcebook: A User's Guide to the Moon. Cambridge University Press (full text hosted by LPI/USRA). https://www.lpi.usra.edu/publications/books/lunar_sourcebook/. The definitive reference on lunar regolith and rock composition, mineralogy, and physical properties - the feedstock inventory for a factory that lands on the Moon and builds from local material. Grounds which elements (O, Si, Al, Fe, Ti, Mg) are locally available and in what abundance.
 - **Hoffman et al. 2022 (MOXIE)** - J. A. Hoffman, M. H. Hecht, D. Rapp et al. (2022). Mars Oxygen ISRU Experiment (MOXIE) - Preparing for human Mars exploration. Science Advances 8(35), eabp8636, DOI 10.1126/sciadv.abp8636. https://www.science.org/doi/10.1126/sciadv.abp8636. The first demonstrated in-situ resource utilization on another planet: solid-oxide electrolysis of Martian CO2 producing ~6 g O2/hr on Perseverance. Grounds the Mars-destination ISRU case - a probe can make consumables from the local atmosphere rather than importing them.
+
+## Invariants (issue #48, phase A)
+
+`replication.simulate` delegates integration to `vn_core.ode` and records `SimStep`s at
+the reporting cadence. Invariants live on the whole trace and are checked once by
+`_verify_trace_invariants(steps, alpha, energy_cap, seed_mass_kg)`, called under
+`if __debug__:` at the end of `simulate`. `python -O` strips it. Positive + negative
+tests live in `tests/test_invariants.py`.
+
+- **[inv:cs-mass-monotone]** For every consecutive pair, `mass[i+1] >= mass[i] * (1 - 1e-8)`.
+  Mass never decreases beyond RK45's `rtol=1e-8`; growth is one-directional in every
+  regime currently modelled.
+- **[inv:cs-mass-nonneg]** `mass[i] >= seed_mass_kg` for all i (with `1e-8` slack). The
+  seed is a floor.
+- **[inv:cs-installed]** `installed_capacity == alpha * factory_mass_kg` (exact within
+  float tolerance). This is a definition, not physics; asserting it catches bookkeeping
+  drift.
+- **[inv:cs-output]** `output == min(installed_capacity, energy_cap)`. Same character as
+  installed - a definition worth pinning.
+- **[inv:cs-growth-nonneg]** `growth_rate_kg_per_day >= 0`. If any regime we later add
+  introduces decay, this becomes conditional and is documented at that point.

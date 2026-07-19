@@ -118,6 +118,50 @@ def initial_state(params: FleetParams, *, seed: int) -> FleetState:
     )
 
 
+def _verify_step_invariants(
+    before: FleetState, after: FleetState, *, params: FleetParams, dt: float
+) -> None:
+    """Assert the documented step invariants on (before -> after). See REFERENCES.md.
+
+    Called by `step` under `if __debug__:` and directly by negative tests.
+    Raises AssertionError with an [inv:...] tag on the first violation.
+    """
+    # Structural / bound checks first: conservation below depends on them being intact.
+    assert abs(after.day - (before.day + dt)) <= 1e-9 * max(1.0, abs(before.day + dt)), (
+        f"[inv:mp-day] day_new={after.day} != day_old+dt={before.day + dt}"
+    )
+    assert len(after.probes) <= params.max_probes, (
+        f"[inv:mp-cap] len(probes)={len(after.probes)} > max_probes={params.max_probes}"
+    )
+    assert after.vitamin_pool_kg >= 0.0, "[inv:mp-vitamin-nonneg] pool_new < 0"
+    before_by_id = {p.id: p for p in before.probes}
+    after_by_id = {p.id: p for p in after.probes}
+    for pid, p_before in before_by_id.items():
+        assert pid in after_by_id, f"[inv:mp-status-transitions] probe id={pid} vanished"
+        p_after = after_by_id[pid]
+        if p_before.status == ProbeStatus.ACTIVE:
+            assert p_after.status == ProbeStatus.ACTIVE, (
+                f"[inv:mp-status-transitions] probe id={pid} ACTIVE->{p_after.status}"
+            )
+        assert p_after.children >= p_before.children, (
+            f"[inv:mp-children-monotone] probe id={pid} children {p_before.children}->{p_after.children}"
+        )
+    n_new = len(after.probes) - len(before.probes)
+    assert after.next_id >= before.next_id, (
+        f"[inv:mp-next-id-monotone] next_id_new={after.next_id} < next_id_old={before.next_id}"
+    )
+    assert after.next_id - before.next_id == n_new, (
+        f"[inv:mp-next-id-monotone] delta_next_id={after.next_id - before.next_id} != N_newborn={n_new}"
+    )
+    v_per_child = (1.0 - params.closure_ratio) * params.seed_mass_kg
+    expected_pool = before.vitamin_pool_kg - n_new * v_per_child
+    tol = max(1e-9 * before.vitamin_pool_kg, 1e-9)
+    assert abs(after.vitamin_pool_kg - expected_pool) <= tol, (
+        f"[inv:mp-vitamin-conservation] pool_new={after.vitamin_pool_kg} "
+        f"expected={expected_pool} (n_new={n_new} v_per_child={v_per_child})"
+    )
+
+
 def step(state: FleetState, params: FleetParams, dt: float) -> FleetState:
     """Advance the whole fleet by ``dt`` days. Pure: returns a new state.
 
@@ -177,7 +221,10 @@ def step(state: FleetState, params: FleetParams, dt: float) -> FleetState:
         else:
             arrived.append(p)
 
-    return FleetState(rng=rng, day=new_day, probes=arrived, vitamin_pool_kg=pool, next_id=next_id)
+    new_state = FleetState(rng=rng, day=new_day, probes=arrived, vitamin_pool_kg=pool, next_id=next_id)
+    if __debug__:
+        _verify_step_invariants(state, new_state, params=params, dt=dt)
+    return new_state
 
 
 def _snapshot(state: FleetState) -> FleetStep:

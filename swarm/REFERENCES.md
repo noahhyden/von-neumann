@@ -551,3 +551,29 @@ Sources that ground this module's ideas or cross-check its numbers, consolidated
 - **Clark & Evans 1954** - P. J. Clark & F. C. Evans (1954). Distance to Nearest Neighbor as a Measure of Spatial Relationships in Populations. Ecology 35(4):445-453, DOI 10.2307/1931034. https://doi.org/10.2307/1931034. The aggregation index R = (observed mean nearest-neighbour distance) / (expected under a Poisson process), R=1 random, R<1 clustered, R>1 regular - the measured clumpiness x-axis for the `clumpiness` experiment. The 3D Poisson expectation `E[NN] = 0.55396·ρ^(-1/3)` (coefficient `Γ(4/3)/(4π/3)^(1/3)`) generalizes their 2D form; used comparatively across fields at fixed N and box so the box edge bias cancels.
 - **Thomas / Neyman-Scott cluster process** - M. Thomas (1949), A generalization of Poisson's binomial limit for use in ecology, Biometrika 36:18-25, DOI 10.1093/biomet/36.1-2.18 (https://doi.org/10.1093/biomet/36.1-2.18); J. Neyman & E. L. Scott (1958), Statistical approach to problems of cosmology, J. R. Stat. Soc. B 20:1-43. The parent-plus-offspring point process used to generate the non-uniform star field: cluster centres scattered uniformly, stars placed Gaussian around them. A standard, tunable clustering model whose scatter interpolates cleanly to the uniform limit, which is what lets the `clumpiness` sweep use the uniform slope as a hard null.
 - **Lubin 2016** - P. Lubin (UC Santa Barbara) (2016). A Roadmap to Interstellar Flight (arXiv:1604.01356). Journal of the British Interplanetary Society 69:40-72. https://arxiv.org/abs/1604.01356. The far end of the propulsion spectrum for a self-replicating seed: beamed directed-energy light-sail acceleration of gram-scale craft toward ~0.2c, sidestepping the rocket-equation penalty by leaving the energy source at home. Connects to the swarm's interstellar cruise-speed assumptions.
+
+## Invariants (issue #48, phase A)
+
+Swarm mutates state in place, so `_verify_step_invariants(before_snap, after)` is called
+under `if __debug__:` in both `step` (fixed) and `step_event` (event). The snapshot is a
+small frozen dataclass holding the scalar counters plus a tuple copy of `settled_year`
+(cheap at test scale, N=300; `python -O` strips both the snapshot and the checks for
+the 200k-star sweeps in `experiments/`). Positive + negative tests live in
+`tests/test_invariants.py`.
+
+- **[inv:sw-year-monotone]** `after.year >= before.year`. Time never runs backwards.
+  Uses `>=` rather than `>` because `step_event` no-ops when no probe is due, leaving
+  `year` unchanged.
+- **[inv:sw-settled-monotone]** `after.settled_count >= before.settled_count`. Stars only
+  settle once; the count only rises.
+- **[inv:sw-settled-latch]** For every star `i`, if `before.settled_year[i] >= 0` then
+  `after.settled_year[i] >= 0`. Once settled, never unsettled. The stronger companion to
+  the count-monotone invariant.
+- **[inv:sw-front-monotone]** `after.front_radius >= before.front_radius`. Follows from
+  the latch (a settled star at distance `r` stays settled and stays at `r`), but the
+  incrementally-maintained counter can drift under a bug - assert it directly.
+- **[inv:sw-launched-monotone]** `after.total_launched >= before.total_launched`. The
+  cumulative launch count only rises.
+- **[inv:sw-probe-ids-unique]** No `Probe.id` appears twice in `after.probes.values()`.
+  The dict key is unique by construction; this catches a bug where the `.id` field
+  drifts from its key.

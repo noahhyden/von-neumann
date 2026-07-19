@@ -79,3 +79,13 @@ flight anchor.
   heat-pipe designs behind it.
 - **ISS EATCS documentation (NASA/CBS)** - the 70 kW / 275 K / 70.3 m^2-assembly flight
   anchor that validates the Stefan-Boltzmann sizing.
+
+## Invariants (issue #48, phase B)
+
+`RadiatorResult` is a frozen dataclass with a `__post_init__` postcondition.
+Runs in release (never gated).
+
+- **[inv:th-radiator]** `flux_w_m2 > 0` (a radiator always radiates), `area_m2 >= 0`
+  and `mass_kg >= 0` (a zero-heat call gives `area = mass = 0`; negative is a bug).
+
+Tests: `tests/test_invariants.py`.

@@ -79,3 +79,16 @@ deliberately declined.
 - **NASA ISS P6 array degradation (NTRS 20030068268)** - the flight-measured annual array
   loss behind the degradation rate.
 - **Zeitlin et al. 2013** (via shielding.radenv) - the deep-space GCR dose rate.
+
+## Invariants (issue #48, phase A)
+
+The fold `mortality.step` is guarded by `_verify_step_invariants(before, after)`,
+called under `if __debug__:`. `python -O` strips both the call site and the
+asserts, so ensemble runs pay zero cost. Positive + negative tests live in
+`tests/test_invariants.py`.
+
+- **[inv:rl-alive-monotone]** `after.alive <= before.alive`. Deaths never resurrect.
+- **[inv:rl-alive-nonneg]** `after.alive >= 0`. Population is a count.
+- **[inv:rl-day-monotone]** `after.day == before.day + 1`. Time advances exactly one day per step.
+- **[inv:rl-rng-advances]** If `before.alive > 0`, `after.rng != before.rng`. Guards against a
+  bug where `step` forgets to thread the RNG (a §7 hazard).

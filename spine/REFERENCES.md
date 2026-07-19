@@ -65,3 +65,17 @@ that *is* the clock for a local fleet (transit is days) is a vanishing tax on ga
 exploration - and the faster the probe, the larger (still tiny) that tax, because faster
 transit shrinks the hop time the dwell competes with. No `[GAP]` or `[ESTIMATE]` is
 introduced by spine; it removes one (the swarm's 0.0 dwell) by grounding it.
+
+## Invariants (issue #48, phase B)
+
+`run_spine` calls `_verify_spine_result(result)` under `if __debug__:` before
+returning.
+
+- **[inv:sp-scale-order]** `0 <= closure_ratio <= 1`; `copy_time_days > 0`;
+  `settle_time_years == copy_time_days / DAYS_PER_JULIAN_YEAR` (within `1e-9`
+  relative); `0 <= final_settled <= n_stars`; `fleet_final_population >= 0`. The
+  seam that links factory -> fleet -> swarm must stay consistent.
+- **[inv:sp-dwell-nonneg]** `swarm_t100_years > 0` when not None; the reported
+  dwell fraction of t100 is `>= 0` when not None. Dwell tax is a magnitude.
+
+Tests: `tests/test_invariants.py`.

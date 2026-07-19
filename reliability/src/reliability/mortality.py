@@ -44,6 +44,22 @@ class FleetState:
         return FleetState(rng=seed_state(seed), alive=population, day=0)
 
 
+def _verify_step_invariants(before: FleetState, after: FleetState) -> None:
+    """Assert the documented step invariants on (before -> after). See REFERENCES.md.
+
+    Called by `step` under `if __debug__:` and directly by the negative tests in
+    `tests/test_invariants.py`. Raises AssertionError with an [inv:...] tag on the
+    first violation. `python -O` strips both the call site and the assertions.
+    """
+    assert after.alive <= before.alive, "[inv:rl-alive-monotone] alive_new > alive_old"
+    assert after.alive >= 0, "[inv:rl-alive-nonneg] alive_new < 0"
+    assert after.day == before.day + 1, "[inv:rl-day-monotone] day_new != day_old + 1"
+    # When any draws happened, the RNG state must have advanced. Guards against a
+    # bug where step() forgets to thread the RNG and returns the same state.
+    if before.alive > 0:
+        assert after.rng != before.rng, "[inv:rl-rng-advances] RNG state did not change despite alive>0"
+
+
 def step(state: FleetState, hazard_per_day: float) -> FleetState:
     """Advance the fleet one day: each living unit fails with probability hazard_per_day.
 
@@ -60,7 +76,10 @@ def step(state: FleetState, hazard_per_day: float) -> FleetState:
         rng, u = next_uniform(rng)
         if u < hazard_per_day:
             deaths += 1
-    return FleetState(rng=rng, alive=state.alive - deaths, day=state.day + 1)
+    new_state = FleetState(rng=rng, alive=state.alive - deaths, day=state.day + 1)
+    if __debug__:
+        _verify_step_invariants(state, new_state)
+    return new_state
 
 
 def simulate(

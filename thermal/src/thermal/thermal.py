@@ -63,6 +63,16 @@ class RadiatorResult:
     area_m2: float
     mass_kg: float
 
+    def __post_init__(self) -> None:
+        # [inv:th-radiator] a radiator has positive flux and non-negative area/mass. A
+        # zero-heat-load call is legal and gives area=mass=0; negative anywhere is a bug.
+        if self.flux_w_m2 <= 0:
+            raise ValueError(f"[inv:th-radiator] flux_w_m2={self.flux_w_m2} must be > 0")
+        if self.area_m2 < 0:
+            raise ValueError(f"[inv:th-radiator] area_m2={self.area_m2} must be >= 0")
+        if self.mass_kg < 0:
+            raise ValueError(f"[inv:th-radiator] mass_kg={self.mass_kg} must be >= 0")
+
 
 def radiated_flux_w_m2(
     temp_k: float,

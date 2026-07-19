@@ -75,3 +75,15 @@ Sources that ground this module's ideas or cross-check its numbers, consolidated
 - **Shockley & Queisser 1961** - W. Shockley & H. J. Queisser (1961). Detailed Balance Limit of Efficiency of p-n Junction Solar Cells. Journal of Applied Physics 32(3):510-519, DOI 10.1063/1.1736034. https://doi.org/10.1063/1.1736034. The thermodynamic (detailed-balance) ceiling on single-junction photovoltaic conversion, about 30% at 1.1 eV. Grounds the solar-limited premise: only a bounded fraction of incident solar flux becomes electrical watts, setting the upper bound on the budget split among manufacturing, compute, and housekeeping.
 - **Gilmore 2002** - D. G. Gilmore (ed.), The Aerospace Corporation (2002). Spacecraft Thermal Control Handbook, Volume I: Fundamental Technologies (2nd ed.). The Aerospace Press / AIAA, DOI 10.2514/4.989117. https://arc.aiaa.org/doi/book/10.2514/4.989117. Waste-heat rejection in vacuum is radiation-only, Q = e*sigma*A*(T^4 - T_env^4), so radiator area and temperature set what power a system can dissipate. Grounds the housekeeping / thermal side of the budget and the radiator temperature T that the Landauer floor scales with.
 - **NASA SoA Small Spacecraft Power 2024** - NASA Ames Research Center (Small Spacecraft Systems Virtual Institute) (2024). State of the Art of Small Spacecraft Technology - Power chapter. NASA / Ames Research Center technical report (2024 edition). https://www.nasa.gov/wp-content/uploads/2025/02/3-soa-power-2024.pdf. Space solar-array specific power in W/kg (roll-out arrays about 75 W/kg; flexible arrays demonstrated toward hundreds of W/kg). Grounds the mass cost of the power source that feeds the whole budget - how many kilograms of array a solar-limited watt requires.
+
+## Invariants (issue #48, phase B)
+
+`PowerBudget` already has a pydantic `model_validator` ensuring fractions sum to
+<= 1. `_verify_power_split(pb)` is a documented postcondition on the derived W
+properties, callable from tests and from downstream callers under `if __debug__:`.
+
+- **[inv:pb-split]** `manufacturing_w + compute_w + housekeeping_w + unallocated_w
+  == total_w` within `1e-9` relative, and each component `>= 0`. Guards against a
+  drift where a derived-property formula silently breaks the partition.
+
+Tests: `tests/test_invariants.py`.

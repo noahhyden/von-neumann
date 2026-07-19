@@ -82,6 +82,38 @@ class MissionResult:
     binding_regime: str | None
 
 
+def _verify_mission_result(r: MissionResult) -> None:
+    """Assert composite invariants on a completed mission. See REFERENCES.md.
+
+    Called under `if __debug__:` at the end of `run_mission`. Raises AssertionError
+    with an [inv:...] tag on the first violation.
+    """
+    assert 0.0 <= r.closure_ratio <= 1.0, (
+        f"[inv:ms-composite-closure] closure_ratio={r.closure_ratio} outside [0, 1]"
+    )
+    assert r.delta_v_m_s > 0, f"[inv:ms-dv-sign] delta_v_m_s={r.delta_v_m_s} must be > 0"
+    assert r.distance_au > 0, f"[inv:ms-dv-sign] distance_au={r.distance_au} must be > 0"
+    assert r.delivered_power_w >= 0, (
+        f"[inv:ms-dv-sign] delivered_power_w={r.delivered_power_w} must be >= 0"
+    )
+    for name, val in (
+        ("seed_mass_kg", r.seed_mass_kg),
+        ("target_installed_mass_kg", r.target_installed_mass_kg),
+        ("vitamin_mass_kg", r.vitamin_mass_kg),
+        ("launched_mass_kg", r.launched_mass_kg),
+        ("manufacturing_w", r.manufacturing_w),
+        ("compute_w", r.compute_w),
+        ("housekeeping_w", r.housekeeping_w),
+    ):
+        assert val >= 0.0, f"[inv:ms-dv-sign] {name}={val} must be >= 0"
+    # Power split cannot exceed delivered power (tolerating a small float slack).
+    split_sum = r.manufacturing_w + r.compute_w + r.housekeeping_w
+    tol = 1e-9 * max(1.0, r.delivered_power_w)
+    assert split_sum <= r.delivered_power_w + tol, (
+        f"[inv:ms-composite-closure] split={split_sum} > delivered={r.delivered_power_w}"
+    )
+
+
 def run_mission(scenario: MissionScenario) -> MissionResult:
     """Run the whole chain once and return every stage's headline numbers."""
     factory = scenario.factory
@@ -144,7 +176,7 @@ def run_mission(scenario: MissionScenario) -> MissionResult:
         doubling = None
         binding_regime = None
 
-    return MissionResult(
+    result = MissionResult(
         closure_ratio=closure_ratio,
         seed_mass_kg=comparison.seed_mass_kg,
         target_installed_mass_kg=comparison.target_installed_mass_kg,
@@ -172,3 +204,6 @@ def run_mission(scenario: MissionScenario) -> MissionResult:
         doubling_time_days=doubling,
         binding_regime=binding_regime,
     )
+    if __debug__:
+        _verify_mission_result(result)
+    return result

@@ -63,3 +63,18 @@ Sources that ground this module's ideas or cross-check its numbers, consolidated
 - **Sutton & Biblarz 2016** - G. P. Sutton & O. Biblarz (2016). Rocket Propulsion Elements (9th ed.). Wiley, ISBN 978-1-118-75365-1. https://www.wiley.com/en-us/Rocket+Propulsion+Elements,+9th+Edition-p-9781118753651. The standard text behind the rocket equation and the chemical specific-impulse ranges the scenarios use (LOX/RP-1 ~280-340 s, LOX/LH2 ~450 s). Pins the previously bundled Sutton & Biblarz mention to a specific edition.
 - **Curtis 2020** - H. D. Curtis (2020). Orbital Mechanics for Engineering Students (4th ed.). Butterworth-Heinemann (Elsevier), ISBN 978-0-12-824025-0. https://shop.elsevier.com/books/orbital-mechanics-for-engineering-students/curtis/978-0-12-824025-0. Grounds the rocket-equation derivation and the representative delta-v budgets (surface-to-LEO ~9.3-10 km/s, LEO-to-TLI ~3.1 km/s, LEO-to-Mars ~3.6 km/s) that drive the mass-ratio computation.
 - **ASTM E490** - ASTM International (Subcommittee E21.04) (2019). Standard Solar Constant and Zero Air Mass Solar Spectral Irradiance Tables (E490-00a(2019)). ASTM International standard. https://www.astm.org/e0490-00ar19.html. The aerospace-community AM0 reference: the extraterrestrial solar constant (1366.1 W/m2) and the full solar spectrum at 1 AU. The standards-body cross-check on the 1-AU irradiance (complementing Kopp & Lean's measured 1360.8) and it fixes the spectrum a space solar cell actually converts.
+
+## Invariants (issue #48, phase B)
+
+`run_mission` calls `_verify_mission_result(result)` under `if __debug__:` before
+returning. `python -O` strips it for large sweeps.
+
+- **[inv:ms-composite-closure]** `0 <= closure_ratio <= 1`; the sum of
+  `manufacturing_w + compute_w + housekeeping_w` does not exceed `delivered_power_w`
+  (up to `1e-9` slack). The mission's derived power split must agree with the
+  delivered budget.
+- **[inv:ms-dv-sign]** `delta_v_m_s > 0`, `distance_au > 0`, `delivered_power_w >= 0`,
+  and every reported mass or power is `>= 0`. Sign guards on the composite headline
+  numbers.
+
+Tests: `tests/test_invariants.py`.

@@ -63,6 +63,24 @@ class PowerBudget(BaseModel):
         return self.total_w * (1.0 - allocated)
 
 
+def _verify_power_split(pb: PowerBudget) -> None:
+    """Assert the derived W properties partition total_w. See REFERENCES.md.
+
+    [inv:pb-split]: manufacturing_w + compute_w + housekeeping_w + unallocated_w == total_w
+    within float tolerance. Documents the property-level accounting so a future change to
+    any derived formula cannot silently break the partition.
+    """
+    total = pb.manufacturing_w + pb.compute_w + pb.housekeeping_w + pb.unallocated_w
+    tol = 1e-9 * max(1.0, abs(pb.total_w))
+    assert abs(total - pb.total_w) <= tol, (
+        f"[inv:pb-split] partition sum={total} != total_w={pb.total_w}"
+    )
+    assert pb.manufacturing_w >= 0, "[inv:pb-split] manufacturing_w < 0"
+    assert pb.compute_w >= 0, "[inv:pb-split] compute_w < 0"
+    assert pb.housekeeping_w >= 0, "[inv:pb-split] housekeeping_w < 0"
+    assert pb.unallocated_w >= -tol, "[inv:pb-split] unallocated_w < 0"
+
+
 def compute_capacity_flops(power_w: float, efficiency_flops_per_w: float) -> float:
     """Compute throughput (FLOPS) a given power (W) buys at a hardware efficiency."""
     if power_w < 0:
