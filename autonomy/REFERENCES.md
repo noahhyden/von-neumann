@@ -78,3 +78,31 @@ contradiction: different brains for different questions.
   honeybee and mouse anchors.
 - **Edge AI and Vision Alliance / GSA** - the TOPS-by-autonomy-level figures behind the
   self-driving-car central anchor.
+
+## Analytical companion (issue #50, Phase 2)
+
+`docs/FINDINGS_CLASSIFICATION.md` #30 asserts the autonomy wall
+`d_wall = sqrt(supply_flops_at_1AU / required_flops)`. This is the compute
+analogue of the power-source distance crossover (finding #24), from the
+demand side. Derivation:
+
+Solar-fed compute supply falls as `1/d^2`; autonomy demand is
+distance-independent (set by the control problem, not the range):
+
+    S(d) = S_1AU / d^2
+    D    = required_flops
+
+The wall is where supply drops below demand: `S(d_wall) = D`, hence
+
+    d_wall = sqrt(S_1AU / D)
+
+Two structural facts follow:
+- **Absolute magnitude cancels** if S and D scale together
+  (`d_wall(alpha*S, alpha*D) = d_wall(S, D)`).
+- Only the **ratio** `S_1AU / D` controls the wall - not either quantity
+  individually.
+
+Tests in `tests/test_analytical_companions.py` verify (i) the closed form
+matches, (ii) supply exactly equals demand at `d = d_wall`, (iii) the
+absolute-magnitude cancellation via a joint-rescaling sweep, and (iv) the
+`sqrt(2)` elasticity to doubling supply or demand.

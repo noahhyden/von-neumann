@@ -81,3 +81,30 @@ system with gimbals and structure). We pin the **conservative flight system-leve
 - **World Nuclear Association, "Nuclear Reactors for Space"** -
   https://world-nuclear.org/information-library/non-power-nuclear-applications/transport/nuclear-reactors-for-space -
   cross-check on RTG/fission flight history and the power ranges each serves.
+
+## Analytical companion (issue #50, Phase 2)
+
+`docs/FINDINGS_CLASSIFICATION.md` #24 asserts the solar/nuclear crossover
+distance is a technology-only constant. Derivation:
+
+At distance d, the solar array's specific power is `sp_solar(d) = sp_solar_1AU / d^2`
+(the `1/d^2` law). A nuclear source has distance-independent specific power
+`sp_nuclear`. To deliver power P, the source masses are
+
+    m_solar(P, d)   = P * d^2 / sp_solar_1AU
+    m_nuclear(P)    = P / sp_nuclear
+
+Equating gives
+
+    d_cross^2 = sp_solar_1AU / sp_nuclear
+    d_cross = sqrt(sp_solar_1AU / sp_nuclear)
+
+**P cancels**: the crossover is a property of the two technologies, not the
+mission's power level. At defaults (`sp_solar_1AU = 100 W/kg`,
+`sp_nuclear = 6.7 W/kg` fission) this is ~3.86 AU, matching the sourced
+"4-5 AU" band and reality (Juno at Jupiter's 5.2 AU is right at the boundary
+with an oversized array).
+
+Tests in `tests/test_analytical_companions.py` assert (i) the closed form
+matches the code, (ii) crossover is invariant under P-rescaling (verifying
+the cancellation), (iii) the mass-order flips at exactly `d_cross`.
