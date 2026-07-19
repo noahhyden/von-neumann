@@ -61,3 +61,24 @@ cap binds - the spatial power wall is emergent, not hard-coded.
   no sourced per-module mass breakdown for the Borgue & Hein probe, so the factory here is
   closure-sim's lunar-regolith seed scenario used as a stand-in - a real BOM, not
   probe-specific. No masses are invented.
+
+## Invariants (issue #48, phase A)
+
+The fold `fleet.step` is guarded by `_verify_step_invariants(before, after, params, dt)`,
+called under `if __debug__:`. `python -O` strips both the call site and the asserts.
+Positive + negative tests live in `tests/test_invariants.py`.
+
+- **[inv:mp-day]** `after.day == before.day + dt` (float tolerance `1e-9`). Time advances
+  by exactly the requested step.
+- **[inv:mp-cap]** `len(after.probes) <= params.max_probes`. The fleet cap is a hard bound.
+- **[inv:mp-vitamin-nonneg]** `after.vitamin_pool_kg >= 0`. No borrowing from the future.
+- **[inv:mp-status-transitions]** Every probe id in `before` still exists in `after`; an
+  ACTIVE probe never becomes TRAVELING. Guards against silent drops and status regressions.
+- **[inv:mp-children-monotone]** For each surviving probe, `children_new >= children_old`.
+  Spawn counters only advance.
+- **[inv:mp-next-id-monotone]** `after.next_id >= before.next_id` and the delta equals
+  the number of newly-appended probes. IDs are handed out sequentially.
+- **[inv:mp-vitamin-conservation]** `after.pool + N_new * v_per_child == before.pool`
+  within `1e-9` relative. Every kg of vitamin removed becomes part of a child; conservation
+  is derived from the closure decomposition and holds by construction. The tightest check
+  we have.

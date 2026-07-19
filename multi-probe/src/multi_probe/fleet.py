@@ -143,6 +143,9 @@ def _verify_step_invariants(
             assert p_after.status == ProbeStatus.ACTIVE, (
                 f"[inv:mp-status-transitions] probe id={pid} ACTIVE->{p_after.status}"
             )
+        assert p_after.children >= p_before.children, (
+            f"[inv:mp-children-monotone] probe id={pid} children {p_before.children}->{p_after.children}"
+        )
     n_new = len(after.probes) - len(before.probes)
     assert after.next_id >= before.next_id, (
         f"[inv:mp-next-id-monotone] next_id_new={after.next_id} < next_id_old={before.next_id}"

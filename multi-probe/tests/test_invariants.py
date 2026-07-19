@@ -195,6 +195,40 @@ def test_inv_mp_status_transitions_negative_active_to_traveling():
         _verify_step_invariants(before, bad, params=params, dt=1.0)
 
 
+# --- [inv:mp-children-monotone] each probe's children counter monotone ---
+
+def test_inv_mp_children_monotone_positive():
+    params = _params()
+    before = _before(params)
+    after = step(before, params, dt=200.0)
+    _verify_step_invariants(before, after, params=params, dt=200.0)
+
+
+def test_inv_mp_children_monotone_negative():
+    params = _params()
+    before = _before(params)
+    # A probe's children count went backwards - illegal.
+    seed = before.probes[0]
+    manipulated = FleetState(
+        rng=before.rng,
+        day=before.day,
+        probes=[Probe(id=seed.id, distance_au=seed.distance_au, status=seed.status,
+                       arrival_day=seed.arrival_day, built_kg=seed.built_kg, children=5)],
+        vitamin_pool_kg=before.vitamin_pool_kg,
+        next_id=before.next_id,
+    )
+    bad = FleetState(
+        rng=manipulated.rng,
+        day=manipulated.day + 1.0,
+        probes=[Probe(id=seed.id, distance_au=seed.distance_au, status=seed.status,
+                       arrival_day=seed.arrival_day, built_kg=seed.built_kg, children=3)],
+        vitamin_pool_kg=manipulated.vitamin_pool_kg,
+        next_id=manipulated.next_id,
+    )
+    with pytest.raises(AssertionError, match=r"inv:mp-children-monotone"):
+        _verify_step_invariants(manipulated, bad, params=params, dt=1.0)
+
+
 # --- integration: real runs do not trip any invariant ---
 
 def test_simulate_fleet_does_not_trip_invariants():

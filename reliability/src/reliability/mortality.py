@@ -54,6 +54,10 @@ def _verify_step_invariants(before: FleetState, after: FleetState) -> None:
     assert after.alive <= before.alive, "[inv:rl-alive-monotone] alive_new > alive_old"
     assert after.alive >= 0, "[inv:rl-alive-nonneg] alive_new < 0"
     assert after.day == before.day + 1, "[inv:rl-day-monotone] day_new != day_old + 1"
+    # When any draws happened, the RNG state must have advanced. Guards against a
+    # bug where step() forgets to thread the RNG and returns the same state.
+    if before.alive > 0:
+        assert after.rng != before.rng, "[inv:rl-rng-advances] RNG state did not change despite alive>0"
 
 
 def step(state: FleetState, hazard_per_day: float) -> FleetState:

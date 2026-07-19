@@ -70,6 +70,22 @@ def test_inv_rl_day_monotone_negative():
         _verify_step_invariants(before, jumped)
 
 
+# --- [inv:rl-rng-advances] alive>0 => rng advances across a step ---
+
+def test_inv_rl_rng_advances_positive():
+    before = _before()
+    after = step(before, hazard_per_day=1e-3)
+    _verify_step_invariants(before, after)
+
+
+def test_inv_rl_rng_advances_negative():
+    before = _before()
+    # alive>0 but rng unchanged.
+    same_rng = FleetState(rng=before.rng, alive=before.alive, day=before.day + 1)
+    with pytest.raises(AssertionError, match=r"inv:rl-rng-advances"):
+        _verify_step_invariants(before, same_rng)
+
+
 # --- integration: a live run trips no assertion ---
 
 def test_simulate_does_not_trip_invariants_across_hazards():
