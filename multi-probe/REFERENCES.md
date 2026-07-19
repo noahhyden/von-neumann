@@ -82,3 +82,23 @@ Positive + negative tests live in `tests/test_invariants.py`.
   within `1e-9` relative. Every kg of vitamin removed becomes part of a child; conservation
   is derived from the closure decomposition and holds by construction. The tightest check
   we have.
+
+## Self-stabilization scenarios (issue #49)
+
+`tests/test_self_stabilization.py` answers the Dijkstra question: given a legal
+running fleet, if we perturb it to an arbitrary state, does the survivor set
+converge to a legal replication regime?
+
+- **`is_legal_fleet(history, params)`** - the legality predicate: active
+  fraction >= 0.5, population non-decreasing over a small window, remaining
+  vitamins cover at least one more child, and not cap-bound.
+- **Perturbation classes** - each is a deterministic state-to-state function
+  seeded by the caller's RNG (same discipline as the fold, §7):
+  - `[pert:mp-mass-loss(frac)]` - delete `frac` of probes at random.
+  - `[pert:mp-vitamin-shock(frac)]` - multiply the vitamin pool by `frac`.
+  - `[pert:mp-stranding(frac)]` - move `frac` of ACTIVE probes to `max_distance_au`.
+  - `[pert:mp-status-flip(frac)]` - flip `frac` of ACTIVE probes back to TRAVELING.
+- **Analytical prediction** - convergence time is monotone in mass-loss fraction:
+  worse perturbations recover slower. Asserted on a small sweep.
+- **Honest nulls** - total extinction and zero-vitamin shock do not converge. The
+  suite records the failure explicitly rather than pretending recovery exists.

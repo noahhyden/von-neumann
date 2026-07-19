@@ -577,3 +577,25 @@ the 200k-star sweeps in `experiments/`). Positive + negative tests live in
 - **[inv:sw-probe-ids-unique]** No `Probe.id` appears twice in `after.probes.values()`.
   The dict key is unique by construction; this catches a bug where the `.id` field
   drifts from its key.
+
+## Self-stabilization scenarios (issue #49)
+
+`tests/test_self_stabilization.py` answers the Dijkstra question for the
+interstellar settlement front. Perturbations mutate `SwarmState` in place
+(matching swarm's fold discipline) and are seeded through the caller's RNG.
+
+- **`is_legal_swarm(history, n_stars)`** - the legality predicate: the front
+  reached terminal saturation (`settled_count == n_stars`), or `settled_count`
+  grew across the recent window and in-flight probes remain.
+- **Perturbation classes:**
+  - `[pert:sw-star-loss(frac)]` - delete `frac` of in-flight probes.
+  - `[pert:sw-settle-loss(frac)]` - flip `frac` of settled stars to unsettled
+    (violates `[inv:sw-settled-latch]` if it happened *inside* a step; applied
+    between steps this exercises the recovery question directly).
+  - `[pert:sw-retarget-cap-shock]` - set every in-flight probe's `retargets`
+    counter to `max_retargets - 1`, forcing near-retirement.
+- **Analytical claim** - a monotone relation between `settle-loss` fraction and
+  convergence time: worse setback -> slower recovery. Asserted on a small sweep.
+- **Honest null** - killing every in-flight probe pre-settlement halts progress;
+  the suite records that as the terminal state rather than pretending the front
+  advances by other means.
