@@ -7,13 +7,17 @@ Distributed as the `vn-core` package (Python name `vn_core`). Currently holds:
   `swarm/rng.py` and `multi_probe/rng.py` under issue
   [#29](https://github.com/noahhyden/von-neumann/issues/29) once the second
   consumer (multi-probe) confirmed the "extract on second consumer" trigger had
-  fired. Both modules now re-export from here, so there is one Python source of
-  truth. Byte-identical to the mulberry32 in `frontend/src/swarm.ts`,
-  `frontend/src/multi-probe.ts`, and `frontend/scripts/gen-diff.mjs`; that JS
-  parity is pinned by a committed fixture (`tests/rng_js_fixture/`), so a
-  drift in either language is a test failure and not a downstream simulation
-  puzzle. Reliability's `splitmix64` is a *different* generator - it does not
-  belong here.
+  fired. Both modules now re-export from here, so there is one Python source
+  of truth for the mulberry32. Byte-identical to the mulberry32 in
+  `frontend/src/swarm.ts`, `frontend/src/multi-probe.ts`, and
+  `frontend/scripts/gen-diff.mjs`; that JS parity is pinned by a committed
+  fixture (`tests/rng_js_fixture/`), so a drift in either language is a test
+  failure and not a downstream simulation puzzle. Reliability uses a distinct
+  64-bit generator (`splitmix64`) because it has no JS-parity surface and a
+  wider generator is defensible there; the two share the ``(value,
+  new_state)`` threading contract but not the algorithm (issue
+  [#65](https://github.com/noahhyden/von-neumann/issues/65)). A third
+  generator would fire the same "second-consumer" trigger.
 - **`vn_core.uq`** - uncertainty quantification. Distributions (`Fixed`, `Uniform`,
   `Normal`, `LogNormal`), seeded Monte Carlo, Sobol first- and total-order
   sensitivity (each with a confidence interval, so an index that is within noise
