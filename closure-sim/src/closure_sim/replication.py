@@ -203,6 +203,40 @@ def _make_rhs(s: _Setup) -> Callable[[float, list[float]], list[float]]:
     return _dF_dt
 
 
+def _verify_trace_invariants(
+    steps: list["SimStep"], *, alpha: float, energy_cap: float, seed_mass_kg: float
+) -> None:
+    """Assert the documented trace invariants on a completed run. See REFERENCES.md.
+
+    Called by `simulate` under `if __debug__:` and directly by negative tests.
+    Raises AssertionError with an [inv:...] tag on the first violation. `python -O`
+    strips both the call site and the assertions.
+    """
+    for i, s in enumerate(steps):
+        assert s.factory_mass_kg >= seed_mass_kg * (1.0 - 1e-8), (
+            f"[inv:cs-mass-nonneg] step {i}: mass={s.factory_mass_kg} < seed={seed_mass_kg}"
+        )
+        assert abs(s.installed_capacity_kg_per_day - alpha * s.factory_mass_kg) <= (
+            1e-9 * max(1.0, abs(alpha * s.factory_mass_kg))
+        ), (
+            f"[inv:cs-installed] step {i}: installed={s.installed_capacity_kg_per_day} "
+            f"!= alpha*F={alpha * s.factory_mass_kg}"
+        )
+        expected_output = min(s.installed_capacity_kg_per_day, energy_cap)
+        assert abs(s.output_kg_per_day - expected_output) <= 1e-9 * max(1.0, expected_output), (
+            f"[inv:cs-output] step {i}: output={s.output_kg_per_day} "
+            f"!= min(installed, energy_cap)={expected_output}"
+        )
+        assert s.growth_rate_kg_per_day >= 0.0, (
+            f"[inv:cs-growth-nonneg] step {i}: growth={s.growth_rate_kg_per_day} < 0"
+        )
+    for i in range(len(steps) - 1):
+        prev_m, next_m = steps[i].factory_mass_kg, steps[i + 1].factory_mass_kg
+        assert next_m >= prev_m * (1.0 - 1e-8), (
+            f"[inv:cs-mass-monotone] step {i}->{i + 1}: mass {prev_m} -> {next_m}"
+        )
+
+
 def simulate(
     factory: Factory, params: ReplicationParams | None = None
 ) -> SimResult:
@@ -289,6 +323,9 @@ def simulate(
         prev_day, prev_output, prev_mass = day, output, F
 
     F = masses[-1]
+
+    if __debug__:
+        _verify_trace_invariants(steps, alpha=alpha, energy_cap=energy_cap, seed_mass_kg=F0)
 
     return SimResult(
         factory_name=factory.name,

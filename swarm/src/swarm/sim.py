@@ -22,6 +22,7 @@ from __future__ import annotations
 import bisect
 import heapq
 import math
+from dataclasses import dataclass
 
 from swarm.models import (
     C_PC_PER_YEAR,
@@ -947,6 +948,56 @@ def _resolve_batch(state: SwarmState, params: SwarmParams, batch: list[Probe]) -
         _process_learns(state, params, learns)
 
 
+@dataclass(frozen=True)
+class _InvariantSnapshot:
+    """Small pre-step snapshot for the invariant verifier. See REFERENCES.md."""
+
+    year: float
+    settled_count: int
+    front_radius: float
+    total_launched: int
+    settled_year: tuple[float, ...]  # tuple copy - immutable, cheap to compare
+
+
+def _snapshot_invariant_state(state: SwarmState) -> _InvariantSnapshot:
+    return _InvariantSnapshot(
+        year=state.year,
+        settled_count=state.settled_count,
+        front_radius=state.front_radius,
+        total_launched=state.total_launched,
+        settled_year=tuple(state.settled_year),
+    )
+
+
+def _verify_step_invariants(before: _InvariantSnapshot, after: SwarmState) -> None:
+    """Assert the documented step invariants on (before-snapshot -> after). See REFERENCES.md.
+
+    Called by `step` / `step_event` under `if __debug__:` and directly by negative tests.
+    Raises AssertionError with an [inv:...] tag on the first violation.
+    """
+    assert after.year >= before.year, (
+        f"[inv:sw-year-monotone] year_new={after.year} < year_old={before.year}"
+    )
+    assert after.settled_count >= before.settled_count, (
+        f"[inv:sw-settled-monotone] count_new={after.settled_count} < count_old={before.settled_count}"
+    )
+    assert after.front_radius >= before.front_radius, (
+        f"[inv:sw-front-monotone] front_new={after.front_radius} < front_old={before.front_radius}"
+    )
+    assert after.total_launched >= before.total_launched, (
+        f"[inv:sw-launched-monotone] launched_new={after.total_launched} < old={before.total_launched}"
+    )
+    # Latch: once settled, never unsettled.
+    for i, y_before in enumerate(before.settled_year):
+        if y_before >= 0.0:
+            assert after.settled_year[i] >= 0.0, (
+                f"[inv:sw-settled-latch] star {i}: settled_year {y_before} -> {after.settled_year[i]}"
+            )
+    # Uniqueness: no Probe.id appears twice among in-flight probes.
+    ids = [p.id for p in after.probes.values()]
+    assert len(set(ids)) == len(ids), "[inv:sw-probe-ids-unique] duplicate Probe.id in state.probes"
+
+
 def step(state: SwarmState, params: SwarmParams) -> SwarmState:
     """Advance one FIXED timestep of ``dt_years``. Mutates and returns ``state``.
 
@@ -957,8 +1008,12 @@ def step(state: SwarmState, params: SwarmParams) -> SwarmState:
     mid-flight learning is event-exact only under ``stepping="event"``; in fixed mode it is
     resolved at the step boundary, so run the floor bracket in event mode.)
     """
+    if __debug__:
+        snap = _snapshot_invariant_state(state)
     state.year += params.dt_years
     _resolve_events(state, params, state.year)
+    if __debug__:
+        _verify_step_invariants(snap, state)
     return state
 
 
@@ -975,8 +1030,12 @@ def step_event(state: SwarmState, params: SwarmParams) -> SwarmState:
     next_year = _next_event_year(state, params)
     if next_year is None:
         return state
+    if __debug__:
+        snap = _snapshot_invariant_state(state)
     state.year = next_year
     _resolve_events(state, params, next_year)
+    if __debug__:
+        _verify_step_invariants(snap, state)
     return state
 
 
