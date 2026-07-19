@@ -101,6 +101,24 @@ def test_first_order_never_exceeds_total_order():
         assert r.first_order[name] <= r.total_order[name] + 0.02
 
 
+def test_first_order_is_sane_for_a_low_cov_finding():
+    """A large output mean relative to its spread (low coefficient of variation)
+    used to wreck the un-centered first-order estimator via catastrophic
+    cancellation - it read ~2.5 where the truth is ~0.8. The centered estimator
+    must stay sane. This is the regression guard for the centering fix."""
+    inputs = {"a": Uniform(-1.0, 1.0), "b": Uniform(-1.0, 1.0)}
+    # f = 500 + 2a + b: additive (so first-order == total-order), but a huge
+    # constant offset -> mean ~500, std ~1.4 -> CoV ~ 0.3%.
+    r = sobol_total_order(inputs, lambda s: 500.0 + 2.0 * s["a"] + s["b"], n=4000, seed=1)
+    # analytic additive shares: Var(2a)=4/3, Var(b)=1/3 -> S_a=0.8, S_b=0.2.
+    assert r.first_order["a"] == pytest.approx(0.8, abs=0.05)
+    assert r.first_order["b"] == pytest.approx(0.2, abs=0.05)
+    # additive: first-order and total-order coincide, and both stay in [0, 1].
+    for name in ("a", "b"):
+        assert 0.0 <= r.first_order[name] <= 1.0
+        assert r.first_order[name] == pytest.approx(r.total_order[name], abs=0.05)
+
+
 # --- The honest CI: unresolved index straddles zero ----------------------------
 
 

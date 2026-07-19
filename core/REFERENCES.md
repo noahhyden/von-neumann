@@ -100,9 +100,14 @@ sensitivity estimator computed from the shared Saltelli design.
   - **Jansen, M. J. W. (1999), "Analysis of variance designs for model output",
     Computer Physics Communications 117, 35-43.**
     - https://doi.org/10.1016/S0010-4655(98)00154-4
-- **First-order index (Saltelli et al. 2010).** `S_i = (1/N) sum_j f(B)_j (f(AB^i)_j
-  - f(A)_j) / Var`. Free: it reuses the exact A, B, AB^i evaluations the total-order
-  estimator already needs.
+- **First-order index (Saltelli et al. 2010), centered.** `S_i = (1/N) sum_j
+  (f(B)_j - f0) (f(AB^i)_j - f(A)_j) / Var`, with `f0` the sample mean. Free: it
+  reuses the exact A, B, AB^i evaluations the total-order estimator already needs.
+  The `- f0` centering is essential, not cosmetic: without it the estimator carries
+  the full output mean and, for a low-coefficient-of-variation finding (mean large
+  vs. spread), catastrophic cancellation makes it wildly noisy - it read 2.459 (and
+  0.384 at N=6000) on a real finding with mean/std ~ 52 where the true value is ~1.
+  Total-order (Jansen) is immune because it uses differences.
   - **Saltelli, A. et al. (2010), "Variance based sensitivity analysis of model
     output. Design and estimator for the total sensitivity index", Computer Physics
     Communications 181, 259-270.**
