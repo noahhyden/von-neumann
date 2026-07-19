@@ -2,6 +2,10 @@
 refs.bib
 **/refs.bib
 
+# Generated per-paper Zenodo DOI include (written by the zenodo workflow, issue #8),
+# input by main.tex to print the reserved DOI on the title page. Never committed.
+**/doi.tex
+
 # LaTeX build artifacts.
 **/build/
 *.aux

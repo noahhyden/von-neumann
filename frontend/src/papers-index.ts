@@ -24,6 +24,13 @@ export interface PaperMeta {
   cites: string[];
   /** Path to the compiled PDF, relative to the site root: papers/<slug>.pdf */
   pdf: string;
+  /**
+   * Per-paper Zenodo concept DOI (always resolves to the latest version), or null
+   * until one is minted. Production preferred over sandbox; see doiIsSandbox.
+   */
+  doi: string | null;
+  /** True when `doi` is a sandbox.zenodo.org DOI (label it as such; not citable). */
+  doiIsSandbox: boolean;
 }
 
 export const PAPERS: PaperMeta[] = [
@@ -64,7 +71,9 @@ export const PAPERS: PaperMeta[] = [
       "tsiolkovsky-1903",
       "kopp-lean-2011"
     ],
-    "pdf": "papers/spine.pdf"
+    "pdf": "papers/spine.pdf",
+    "doi": null,
+    "doiIsSandbox": false
   },
   {
     "slug": "coordination-tax",
@@ -110,7 +119,9 @@ export const PAPERS: PaperMeta[] = [
       "burgard-2005",
       "amigoni-2017"
     ],
-    "pdf": "papers/coordination-tax.pdf"
+    "pdf": "papers/coordination-tax.pdf",
+    "doi": null,
+    "doiIsSandbox": false
   },
   {
     "slug": "electronics-wall",
@@ -159,6 +170,8 @@ export const PAPERS: PaperMeta[] = [
       "curtis-2020",
       "jones-2018-launch-cost"
     ],
-    "pdf": "papers/electronics-wall.pdf"
+    "pdf": "papers/electronics-wall.pdf",
+    "doi": null,
+    "doiIsSandbox": false
   }
 ];

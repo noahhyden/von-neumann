@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.6",
     "vn-core",
+    "numba>=0.66.0",
 ]
 
 [project.optional-dependencies]

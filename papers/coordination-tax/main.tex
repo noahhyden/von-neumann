@@ -25,6 +25,11 @@
 \begin{document}
 \maketitle
 
+% Reserved Zenodo DOI, printed on the title page when the zenodo workflow has
+% generated doi.tex (gitignored, issue #8). Absent in ordinary builds, so nothing
+% prints; the paper typesets identically with or without a minted DOI.
+\IfFileExists{doi.tex}{\input{doi.tex}}{}
+
 \begin{abstract}
 A swarm of self-replicating probes fills a stellar field star by star. The standard
 exploration-timescale model grants every probe perfect, instantaneous knowledge of which stars are

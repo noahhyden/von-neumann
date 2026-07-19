@@ -2,3 +2,8 @@ node_modules/
 dist/
 .cache/
 *.log
+
+# Generated at build time from git history by papers/scripts/gen-versions.mjs.
+# A version = every commit touching papers/<slug>/; the newest entry names the
+# current commit's own SHA, so this can never be committed (see gen-versions.mjs).
+src/papers-versions.ts
