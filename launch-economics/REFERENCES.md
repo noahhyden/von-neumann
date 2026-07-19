@@ -126,3 +126,23 @@ Boundaries:
 The test `tests/test_analytical_companions.py` asserts sim agrees with the
 closed form to `1e-9` relative at points, monotone approach to the asymptote
 as `eps -> 0`, and the leading-order correction to `O(eps^2 / (1-C))`.
+
+## Analytical companion: Tsiolkovsky (issue #50 #22)
+
+Restated for the record. Momentum conservation, integrated:
+
+    Δv = v_e * ln(m0 / mf)
+    mass_ratio = exp(Δv / v_e)
+    prop_frac  = 1 - exp(-Δv / v_e)
+
+with `v_e = Isp * g0` (`g0 = 9.80665 m/s^2` BIPM-defined).
+
+The popular "93% propellant for LEO" figure sits between the two most-cited
+propellant families at a nominal `Δv = 9.4 km/s`: H2/O2 (Isp 450 s) gives
+~88%, kerolox (Isp 300 s) gives ~96%. Neither individually is 93%; the
+figure implicitly interpolates.
+
+Tests in `tests/test_tsiolkovsky_companion.py` verify: closed-form
+agreement, Δv=0 boundary, additivity of sequential burns (Δv_total ->
+product of ratios), the SI-defined `g0`, the LEO 88%-96% bracket, and Isp
+monotonicity.
