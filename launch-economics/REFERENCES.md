@@ -98,3 +98,31 @@ Sources that ground this module's ideas or cross-check its numbers, consolidated
 - **Goebel & Katz 2008** - D. M. Goebel & I. Katz (JPL) (2008). Fundamentals of Electric Propulsion: Ion and Hall Thrusters. JPL Space Science and Technology Series, Wiley, DOI 10.1002/9780470436448. https://onlinelibrary.wiley.com/doi/book/10.1002/9780470436448. The standard text grounding the electric / ion specific-impulse band (~1,500-4,000 s) - the high-Isp end that makes deep-space transfer far cheaper in propellant than chemical.
 - **NEXT-C 2021** - NASA Glenn Research Center (NEXT-C flight team) (2021). A Summary of the NEXT-C Flight Thruster Proto-flight Testing. NASA NTRS 20210018563 / AIAA. https://ntrs.nasa.gov/api/citations/20210018563/downloads/NEXT-C%20AIAA%20Paper%202021%20FINAL.pdf. A flight-qualified data point at the top of the electric Isp range: ~4,190 s at 6.9 kW, flown on DART (2021). Shows the upper electric-Isp bound is a demonstrated value, not just a textbook span.
 - **Borowski et al. 2012** - S. K. Borowski, D. R. McCurdy & T. W. Packard (NASA Glenn) (2012). Nuclear Thermal Rocket (NTR) Propulsion: A Proven Game-Changing Technology for Future Human Exploration Missions. NASA NTRS 20120009207. https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/20120009207.pdf. Fills the Isp gap between chemical (~450 s) and electric (thousands of s): nuclear thermal at ~900 s, an intermediate propulsion option for moving seed mass with less propellant penalty.
+
+## Analytical companion (issue #50, Phase 2 pilot)
+
+`docs/FINDINGS_CLASSIFICATION.md` #21 asserts that mass leverage tends to
+`1 / (1 - C)` in the small-seed limit. Derivation:
+
+Let M be the target installed mass, s the seed mass, and C the closure ratio.
+The mass built locally is `M - s`; each locally-built kilogram needs `1 - C`
+kg of imported vitamins. Launched mass:
+
+    L = s + (1 - C) * (M - s)  =  s*C + (1 - C)*M
+
+Leverage:
+
+    G(s, C) = M / L  =  1 / (s*C/M + (1 - C))
+
+With `eps := s / M` as the small parameter, expanding at fixed C in (0, 1):
+
+    G(0, C) = 1 / (1 - C)
+    G(eps, C) = 1/(1-C) - eps * C / (1-C)^2 + O(eps^2 / (1-C))
+
+Boundaries:
+- `C = 0`: G = 1 (launch everything).
+- `C = 1`: G = M / s, unbounded as `s -> 0`.
+
+The test `tests/test_analytical_companions.py` asserts sim agrees with the
+closed form to `1e-9` relative at points, monotone approach to the asymptote
+as `eps -> 0`, and the leading-order correction to `O(eps^2 / (1-C))`.
