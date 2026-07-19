@@ -10,7 +10,7 @@ This sweep shows the fill-100% time penalty for slingshot_nearest collapsing fro
 dt=5000 toward ~0 as dt shrinks, and matches the dt-independent event fold at the bottom. It
 is why the paper's headline metric is redundant travel at event resolution, not fill time.
 
-Run:  uv run python -m experiments.dt_artifact
+Run:  uv run python -O -m experiments.dt_artifact  # ensemble; -O strips debug invariants
 """
 
 from __future__ import annotations
@@ -62,4 +62,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    from experiments._run import warn_if_no_optimize
+
+    warn_if_no_optimize("experiments.dt_artifact")
     main()

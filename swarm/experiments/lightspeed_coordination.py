@@ -22,7 +22,7 @@ The finding, at resolved timestep:
   at directed-energy speeds (Lambda ~ 0.2). Lambda is the governing parameter - for fuel, not
   time.
 
-Run:  uv run python -m experiments.lightspeed_coordination
+Run:  uv run python -O -m experiments.lightspeed_coordination  # ensemble; -O strips debug invariants
 """
 
 from __future__ import annotations
@@ -164,4 +164,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    from experiments._run import warn_if_no_optimize
+
+    warn_if_no_optimize("experiments.lightspeed_coordination")
     main()

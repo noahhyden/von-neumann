@@ -22,7 +22,7 @@ it is (i) the model's own arrival count, which grows ~N^0.09 per star as a large
 stale-view races, and (ii) the O(log N) tree descent. The local exponent settles well below the old
 ~2 (toward ~1 as N grows and the polylog flattens), and the finite_size sweep now reaches N=200,000.
 
-Run:  uv run python -m experiments.scaling_benchmark
+Run:  uv run python -O -m experiments.scaling_benchmark  # timing; -O strips debug invariants
       uv run python -m experiments.scaling_benchmark 500 1000 2000 4000 8000
 """
 
@@ -69,4 +69,7 @@ def main(argv: list[str]) -> None:
 
 
 if __name__ == "__main__":
+    from experiments._run import warn_if_no_optimize
+
+    warn_if_no_optimize("experiments.scaling_benchmark")
     main(sys.argv[1:])
