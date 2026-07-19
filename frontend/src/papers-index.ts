@@ -171,7 +171,7 @@ export const PAPERS: PaperMeta[] = [
       "jones-2018-launch-cost"
     ],
     "pdf": "papers/electronics-wall.pdf",
-    "doi": null,
-    "doiIsSandbox": false
+    "doi": "10.5072/zenodo.568806",
+    "doiIsSandbox": true
   }
 ];
