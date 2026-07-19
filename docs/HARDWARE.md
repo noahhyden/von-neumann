@@ -42,6 +42,33 @@ The fold modules carry `if __debug__:` invariant checks at each `step` call site
 observational, never load-bearing. It only changes how expensive it is to notice a
 bug at runtime.
 
+## Optional Rust toolchain (issue #33, swarm only)
+
+The swarm module ships an optional pyo3 Rust drop-in for its nearest-unsettled
+k-d tree query (`swarm/rust/`), gated behind the `[project.optional-dependencies]
+rust` extra. Building it needs a stable Rust toolchain (`cargo`, `rustc`) plus
+`maturin`; the extra pulls maturin, and any recent `rustup default stable`
+provides Cargo. To build and install the extension into `swarm`'s venv:
+
+```sh
+cd swarm
+uv sync --extra dev --extra rust
+uv run --extra rust maturin develop --release --manifest-path rust/Cargo.toml
+```
+
+Determinism note (repeats §7): the crate's `[profile.release]` disables LTO,
+pins `codegen-units = 1`, and never enables `fastmath`. `f64::sqrt` delegates
+to the hardware SQRTSD/FSQRT (correctly-rounded IEEE 754 on every modern
+platform), so Rust and Python produce bit-identical outputs. Verified end-to-end
+by `swarm/tests/test_kdtree_backends.py` (A/B/C oracle: Rust, numba, and pure
+Python return the same star for the same query) plus every committed drift-guard
+fixture (`tests/test_measure_results.py`) run through each backend.
+
+Optional at runtime. A checkout without Cargo, without `maturin`, or without
+building the extension still runs and passes the whole test suite; `swarm/sim.py`
+falls back to numba (`swarm.kd_njit`) or pure Python. Override via
+`SWARM_NO_RUST=1` / `SWARM_NO_NJIT=1`.
+
 ## Machines
 
 ### k02 - primary laptop (active)
