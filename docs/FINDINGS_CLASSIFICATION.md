@@ -28,7 +28,7 @@ as **C** (numerics-native) is an intentional call, not a placeholder.
 | 2 | closure-sim / chip-lift | Time-to-target drops 29 yr -> 17 yr with local chips (needs ~4 MW) | closure-sim/README.md | 3-regime min(machinery, power, resupply) | C |
 | 3 | multi-probe / spatial-power-wall | Fleet stops expanding at ~13.6 AU (default) | multi-probe/README.md | 1/d^2 solar x closure-sim | A |
 | 4 | multi-probe / build-rate-anchor | ~20 kg/day machinery cap near Sun | multi-probe/README.md, assembly/README.md | Fixed-probe, near-Sun WAAM | A |
-| 5 | swarm / front-speed-40pct | Settlement front ~40% of one probe's speed | swarm/README.md, REFERENCES.md | Nearest-hop, 1 star/pc^3 uniform | B |
+| 5 | swarm / front-speed-40pct | Settlement front ~40% of one probe's speed | swarm/README.md, REFERENCES.md | Nearest-hop, 1 star/pc^3 uniform | **C (reclassified from B - see note)** |
 | 6 | swarm / coordination-tax | Fuel tax ~ Λ = v/c; slope 0.95, ratio 1+Λ | swarm/REFERENCES.md | Powered, N=500, event step | B |
 | 7 | swarm / finite-size-decline | Tax fraction 19.0%->13.1% over N=300..4800 | swarm/REFERENCES.md | Λ=0.2, powered | C |
 | 8 | spine / copy-time-582d | Derived copy time ~582 days | spine/README.md, assembly/README.md | C * M_seed / build_rate | A |
@@ -83,6 +83,15 @@ as **C** (numerics-native) is an intentional call, not a placeholder.
   #26 (probe-sim operational range). These are where simulation is the right
   tool; a "why numerics" companion belongs in paper prose, not a derivation
   attempt.
+
+**Class-C reclassification: #5 swarm front-speed 40pct.** Initially ranked B
+on the guess that spreading-process asymptotics might give a rigorous
+front-speed coefficient. On inspection the "40%" is genuinely numerical: it
+mixes hop-length geometry (nearest-neighbor 3D Poisson), the zig-zag angle
+distribution, and dwell time. Trivial bounds are available (`v_front <= v`
+absolute upper; `v_front > 0` when settle_time is finite) but neither pins
+the ~0.4 coefficient. This is the point of the Phase-1 classification: the
+promotion from B to C is itself a finding.
 
 ## Convention for a Phase-2 derivation
 
