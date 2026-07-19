@@ -18,6 +18,7 @@ from vn_core.uq.distributions import (
     Normal,
     Uniform,
 )
+from vn_core.uq.pce import PCEResult, pce_fit
 from vn_core.uq.report import one_line_finding
 from vn_core.uq.sample import MCResult, monte_carlo, summarize
 from vn_core.uq.sobol import Analysis, SobolResult, sobol_total_order, uq_and_gsa
@@ -36,5 +37,7 @@ __all__ = [
     "sobol_total_order",
     "Analysis",
     "uq_and_gsa",
+    "PCEResult",
+    "pce_fit",
     "one_line_finding",
 ]

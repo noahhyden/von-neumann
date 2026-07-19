@@ -4,7 +4,13 @@ Distributed as the `vn-core` package (Python name `vn_core`). Currently holds:
 
 - **`vn_core.uq`** - uncertainty quantification. Distributions (`Fixed`, `Uniform`,
   `Normal`, `LogNormal`), seeded Monte Carlo, Sobol total-order sensitivity, a
-  paper-ready one-line reporter. Every von-neumann module reaches for this so
+  paper-ready one-line reporter. `uq_and_gsa` runs both propagation and sensitivity
+  off one Saltelli design (the UQ is free from the Sobol evaluations). `pce_fit`
+  is a polynomial-chaos surrogate for **smooth, low-dimensional** findings: it
+  returns the moments, closed-form Sobol indices, and a cheap `predict()` surrogate
+  in far fewer model evaluations than Monte Carlo, and carries a `fit_residual`
+  that flags non-smooth findings so it never silently lies (fall back to
+  `monte_carlo`/`uq_and_gsa` there). Every von-neumann module reaches for this so
   no one re-implements the RNG discipline or the propagation loop.
 - **`vn_core.ode`** - ordinary differential equation solvers (issue
   [#38](https://github.com/noahhyden/von-neumann/issues/38)). One entry point,

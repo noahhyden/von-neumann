@@ -66,8 +66,45 @@ error-estimate weights `E*`) is the standard explicit RK5(4) pair.
   nonlinear solve is not the accuracy bottleneck. Verdict: reasonable - loose by
   design, tightening it would only cost iterations.
 
+## UQ: polynomial chaos (`vn_core.uq.pce`)
+
+Like the ODE solver, PCE carries no physical constants - only numerical-method
+constants, each a mathematical identity, not an assumption.
+
+- **Wiener-Askey basis choice (Uniform -> Legendre, Normal -> Hermite).**
+  - **Xiu, D. and Karniadakis, G. E. (2002), "The Wiener-Askey polynomial chaos
+    for stochastic differential equations", SIAM J. Sci. Comput. 24(2), 619-644.**
+    The correspondence between input distribution and the orthogonal polynomial
+    family that makes the expansion converge optimally.
+    - https://doi.org/10.1137/S1064827501387826
+- **Recurrence coefficients b_k (used to build the Gauss quadrature).** Monic
+  three-term recurrence, symmetric families (a_k = 0):
+  - Legendre (uniform on [-1,1]): `b_k = k^2 / (4k^2 - 1)`.
+  - Probabilists' Hermite (standard normal): `b_k = k`.
+  These are standard tabulated values (Gautschi, "Orthogonal Polynomials:
+  Computation and Approximation", 2004). Verdict: exact identities; the tests
+  confirm the resulting nodes integrate polynomials to degree 2m-1 exactly.
+- **Golub-Welsch quadrature (nodes = Jacobi-matrix eigenvalues, weights = squared
+  first eigenvector components).**
+  - **Golub, G. H. and Welsch, J. H. (1969), "Calculation of Gauss quadrature
+    rules", Math. Comp. 23, 221-230.** The eigenvalue algorithm for Gauss nodes;
+    implemented here on a pure-Python classical Jacobi symmetric eigensolver.
+    - https://doi.org/10.1090/S0025-5718-69-99647-1
+- **Sobol indices from PCE coefficients (grouped coefficient energy).**
+  - **Sudret, B. (2008), "Global sensitivity analysis using polynomial chaos
+    expansions", Reliability Engineering & System Safety 93(7), 964-979.** First-
+    and total-order indices as sums of squared coefficients over the multi-indices
+    that involve each input - the closed form used here.
+    - https://doi.org/10.1016/j.ress.2007.04.002
+- **Ishigami test function (validation benchmark, not shipped).** Used only in
+  tests, with its analytic variance and Sobol indices, to validate the estimator.
+  - **Ishigami, T. and Homma, T. (1990), "An importance quantification technique
+    in uncertainty analysis for computer models", ISUMA '90.** Verdict: standard
+    GSA benchmark; PCE degree 10 reproduces its analytic indices to ~1e-3.
+
 ## Everything else in `vn-core`
 
-`vn_core.uq` (distributions, Monte Carlo, Sobol) carries no physical constants of
-its own - it propagates numbers that live in each consuming module's own
-`REFERENCES.md`. See those modules for the physics.
+`vn_core.uq` (distributions, Monte Carlo, Sobol, the unified UQ+GSA surface, and
+polynomial chaos) carries no physical constants of its own - it propagates numbers
+that live in each consuming module's own `REFERENCES.md`. See those modules for the
+physics.
