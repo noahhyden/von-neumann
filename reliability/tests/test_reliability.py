@@ -31,17 +31,17 @@ def test_rng_is_deterministic_and_in_range():
     s = seed_state(12345)
     seq1, state = [], s
     for _ in range(5):
-        state, u = next_uniform(state)
+        u, state = next_uniform(state)
         assert 0.0 <= u < 1.0
         seq1.append(u)
     # Replaying from the same seed reproduces the identical stream.
     seq2, state = [], seed_state(12345)
     for _ in range(5):
-        state, u = next_uniform(state)
+        u, state = next_uniform(state)
         seq2.append(u)
     assert seq1 == seq2
     # A different seed gives a different stream.
-    _, first_other = next_uniform(seed_state(54321))
+    first_other, _ = next_uniform(seed_state(54321))
     assert first_other != seq1[0]
 
 

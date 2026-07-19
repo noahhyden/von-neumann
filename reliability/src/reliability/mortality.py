@@ -73,7 +73,7 @@ def step(state: FleetState, hazard_per_day: float) -> FleetState:
     rng = state.rng
     deaths = 0
     for _ in range(state.alive):
-        rng, u = next_uniform(rng)
+        u, rng = next_uniform(rng)
         if u < hazard_per_day:
             deaths += 1
     new_state = FleetState(rng=rng, alive=state.alive - deaths, day=state.day + 1)

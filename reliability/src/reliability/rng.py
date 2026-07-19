@@ -8,6 +8,13 @@ exactly like the JS folds elsewhere in the repo. Same seed in -> same stream out
 
 This is splitmix64 (Vigna), a well-tested 64-bit generator: fast, tiny, and fully
 deterministic. The state is a plain `int`; nothing hidden, no global, no clock.
+
+Draws return ``(value, new_state)`` - value first, state second - matching the
+one threading contract used everywhere else in the repo (``vn_core.rng``,
+``swarm.rng``, ``multi_probe.rng``). splitmix64 stays the algorithm here because
+`reliability` has no frontend/JS surface and so no mulberry32 parity requirement;
+only the tuple order is shared, so a callsite moved between generators cannot
+silently swap value and state (issue #65).
 """
 
 from __future__ import annotations
@@ -25,16 +32,16 @@ def seed_state(seed: int) -> int:
 
 
 def next_uint64(state: int) -> tuple[int, int]:
-    """Advance the generator: returns (new_state, 64-bit output). Pure function."""
+    """Draw one uint64 from ``state``; return ``(value, new_state)``. Pure function."""
     state = (state + _GOLDEN) & _MASK64
     z = state
     z = ((z ^ (z >> 30)) * _MIX_A) & _MASK64
     z = ((z ^ (z >> 27)) * _MIX_B) & _MASK64
     z = z ^ (z >> 31)
-    return state, z
+    return z, state
 
 
-def next_uniform(state: int) -> tuple[int, float]:
-    """Advance the generator: returns (new_state, uniform in [0, 1)). Pure function."""
-    state, z = next_uint64(state)
-    return state, z / _TWO_POW_64
+def next_uniform(state: int) -> tuple[float, int]:
+    """Draw one uniform in ``[0, 1)``; return ``(value, new_state)``. Pure function."""
+    z, state = next_uint64(state)
+    return z / _TWO_POW_64, state
