@@ -113,8 +113,8 @@ This is physics-heavy. Grounding is not optional.
   project whose output is meant to be read as research. Math and astronomy symbols
   (Greek letters, `≈`, `≫`, `²`, `☉`, arrows) are not emoji and are fine where they
   carry meaning.
-- **Git:** commit or push only when asked. The repo is **private** at
-  `noahhyden/von-neumann`. **Never push to `Klarum-Software`** (or anywhere else).
+- **Git:** commit or push only when asked. The repo is **public** at
+  `noahhyden/von-neumann`. **Never push anywhere else**.
 - New numbers in a change → update that module's `REFERENCES.md` in the same change.
 - **Compute hardware is inventoried in [`docs/HARDWARE.md`](docs/HARDWARE.md).** Consult
   it whenever you reason about run time, parallelism, or what a machine can handle, and
