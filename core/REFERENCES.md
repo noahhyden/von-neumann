@@ -66,6 +66,30 @@ error-estimate weights `E*`) is the standard explicit RK5(4) pair.
   nonlinear solve is not the accuracy bottleneck. Verdict: reasonable - loose by
   design, tightening it would only cost iterations.
 
+## UQ: variance-reduction mean estimators (`vn_core.uq.qmc`, `vn_core.uq.pce`)
+
+- **Halton low-discrepancy sequence (`qmc.py`).** Per-dimension radical inverse in
+  the first primes as bases - a quasi-random sequence that fills the cube evenly,
+  giving ~1/N mean convergence vs Monte Carlo's 1/sqrt(N) for smooth low-dim
+  findings.
+  - **Halton, J. H. (1964), "Algorithm 247: Radical-inverse quasi-random point
+    sequence", Comm. ACM 7(12), 701-702.**
+    - https://doi.org/10.1145/355588.365104
+- **Randomization (Cranley-Patterson rotation).** A seeded uniform shift per
+  dimension, applied mod 1, per replicate - makes each replicate an unbiased QMC
+  estimate so the spread between replicate means is an honest error bar (plain
+  QMC's iid stderr is invalid).
+  - **Cranley, R. and Patterson, T. N. L. (1976), "Randomization of number
+    theoretic methods for multiple integration", SIAM J. Numer. Anal. 13(6),
+    904-914.**
+    - https://doi.org/10.1137/0713071
+- **PCE control variate (`pce.py`).** Standard control-variate variance reduction
+  with the polynomial-chaos surrogate as the control (its mean is known exactly),
+  so the estimate is unbiased MC on the residual with much lower variance.
+  - **Owen, A. B. (2013), "Monte Carlo theory, methods and examples", Ch. 8-9
+    (control variates).** https://artowen.su.domains/mc/ ; and Sudret (2008) above
+    for using PCE as the surrogate.
+
 ## UQ: Sobol sensitivity estimators (`vn_core.uq.sobol`)
 
 Method choices, not physical numbers - each is a published variance-based

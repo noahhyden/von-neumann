@@ -12,7 +12,12 @@ Distributed as the `vn-core` package (Python name `vn_core`). Currently holds:
   returns the moments, closed-form Sobol indices, and a cheap `predict()` surrogate
   in far fewer model evaluations than Monte Carlo, and carries a `fit_residual`
   that flags non-smooth findings so it never silently lies (fall back to
-  `monte_carlo`/`uq_and_gsa` there). Every von-neumann module reaches for this so
+  `monte_carlo`/`uq_and_gsa` there). Two variance-reduction mean estimators sit
+  alongside for when the mean is the headline number: `qmc_mean` (randomized
+  quasi-Monte Carlo - ~1/N convergence for smooth low-dim findings, with an honest
+  error bar from replicate spread) and `pce_control_variate` (PCE as a control
+  variate - an unbiased mean with far lower variance, and it stays honest even
+  where PCE alone is untrustworthy). Every von-neumann module reaches for this so
   no one re-implements the RNG discipline or the propagation loop.
 - **`vn_core.ode`** - ordinary differential equation solvers (issue
   [#38](https://github.com/noahhyden/von-neumann/issues/38)). One entry point,

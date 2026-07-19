@@ -421,3 +421,79 @@ def pce_fit(
         fit_residual=fit_residual, input_names=result.input_names,
         coefficients=coeffs, _adapters=tuple(adapters), _fixed=tuple(fixed),
     )
+
+
+@dataclass(frozen=True)
+class CVResult:
+    """A PCE control-variate estimate of a finding's mean.
+
+    Unbiased (it is Monte Carlo on the residual f - g plus the *exact* E[g] = the
+    PCE's constant coefficient), with an honest iid error bar, and a variance far
+    below plain MC when the PCE surrogate correlates with the finding.
+    """
+
+    mean: float
+    stderr: float
+    ci: tuple[float, float]
+    variance_reduction: float  # Var(f) / Var(f - g); >1 means the CV helped
+    n_evaluations: int  # PCE fit + validation + the residual MC samples
+    input_names: tuple[str, ...]
+
+
+def pce_control_variate(
+    inputs: Mapping[str, Distribution],
+    finding: Callable[[Mapping[str, float]], float],
+    *,
+    degree: int,
+    n: int,
+    seed: int,
+) -> CVResult:
+    """Estimate the mean of ``finding`` with a PCE control variate.
+
+    Fits a PCE surrogate ``g`` (whose mean E[g] is known exactly from its constant
+    coefficient), then Monte-Carlos the residual ``f - g`` over ``n`` fresh iid
+    samples: ``E[f] = E[f - g] + E[g]``. Because g correlates with f, Var(f - g) is
+    much smaller than Var(f), so the estimate is far tighter than plain MC at the
+    same MC sample count - yet it stays **unbiased** and keeps a real iid error
+    bar, even on findings where the PCE alone is not trustworthy (a kink): the MC
+    on the residual carries the part PCE cannot fit. ``variance_reduction`` reports
+    how much the control variate actually bought (~1 means the finding did not
+    correlate with a low-degree polynomial - honest, and no worse than MC).
+
+    Deterministic (§7): the PCE quadrature is fixed; the residual MC uses ``seed``.
+    """
+    if n < 1:
+        raise ValueError(f"n must be >= 1, got {n}")
+    # validation=0: the CV does not need the fit-quality probe (the residual MC is
+    # itself the honest check), and it keeps the PCE fit purely deterministic.
+    pce = pce_fit(inputs, finding, degree=degree, seed=seed, validation=0)
+
+    rng = random.Random(seed)
+    raw: list[float] = []
+    resid: list[float] = []
+    for _ in range(n):
+        sample = {name: inputs[name].quantile(rng.random()) for name in inputs}
+        f = finding(sample)
+        if math.isnan(f) or math.isinf(f):
+            raise ValueError("finding returned nan/inf - a nonfinite draw is not honest UQ")
+        raw.append(f)
+        resid.append(f - pce.predict(sample))
+
+    mean = statistics.fmean(resid) + pce.mean
+    stderr = statistics.pstdev(resid) / math.sqrt(n) if n >= 2 else 0.0
+    half = 1.6448536269514722 * stderr
+    var_raw = statistics.pvariance(raw) if n >= 2 else 0.0
+    var_resid = statistics.pvariance(resid) if n >= 2 else 0.0
+    if var_resid > 0:
+        vr = var_raw / var_resid
+    else:
+        vr = math.inf if var_raw > 0 else 1.0
+    n_eval = pce.n_evaluations + pce.n_validation + n
+    return CVResult(
+        mean=mean,
+        stderr=stderr,
+        ci=(mean - half, mean + half),
+        variance_reduction=vr,
+        n_evaluations=n_eval,
+        input_names=tuple(inputs.keys()),
+    )
