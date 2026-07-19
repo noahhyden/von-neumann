@@ -117,10 +117,33 @@ the GPU fields are the ones that matter for that decision.
 
 ### <aws-ensemble> - cloud burst (planned, only if needed)
 
-A spot-instance fleet or batch service for large ensembles at scale. Deferred in issue
-#27; the seed ensemble is map-only (zero cross-run communication), so this is a linear,
-predictable spend when it is worth it. Fill in with instance type, vCPU count, and
-per-run cost when provisioned.
+A spot-instance fleet or batch service for large ensembles at scale. The seed ensemble is
+map-only (zero cross-run communication), so this is a linear, predictable spend when it
+is worth it. Fill in with instance type, vCPU count, and per-run cost when provisioned.
+
+The mechanism for splitting a sweep across boxes is `--seed-slice N/K` on
+`experiments.measure` (issue #33, item 2 of the alternative-levers analysis). Run the
+same sweep on K boxes, each with a different `N`; each box writes a shard file
+(`<name>.shard<N>_<K>.json`). One box then runs `--merge <name>` to reconstruct the full
+JSON. The merge is bit-identical to a single-machine run - the fold is deterministic in
+(params, seed) and the merger re-interleaves rows in seed order before re-running the
+same aggregators (`_tax_block`, `loglog_slope_ci`, ...) the single-machine path uses.
+
+Minimal recipe (four spot boxes, same repo checkout, `finite_size_periodic` sweep):
+
+```sh
+# On each of box0..box3:
+cd von-neumann/swarm
+uv sync --extra dev
+uv run --extra dev python -O -m experiments.measure --seed-slice $BOX_INDEX/4 finite_size_periodic
+
+# Then on any one box (with all four shards rsync'd into experiments/results/):
+uv run --extra dev python -O -m experiments.measure --merge finite_size_periodic
+```
+
+Only measurements listed in `experiments/measure.py::SHARDABLE` support this today
+(currently `finite_size_periodic`); adding another is a small refactor - see
+`swarm/tests/test_seed_slice.py` for the bit-identity contract to preserve.
 
 ## Adding a machine
 
