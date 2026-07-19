@@ -8,9 +8,11 @@ Distributed as the `vn-core` package (Python name `vn_core`). Currently holds:
   reads as a CI straddling zero rather than a false-confident number), a
   paper-ready one-line reporter. `uq_and_gsa` runs both propagation and sensitivity
   off one Saltelli design (the UQ is free from the Sobol evaluations). `pce_fit`
-  is a polynomial-chaos surrogate for **smooth, low-dimensional** findings: it
+  is a polynomial-chaos surrogate for **smooth** findings: it
   returns the moments, closed-form Sobol indices, and a cheap `predict()` surrogate
-  in far fewer model evaluations than Monte Carlo, and carries a `fit_residual`
+  in far fewer model evaluations than Monte Carlo (`method="quadrature"` in low
+  dimension, `method="regression"` - least squares, ~2*n_terms runs - when the
+  input count would make tensor quadrature explode), and carries a `fit_residual`
   that flags non-smooth findings so it never silently lies (fall back to
   `monte_carlo`/`uq_and_gsa` there). Two variance-reduction mean estimators sit
   alongside for when the mean is the headline number: `qmc_mean` (randomized

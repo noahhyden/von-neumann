@@ -218,10 +218,11 @@ class PCEResult:
     first_order: dict[str, float]
     total_order: dict[str, float]
     degree: int
-    n_evaluations: int  # model calls for the quadrature fit
+    n_evaluations: int  # model calls for the fit
     n_validation: int  # model calls for the fit-quality check
     fit_residual: float  # relative RMS surrogate error on the validation sample
     input_names: tuple[str, ...]  # active (non-Fixed) inputs, in order
+    method: str  # "quadrature" (tensor Gauss) or "regression" (least squares)
 
     # Private surrogate state for predict(); underscored to signal "not the API".
     coefficients: dict[tuple[int, ...], float]
@@ -265,100 +266,40 @@ class PCEResult:
 # --- Fit -----------------------------------------------------------------------
 
 
-def pce_fit(
+def _check_finite(y: float) -> None:
+    if math.isnan(y) or math.isinf(y):
+        raise ValueError("finding returned nan/inf - a nonfinite draw is not honest UQ")
+
+
+def _split_inputs(
     inputs: Mapping[str, Distribution],
-    finding: Callable[[Mapping[str, float]], float],
-    *,
-    degree: int,
-    seed: int = 0,
-    validation: int = 256,
-) -> PCEResult:
-    """Fit a polynomial chaos expansion of ``finding`` over ``inputs``.
-
-    ``degree`` is the total-degree truncation. Model evaluations for the fit are
-    (degree+1)^d where d is the number of non-Fixed inputs (tensor Gauss
-    quadrature). ``validation`` extra evaluations estimate ``fit_residual`` - set
-    it to 0 to skip (then trust is your responsibility). Deterministic given
-    ``seed`` (used only for the validation sample).
-
-    Always check ``result.is_trustworthy()`` (or ``fit_residual``) before quoting
-    the moments/indices: on a non-smooth finding they are not reliable.
-    """
-    if degree < 1:
-        raise ValueError(f"degree must be >= 1, got {degree}")
-
-    names = tuple(inputs.keys())
+) -> tuple[list[str], list[tuple[str, float, float]], list[tuple[str, float]]]:
+    """Partition inputs into active (Uniform/Normal) and Fixed; adapt the active."""
     active: list[str] = []
     adapters: list[tuple[str, float, float]] = []
     fixed: list[tuple[str, float]] = []
-    for name in names:
+    for name in inputs:
         dist = inputs[name]
         if isinstance(dist, Fixed):
             fixed.append((name, dist.value))
         else:
             active.append(name)
             adapters.append(_adapt(dist))
+    return active, adapters, fixed
 
-    fixed_sample = {name: value for name, value in fixed}
 
-    if not active:
-        # Every input is Fixed: the finding is a constant, no expansion to fit.
-        y0 = finding(dict(fixed_sample))
-        return PCEResult(
-            mean=y0, variance=0.0, std=0.0, first_order={}, total_order={},
-            degree=degree, n_evaluations=1, n_validation=0, fit_residual=0.0,
-            input_names=(), coefficients={(): y0}, _adapters=(), _fixed=tuple(fixed),
-        )
+def _total_degree_alphas(degree: int, d: int) -> list[tuple[int, ...]]:
+    """All multi-indices with total degree <= ``degree`` over ``d`` inputs."""
+    return [a for a in product(range(degree + 1), repeat=d) if sum(a) <= degree]
 
-    d = len(active)
-    m = degree + 1  # nodes per dimension (exact for the projected integrand)
 
-    # 1D reference nodes/weights and the orthonormal basis table at each node.
-    per_dim_nodes: list[list[float]] = []
-    per_dim_weights: list[list[float]] = []
-    per_dim_basis: list[list[list[float]]] = []  # [dim][node][phi_0..phi_deg]
-    for fam, _p0, _p1 in adapters:
-        nodes, weights = _gauss_nodes_weights(fam, m)
-        per_dim_nodes.append(nodes)
-        per_dim_weights.append(weights)
-        per_dim_basis.append([_basis_values(fam, degree, xi) for xi in nodes])
-
-    # Tensor grid: evaluate the finding once per node, caching Y and the tensor weight.
-    idx_grid = list(product(*[range(m) for _ in range(d)]))
-    ys: list[float] = []
-    tensor_w: list[float] = []
-    for idx in idx_grid:
-        sample = dict(fixed_sample)
-        for dim, node_i in enumerate(idx):
-            fam, p0, p1 = adapters[dim]
-            sample[active[dim]] = _to_physical(fam, p0, p1, per_dim_nodes[dim][node_i])
-        y = finding(sample)
-        if math.isnan(y) or math.isinf(y):
-            raise ValueError("finding returned nan/inf - a nonfinite draw is not honest UQ")
-        ys.append(y)
-        w = 1.0
-        for dim, node_i in enumerate(idx):
-            w *= per_dim_weights[dim][node_i]
-        tensor_w.append(w)
-
-    # Total-degree multi-index basis.
-    alphas = [a for a in product(range(degree + 1), repeat=d) if sum(a) <= degree]
-
-    # Pseudospectral projection: c_a = sum_q W_q * Y_q * prod_d phi_{a_d}(xi_{q,d}).
-    coeffs: dict[tuple[int, ...], float] = {}
-    for alpha in alphas:
-        acc = 0.0
-        for q, idx in enumerate(idx_grid):
-            psi = 1.0
-            for dim, node_i in enumerate(idx):
-                psi *= per_dim_basis[dim][node_i][alpha[dim]]
-            acc += tensor_w[q] * ys[q] * psi
-        coeffs[alpha] = acc
-
+def _statistics(
+    coeffs: dict[tuple[int, ...], float], active: list[str], d: int
+) -> tuple[float, float, dict[str, float], dict[str, float]]:
+    """Mean, variance, and first-/total-order Sobol indices from PCE coefficients."""
     zero = tuple([0] * d)
     mean = coeffs[zero]
     variance = sum(c * c for a, c in coeffs.items() if a != zero)
-
     first_order: dict[str, float] = {}
     total_order: dict[str, float] = {}
     for i, name in enumerate(active):
@@ -376,7 +317,199 @@ def pce_fit(
         st = sum(c * c for a, c in coeffs.items() if a[i] > 0)
         first_order[name] = s1 / variance
         total_order[name] = st / variance
+    return mean, variance, first_order, total_order
 
+
+def _solve_spd(a: list[list[float]], b: list[float]) -> list[float]:
+    """Solve a small dense system ``a x = b`` by Gaussian elimination w/ pivoting."""
+    n = len(b)
+    m = [list(a[i]) + [b[i]] for i in range(n)]
+    for col in range(n):
+        piv = max(range(col, n), key=lambda r: abs(m[r][col]))
+        if abs(m[piv][col]) < 1e-300:
+            raise ValueError("regression design is rank-deficient (too few / degenerate samples)")
+        if piv != col:
+            m[col], m[piv] = m[piv], m[col]
+        inv = 1.0 / m[col][col]
+        for r in range(col + 1, n):
+            f = m[r][col] * inv
+            if f == 0.0:
+                continue
+            for c in range(col, n + 1):
+                m[r][c] -= f * m[col][c]
+    x = [0.0] * n
+    for row in range(n - 1, -1, -1):
+        acc = m[row][n]
+        for c in range(row + 1, n):
+            acc -= m[row][c] * x[c]
+        x[row] = acc / m[row][row]
+    return x
+
+
+def _fit_quadrature(
+    inputs: Mapping[str, Distribution],
+    finding: Callable[[Mapping[str, float]], float],
+    active: list[str],
+    adapters: list[tuple[str, float, float]],
+    fixed_sample: dict[str, float],
+    degree: int,
+    d: int,
+    alphas: list[tuple[int, ...]],
+) -> tuple[dict[tuple[int, ...], float], int]:
+    """Coefficients by tensor Gauss-quadrature pseudospectral projection.
+
+    Exact for a degree-``degree`` finding, but costs (degree+1)^d model calls -
+    exponential in dimension. For higher d use the "regression" method.
+    """
+    m = degree + 1
+    per_dim_nodes: list[list[float]] = []
+    per_dim_weights: list[list[float]] = []
+    per_dim_basis: list[list[list[float]]] = []
+    for fam, _p0, _p1 in adapters:
+        nodes, weights = _gauss_nodes_weights(fam, m)
+        per_dim_nodes.append(nodes)
+        per_dim_weights.append(weights)
+        per_dim_basis.append([_basis_values(fam, degree, xi) for xi in nodes])
+
+    idx_grid = list(product(*[range(m) for _ in range(d)]))
+    ys: list[float] = []
+    tensor_w: list[float] = []
+    for idx in idx_grid:
+        sample = dict(fixed_sample)
+        for dim, node_i in enumerate(idx):
+            fam, p0, p1 = adapters[dim]
+            sample[active[dim]] = _to_physical(fam, p0, p1, per_dim_nodes[dim][node_i])
+        y = finding(sample)
+        _check_finite(y)
+        ys.append(y)
+        w = 1.0
+        for dim, node_i in enumerate(idx):
+            w *= per_dim_weights[dim][node_i]
+        tensor_w.append(w)
+
+    coeffs: dict[tuple[int, ...], float] = {}
+    for alpha in alphas:
+        acc = 0.0
+        for q, idx in enumerate(idx_grid):
+            psi = 1.0
+            for dim, node_i in enumerate(idx):
+                psi *= per_dim_basis[dim][node_i][alpha[dim]]
+            acc += tensor_w[q] * ys[q] * psi
+        coeffs[alpha] = acc
+    return coeffs, len(idx_grid)
+
+
+def _fit_regression(
+    inputs: Mapping[str, Distribution],
+    finding: Callable[[Mapping[str, float]], float],
+    active: list[str],
+    adapters: list[tuple[str, float, float]],
+    fixed_sample: dict[str, float],
+    degree: int,
+    d: int,
+    alphas: list[tuple[int, ...]],
+    oversampling: float,
+    n_samples: int | None,
+    seed: int,
+) -> tuple[dict[tuple[int, ...], float], int]:
+    """Coefficients by least-squares regression over N sampled points.
+
+    N = ``n_samples`` or ceil(``oversampling`` * n_terms), where n_terms grows
+    only *polynomially* in dimension (C(degree+d, d)) - so this scales where the
+    (degree+1)^d tensor quadrature explodes. On the orthonormal basis with samples
+    drawn from the input distribution, the normal-equations Gram matrix tends to
+    N * identity, so it is well-conditioned by construction.
+    """
+    p = len(alphas)
+    n = n_samples if n_samples is not None else max(p + 1, math.ceil(oversampling * p))
+    if n <= p:
+        raise ValueError(
+            f"regression needs more samples than basis terms: n={n} <= n_terms={p}. "
+            "Raise oversampling or n_samples (or lower the degree)."
+        )
+    rng = random.Random(seed)
+    design: list[list[float]] = []
+    rhs: list[float] = []
+    for _ in range(n):
+        sample = dict(fixed_sample)
+        tables: list[list[float]] = []
+        for dim in range(d):
+            fam, p0, p1 = adapters[dim]
+            x = inputs[active[dim]].quantile(rng.random())
+            sample[active[dim]] = x
+            tables.append(_basis_values(fam, degree, _to_reference(fam, p0, p1, x)))
+        design.append([math.prod(tables[dim][a[dim]] for dim in range(d)) for a in alphas])
+        y = finding(sample)
+        _check_finite(y)
+        rhs.append(y)
+
+    # Normal equations (M^T M) c = M^T y.
+    gram = [[sum(design[r][i] * design[r][j] for r in range(n)) for j in range(p)] for i in range(p)]
+    proj = [sum(design[r][i] * rhs[r] for r in range(n)) for i in range(p)]
+    coeffs = dict(zip(alphas, _solve_spd(gram, proj)))
+    return coeffs, n
+
+
+def pce_fit(
+    inputs: Mapping[str, Distribution],
+    finding: Callable[[Mapping[str, float]], float],
+    *,
+    degree: int,
+    method: str = "quadrature",
+    oversampling: float = 2.0,
+    n_samples: int | None = None,
+    seed: int = 0,
+    validation: int = 256,
+) -> PCEResult:
+    """Fit a polynomial chaos expansion of ``finding`` over ``inputs``.
+
+    ``degree`` is the total-degree truncation. ``method`` chooses how the
+    coefficients are computed:
+
+    - ``"quadrature"`` (default): tensor Gauss quadrature, exact for a
+      degree-``degree`` finding but (degree+1)^d model calls - best in low
+      dimension.
+    - ``"regression"``: least-squares over ~``oversampling`` * n_terms sampled
+      points (n_terms = C(degree+d, d), polynomial in d) - the scalable choice in
+      higher dimension. Override the sample count with ``n_samples``.
+
+    ``validation`` extra evaluations estimate ``fit_residual`` on an independent
+    sample (set 0 to skip). Deterministic given ``seed``. Always check
+    ``result.is_trustworthy()`` before quoting the moments/indices: on a
+    non-smooth finding they are not reliable.
+    """
+    if degree < 1:
+        raise ValueError(f"degree must be >= 1, got {degree}")
+    if method not in ("quadrature", "regression"):
+        raise ValueError(f"method must be 'quadrature' or 'regression', got {method!r}")
+
+    active, adapters, fixed = _split_inputs(inputs)
+    fixed_sample = {name: value for name, value in fixed}
+
+    if not active:
+        # Every input is Fixed: the finding is a constant, no expansion to fit.
+        y0 = finding(dict(fixed_sample))
+        _check_finite(y0)
+        return PCEResult(
+            mean=y0, variance=0.0, std=0.0, first_order={}, total_order={},
+            degree=degree, n_evaluations=1, n_validation=0, fit_residual=0.0,
+            input_names=(), method=method, coefficients={(): y0}, _adapters=(),
+            _fixed=tuple(fixed),
+        )
+
+    d = len(active)
+    alphas = _total_degree_alphas(degree, d)
+    if method == "quadrature":
+        coeffs, n_eval = _fit_quadrature(
+            inputs, finding, active, adapters, fixed_sample, degree, d, alphas
+        )
+    else:
+        coeffs, n_eval = _fit_regression(
+            inputs, finding, active, adapters, fixed_sample, degree, d, alphas,
+            oversampling, n_samples, seed,
+        )
+
+    mean, variance, first_order, total_order = _statistics(coeffs, active, d)
     result = PCEResult(
         mean=mean,
         variance=variance,
@@ -384,20 +517,22 @@ def pce_fit(
         first_order=first_order,
         total_order=total_order,
         degree=degree,
-        n_evaluations=len(idx_grid),
+        n_evaluations=n_eval,
         n_validation=0,
         fit_residual=0.0,
         input_names=tuple(active),
+        method=method,
         coefficients=coeffs,
         _adapters=tuple(adapters),
         _fixed=tuple(fixed),
     )
-
     if validation <= 0:
         return result
 
     # Fit-quality: relative RMS of (surrogate - truth) on an independent sample.
-    rng = random.Random(seed)
+    # seed + 1 so the validation points are independent of the regression fit
+    # sample (which uses seed) - an in-sample residual would flatter the fit.
+    rng = random.Random(seed + 1)
     truth: list[float] = []
     pred: list[float] = []
     for _ in range(validation):
@@ -405,20 +540,18 @@ def pce_fit(
         for name in active:
             sample[name] = inputs[name].quantile(rng.random())
         y = finding(sample)
-        if math.isnan(y) or math.isinf(y):
-            raise ValueError("finding returned nan/inf - a nonfinite draw is not honest UQ")
+        _check_finite(y)
         truth.append(y)
         pred.append(result.predict(sample))
     resid = math.sqrt(statistics.fmean([(p - t) ** 2 for p, t in zip(pred, truth)]))
     spread = statistics.pstdev(truth) if len(truth) >= 2 else 0.0
     fit_residual = resid / spread if spread > 0 else (0.0 if resid == 0 else math.inf)
 
-    # Rebuild with the measured residual (frozen dataclass).
     return PCEResult(
         mean=result.mean, variance=result.variance, std=result.std,
         first_order=result.first_order, total_order=result.total_order,
         degree=degree, n_evaluations=result.n_evaluations, n_validation=validation,
-        fit_residual=fit_residual, input_names=result.input_names,
+        fit_residual=fit_residual, input_names=result.input_names, method=method,
         coefficients=coeffs, _adapters=tuple(adapters), _fixed=tuple(fixed),
     )
 

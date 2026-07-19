@@ -138,6 +138,18 @@ constants, each a mathematical identity, not an assumption.
     rules", Math. Comp. 23, 221-230.** The eigenvalue algorithm for Gauss nodes;
     implemented here on a pure-Python classical Jacobi symmetric eigensolver.
     - https://doi.org/10.1090/S0025-5718-69-99647-1
+- **Coefficient fitting: quadrature or regression.** Two non-intrusive methods
+  build the same orthonormal expansion. Tensor Gauss quadrature (pseudospectral
+  projection) is exact but costs (degree+1)^d runs. Least-squares **regression**
+  (point collocation) fits from ~2 * n_terms sampled runs, where n_terms =
+  C(degree+d, d) is polynomial in dimension - the scalable choice in higher d.
+  - **Hosder, S., Walters, R. W., Balch, M. (2007), "Efficient sampling for
+    non-intrusive polynomial chaos expansions with high number of random
+    variables", AIAA 2007-1939.** Source of the ~2x oversampling ratio (runs vs.
+    basis terms). Verdict: reasonable - with the orthonormal basis and samples
+    drawn from the input distribution, the normal-equations Gram matrix tends to
+    N * identity, so it is well-conditioned; tests confirm machine-precision
+    recovery of a degree-2 polynomial in 8 inputs from ~90 runs.
 - **Sobol indices from PCE coefficients (grouped coefficient energy).**
   - **Sudret, B. (2008), "Global sensitivity analysis using polynomial chaos
     expansions", Reliability Engineering & System Safety 93(7), 964-979.** First-
