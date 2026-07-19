@@ -166,17 +166,26 @@ class Probe:
     launch_year: float = 0.0
 
 
-@dataclass
+@dataclass(slots=True)
 class SwarmState:
-    """Full state carried by the fold. SoA star field + seeded RNG (pure data)."""
+    """Full state carried by the fold. SoA star field + seeded RNG (pure data).
+
+    `slots=True` bypasses the per-instance `__dict__` so attribute access is measurably
+    faster on the ~40k per-run `state.kd_*` reads inside the njit wrapper (#27 Part 4).
+    """
 
     rng: int
     year: float
-    xs: np.ndarray
-    ys: np.ndarray
-    zs: np.ndarray
-    star_speed_pc_yr: np.ndarray  # per-star speed magnitude (drives the slingshot boost)
-    settled_year: np.ndarray  # -1.0 while unsettled, else the year it was settled
+    # Fixed star field, stored as tuples of Python floats so per-element access in the
+    # per-arrival hot loop is native Python (~40% faster than numpy scalar boxing). The
+    # njit fold reads the parallel `_np` arrays below (same data, one-time copy at init).
+    xs: tuple[float, ...]
+    ys: tuple[float, ...]
+    zs: tuple[float, ...]
+    star_speed_pc_yr: tuple[float, ...]
+    # settled_year is numpy (mutated per settle, and read by njit); Python reads convert
+    # to `float()` at hot access sites.
+    settled_year: np.ndarray
     origin: int  # index of the homeworld star (front radius is measured from here)
     # In-flight probes keyed by id, insertion-ordered (issue #27). A dict (not a list) so removing
     # a processed probe and looking one up by id are O(1) instead of an O(P) list rebuild per event.
@@ -210,6 +219,12 @@ class SwarmState:
     # avoids Python interpreter overhead. Set once in `_build_kdtree`; `kd_nuns` and
     # `kd_tsmax` mutate in-place at indices as stars settle. `kd_bucket_flat` holds star
     # ids concatenated in node id order; `kd_bucket_offsets[node..node+1]` is the slice.
+    # Numpy mirrors of xs/ys/zs, for the numba-jitted nearest-unsettled kernel. Populated
+    # in `initial_state`; the tuples above are immutable, so these one-time copies stay
+    # valid for the whole run.
+    xs_np: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
+    ys_np: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
+    zs_np: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
     kd_root: int = -1
     kd_axis: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.int8))
     kd_split: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
@@ -227,6 +242,12 @@ class SwarmState:
     kd_nuns: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.int32))
     kd_tsmax: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
     star_leaf: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.int32))
+    # Prebuilt tuple of (xs_np, ys_np, zs_np, settled_year, kd_root, kd_axis, kd_split, kd_lo,
+    # kd_hi, kd_bxmin..bzmax, kd_nuns, kd_tsmax, kd_bucket_flat, kd_bucket_offsets) - the args
+    # the njit kernel expects. Built once in `sim.initial_state`; every element is a reference
+    # (settled_year, kd_nuns, kd_tsmax mutate in-place), so a single attribute lookup + tuple
+    # index-19 replaces 20 per-call attribute chains in the njit wrapper.
+    _njit_args: tuple = field(default_factory=tuple)
     # Event queue (issue #27): a lazy min-heap of (actionable_year, probe_id), so the next event is
     # found in O(log P) instead of an O(P) min-scan over every in-flight probe each event. Entries
     # are validated on pop against `probes` and the probe's CURRENT actionable time; stale ones (a
