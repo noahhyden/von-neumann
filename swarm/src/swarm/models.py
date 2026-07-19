@@ -10,6 +10,8 @@ Nothing here imports pimas, the DOM, or a clock.
 
 from __future__ import annotations
 
+import numpy as np
+
 import math
 from dataclasses import dataclass, field
 from typing import Literal
@@ -170,11 +172,11 @@ class SwarmState:
 
     rng: int
     year: float
-    xs: list[float]
-    ys: list[float]
-    zs: list[float]
-    star_speed_pc_yr: list[float]  # per-star speed magnitude (drives the slingshot boost)
-    settled_year: list[float]  # -1.0 while unsettled, else the year it was settled
+    xs: np.ndarray
+    ys: np.ndarray
+    zs: np.ndarray
+    star_speed_pc_yr: np.ndarray  # per-star speed magnitude (drives the slingshot boost)
+    settled_year: np.ndarray  # -1.0 while unsettled, else the year it was settled
     origin: int  # index of the homeworld star (front radius is measured from here)
     # In-flight probes keyed by id, insertion-ordered (issue #27). A dict (not a list) so removing
     # a processed probe and looking one up by id are O(1) instead of an O(P) list rebuild per event.
@@ -204,22 +206,27 @@ class SwarmState:
     # HOW the nearest is found, never WHICH star - the branch-and-bound reproduces the linear scan's
     # (distance, lowest-index) argmin bit-for-bit (see sim._nearest_unsettled_at). Flat arrays indexed
     # by node id (SoA, the shape a future TypeScript port would use); leaves hold a small star bucket.
+    # Numpy arrays (issue #27 Part 4): a numba-jitted hot loop reads these directly and
+    # avoids Python interpreter overhead. Set once in `_build_kdtree`; `kd_nuns` and
+    # `kd_tsmax` mutate in-place at indices as stars settle. `kd_bucket_flat` holds star
+    # ids concatenated in node id order; `kd_bucket_offsets[node..node+1]` is the slice.
     kd_root: int = -1
-    kd_axis: list[int] = field(default_factory=list)  # split axis 0/1/2 per node, -1 for a leaf
-    kd_split: list[float] = field(default_factory=list)  # split coordinate (internal nodes only)
-    kd_lo: list[int] = field(default_factory=list)  # left child node id (-1 for a leaf)
-    kd_hi: list[int] = field(default_factory=list)  # right child node id (-1 for a leaf)
-    kd_parent: list[int] = field(default_factory=list)  # parent node id (-1 at the root)
-    kd_bucket: list[list[int]] = field(default_factory=list)  # star ids at a leaf (None/[] internal)
-    kd_bxmin: list[float] = field(default_factory=list)  # per-node axis-aligned bounding box
-    kd_bxmax: list[float] = field(default_factory=list)
-    kd_bymin: list[float] = field(default_factory=list)
-    kd_bymax: list[float] = field(default_factory=list)
-    kd_bzmin: list[float] = field(default_factory=list)
-    kd_bzmax: list[float] = field(default_factory=list)
-    kd_nuns: list[int] = field(default_factory=list)  # unsettled-star count in the subtree
-    kd_tsmax: list[float] = field(default_factory=list)  # max settled_year in the subtree (-1 if none)
-    star_leaf: list[int] = field(default_factory=list)  # leaf node id holding each star (O(depth) settle)
+    kd_axis: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.int8))
+    kd_split: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
+    kd_lo: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.int32))
+    kd_hi: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.int32))
+    kd_parent: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.int32))
+    kd_bucket_flat: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.int32))
+    kd_bucket_offsets: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.int32))
+    kd_bxmin: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
+    kd_bxmax: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
+    kd_bymin: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
+    kd_bymax: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
+    kd_bzmin: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
+    kd_bzmax: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
+    kd_nuns: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.int32))
+    kd_tsmax: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
+    star_leaf: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.int32))
     # Event queue (issue #27): a lazy min-heap of (actionable_year, probe_id), so the next event is
     # found in O(log P) instead of an O(P) min-scan over every in-flight probe each event. Entries
     # are validated on pop against `probes` and the probe's CURRENT actionable time; stale ones (a

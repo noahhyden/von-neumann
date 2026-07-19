@@ -637,3 +637,27 @@ A **fast smoke check** at N=200 with 16 seeds is in
 `tests/test_coordination_tax_analytical.py` - it guards against a code
 change silently breaking the `1 + Λ` relation without pretending to be the
 finding itself (which is the paired 512-seed sweep).
+
+## Numba-jitted nearest-unsettled kernel (issue #27 Part 4)
+
+The `_nearest_unsettled_at` k-d tree branch-and-bound moved into a
+`@njit(cache=True, fastmath=False, parallel=False, nogil=False)` function in
+`swarm/kd_njit.py`. The Python wrapper in `sim.py` unpacks `SwarmState` and
+passes flat numpy arrays; the jitted body reproduces the DFS traversal, the
+`(distance^2, lowest-index)` tie-break, and the inlined
+`_believes_settled_at` gate bit-identically. Environment override
+`SWARM_NO_NJIT=1` selects the pure-Python reference (still bit-identical, but
+slower - kept in-tree as the readable ground truth).
+
+State fields converted to numpy arrays so the jit function reads them
+directly without per-call conversion: `xs, ys, zs, star_speed_pc_yr,
+settled_year, kd_axis, kd_split, kd_lo, kd_hi, kd_parent, kd_bucket_flat,
+kd_bucket_offsets, kd_bxmin..bzmax, kd_nuns, kd_tsmax, star_leaf`. The
+former list-of-lists `kd_bucket` is now `kd_bucket_flat` (concatenated star
+ids) + `kd_bucket_offsets` (start index per leaf).
+
+Bit-identical to the pre-refactor list-based fold on every drift-guard
+committed artifact (`test_measure_results.py`) and the whole test suite. The
+`_nearest_unsettled_at` cumulative time drops ~8x on a small N=2000 event
+run (0.30 s -> 0.036 s); overall wall clock for a fresh run drops ~40-60%
+because Python overhead outside the kernel remains.

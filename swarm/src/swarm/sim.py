@@ -22,7 +22,10 @@ from __future__ import annotations
 import bisect
 import heapq
 import math
+import os
 from dataclasses import dataclass
+
+import numpy as np
 
 from swarm.models import (
     C_PC_PER_YEAR,
@@ -288,10 +291,36 @@ def _build_kdtree(xs: list[float], ys: list[float], zs: list[float]) -> dict:
         return node
 
     root = build(list(range(n))) if n else -1
+    # Flatten bucket (list[list[int] | None]) to (bucket_flat, bucket_offsets) so the njit
+    # hot loop reads it as two flat numpy arrays; bit-identical iteration order because we
+    # concatenate in node id order and each leaf's bucket in its stored order (issue #27
+    # Part 4). Empty for internal nodes; offsets[i+1] - offsets[i] == 0 there.
+    n_nodes = len(axis)
+    offsets = np.zeros(n_nodes + 1, dtype=np.int32)
+    flat_parts: list[int] = []
+    for i in range(n_nodes):
+        b = bucket[i]
+        if b is not None:
+            flat_parts.extend(b)
+        offsets[i + 1] = len(flat_parts)
     return {
-        "root": root, "axis": axis, "split": split, "lo": lo, "hi": hi, "parent": parent,
-        "bucket": bucket, "bxmin": bxmin, "bxmax": bxmax, "bymin": bymin, "bymax": bymax,
-        "bzmin": bzmin, "bzmax": bzmax, "nuns": nuns, "tsmax": tsmax, "star_leaf": star_leaf,
+        "root": root,
+        "axis": np.asarray(axis, dtype=np.int8),
+        "split": np.asarray(split, dtype=np.float64),
+        "lo": np.asarray(lo, dtype=np.int32),
+        "hi": np.asarray(hi, dtype=np.int32),
+        "parent": np.asarray(parent, dtype=np.int32),
+        "bucket_flat": np.asarray(flat_parts, dtype=np.int32),
+        "bucket_offsets": offsets,
+        "bxmin": np.asarray(bxmin, dtype=np.float64),
+        "bxmax": np.asarray(bxmax, dtype=np.float64),
+        "bymin": np.asarray(bymin, dtype=np.float64),
+        "bymax": np.asarray(bymax, dtype=np.float64),
+        "bzmin": np.asarray(bzmin, dtype=np.float64),
+        "bzmax": np.asarray(bzmax, dtype=np.float64),
+        "nuns": np.asarray(nuns, dtype=np.int32),
+        "tsmax": np.asarray(tsmax, dtype=np.float64),
+        "star_leaf": np.asarray(star_leaf, dtype=np.int32),
     }
 
 
@@ -327,15 +356,16 @@ def _believes_settled_at(
     info) this collapses to ``settled_year[i] >= 0`` - bit-identical to slices 1-3. Pure
     function of state (positions + settled_year + the sourced ``C_PC_PER_YEAR``); no RNG.
     """
-    if s.settled_year[i] < 0.0:
+    sy = float(s.settled_year[i])
+    if sy < 0.0:
         return False
     if coordination == "instant":
         return True
-    dx = s.xs[i] - px
-    dy = s.ys[i] - py
-    dz = s.zs[i] - pz
+    dx = float(s.xs[i]) - px
+    dy = float(s.ys[i]) - py
+    dz = float(s.zs[i]) - pz
     d = (dx * dx + dy * dy + dz * dz) ** 0.5
-    return s.settled_year[i] + d / C_PC_PER_YEAR <= year
+    return bool(sy + d / C_PC_PER_YEAR <= year)
 
 
 def _believes_settled(s: SwarmState, frm: int, i: int, params: SwarmParams) -> bool:
@@ -348,37 +378,65 @@ def _believes_settled(s: SwarmState, frm: int, i: int, params: SwarmParams) -> b
     return _believes_settled_at(s, s.xs[frm], s.ys[frm], s.zs[frm], i, s.year, params.coordination)
 
 
+# Module-init: decide which path once. `SWARM_NO_NJIT=1` forces the pure-Python
+# reference; if numba is unavailable, kd_njit.HAS_NJIT is False and we also fall
+# back. The check runs at import time so per-query calls have zero import cost.
+try:
+    from swarm.kd_njit import HAS_NJIT as _HAS_NJIT, nearest_unsettled_njit as _NJIT_KERNEL
+except ImportError:
+    _HAS_NJIT = False
+    _NJIT_KERNEL = None
+
+_USE_NJIT = _HAS_NJIT and os.environ.get("SWARM_NO_NJIT") != "1"
+
+_EXCLUDE_SCRATCH = np.zeros(64, dtype=np.int32)  # reused per query to avoid alloc
+
+
 def _nearest_unsettled_at(
     s: SwarmState, px: float, py: float, pz: float, year: float, coordination: str, exclude: set[int]
 ) -> int | None:
     """Index of the nearest *believed*-unsettled star to point ``(px,py,pz)`` not in ``exclude``.
 
-    k-d tree branch-and-bound (issue #30). Depth-first, visiting the nearer child first, with two
-    prunes that are provably safe - each skips only stars that CANNOT be the answer, so the argmin
-    over the stars actually examined is bit-identical to the old O(N) linear scan (same
-    (distance, lowest-index) tie-break):
-
-      - Distance prune: skip a subtree whose nearest possible point ``dlo`` is strictly farther
-        than the best found (``dlo^2 > best_d2``). ``dlo`` is a true lower bound on every star's
-        distance, so nothing skipped could beat or tie the best. Equality descends, so a
-        same-distance lower-index star is never missed.
-      - Belief prune: skip a subtree that is provably entirely *believed*-settled from here -
-        every star settled (``kd_nuns == 0``) and, for the light-delayed regimes, the beacon of
-        even the most-recently-settled star (``kd_tsmax``) has reached the box's FARTHEST corner
-        ``dhi`` (``kd_tsmax + dhi/c <= year``). ``dhi >= d_i`` for every star i, so the same gate
-        the leaf scan uses (``settled_year[i] + d_i/c <= year``) then holds for all of them. This
-        is the news-in-transit correctness point: a recently-settled star whose beacon is still in
-        flight is NOT pruned (it is believed-unsettled and a valid target), so it is examined.
-
-    Every star that survives both prunes is tested with the exact ``_believes_settled_at`` gate and
-    exact squared distance, so the returned star matches the linear scan for every query.
+    Numba-jitted k-d tree branch-and-bound (#27 Part 4, on top of #30). The jitted hot
+    loop is `swarm.kd_njit.nearest_unsettled_njit`; a `SWARM_NO_NJIT=1` env var forces
+    the pure-Python fallback below (used for debugging and no-numba environments).
+    The two paths are bit-identical: same DFS order (preallocated int32 stack in the
+    njit version reproduces list append/pop semantics), same (d^2, lowest-index)
+    tie-break, same inlined `_believes_settled_at` gate. See kd_njit.py for the flags.
     """
+    if _USE_NJIT:
+        # Pack the exclude set into a small numpy array (typical len 0-2 in the powered
+        # policy; capped at max_boost_candidates ~30 upstream). Skip work when empty.
+        n_ex = len(exclude)
+        if n_ex > 0:
+            if n_ex > _EXCLUDE_SCRATCH.size:
+                raise ValueError(f"exclude set too large ({n_ex} > {_EXCLUDE_SCRATCH.size})")
+            for j, e in enumerate(exclude):
+                _EXCLUDE_SCRATCH[j] = e
+        r = _NJIT_KERNEL(
+            px, py, pz, year, coordination == "instant",
+            s.xs, s.ys, s.zs, s.settled_year,
+            s.kd_root, s.kd_axis, s.kd_split, s.kd_lo, s.kd_hi,
+            s.kd_bxmin, s.kd_bxmax, s.kd_bymin, s.kd_bymax, s.kd_bzmin, s.kd_bzmax,
+            s.kd_nuns, s.kd_tsmax,
+            s.kd_bucket_flat, s.kd_bucket_offsets,
+            _EXCLUDE_SCRATCH, n_ex,
+        )
+        return int(r) if r >= 0 else None
+    return _nearest_unsettled_at_python(s, px, py, pz, year, coordination, exclude)
+
+
+def _nearest_unsettled_at_python(
+    s: SwarmState, px: float, py: float, pz: float, year: float, coordination: str, exclude: set[int]
+) -> int | None:
+    """Pure-Python fallback (bit-identical reference for the njit path)."""
     xs, ys, zs = s.xs, s.ys, s.zs
     axis = s.kd_axis
     split = s.kd_split
     lo = s.kd_lo
     hi = s.kd_hi
-    bucket = s.kd_bucket
+    bucket_flat = s.kd_bucket_flat
+    bucket_offsets = s.kd_bucket_offsets
     bxmin = s.kd_bxmin
     bxmax = s.kd_bxmax
     bymin = s.kd_bymin
@@ -442,7 +500,10 @@ def _nearest_unsettled_at(
                 continue  # whole box believed-settled; skip
         ax = axis[node]
         if ax == -1:
-            for i in bucket[node]:
+            start = int(bucket_offsets[node])
+            end = int(bucket_offsets[node + 1])
+            for k in range(start, end):
+                i = int(bucket_flat[k])
                 if i in exclude or _believes_settled_at(s, px, py, pz, i, year, coordination):
                     continue
                 dx = xs[i] - px
@@ -455,11 +516,11 @@ def _nearest_unsettled_at(
         else:
             p_ax = px if ax == 0 else (py if ax == 1 else pz)
             if p_ax < split[node]:
-                stack.append(hi[node])  # far child pushed first -> popped last
-                stack.append(lo[node])
+                stack.append(int(hi[node]))  # far child pushed first -> popped last
+                stack.append(int(lo[node]))
             else:
-                stack.append(lo[node])
-                stack.append(hi[node])
+                stack.append(int(lo[node]))
+                stack.append(int(hi[node]))
     return best if best >= 0 else None
 
 
@@ -485,7 +546,8 @@ def _nearest_k_unsettled_at(
     split = s.kd_split
     lo = s.kd_lo
     hi = s.kd_hi
-    bucket = s.kd_bucket
+    bucket_flat = s.kd_bucket_flat
+    bucket_offsets = s.kd_bucket_offsets
     bxmin = s.kd_bxmin
     bxmax = s.kd_bxmax
     bymin = s.kd_bymin
@@ -547,7 +609,10 @@ def _nearest_k_unsettled_at(
                 continue
         ax = axis[node]
         if ax == -1:
-            for i in bucket[node]:
+            start = int(bucket_offsets[node])
+            end = int(bucket_offsets[node + 1])
+            for k_idx in range(start, end):
+                i = int(bucket_flat[k_idx])
                 if i in exclude or _believes_settled_at(s, px, py, pz, i, year, coordination):
                     continue
                 dx = xs[i] - px
@@ -566,11 +631,11 @@ def _nearest_k_unsettled_at(
         else:
             p_ax = px if ax == 0 else (py if ax == 1 else pz)
             if p_ax < split[node]:
-                stack.append(hi[node])
-                stack.append(lo[node])
+                stack.append(int(hi[node]))
+                stack.append(int(lo[node]))
             else:
-                stack.append(lo[node])
-                stack.append(hi[node])
+                stack.append(int(lo[node]))
+                stack.append(int(hi[node]))
     return [i for _, i in bestk]
 
 
@@ -742,17 +807,26 @@ def initial_state(params: SwarmParams, *, seed: int) -> SwarmState:
         range(n),
         key=lambda i: (xs[i] - cx) ** 2 + (ys[i] - cy) ** 2 + (zs[i] - cz) ** 2,
     )
-    settled = [-1.0] * n
+    # Convert positions and per-star arrays to numpy so the njit kernel reads them
+    # directly (#27 Part 4). No behaviour change; numpy fixed-index assignment matches
+    # Python list assignment element-wise.
+    xs_np = np.asarray(xs, dtype=np.float64)
+    ys_np = np.asarray(ys, dtype=np.float64)
+    zs_np = np.asarray(zs, dtype=np.float64)
+    star_speed_np = np.asarray(star_speed, dtype=np.float64)
+    settled = np.full(n, -1.0, dtype=np.float64)
     settled[origin] = 0.0
     v_max = params.probe_speed_pc_per_year
     kd = _build_kdtree(xs, ys, zs)  # dynamic nearest-over-the-unsettled-set index (issue #30)
     state = SwarmState(
-        rng=rng, year=0.0, xs=xs, ys=ys, zs=zs, star_speed_pc_yr=star_speed, settled_year=settled,
+        rng=rng, year=0.0, xs=xs_np, ys=ys_np, zs=zs_np, star_speed_pc_yr=star_speed_np,
+        settled_year=settled,
         origin=origin, probes={}, next_probe_id=0, total_launched=0, max_speed_pc_yr=v_max,
         box_side_pc=L, periodic=params.periodic,
         settled_count=1, front_radius=0.0,  # origin only; d(origin, origin) = 0 (issue #27)
         kd_root=kd["root"], kd_axis=kd["axis"], kd_split=kd["split"], kd_lo=kd["lo"], kd_hi=kd["hi"],
-        kd_parent=kd["parent"], kd_bucket=kd["bucket"], kd_bxmin=kd["bxmin"], kd_bxmax=kd["bxmax"],
+        kd_parent=kd["parent"], kd_bucket_flat=kd["bucket_flat"], kd_bucket_offsets=kd["bucket_offsets"],
+        kd_bxmin=kd["bxmin"], kd_bxmax=kd["bxmax"],
         kd_bymin=kd["bymin"], kd_bymax=kd["bymax"], kd_bzmin=kd["bzmin"], kd_bzmax=kd["bzmax"],
         kd_nuns=kd["nuns"], kd_tsmax=kd["tsmax"], star_leaf=kd["star_leaf"],
     )
