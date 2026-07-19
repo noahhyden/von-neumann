@@ -599,3 +599,41 @@ interstellar settlement front. Perturbations mutate `SwarmState` in place
 - **Honest null** - killing every in-flight probe pre-settlement halts progress;
   the suite records that as the terminal state rather than pretending the front
   advances by other means.
+
+## Analytical companion: coordination-tax scaling (issue #50, Phase 2)
+
+`docs/FINDINGS_CLASSIFICATION.md` #6 classifies the coordination tax as
+class **B** (rigorous bound). The derivation, formalized here as a numbered
+argument, matches the 512-seed sweep in this file's "Fuel tax vs Λ" section.
+
+**Setup.** Consider one hop of length `d` at speed `v`. Let `rho` be the
+local settlement rate (density of competing arrivals per unit time near the
+target).
+
+**(4a) Instant regime.** The probe sees the true settled set at every
+moment. Exposure to a competing settlement claim is the travel time:
+
+    Δt_inst = d / v
+
+**(4b) Lightspeed regime.** At launch, recent settlements within `d/c` of
+the target have not yet been observed. Exposure widens by the light-lag:
+
+    Δt_ls  = d/v + d/c
+
+**(4c) Ratio.** Paired ensembles share `rho`, `d`, and the collision
+geometry, so:
+
+    E[waste_ls] / E[waste_inst] = (d/v + d/c) / (d/v) = 1 + v/c = 1 + Λ
+
+**Structural consequences.** The `d` factor cancels (hop-length independence)
+and `rho` cancels (density independence). The ratio is a clean function of
+the dimensionless `Λ` alone.
+
+Measured against predicted at Λ = 0.01 / 0.05 / 0.1 / 0.2:
+`1.010 / 1.051 / 1.099 / 1.199` vs `1.010 / 1.050 / 1.100 / 1.200`. Full
+agreement at 512 seeds.
+
+A **fast smoke check** at N=200 with 16 seeds is in
+`tests/test_coordination_tax_analytical.py` - it guards against a code
+change silently breaking the `1 + Λ` relation without pretending to be the
+finding itself (which is the paired 512-seed sweep).
