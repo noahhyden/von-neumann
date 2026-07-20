@@ -335,10 +335,12 @@ loses a race re-targets, but only up to a fixed cap before it is retired; on the
 fields of earlier work the tax plateaued above about $\text{cap} = 8$, which is why we adopt
 $\text{cap} = 8$ as the default. That plateau does not survive to larger fields, and this is the one
 place where moving every measurement onto a bigger field changes a methodological claim rather than
-just a number. At $N = 32{,}768$ the tax climbs monotonically across the whole ladder -- $0.4\%$,
-$1.4\%$, $5.9\%$, $12.1\%$, $15.4\%$ at caps $2, 4, 8, 16, 32$ -- with no sign of levelling; cap 8
-captures under $40\%$ of the cap-32 value. The at-scale companion at $N = 262{,}144$ climbs the same
-way, from $0.27\%$ at $\text{cap} = 2$ to $8.60\%$ at $\text{cap} = 32$. So the default cap of 8 is a
+just a number. At $N = 262{,}144$ the tax climbs monotonically across the whole ladder -- $0.27\%$,
+$0.27\%$, $1.31\%$, $4.79\%$, $8.97\%$ at caps $2, 4, 8, 16, 32$ -- with no sign of levelling; cap 8
+captures only about $15\%$ of the cap-32 value, a shortfall that has grown from the roughly $40\%$
+seen on the smaller $N = 32{,}768$ field, so the plateau is \emph{more} absent at larger $N$. An
+independent eight-seed ensemble at the same field agrees, climbing from $0.27\%$ at
+$\text{cap} = 2$ to $8.60\%$ at $\text{cap} = 32$. So the default cap of 8 is a
 documented \emph{lower bound}, not a converged value: its downward bias is negligible on the small
 fields where the plateau holds and grows with $N$, and we do not separately resolve it at the
 $N = 2{,}048$ headline field, which sits between these regimes. Every fuel-tax figure in this paper

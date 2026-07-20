@@ -110,7 +110,7 @@ number of times before it is retired; this cap is applied identically under both
 regimes, so the paired comparison is fair. On the few-hundred-star fields of earlier work the tax
 plateaued above about $\text{cap} = 8$, which is why we adopt $\text{cap} = 8$ as the default -- but
 that plateau does not survive to larger fields (Section~\ref{sec:scale-companions}): at $\Lambda =
-0.2$ and $N = 32{,}768$ the fuel tax is $0.4$, $1.4$, $5.9$, $12.1$, $15.4\%$ for caps of
+0.2$ and $N = 262{,}144$ the fuel tax is $0.27$, $0.27$, $1.31$, $4.79$, $8.97\%$ for caps of
 $2, 4, 8, 16, 32$, still climbing with no sign of levelling. The default cap of $8$ is therefore a
 documented \emph{lower bound}, not a converged value, and every fuel-tax figure it produces is an
 underestimate whose size grows with the field (negligible at small $N$, substantial at scale). Third, the whole simulation is a pure,
@@ -145,8 +145,10 @@ seeds and differ only in the stated star count.
     fixed 512-seed set, sized to each measurement's cost. Star counts are powers of two computed by
     the \texttt{run\_fill\_flat} fast path (Issue \#38); each fixed-$N$ sweep runs on the largest
     power-of-two field it can complete in about a minute of wall-clock, so the measurements sit at
-    different $N$ rather than a shared anchor (the clumpy-field sweep is kept on its historical
-    $N = 500$ ensemble, its scale companion having no power-of-two rerun). The lower block
+    different $N$ rather than a shared anchor (two exceptions: the clumpy-field sweep is kept on its
+    historical $N = 500$ ensemble, its scale companion having no power-of-two rerun; and the
+    re-target-cap sweep runs at the top of the ladder, $N = 262{,}144$, because its whole purpose is
+    to test whether the cap plateau survives to scale). The lower block
     repeats each fixed-$N$ sweep at $N = 262{,}144$ (the clumpy-field companion excepted -- it stays
     at $N = 200{,}000$) using the finite-size arm's precision-target seed
     count, so every claim rests on a scale companion in addition to its headline result -- discussed
@@ -158,7 +160,7 @@ seeds and differ only in the stated star count.
     \midrule
     Speed sweep (headline)  & 512 & 2{,}048 & Table~\ref{tab:lambda}, Fig.~\ref{fig:lambda} \\
     Branching sweep         & 32 & 8{,}192 & Fig.~\ref{fig:branching} \\
-    Re-target-cap sweep     & 32 & 32{,}768 & Section~\ref{sec:results} \\
+    Re-target-cap sweep     & 32 & 262{,}144 & Section~\ref{sec:results} \\
     In-flight floor         & 48 & 32{,}768 & Fig.~\ref{fig:floor} \\
     Concurrency             & 16 & 32{,}768 & Fig.~\ref{fig:concurrency} \\
     Finite-size sweep       & 48 down to 8 & 256--262{,}144 & Fig.~\ref{fig:scale} \\
