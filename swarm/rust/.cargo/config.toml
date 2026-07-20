@@ -1,0 +1,21 @@
+# SIMD auto-vectorization needs a target with at least AVX2. The default
+# `x86_64-unknown-linux-gnu` triple is baseline SSE2 - LLVM refuses to emit
+# `vsubpd`/`vmulpd`/`vaddpd` at that baseline. `x86-64-v3` is the psABI
+# microarchitecture level that guarantees AVX2 + FMA + BMI2 (Haswell 2013+ on
+# Intel, Excavator 2015+ on AMD), which covers essentially every CPU any
+# collaborator might build on. GH Actions' Ubuntu Linux runners have AVX2.
+#
+# We also enable the individual target features (`+avx,+avx2,+fma`) explicitly.
+# Without them, calls into `std::arch::x86_64::_mm256_*` are emitted as function
+# calls (Rust refuses to inline AVX intrinsics into a caller that lacks the
+# `#[target_feature(enable = "avx")]` attribute), which defeats the whole point
+# of the AVX leaf scan. With the target-feature at the crate level, every
+# function is implicitly AVX-enabled and the intrinsics inline directly.
+#
+# Bit-identity is preserved: default rustc has no fast-math, so mulpd/addpd
+# are IEEE 754 correctly-rounded per lane and match scalar exactly. FMA is
+# permitted only when Rust emits it explicitly (via `f64::mul_add`), which
+# we do NOT use - Rust's default codegen keeps `mul` and `add` as separate
+# ops even under -C opt-level=3.
+[build]
+rustflags = ["-C", "target-cpu=x86-64-v3", "-C", "target-feature=+avx,+avx2,+fma"]

@@ -1290,7 +1290,35 @@ fn flat_nn_impl(
         }
         if node >= m_minus_one {
             // Leaf: 8 contiguous permuted stars at [leaf_offset .. leaf_offset+8).
+            //
+            // Two-pass structure for auto-vectorization:
+            //   Pass 1: branch-free d² compute over 8 contiguous stars. LLVM can vectorize this
+            //           as 8 lanes on AVX-512 (or 4+4 on AVX2). Bit-identical to scalar
+            //           `((dx*dx) + (dy*dy)) + (dz*dz)` per lane - IEEE 754 rounds every mulpd/addpd
+            //           the same as the scalar equivalents, and there is no FMA (default rustc has
+            //           no fast-math).
+            //   Pass 2: scalar mask/reduce with settled + exclude + light-cone + tie-break. This
+            //           keeps the branching out of the vector pipeline, and the reduce visits stars
+            //           0..8 in the SAME order as the old single-pass loop, so the tie-break
+            //           `(d², lowest original index)` is preserved.
             let leaf_offset = (node - m_minus_one) * KD_LEAF;
+            // Two-pass structure: (1) branch-free d² compute over 8 contiguous stars,
+            // (2) scalar mask/reduce with the settled/exclude/light-cone/tie-break logic.
+            //
+            // Explicit AVX2 intrinsics for step (1) were tried and measured *slower* than
+            // this scalar loop at `KD_LEAF = 8` (440k vs 557k qps at N=32768, single-thread).
+            // The setup/store overhead of writing an intermediate `[f64; 8]` outweighs the
+            // arithmetic savings; scalar `vsubsd`/`vmulsd`/`vaddsd` under `-C target-cpu=
+            // x86-64-v3` keeps everything in registers. SIMD would win at leaf sizes of
+            // ~32-64 stars, but a wider leaf is a separate architectural call.
+            let mut d2s: [f64; KD_LEAF] = [0.0; KD_LEAF];
+            for k in 0..KD_LEAF {
+                let i = leaf_offset + k;
+                let dx = xs_p[i] - px;
+                let dy = ys_p[i] - py;
+                let dz = zs_p[i] - pz;
+                d2s[k] = dx * dx + dy * dy + dz * dz;
+            }
             for k in 0..KD_LEAF {
                 let i = leaf_offset + k;
                 let orig = star_perm[i] as i64;
@@ -1305,23 +1333,19 @@ fn flat_nn_impl(
                 if skipped {
                     continue;
                 }
+                let d2 = d2s[k];
                 let sy_i = sy_p[i];
                 if sy_i >= 0.0 {
                     if is_instant {
                         continue;
                     }
-                    let dx = xs_p[i] - px;
-                    let dy = ys_p[i] - py;
-                    let dz = zs_p[i] - pz;
-                    let d = (dx * dx + dy * dy + dz * dz).sqrt();
+                    // Reuse d2 from Pass 1 for the light-cone check; the scalar version recomputed
+                    // dx/dy/dz here, so both `d` values here are IEEE-identical.
+                    let d = d2.sqrt();
                     if sy_i + d / c <= year {
                         continue;
                     }
                 }
-                let dx = xs_p[i] - px;
-                let dy = ys_p[i] - py;
-                let dz = zs_p[i] - pz;
-                let d2 = dx * dx + dy * dy + dz * dz;
                 if d2 < best_d2 || (d2 == best_d2 && best >= 0 && orig < best) {
                     best_d2 = d2;
                     best = orig;

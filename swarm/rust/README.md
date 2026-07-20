@@ -40,11 +40,34 @@ pointer tree fires via `nearest_unsettled` / `run_fill`; the flat tree via
   in favor of a shift+add on `i`, plus a cheaper leaf test (`i >= M-1` vs
   `axis[i] == -1`). This is a real speedup, not a large one.
 
-- **Whole-fill wall-clock: 1.3-1.8x** (see `experiments/bench_flat_run_fill.py`).
+- **Whole-fill wall-clock: 1.2-1.5x** (see `experiments/bench_flat_run_fill.py`).
   The per-query win compounds through the event loop; inflight sees the biggest
-  lift (1.79x at N=4096) because it hits the NN kernel more often via the
-  decrease-key reschedule path. `simulate_swarm` at p2 N gets this for free
-  now that the dispatch is wired.
+  lift at large N (1.44x at N=32768) because it hits the NN kernel more often
+  via the decrease-key reschedule path. `simulate_swarm` at p2 N gets this for
+  free now that the dispatch is wired.
+
+### The SIMD-leaf-scan finding (a documented dead end)
+
+At `KD_LEAF = 8`, an explicit AVX2 leaf scan (4-wide packed `_mm256_sub_pd` /
+`_mm256_mul_pd` / `_mm256_add_pd`, two iterations to cover 8 stars) was
+implemented and measured against the scalar restructured loop at
+`N = 32768`. Result: **440k qps with AVX2 vs 557k qps scalar** - the SIMD
+version was ~20% *slower*. Root cause: at 8 stars per leaf, the setup cost
+(broadcast the query point 3x, load 3 vectors, store an intermediate
+`[f64; 8]` on the stack that the reduce loop reads back) exceeds the
+compute savings on 8 sub/mul/add triples. Scalar under
+`-C target-cpu = x86-64-v3` keeps everything in registers.
+
+The p2 substrate's SIMD payoff would come at wider leaves (~32-64 stars per
+leaf), where compute dominates setup. That's a separate architectural call
+(wider leaves change traversal cost, bbox tightness, and cache footprint) and
+is deliberately deferred - documented here as "measured, not worth it at
+`KD_LEAF = 8`" rather than left as a phantom promise. The main win of the p2
+substrate is therefore not the SIMD leaf scan but (a) the removal of two
+per-internal-node array loads (`lo[i]`, `hi[i]` -> `2i+1`, `2i+2`), (b)
+better scalar codegen under `target-cpu = x86-64-v3`, and (c) the ergonomic
+wins the earlier README section calls out (contiguous leaf memory ready for
+a future wider-leaf variant, clean ensemble sharding).
 
 - **Contiguous 8-star leaves.** `xs_p, ys_p, zs_p` are the star coordinates
   stored in **permuted** order, one leaf's 8 stars at a stretch. A future
@@ -101,3 +124,11 @@ cd swarm
 uv run --extra dev maturin develop --manifest-path rust/Cargo.toml --release
 uv run --extra dev pytest tests/test_flat_kdtree_oracle.py -q
 ```
+
+**Target requirement**: the crate is compiled for `x86-64-v3` (AVX2 + FMA + BMI2
+baseline), pinned in `rust/.cargo/config.toml`. This covers every Intel Haswell
+(2013+) and AMD Excavator (2015+) or newer CPU, which is all hardware anyone
+in this project builds on (GH Actions Linux runners included). A checkout on an
+older CPU would fail at runtime with SIGILL - if that ever matters, remove the
+`target-feature` line and the extension will fall back to baseline SSE2 at a
+modest wall-clock cost.
