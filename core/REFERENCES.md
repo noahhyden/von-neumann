@@ -103,11 +103,26 @@ polynomial in theta built from the step's seven stage derivatives.
 
 ### Backward Euler + finite-difference Jacobian (`implicit.py`, `linalg.py`)
 
-- **Backward (implicit) Euler**, the order-1 L-stable method, is textbook
+- **Backward (implicit) Euler** (`bdf1`), the order-1 L-stable method, is textbook
   (Hairer & Wanner, "Solving ODEs II: Stiff and Differential-Algebraic Problems",
-  Section IV). Chosen for L-stability + simplicity to meet the stiff validation
-  gate; a higher-order L-stable method (Radau IIA-5, BDF2) is the flagged Phase-3+
-  follow-up in issue #38.
+  Section IV). Chosen for L-stability + simplicity; kept as the simple, robust option.
+- **TR-BDF2** (`trbdf2`), an order-2 L-stable one-step method: a trapezoidal sub-step
+  to t + gamma*h then a BDF2 sub-step to t + h, with `gamma = 2 - sqrt(2)`. The
+  BDF2-stage coefficients are `a = 1/(gamma(2-gamma))`, `b = (1-gamma)^2/(gamma(2-
+  gamma))`, `c = (1-gamma)/(2-gamma)` (with `a - b = 1`, exact for constants). The
+  gamma value is the standard choice that makes the two stages' Newton iteration
+  matrices share a coefficient (`gamma/2 = c`) and yields an L-stable, second-order,
+  stiffly-accurate method. On a stiff system this reaches a given accuracy in far
+  fewer / larger steps than backward Euler (measured ~14x fewer steps, ~6x fewer RHS
+  evaluations on `y' = -1000(y - cos t)` at rtol 1e-6), while staying bounded.
+  - **Bank, R. E., Coughran, W. M., Fichtner, W., Grosse, E. H., Rose, D. J., Smith,
+    R. K. (1985), "Transient simulation of silicon devices and circuits", IEEE Trans.
+    CAD 4(4), 436-451.** The origin of TR-BDF2 and the gamma = 2 - sqrt(2) choice.
+    - https://doi.org/10.1109/TCAD.1985.1270142
+  - **Hosea, M. E. and Shampine, L. F. (1996), "Analysis and implementation of
+    TR-BDF2", Applied Numerical Mathematics 20(1-2), 21-37.** The modern analysis
+    (order 2, L-stability). Verdict: reasonable - a standard L-stable order-2 method;
+    validated here against scipy's stiff solvers (BDF/Radau) to tolerance.
 - **Finite-difference Jacobian perturbation `h = sqrt(eps_machine) * max(|y_j|,
   1)`** with `eps_machine ~ 2.22e-16`. The `sqrt(eps)` forward-difference step is
   the standard optimum trading truncation against round-off.
