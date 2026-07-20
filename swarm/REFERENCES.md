@@ -516,11 +516,18 @@ completes in <= ~1 min wall-clock at SWARM_WORKERS=8 on k02 (`P2_FIXED_N` in
 `experiments/measure.py`; the folds are deterministic, so N is a pure wall-clock
 choice). The chosen N and their measured wall-clock: lambda_sweep 2048 (30.7s),
 branching 8192 (57.9s), energy_tax 2048 (57.3s), concurrency 32768 (33.3s),
-floor_bracket 32768 (64.2s, marginally over and kept), retarget_cap 32768 (52.3s),
+floor_bracket 32768 (64.2s, marginally over and kept),
 dt_artifact 8192 (53.4s, fixed-step rows use the pointer path so this caps lowest),
 clumpiness 4096 (26.4s). The measurements therefore sit at different points on the
 size decline, and the paper reads each on its own terms rather than as a shared-N
 cross-check.
+
+One deliberate exception to the 1-minute ceiling: **retarget_cap runs at the top of
+the ladder, N=262,144 (723s @ 32 seeds, k02)**, not its 1-min N. Its p2 companion
+exists precisely to test whether the cap=8 plateau survives to scale, and that
+finding is sharpest at the largest field; the wall-clock cost is paid once and
+committed. This puts it at the same N as `retarget_cap_scale`'s p2 companion (8
+seeds), so the two are an independent 32-seed / 8-seed cross-check at N=262,144.
 
 Two exceptions stay on the historical (non-p2) block:
 - The Nicholson & Forgan speed-up replication (`validation.json`, "about 166x on a
@@ -542,10 +549,13 @@ Two exceptions stay on the historical (non-p2) block:
   (clumpiness), 0.82 at N=2048, 0.73 at N=4096, 0.068 at N=262,144. The paper reframes
   "tax IS v/c" as "tax scales as v/c with a coefficient below one that shrinks with N."
 - The retarget-cap plateau that justified the default cap=8 does not survive to
-  N=32768 (`retarget_cap.json` p2): the tax climbs monotonically 0.4/1.4/5.9/12.1/
-  15.4% across caps 2/4/8/16/32 with no levelling, so cap=8 captures under 40% of the
-  cap-32 tax. cap=8 is now documented as a *lower bound* whose downward bias grows
-  with N; every fuel-tax figure using it is "at least this much."
+  scale (`retarget_cap.json` p2, now at N=262,144, 32 seeds): the tax climbs
+  monotonically 0.27/0.27/1.31/4.79/8.97% across caps 2/4/8/16/32 with no levelling,
+  so cap=8 captures only ~15% of the cap-32 tax (the shortfall grew from ~40% at the
+  earlier N=32,768 companion - the plateau is *more* absent at larger N). The 8-seed
+  `retarget_cap_scale` p2 at the same N=262,144 agrees (0.27 .. 8.60%). cap=8 is
+  documented as a *lower bound* whose downward bias grows with N; every fuel-tax
+  figure using it is "at least this much."
 - The in-flight-relay fill-time cost at Lambda=0.2 is ~30% at N=32768 (was quoted as
   "about 2%" in an earlier draft, which predated the PR #78 pow/sqrt hop fix); the
   relay still drives completed wasted arrivals to zero, but the fill-time price grows
