@@ -15,7 +15,12 @@ Figures (vector PDF, IEEE single-column geometry, serif fonts):
   fig_branching.pdf          - fuel tax vs the replication branching factor (offspring 2/3/4)
   fig_floor_bracket.pdf      - instant/inflight/lightspeed: how much survives in-flight relay
   fig_concurrency.pdf        - probes in flight vs coverage: why a loser is off the critical path
-  fig_fuel_tax_vs_n.pdf      - fuel tax % over a 670x size span (300..200,000); a bulk decline
+  fig_fuel_tax_vs_n.pdf      - fuel tax % over a 1024x size span (256..262,144); a bulk decline
+
+All figures but fig_fuel_tax_vs_clumpiness read the ``p2`` companion ladder (power-of-two N,
+computed by the ``run_fill_flat`` fast path and cited as canonical by the paper); the clumpiness
+figure stays on the historical N=500 ensemble (Issue #38 left ``clumpiness_scale`` without a p2
+rerun, and the paper keeps the clumpiness slope narrative on the historical ladder).
 
 Run (from the swarm/ package root):
     uv run --extra dev python -m experiments.paper_figures
@@ -48,12 +53,32 @@ mpl.rcParams.update({
 })
 
 
-def load(name: str) -> dict:
+def load(name: str, p2: bool = False) -> dict:
+    """Load a committed result JSON.
+
+    ``p2=True`` overlays the ``p2`` companion (Issue #38: the cleanly power-of-two ladder
+    that ``run_fill_flat`` computes, bit-identical to the pointer path at matching N per
+    ``tests/test_flat_run_fill_oracle.py``). The companion carries the same self-contained
+    keys (``config``, ``data``/``rows``, ``scale_regression``, ...), so overlaying them makes
+    the drawing code identical to the historical path; only the swept N moves. The
+    coordination-tax paper cites the p2 ladder as canonical, so every figure but the
+    clumpiness one (kept on the historical N=500 ensemble; Issue #38 left ``clumpiness_scale``
+    without a p2 rerun) reads ``p2=True``.
+    """
     path = RESULTS_DIR / f"{name}.json"
     if not path.exists():
         raise FileNotFoundError(
             f"missing {path.name}; run `uv run --extra dev python -m experiments.measure {name}` first")
-    return json.loads(path.read_text())
+    d = json.loads(path.read_text())
+    if p2:
+        if "p2" not in d:
+            raise FileNotFoundError(
+                f"{path.name} has no p2 companion; run `uv run --extra dev python -O -m "
+                f"experiments.measure --p2 {name}` first")
+        base = {k: v for k, v in d.items() if k != "p2"}
+        base.update(d["p2"])  # overlay p2 config/data/rows/scale_regression over the historical keys
+        return base
+    return d
 
 
 def _save(fig, name: str) -> Path:
@@ -88,7 +113,7 @@ def _clean_log_x(ax, xs) -> None:
 # --------------------------------------------------------------------------------------------
 
 def fig_fuel_tax_vs_lambda() -> Path:
-    d = load("lambda_sweep")
+    d = load("lambda_sweep", p2=True)
     lam = d["config"]["lambdas"]
     fuel = [d["data"][str(l)]["fuel_pct"] for l in lam]
     time = [d["data"][str(l)]["time_pct"] for l in lam]
@@ -117,7 +142,7 @@ def fig_fuel_tax_vs_lambda() -> Path:
 
 
 def fig_fuel_tax_by_seed() -> Path:
-    d = load("lambda_sweep")
+    d = load("lambda_sweep", p2=True)
 
     def per_seed_fuel(l):
         rows = d["data"][str(l)]["per_seed"]
@@ -145,7 +170,7 @@ def fig_fuel_tax_by_seed() -> Path:
 
 
 def fig_time_tax_vs_dt() -> Path:
-    d = load("dt_artifact")
+    d = load("dt_artifact", p2=True)
     rows = [r for r in d["rows"] if r["dt"] is not None]
     ev = next(r for r in d["rows"] if r["dt"] is None)
     xs = [r["dt"] for r in rows]
@@ -168,7 +193,7 @@ def fig_time_tax_vs_dt() -> Path:
 
 
 def fig_branching() -> Path:
-    d = load("branching")
+    d = load("branching", p2=True)
     offs = d["config"]["offspring"]
     lambdas = d["config"]["lambdas"]
     fig, ax = plt.subplots(figsize=(COLW, COLW * 0.8))
@@ -188,7 +213,7 @@ def fig_branching() -> Path:
 
 
 def fig_floor_bracket() -> Path:
-    d = load("floor_bracket")
+    d = load("floor_bracket", p2=True)
     lambdas = d["config"]["lambdas"]
     modes = ["instant", "lightspeed", "inflight"]
     colors = {"instant": "0.75", "lightspeed": "0.15", "inflight": "0.45"}
@@ -220,7 +245,7 @@ def fig_floor_bracket() -> Path:
 
 
 def fig_concurrency() -> Path:
-    d = load("concurrency")
+    d = load("concurrency", p2=True)
     fig, ax = plt.subplots(figsize=(COLW, COLW * GOLDEN))
     for mode, col, ls in (("instant", "0.55", "--"), ("lightspeed", "0.0", "-")):
         cov = d["data"][mode]["coverage"]
@@ -242,7 +267,7 @@ def fig_concurrency() -> Path:
 
 
 def fig_fuel_tax_vs_n() -> Path:
-    d = load("finite_size")
+    d = load("finite_size", p2=True)
     ns = sorted(int(k) for k in d["data"])
     summ = [d["data"][str(n)]["fuel_pct"] for n in ns]
     med = [s["median"] for s in summ]

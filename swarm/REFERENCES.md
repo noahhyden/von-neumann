@@ -493,6 +493,28 @@ p2 key is skipped if already present unless `--force` is passed. See
 `swarm/experiments/SPEC_P2_LADDER.md` for the full schema and sweep-size
 justifications.
 
+**The coordination-tax paper cites the p2 ladder as canonical (Issue #38).** Every
+quantitative claim in `papers/coordination-tax/` now sources from the `p2` keys
+above (the ladder `run_fill_flat` computes; figures read them via
+`experiments.paper_figures.load(..., p2=True)`), with two deliberate exceptions
+that stay on the historical (non-p2) block:
+- The Nicholson & Forgan speed-up replication (`validation.json`, "about 166x on a
+  400-star field, against their factor of about 100") is kept on the historical
+  N=400 measurement, because its whole purpose is to reproduce the external result
+  at a comparable field; the p2 companion reports 195.7x at N=512 for reference.
+- The clumpiness slope narrative (`clumpiness.json`, `fig_fuel_tax_vs_clumpiness`)
+  stays on the historical N=500 ensemble, because its scale companion
+  (`clumpiness_scale.json`) is the one measurement Issue #38 left without a p2
+  rerun; the p2 companion (a = 1.06 [0.97, 1.12] at N=512) is cited only as a
+  consistency check. The `clumpiness_scale` uniform slope (a = 0.078 at N=200,000)
+  is likewise the historical value the paper still quotes at scale.
+
+One number moved as a side effect: the in-flight-relay fill-time cost at Lambda=0.2
+in `floor_bracket.json` reads ~9% (p2 N=512; ~10% on the current historical N=400
+block), not the "about 2%" an earlier paper draft quoted - that figure predated the
+PR #78 pow/sqrt hop fix that shifted the inflight fill times, and the paper text now
+matches the committed JSON.
+
 **Flat p2 kd-tree substrate (Issue #38 p2 scope, `swarm/rust/`).** For sweeps
 at `n_stars = 2^k, k >= 3`, `swarm_rust` exposes a second, heap-indexed kd-tree
 where children of node `i` sit at `2i+1` and `2i+2` and the parent at
