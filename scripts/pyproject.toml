@@ -1,0 +1,29 @@
+[project]
+name = "vn-scripts"
+version = "0.1.0"
+description = "Repo-level tooling for the von-neumann monorepo. Currently: depgraph.py, a stdlib dependency graph (import DAG + results ownership + paper->module figure edges) that computes the test-impact and artifact-drift blast radius of a change. Pure stdlib, deterministic, reads the tree but never runs a fold (CLAUDE.md 7)."
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+# coverage[toml] is the test-only coverage gate; the tool itself is pure stdlib and
+# is never installed as a dependency of any module.
+dev = ["pytest>=8.0", "coverage[toml]>=7.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+python_files = ["test_*.py"]
+
+[tool.coverage.run]
+branch = true
+source = ["depgraph"]
+
+[tool.coverage.report]
+# Repo tooling is held to the same bar as the folds: 100% line+branch. The only
+# exclusion is the CLI entrypoint guard, which pytest drives via main() directly.
+show_missing = true
+skip_covered = false
+fail_under = 100
+exclude_lines = [
+    'if __name__ == .__main__.:',
+]
