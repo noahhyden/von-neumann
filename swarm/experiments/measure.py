@@ -518,7 +518,7 @@ def m_lambda_sweep_scale() -> None:
 
 def m_branching() -> None:
     """Fuel/time/energy tax vs the replication branching factor (offspring per settlement)."""
-    seeds = SEEDS[:32]
+    seeds = SEEDS[:512]
     n_stars = 400
     # Swept high (to 16) so the saturation claim is tested, not asserted from a 3-point plateau:
     # more offspring make more simultaneous races, but once enough probes already contend the
@@ -580,7 +580,7 @@ def m_energy_tax() -> None:
     policies, whose wasted trips are faster/longer than the powered cruise. So we run all three
     policies (lightspeed vs instant, event) and report the count tax alongside the energy tax.
     """
-    seeds = SEEDS[:32]
+    seeds = SEEDS[:512]
     n_stars = 400
     policies = ["powered", "slingshot_nearest", "slingshot_maxboost"]
     data = {}
@@ -691,7 +691,7 @@ def m_concurrency() -> None:
     is one of hundreds in flight and (almost) never sits on the critical path to the last star.
     We record, per coverage bin, the mean number of probes in flight, for instant vs lightspeed.
     """
-    seeds = SEEDS[:16]
+    seeds = SEEDS[:512]
     n_stars = 500
     lam = 0.2
     # coverage fractions to 0.90 in steps of 0.05, then fine tail bins into the final few percent
@@ -733,7 +733,7 @@ def m_floor_bracket() -> None:
     report, per Lambda, all three modes' wasted arrivals, redundant travel, and fill time, plus
     the inflight-vs-lightspeed deltas - the referee's requested floor estimate.
     """
-    seeds = SEEDS[:48]
+    seeds = SEEDS[:512]
     n_stars = 400
     lambdas = [0.05, 0.1, 0.2]
     data = {}
@@ -807,7 +807,7 @@ def m_floor_bracket_scale() -> None:
 
 def m_retarget_cap() -> None:
     """Fuel tax vs the max_retargets bookkeeping cap: show the result is insensitive to it."""
-    seeds = SEEDS[:32]
+    seeds = SEEDS[:512]
     n_stars = 400
     caps = [2, 4, 8, 16, 32]
     data = {}
@@ -847,7 +847,7 @@ def m_retarget_cap_scale() -> None:
 
 def m_dt_artifact() -> None:
     """Fill-time tax vs fixed timestep, collapsing to ~0 at the event (dt->0) limit."""
-    seeds = SEEDS[:32]
+    seeds = SEEDS[:512]
     n_stars = 300
     dts = [5000.0, 2000.0, 1000.0, 500.0, 250.0]
     rows_out = []
@@ -951,7 +951,7 @@ def m_clumpiness() -> None:
     p_lag/p_perfect stratified by hop length at the clumpiest level (flat in d => the mechanism
     survives); (3) linearity across Lambda. The uniform level is the hard null (must return ~0.96).
     """
-    seeds = SEEDS[:48]
+    seeds = SEEDS[:512]
     n_stars = 500
     lambdas = [0.05, 0.1, 0.2]
     n_clumps = 25  # ~20 stars/clump at N=500: dense enough to over-subscribe under 2-offspring branching
