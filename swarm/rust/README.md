@@ -18,11 +18,18 @@ Two trees coexist:
 ## When each fires
 
 The two trees are not mutually exclusive - both live in `swarm_rust`. The
-pointer tree fires today via `nearest_unsettled` / `run_fill`; the flat tree is
-exposed via `build_flat_kdtree` / `nearest_unsettled_flat` / `mark_settled_flat`.
-A follow-up PR wires `simulate_swarm` to prefer the flat path when
-`n_stars` is p2 and `swarm_rust` is present; until then, the flat tree is
-callable but not on the default hot path.
+pointer tree fires via `nearest_unsettled` / `run_fill`; the flat tree via
+`build_flat_kdtree` / `nearest_unsettled_flat` / `mark_settled_flat` /
+`run_fill_flat`. `swarm.sim._simulate_swarm_rust` dispatches at the boundary:
+
+- **`n_stars = 2^k, k >= 3`** and the flat functions are compiled -> the flat
+  tree is built in Rust and `run_fill_flat` owns the event loop. Byte-identical
+  aggregates to the pointer path at matching N
+  (`tests/test_flat_run_fill_oracle.py`).
+- Non-p2 N, or an older crate build missing the flat functions -> the pointer
+  tree + `run_fill` (unchanged).
+- `SWARM_NO_RUST_FLAT=1` env override forces the pointer path at p2 N too,
+  useful for A/B benching and the oracle harness.
 
 ## What p2 buys, honestly
 
@@ -32,6 +39,12 @@ callable but not on the default hot path.
   is the elimination of two per-internal-node array loads (`lo[i]`, `hi[i]`)
   in favor of a shift+add on `i`, plus a cheaper leaf test (`i >= M-1` vs
   `axis[i] == -1`). This is a real speedup, not a large one.
+
+- **Whole-fill wall-clock: 1.3-1.8x** (see `experiments/bench_flat_run_fill.py`).
+  The per-query win compounds through the event loop; inflight sees the biggest
+  lift (1.79x at N=4096) because it hits the NN kernel more often via the
+  decrease-key reschedule path. `simulate_swarm` at p2 N gets this for free
+  now that the dispatch is wired.
 
 - **Contiguous 8-star leaves.** `xs_p, ys_p, zs_p` are the star coordinates
   stored in **permuted** order, one leaf's 8 stars at a stretch. A future
