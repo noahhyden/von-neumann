@@ -26,6 +26,7 @@ from dataclasses import dataclass
 
 from vn_core.uq.distributions import Distribution
 from vn_core.uq.sample import MCResult, summarize
+from vn_core.uq.sequences import MAX_SOBOL_DIM, sobol_points
 
 
 @dataclass(frozen=True)
@@ -77,17 +78,53 @@ class _SaltelliEvals:
     n: int
 
 
+def _ab_matrices(
+    sampler: str, n: int, k: int, seed: int
+) -> tuple[list[list[float]], list[list[float]]]:
+    """The two base uniform matrices A, B in [0, 1)^{n x k} for the Saltelli design.
+
+    - ``"random"`` (default): independent pseudo-random draws, filled in a fixed
+      (row, col) order so the RNG stream is deterministic and reordering ``inputs``
+      does not change results below the level of input identity. Historical behavior.
+    - ``"sobol"``: one Sobol' sequence in 2K dimensions split into A (first K columns)
+      and B (last K columns). This is the standard low-discrepancy Saltelli sampler;
+      the Sobol' index estimates converge markedly faster in N. Fully deterministic
+      (no seed dependence for the base sample). Capped at 2K <= the tabulated Sobol'
+      dimensions, since A and B must come from *independent* columns of one sequence.
+    """
+    if sampler == "random":
+        rng = random.Random(seed)
+        a_u = [[rng.random() for _ in range(k)] for _ in range(n)]
+        b_u = [[rng.random() for _ in range(k)] for _ in range(n)]
+        return a_u, b_u
+    if sampler == "sobol":
+        if 2 * k > MAX_SOBOL_DIM:
+            raise ValueError(
+                f"sampler='sobol' needs 2*K <= {MAX_SOBOL_DIM} tabulated Sobol' dimensions "
+                f"(A and B are independent column blocks of one sequence); K={k} gives "
+                f"2K={2 * k}. Use sampler='random' for more inputs."
+            )
+        pts = sobol_points(n, 2 * k, skip=1)
+        a_u = [list(p[:k]) for p in pts]
+        b_u = [list(p[k:]) for p in pts]
+        return a_u, b_u
+    raise ValueError(f"unknown sampler {sampler!r}; choose 'random' or 'sobol'")
+
+
 def _saltelli_evaluate(
     inputs: Mapping[str, Distribution],
     finding: Callable[[Mapping[str, float]], float],
     *,
     n: int,
     seed: int,
+    sampler: str = "random",
 ) -> _SaltelliEvals:
     """Run one Saltelli design and return all N*(K+2) finding evaluations.
 
     The single model-evaluation path behind both ``sobol_total_order`` and
     ``uq_and_gsa`` - so asking for UQ alongside GSA costs zero extra evaluations.
+    ``sampler`` selects the base A/B sample: "random" (default) or "sobol" (a
+    low-discrepancy sample that converges faster; see ``_ab_matrices``).
     """
     if n < 2:
         raise ValueError(f"n must be >= 2, got {n}")
@@ -96,13 +133,7 @@ def _saltelli_evaluate(
     if k < 1:
         raise ValueError("a Saltelli design requires at least one input")
 
-    rng = random.Random(seed)
-
-    # Two independent uniform matrices A, B in [0, 1)^{n x k}. Fill in a fixed
-    # (row, col) order so the RNG stream is deterministic and rearrangement of
-    # `inputs` keys does not change results below the level of input identity.
-    a_u = [[rng.random() for _ in range(k)] for _ in range(n)]
-    b_u = [[rng.random() for _ in range(k)] for _ in range(n)]
+    a_u, b_u = _ab_matrices(sampler, n, k, seed)
 
     def push(u_row: list[float]) -> dict[str, float]:
         return {name: inputs[name].quantile(u) for name, u in zip(names, u_row)}
@@ -262,6 +293,7 @@ def sobol_total_order(
     n: int,
     seed: int,
     bootstrap: int = 0,
+    sampler: str = "random",
 ) -> SobolResult:
     """First- and total-order Sobol indices, each with a 90% confidence interval.
 
@@ -271,10 +303,14 @@ def sobol_total_order(
     pass ``bootstrap=B`` (e.g. 500) for percentile CIs by resampling instead, which
     adds no model evaluations but is O(N*B) arithmetic (slow at large N).
 
+    ``sampler`` picks the base A/B sample: "random" (default; existing seeded results
+    are unchanged) or "sobol" (a low-discrepancy Saltelli sample - the index estimates
+    converge markedly faster in N, capped at 2*K <= the tabulated Sobol' dimensions).
+
     If you also want the output distribution (error bars), call ``uq_and_gsa``
     instead - it returns both from this same design at no extra evaluations.
     """
-    ev = _saltelli_evaluate(inputs, finding, n=n, seed=seed)
+    ev = _saltelli_evaluate(inputs, finding, n=n, seed=seed, sampler=sampler)
     return _sobol_from_evals(ev, bootstrap=bootstrap, seed=seed)
 
 
@@ -299,6 +335,7 @@ def uq_and_gsa(
     n: int,
     seed: int,
     bootstrap: int = 0,
+    sampler: str = "random",
 ) -> Analysis:
     """Propagate uncertainty AND rank drivers from one Saltelli design.
 
@@ -309,11 +346,15 @@ def uq_and_gsa(
     (which would re-evaluate the model M extra times), and the free UQ carries 2N
     samples. ``bootstrap`` is forwarded to the GSA CIs (see ``sobol_total_order``).
 
-    The A/B matrices are genuine iid draws of the joint input distribution (one
-    uniform per independent input, pushed through its inverse CDF), so the UQ
-    built from them is a standard Monte Carlo estimate - not an approximation.
+    ``sampler`` picks the base sample: "random" (default) or "sobol" (low-discrepancy;
+    faster index convergence). Note the honest caveat with "sobol": the A+B samples
+    are then quasi-random, not iid, so the reported UQ *mean* is a strong estimate but
+    the std/quantile error bar is over a low-discrepancy sample, not an iid one - for
+    strict iid error-bar semantics keep "random" (or use ``monte_carlo``). With the
+    default "random", the A/B matrices are genuine iid draws of the joint input
+    distribution, so the UQ built from them is a standard Monte Carlo estimate.
     """
-    ev = _saltelli_evaluate(inputs, finding, n=n, seed=seed)
+    ev = _saltelli_evaluate(inputs, finding, n=n, seed=seed, sampler=sampler)
     uq = summarize(ev.y_a + ev.y_b, ev.names)
     gsa = _sobol_from_evals(ev, bootstrap=bootstrap, seed=seed)
     return Analysis(uq=uq, gsa=gsa)
