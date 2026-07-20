@@ -45,6 +45,13 @@ jobs:
         run: |
           uv run --extra dev coverage run -m pytest -q
           uv run --extra dev coverage report
+      # The papers paths-filter in this workflow is hand-maintained; this asserts it
+      # still matches the paper->module edges depgraph derives from figure content, so
+      # a new figure sourced from an unlisted module fails here instead of silently
+      # skipping that paper's rebuild. Regenerate groups with `depgraph.py --ci-filter`.
+      - name: ci.yml paths-filter matches depgraph
+        working-directory: scripts
+        run: uv run python depgraph.py --check-ci-filter
 
   closure-sim:
     runs-on: ubuntu-latest
