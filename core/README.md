@@ -37,8 +37,14 @@ Distributed as the `vn-core` package (Python name `vn_core`). Currently holds:
   quasi-Monte Carlo - ~1/N convergence for smooth low-dim findings, with an honest
   error bar from replicate spread) and `pce_control_variate` (PCE as a control
   variate - an unbiased mean with far lower variance, and it stays honest even
-  where PCE alone is untrustworthy). Every von-neumann module reaches for this so
-  no one re-implements the RNG discipline or the propagation loop.
+  where PCE alone is untrustworthy). Both variance-reduction paths and the Saltelli
+  sensitivity design draw their base points from `vn_core.uq.sequences` - a shared
+  source of deterministic low-discrepancy sequences (`halton_point`, `sobol_points`).
+  The Sobol' points are built from the Joe-Kuo direction numbers and pinned
+  bit-identical to `scipy.stats.qmc.Sobol` by a committed oracle test, so the
+  quasi-random sampler is verified against the reference rather than hand-rolled.
+  Every von-neumann module reaches for this so no one re-implements the RNG
+  discipline or the propagation loop.
 - **`vn_core.ode`** - ordinary differential equation solvers (issue
   [#38](https://github.com/noahhyden/von-neumann/issues/38)). One entry point,
   `solve(f, y0, t_span, ...)`, with two methods: `"rk45"` (Dormand-Prince,

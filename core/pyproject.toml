@@ -10,13 +10,26 @@ requires-python = ">=3.12"
 dependencies = []
 
 [project.optional-dependencies]
-# scipy is a TEST-ONLY oracle for the ODE validation gate (issue #38): we compare
-# vn_core.ode against scipy.integrate.solve_ivp. It is never a runtime dependency
-# - vn-core itself stays `dependencies = []` and pure Python.
-dev = ["pytest>=8.0", "scipy>=1.11"]
+# scipy is a TEST-ONLY oracle for the validation gates: the ODE gate (issue #38)
+# compares vn_core.ode against scipy.integrate.solve_ivp, and the Sobol'-sequence
+# gate compares vn_core.uq.sequences against scipy.stats.qmc.Sobol (the authoritative
+# Joe-Kuo direction numbers). It is never a runtime dependency - vn-core itself stays
+# `dependencies = []` and pure Python. coverage[toml] is the test-only coverage gate.
+dev = ["pytest>=8.0", "scipy>=1.11", "coverage[toml]>=7.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["vn_core"]
+
+[tool.coverage.report]
+# The fold is the product; every line of it is exercised or explained. New modules
+# land at 100% line+branch coverage (the build discipline). `# pragma: no cover` is
+# permitted only on genuinely unreachable defensive branches, each justified inline.
+show_missing = true
+skip_covered = false
