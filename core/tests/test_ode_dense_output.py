@@ -52,7 +52,11 @@ def test_dense_output_matches_analytic():
         assert state[0] == pytest.approx(math.cos(tv), abs=1e-5)
 
 
-def test_dense_output_matches_scipy():
+def test_dense_output_agrees_with_scipy_at_tolerance():
+    """Cross-check the dense output against scipy's RK45. The two no longer agree to
+    machine precision - vn_core uses a PI step controller, scipy an elementary one, so
+    their step sequences differ - but both are rtol-accurate, so their solutions (and
+    hence dense-output samples) agree at the tolerance level."""
     np = pytest.importorskip("numpy")
     from scipy.integrate import solve_ivp
 
@@ -63,7 +67,7 @@ def test_dense_output_matches_scipy():
         method="RK45", rtol=1e-6, atol=1e-9, t_eval=grid,
     )
     for i, tv in enumerate(grid):
-        assert mine.y[i + 1][0] == pytest.approx(float(ref.y[0][i]), abs=1e-8)
+        assert mine.y[i + 1][0] == pytest.approx(float(ref.y[0][i]), abs=1e-5)
 
 
 def test_teval_final_time_is_exact():
@@ -76,7 +80,7 @@ def test_teval_single_interior_point_golden():
     """Bit-reproducibility of an interpolated value (exp at t=0.37)."""
     r = solve(_exp, [1.0], (0.0, 1.0), t_eval=[0.37])
     assert r.t == (0.0, 0.37)  # t0 is prepended, then the requested time
-    assert r.y[1][0] == 1.4477349593481161
+    assert r.y[1][0] == 1.4477346838495178
     assert r.y[1][0] == pytest.approx(math.exp(0.37), abs=1e-6)
 
 
@@ -115,3 +119,33 @@ def test_dense_output_is_deterministic():
     a = solve(_oscillator, [1.0, 0.0], (0.0, 5.0), t_eval=[1.0, 2.5, 4.0])
     b = solve(_oscillator, [1.0, 0.0], (0.0, 5.0), t_eval=[1.0, 2.5, 4.0])
     assert a.y == b.y
+
+
+def _van_der_pol(t, y):
+    mu = 5.0
+    return [y[1], mu * (1.0 - y[0] ** 2) * y[1] - y[0]]
+
+
+def test_pi_controller_keeps_rejection_rate_low():
+    """The PI controller damps the step-size oscillation a pure err**(-1/5) controller
+    shows on a demanding problem (van der Pol has sharp relaxation turns). Its rejection
+    ratio here (~0.09) is well below the elementary controller's (~0.14) - this pins the
+    PI behavior and exercises the reject branch. It also stays accurate."""
+    r = solve(_van_der_pol, [2.0, 0.0], (0.0, 30.0), rtol=1e-6, atol=1e-9)
+    assert r.success
+    assert r.n_rejected > 0  # the problem does force some rejects (reject branch runs)
+    assert r.n_rejected < 0.12 * r.n_accepted  # elementary (~0.14) would fail this
+
+
+def test_pi_controller_accuracy_matches_scipy_on_van_der_pol():
+    np = pytest.importorskip("numpy")
+    from scipy.integrate import solve_ivp
+
+    grid = [i * 0.5 for i in range(1, 61)]
+    mine = solve(_van_der_pol, [2.0, 0.0], (0.0, 30.0), t_eval=grid, rtol=1e-8, atol=1e-11)
+    ref = solve_ivp(
+        lambda t, y: [y[1], 5.0 * (1.0 - y[0] ** 2) * y[1] - y[0]],
+        (0.0, 30.0), [2.0, 0.0], method="RK45", rtol=1e-8, atol=1e-11, t_eval=grid,
+    )
+    for i in range(len(grid)):
+        assert mine.y[i + 1][0] == pytest.approx(float(ref.y[0][i]), abs=1e-4)

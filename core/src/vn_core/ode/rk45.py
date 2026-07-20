@@ -51,11 +51,16 @@ E5 = -2187 / 6784 - (-92097 / 339200)
 E6 = 11 / 84 - 187 / 2100
 E7 = -1 / 40
 
-# Step controller constants (Hairer/Wanner defaults, matching scipy's RK45).
+# Step controller constants. Gustafsson PI controller (Hairer/Wanner II.4), the same
+# form and defaults as Hairer's reference DOPRI5. The step factor is
+#   factor = clamp( SAFETY * err**(-alpha) * err_prev**beta,  MIN_FACTOR, MAX_FACTOR )
+# with the beta (integral) term damping the oscillation a pure err**(-1/5) controller
+# shows on problems with abruptly changing scales - fewer rejected steps, same accuracy.
 _SAFETY = 0.9
 _MIN_FACTOR = 0.2
 _MAX_FACTOR = 10.0
-_ERROR_EXPONENT = -1.0 / 5.0  # -1/(estimator_order+1), estimator order 4
+_PI_BETA = 0.04  # integral-term gain (Hairer DOPRI5 default)
+_PI_ALPHA = 1.0 / 5.0 - 0.75 * _PI_BETA  # = 0.17; current-error exponent, 1/(q+1) - 0.75*beta
 
 # Dense-output interpolation matrix P (7 stages x 4 powers of theta), exact rationals.
 # The quartic interpolant on an accepted step [t, t+h] is
@@ -139,6 +144,9 @@ def integrate_rk45(
     rejected = 0
     steps = 0
     max_steps = 10_000_000  # a real cap so a bad RHS cannot spin forever
+    # Previous accepted step's error, the PI controller's "integral" memory. Hairer's
+    # initial value; floored at 1e-4 so an exactly-zero error cannot zero the term.
+    err_prev = 1e-4
 
     while t < t1:
         steps += 1
@@ -176,16 +184,21 @@ def integrate_rk45(
                     ti += 1
             y = y_new
             f0 = stages[6]  # FSAL: k7 is the next step's first stage.
-            # Grow the step for next time (error 0 -> max growth).
+            # PI controller: err**(-alpha) is the proportional term, err_prev**beta the
+            # integral term. err == 0 (an exactly-integrated step) means grow maximally.
             if err == 0.0:
                 factor = _MAX_FACTOR
             else:
-                factor = min(_MAX_FACTOR, _SAFETY * err**_ERROR_EXPONENT)
+                factor = _SAFETY * err ** (-_PI_ALPHA) * err_prev**_PI_BETA
+                factor = min(_MAX_FACTOR, max(_MIN_FACTOR, factor))
+            err_prev = max(err, 1e-4)  # remember this step's error for the next PI update
             h = h * factor
         else:
-            # Reject: shrink and retry from the same point (do not grow).
+            # Reject: shrink and retry from the same point. Pure proportional term (the
+            # PI integral memory is not updated on a reject, per Hairer); err > 1 here so
+            # the factor is < 1 (shrink), floored at _MIN_FACTOR.
             rejected += 1
-            factor = max(_MIN_FACTOR, _SAFETY * err**_ERROR_EXPONENT)
+            factor = max(_MIN_FACTOR, _SAFETY * err ** (-_PI_ALPHA))
             h = h * factor
 
     # Safety net: guarantee the final time is present under record_all. In practice
