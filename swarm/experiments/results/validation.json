@@ -22,5 +22,28 @@
     }
   },
   "nearest_speedup_over_powered": 166.4103939844196,
-  "nearest_beats_maxboost_on_time": true
+  "nearest_beats_maxboost_on_time": true,
+  "p2": {
+    "config": {
+      "n_stars": 512,
+      "seed": 2654435769,
+      "stepping": "event"
+    },
+    "policies": {
+      "powered": {
+        "t100": 1578666.8043786818,
+        "max_speed_km_s": 8.993773739999998
+      },
+      "slingshot_nearest": {
+        "t100": 8065.83027674084,
+        "max_speed_km_s": 3897.848071665256
+      },
+      "slingshot_maxboost": {
+        "t100": 58498.29341833365,
+        "max_speed_km_s": 5780.6711085665875
+      }
+    },
+    "nearest_speedup_over_powered": 195.7227898696343,
+    "nearest_beats_maxboost_on_time": true
+  }
 }
