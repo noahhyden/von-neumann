@@ -293,6 +293,10 @@ class SwarmState:
     # interior-only stars at any shell and separate a boundary artifact from bulk saturation.
     settle_wall_hist: list[int] = field(default_factory=lambda: [0] * N_WALL_BINS)
     wasted_wall_hist: list[int] = field(default_factory=lambda: [0] * N_WALL_BINS)
+    # Scratchpad: normalized claim-margin histogram for wasted arrivals in the instant run.
+    # For each wasted arrival: s = (settled_year[target] - launch_year) / (arrive - launch),
+    # binned into 32 bins on [0, 1]. Diagnostic-only; does not affect the fold.
+    wasted_s_hist: list[int] = field(default_factory=lambda: [0] * 32)
 
     def n_settled(self) -> int:
         return sum(1 for y in self.settled_year if y >= 0.0)
@@ -355,4 +359,5 @@ class SwarmResult:
     # mean-NN-distance units) - the finite-size edge test (M1): interior-only tax vs N.
     settle_wall_hist: list[int] = field(default_factory=list)
     wasted_wall_hist: list[int] = field(default_factory=list)
+    wasted_s_hist: list[int] = field(default_factory=list)
     steps: list[SwarmStep] = field(default_factory=list)
