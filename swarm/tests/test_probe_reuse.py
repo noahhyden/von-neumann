@@ -39,11 +39,19 @@ GOLDEN: dict[tuple, str] = {
 
 
 def _result_digest(policy: str, coord: str, n: int, off: int, seed: int) -> str:
-    """Stable digest of a full SwarmResult (all fields but the trace), exact via repr()."""
+    """Stable digest of a full SwarmResult (all fields but the trace), exact via repr().
+
+    Runs the PYTHON fold explicitly: this guards the Tier-1 (Probe slots + in-place reuse)
+    allocation change, which is a property of ``_simulate_swarm_python``. The Rust fast path
+    has its own bit-identity oracle (``test_rust_fill_loop.py``); routing this digest through
+    the dispatcher would make it repr-sensitive to float vs np.float64 typing, not behaviour.
+    """
+    import swarm.sim as sim
+
     p = SwarmParams(n_stars=n, policy=policy, coordination=coord,
                     offspring_per_settlement=off, probe_speed_c=0.2,
                     speed_cap_c=0.4, stepping="event")
-    r = simulate_swarm(p, seed=seed, record_steps=False)
+    r = sim._simulate_swarm_python(p, seed=seed, record_steps=False)
     blob = "|".join(f"{f.name}={getattr(r, f.name)!r}"
                     for f in fields(r) if f.name != "steps")
     return hashlib.sha256(blob.encode()).hexdigest()[:16]

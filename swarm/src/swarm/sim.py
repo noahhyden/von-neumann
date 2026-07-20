@@ -1260,16 +1260,16 @@ def _snapshot(s: SwarmState, n_stars: int) -> SwarmStep:
 def _rust_fill_supported(params: SwarmParams) -> bool:
     """Whether the Rust whole-fill loop (Tier 2) covers this config.
 
-    The fast path handles the powered policy under instant/lightspeed coordination in event
-    mode - the config every 200k scale sweep uses. inflight (mid-flight relay) and the
-    slingshot policies fall back to the Python reference, which stays the source of truth.
+    The fast path handles the powered policy under instant/lightspeed/inflight coordination in
+    event mode. The slingshot policies fall back to the Python reference, which stays the source
+    of truth.
     """
     return (
         _RUST_FILL is not None
         and os.environ.get("SWARM_NO_RUST") != "1"
         and os.environ.get("SWARM_NO_RUST_FILL") != "1"
         and params.policy == "powered"
-        and params.coordination in ("instant", "lightspeed")
+        and params.coordination in ("instant", "lightspeed", "inflight")
         and params.stepping == "event"
     )
 
@@ -1301,7 +1301,7 @@ def _simulate_swarm_rust(
         kd["root"], kd["axis"], kd["split"], kd["lo"], kd["hi"], kd["parent"],
         kd["bxmin"], kd["bxmax"], kd["bymin"], kd["bymax"], kd["bzmin"], kd["bzmax"],
         kd["nuns"], kd["tsmax"], kd["star_leaf"], kd["bucket_flat"], kd["bucket_offsets"],
-        params.coordination == "instant", L, params.periodic,
+        params.coordination == "instant", params.coordination == "inflight", L, params.periodic,
         params.probe_speed_pc_per_year, params.offspring_per_settlement,
         params.settle_time_years, params.max_years, params.max_retargets, inv_d_nn,
         hop_edges, wall_edges,
@@ -1321,7 +1321,7 @@ def _simulate_swarm_rust(
         policy=params.policy, coordination=params.coordination,
         total_arrivals=d["total_arrivals"], wasted_arrivals=d["wasted_arrivals"],
         retarget_count=d["retarget_count"], wasted_travel_pc=d["wasted_travel_pc"],
-        midflight_aborts=0,  # no mid-flight relay in the powered instant/lightspeed fast path
+        midflight_aborts=d["midflight_aborts"],  # nonzero only under inflight mid-flight relay
         mean_launch_speed_km_s=(
             d["launch_speed_sum_pc_yr"] / d["launch_count"] / KM_S_TO_PC_YR
             if d["launch_count"] else 0.0
@@ -1356,11 +1356,11 @@ def simulate_swarm(
 ) -> SwarmResult:
     """Run the settlement front and summarize; routes to the Rust fast path when it applies.
 
-    For the powered/instant-or-lightspeed/event config (the 200k scale sweeps), and when the
-    Rust ``run_fill`` extension is built, this dispatches to ``_simulate_swarm_rust`` - a
-    bit-identical, much faster path. Everything else (inflight, slingshot, fixed-step, or a
-    caller that needs the full per-event ``steps`` trace) uses the Python reference fold. The
-    two are byte-for-byte equal on the fast-path config (``test_rust_fill_loop.py``).
+    For the powered / instant-lightspeed-or-inflight / event config (the 200k scale sweeps), and
+    when the Rust ``run_fill`` extension is built, this dispatches to ``_simulate_swarm_rust`` - a
+    bit-identical, much faster path. Everything else (slingshot policies, fixed-step, or a caller
+    that needs the full per-event ``steps`` trace) uses the Python reference fold. The two are
+    byte-for-byte equal on the fast-path config (``test_rust_fill_loop.py``).
     """
     # The fast path returns only the single initial snapshot, so a caller that walks the full
     # per-event trace (record_steps=True) must use the Python fold.

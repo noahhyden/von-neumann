@@ -40,6 +40,12 @@ MATRIX = [
     dict(n_stars=1500, coordination="instant", seed=3),
     dict(n_stars=1200, coordination="lightspeed", seed=11, periodic=True),
     dict(n_stars=600, coordination="lightspeed", seed=2, max_retargets=2),
+    # inflight: mid-flight relay (learns, decrease-key, by_target) - the intricate path.
+    dict(n_stars=400, coordination="inflight", seed=1),
+    dict(n_stars=900, coordination="inflight", seed=7, offspring_per_settlement=3),
+    dict(n_stars=1500, coordination="inflight", seed=3),
+    dict(n_stars=1200, coordination="inflight", seed=11, periodic=True),
+    dict(n_stars=600, coordination="inflight", seed=6, max_retargets=2),
 ]
 
 
@@ -90,9 +96,13 @@ def test_dispatch_prefers_rust_for_supported_config() -> None:
         assert not sim._rust_fill_supported(supported)
     else:
         assert sim._rust_fill_supported(supported)
+    # inflight is now supported (mirrors the env gate too).
+    inflight = SwarmParams(policy="powered", coordination="inflight", stepping="event")
+    if os.environ.get("SWARM_NO_RUST") == "1" or os.environ.get("SWARM_NO_RUST_FILL") == "1":
+        assert not sim._rust_fill_supported(inflight)
+    else:
+        assert sim._rust_fill_supported(inflight)
     # Unsupported configs must NOT claim the fast path (they fall back to Python) - env-independent.
-    assert not sim._rust_fill_supported(SwarmParams(policy="powered", coordination="inflight",
-                                                    stepping="event"))
     assert not sim._rust_fill_supported(SwarmParams(policy="slingshot_nearest",
                                                     coordination="lightspeed", stepping="event"))
     assert not sim._rust_fill_supported(SwarmParams(policy="powered", coordination="lightspeed",

@@ -53,13 +53,16 @@ paths, gated behind the `[project.optional-dependencies] rust` extra:
 
 - the nearest-unsettled k-d tree **query** (`nearest_unsettled`, issue #33 Phase 1); and
 - the whole-fill **event loop** (`run_fill`, Tier 2 of the 200k speedup): for
-  `policy="powered"`, `coordination in {instant, lightspeed}`, `stepping="event"`
-  (the config every 200k scale sweep uses), `sim.simulate_swarm` hands the
-  Python-built seeded field + k-d tree to Rust, which runs the ~2M-event fill and
-  returns aggregates. **Measured ~4.5-5x** over the Python fold on k02 (200k fill:
-  ~20s -> ~4.5s), bit-identical. Everything else (inflight relay, slingshot
-  policies, fixed-step, or a caller needing the full per-event `steps` trace)
-  stays on the Python reference, which remains the source of truth.
+  `policy="powered"`, `coordination in {instant, lightspeed, inflight}`,
+  `stepping="event"` (the config every 200k scale sweep uses), `sim.simulate_swarm`
+  hands the Python-built seeded field + k-d tree to Rust, which runs the ~2M-event
+  fill and returns aggregates. **Measured ~4.5-5.7x** over the Python fold on k02
+  (200k fill: instant/lightspeed ~20s -> ~4.5s; the heavier inflight relay ~28s ->
+  ~4.9s), bit-identical. The slingshot policies, fixed-step, and callers needing the
+  full per-event `steps` trace stay on the Python reference, which remains the
+  source of truth. inflight adds mid-flight relay (learns, the `by_target`
+  decrease-key, and stale-entry lazy validation) - the same event order Python's
+  `_resolve_batch` produces.
 
 Building it needs a stable Rust toolchain (`cargo`, `rustc`) plus
 `maturin`; the extra pulls maturin, and any recent `rustup default stable`
@@ -76,9 +79,16 @@ pins `codegen-units = 1`, and never enables `fastmath`. `f64::sqrt` delegates
 to the hardware SQRTSD/FSQRT (correctly-rounded IEEE 754 on every modern
 platform), so Rust and Python produce bit-identical outputs. The `run_fill` loop
 holds the same discipline: identical f64 op order to `sim.py`, the one
-`density**(-1/3)` precomputed in Python and passed as `inv_d_nn` (no `powf` in the
-loop), and periodic wrap via `round_ties_even` to match Python's banker's-rounding
-`round()`. Verified by `swarm/tests/test_kdtree_backends.py` (A/B/C query oracle)
+`density**(-1/3)` precomputed in Python and passed as `inv_d_nn`, and periodic wrap
+via `round_ties_even` to match Python's banker's-rounding `round()`. One sharp edge
+worth recording: the QUERY kernel uses `sqrt` (matching numba `nearest_unsettled_njit`
+and the committed query backend), but the fold computes HOP distances with `** 0.5`,
+which CPython evaluates as libm `pow(x, 0.5)` - and on this platform glibc `pow(x,0.5)`
+is 1 ULP off from correctly-rounded `sqrt(x)` for some arguments. A single-ULP hop
+cascades (hop -> arrive -> a star's `settled_year` -> every downstream `learn_year`
+-> which target a mid-flight learner re-selects), so `run_fill` reproduces glibc `pow`
+for hops via an FFI call guarded with `black_box` (LLVM otherwise folds `pow(x,0.5)`
+back to `sqrt`). See `rust/src/lib.rs::ref_root`. Verified by `swarm/tests/test_kdtree_backends.py` (A/B/C query oracle)
 and `swarm/tests/test_rust_fill_loop.py` (the fill oracle: Rust `SwarmResult` ==
 Python `SwarmResult`, plus a direct check against the committed `finite_size.json`).
 
