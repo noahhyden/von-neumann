@@ -182,6 +182,18 @@ distant star `i` as settled only once the news has arrived -
   convergence (+18.4%, ~90% of the +20.4% asymptote) - a mild lower bound, not a knob the result is
   blind to. Honest correction of an earlier "insensitive" note (`experiments/measure.py::retarget_cap`).
 
+- **Plateau-locator threshold `= 0.05` `[ESTIMATE]` - a diagnostic tolerance, not a physical
+  number.** Issue #73's `--locate-plateau` finds `cap*(N)` from the instant-only bounce depth
+  `b = W_inst / N` (arrivals per star): the smallest cap `k` where doubling to `2k` moves the
+  median `b` by less than the threshold. `0.05` is a step in `b` (units: arrivals/star), a tunable
+  knob on the tool (every use site exposes `--plateau-threshold`), not a measured quantity. Its
+  default is motivated by the committed N=400 rows, where the converged step is `Δb = 0.000`
+  (cap 16→32) and the last still-climbing step is `Δb = 0.120` (cap 8→16): `0.05` sits cleanly
+  between them, so the locator returns `cap* = 16` at N=400 and (correctly) *no plateau* at
+  N ≥ 32 768 where `b` never flattens (see `experiments/SPEC_PLATEAU_LOCATOR.md`,
+  `experiments/measure.py::locate_plateau`, `tests/test_winst_locator.py`). The `Δb ⇔ Δτ`
+  correspondence the shortcut rests on is pinned against `retarget_cap*.json` in that test.
+
 **Modelling assumptions (stated as assumptions, not measured facts - §1):**
 - **A settled star is an omnidirectional beacon emitting at year `settled_year[i]`.** No relay,
   no directionality.

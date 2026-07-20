@@ -90,6 +90,10 @@ Knobs (`SwarmParams`): `n_stars`, `density_stars_per_pc3`, `probe_speed_c`,
   - `validation.py` - the perfect-info baseline reproduces Nicholson & Forgan quantitatively (~166x).
   - `stats_util.py` - seeded, dependency-free bootstrap CI + sign test.
   - `paper_figures.py` - regenerates the four paper figures and prints every cited number.
+  - `measure.py --locate-plateau N` - a paired-free shortcut (issue #73) that finds the
+    retarget-cap plateau `cap*(N)` from the instant-only bounce depth `b = W_inst/N` alone
+    (~3x cheaper than the paired sweep), reporting the smallest cap past which `b` stops moving,
+    or no plateau in range. See `experiments/SPEC_PLATEAU_LOCATOR.md`.
 
 ## What's still deferred
 
