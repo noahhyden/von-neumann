@@ -56,6 +56,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from itertools import product
 
+from vn_core.linalg import solve_lstsq
 from vn_core.uq.distributions import (
     Distribution,
     Fixed,
@@ -445,32 +446,6 @@ def _statistics(
     return mean, variance, first_order, total_order
 
 
-def _solve_spd(a: list[list[float]], b: list[float]) -> list[float]:
-    """Solve a small dense system ``a x = b`` by Gaussian elimination w/ pivoting."""
-    n = len(b)
-    m = [list(a[i]) + [b[i]] for i in range(n)]
-    for col in range(n):
-        piv = max(range(col, n), key=lambda r: abs(m[r][col]))
-        if abs(m[piv][col]) < 1e-300:
-            raise ValueError("regression design is rank-deficient (too few / degenerate samples)")
-        if piv != col:
-            m[col], m[piv] = m[piv], m[col]
-        inv = 1.0 / m[col][col]
-        for r in range(col + 1, n):
-            f = m[r][col] * inv
-            if f == 0.0:
-                continue
-            for c in range(col, n + 1):
-                m[r][c] -= f * m[col][c]
-    x = [0.0] * n
-    for row in range(n - 1, -1, -1):
-        acc = m[row][n]
-        for c in range(row + 1, n):
-            acc -= m[row][c] * x[c]
-        x[row] = acc / m[row][row]
-    return x
-
-
 def _fit_quadrature(
     inputs: Mapping[str, Distribution],
     finding: Callable[[Mapping[str, float]], float],
@@ -541,8 +516,10 @@ def _fit_regression(
     N = ``n_samples`` or ceil(``oversampling`` * n_terms), where n_terms grows
     only *polynomially* in dimension (C(degree+d, d)) - so this scales where the
     (degree+1)^d tensor quadrature explodes. On the orthonormal basis with samples
-    drawn from the input distribution, the normal-equations Gram matrix tends to
-    N * identity, so it is well-conditioned by construction.
+    drawn from the input distribution the design is already well-conditioned (its
+    Gram matrix tends to N * identity); the fit is solved by Householder QR on the
+    design matrix (``vn_core.linalg.solve_lstsq``) rather than the normal equations,
+    which keeps full precision even when a particular draw makes the design less tame.
     """
     p = len(alphas)
     n = n_samples if n_samples is not None else max(p + 1, math.ceil(oversampling * p))
@@ -567,10 +544,20 @@ def _fit_regression(
         _check_finite(y)
         rhs.append(y)
 
-    # Normal equations (M^T M) c = M^T y.
-    gram = [[sum(design[r][i] * design[r][j] for r in range(n)) for j in range(p)] for i in range(p)]
-    proj = [sum(design[r][i] * rhs[r] for r in range(n)) for i in range(p)]
-    coeffs = dict(zip(alphas, _solve_spd(gram, proj)))
+    # Solve the least-squares problem M c ~= y directly by Householder QR. Going
+    # through the normal equations (M^T M) c = M^T y instead would square the
+    # condition number of the design, throwing away half the digits on a mildly
+    # ill-conditioned basis; QR on M keeps them.
+    try:
+        coeffs = dict(zip(alphas, solve_lstsq(design, rhs)))
+    except ValueError as exc:  # pragma: no cover - unreachable via the public API:
+        # the n<=p "too few samples" case is guarded above, and with n>p samples drawn
+        # from continuous distributions the design is full-rank almost surely (the
+        # constant basis term is the all-ones column). Kept to rewrap any residual
+        # rank-deficiency into a PCE-context message rather than leak the linalg one.
+        raise ValueError(
+            "regression design is rank-deficient (too few / degenerate samples)"
+        ) from exc
     return coeffs, n
 
 

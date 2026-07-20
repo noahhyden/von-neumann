@@ -26,8 +26,9 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 
+from vn_core.linalg import solve_linear
 from vn_core.ode.common import RHS, clamp_step, output_targets, rms_error_norm
-from vn_core.ode.linalg import numerical_jacobian, solve_linear
+from vn_core.ode.linalg import numerical_jacobian
 
 _SAFETY = 0.9
 _MIN_FACTOR = 0.2

@@ -13,4 +13,6 @@ Subpackages:
   ``(value, new_state)`` threading contract (issue #65).
 - :mod:`vn_core.uq`  - propagation, Sobol sensitivity, PCE (issue #35).
 - :mod:`vn_core.ode` - RK45 + backward Euler with a validation gate (issue #38).
+- :mod:`vn_core.linalg` - tiny dense solvers shared by the two: a square Gaussian
+  elimination (implicit ODE) and a Householder-QR least-squares (PCE regression).
 """

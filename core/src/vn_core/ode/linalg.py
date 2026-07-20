@@ -1,55 +1,18 @@
-"""Tiny dense linear algebra for the implicit solver - pure Python, zero deps.
+"""ODE-specific linear-algebra helper: the finite-difference Jacobian of the RHS.
 
-The stiff (implicit) integrator needs to solve a small linear system per Newton
-iteration, `J x = b`, and to form `J` by finite differences. The systems here are
-the size of the ODE state (scalar or a handful of components), so a dense
-Gaussian elimination with partial pivoting is the right tool: correct, simple,
-and no numpy dependency (vn-core is deliberately `dependencies = []`).
+The dense square solver the implicit integrator needs (`J x = b` per Newton step)
+now lives in the shared ``vn_core.linalg`` (alongside the least-squares solver PCE
+uses), so there is one source of truth for dense elimination. What stays here is the
+one piece that is genuinely about an ODE right-hand side: forming ``J`` by finite
+differences of ``f(t, y)``.
 
-Keeping this here rather than reaching for numpy is a §7 call as much as a
-dependency one: the fold must be deterministic, and hand-written elimination in
-a fixed pivot order is trivially reproducible across machines.
+Pure Python, zero deps, deterministic (§7): a fixed-order forward difference is
+trivially reproducible across machines.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-
-
-def solve_linear(a: list[list[float]], b: list[float]) -> list[float]:
-    """Solve the dense system ``a x = b`` by Gaussian elimination w/ partial pivot.
-
-    ``a`` is an n x n matrix (list of rows), ``b`` a length-n vector. Returns the
-    solution ``x``. Raises ValueError if the matrix is singular to working
-    precision. Operates on copies, so the inputs are not mutated.
-    """
-    n = len(b)
-    if any(len(row) != n for row in a) or len(a) != n:
-        raise ValueError("a must be square and match len(b)")
-    # Work on an augmented copy so callers' data is untouched.
-    m = [list(a[i]) + [b[i]] for i in range(n)]
-    for col in range(n):
-        # Partial pivot: pick the row with the largest magnitude in this column.
-        pivot = max(range(col, n), key=lambda r: abs(m[r][col]))
-        if abs(m[pivot][col]) < 1e-300:
-            raise ValueError("matrix is singular to working precision")
-        if pivot != col:
-            m[col], m[pivot] = m[pivot], m[col]
-        inv = 1.0 / m[col][col]
-        for r in range(col + 1, n):
-            factor = m[r][col] * inv
-            if factor == 0.0:
-                continue
-            for c in range(col, n + 1):
-                m[r][c] -= factor * m[col][c]
-    # Back-substitution.
-    x = [0.0] * n
-    for row in range(n - 1, -1, -1):
-        acc = m[row][n]
-        for c in range(row + 1, n):
-            acc -= m[row][c] * x[c]
-        x[row] = acc / m[row][row]
-    return x
 
 
 def numerical_jacobian(

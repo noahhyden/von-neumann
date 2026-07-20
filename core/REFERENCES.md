@@ -233,9 +233,19 @@ constants, each a mathematical identity, not an assumption.
     non-intrusive polynomial chaos expansions with high number of random
     variables", AIAA 2007-1939.** Source of the ~2x oversampling ratio (runs vs.
     basis terms). Verdict: reasonable - with the orthonormal basis and samples
-    drawn from the input distribution, the normal-equations Gram matrix tends to
+    drawn from the input distribution, the design's Gram matrix tends to
     N * identity, so it is well-conditioned; tests confirm machine-precision
     recovery of a degree-2 polynomial in 8 inputs from ~90 runs.
+  - **Least-squares solve: Householder QR (`vn_core.linalg.solve_lstsq`).** The
+    regression fit solves the design system M c ~= y by Householder QR rather than
+    the normal equations (M^T M) c = M^T y. The normal equations square the
+    condition number of M, discarding up to half the significant digits on a mildly
+    ill-conditioned design; QR on M keeps them (a test shows QR ~8 orders of
+    magnitude more accurate than the normal equations on a near-collinear design).
+    - **Golub, G. H. and Van Loan, C. F. (2013), "Matrix Computations", 4th ed.,
+      Johns Hopkins**, Section 5.2 (Householder QR least squares). Verdict:
+      reasonable - the textbook stable LS method; validated bit-for-bit against
+      numpy.linalg.lstsq in the tests (numpy is a dev-only oracle).
 - **Sobol indices from PCE coefficients (grouped coefficient energy).**
   - **Sudret, B. (2008), "Global sensitivity analysis using polynomial chaos
     expansions", Reliability Engineering & System Safety 93(7), 964-979.** First-
