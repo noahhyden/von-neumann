@@ -40,12 +40,15 @@ decides at its true arrival time, leaving a few percent at directed-energy speed
 slingshot speeds, and the slingshot speed-up intact. The dominant cost is redundant travel: the two
 regimes build essentially the same number of probes, but stale views send them to already-claimed
 stars. A short collision argument, confirmed in simulation, shows the delay multiplies wasted
-journeys by 1 + v/c, so the coordination tax -- extra wasted trips relative to a perfect-information
-swarm -- equals the probe's speed in units of light, v/c: negligible for a powered cruise, about a
-percent at slingshot speeds, a fifth at directed-energy speeds. That baseline is itself wasteful --
-four in five journeys are redundant even with a perfect map -- so this is a v/c surcharge, not a
-fifth of all journeys. The tax grows with the branching factor but shrinks with system size, falling
-from about a fifth to one part in eighty over a 1024-fold range -- a genuine bulk decline that
+journeys by at most 1 + v/c, so the coordination tax -- extra wasted trips relative to a perfect-information
+swarm -- scales linearly with the probe's speed in units of light, v/c, with a measured coefficient
+below that derived ceiling of one (saturation removes waste the delay would otherwise add) that
+itself shrinks with system size: on a two-thousand-star field the tax is about 0.8 v/c -- negligible
+for a powered cruise, about a percent at slingshot speeds, a sixth at directed-energy speeds. That
+baseline is itself wasteful -- about five in six journeys are redundant even with a perfect map -- so
+this is a v/c surcharge, not a sixth of all journeys. The tax grows with the branching factor, and its
+decline with system size carries it from about a fifth at a few hundred stars to one part in eighty
+over a 1024-fold range -- a genuine bulk decline that
 survives both an interior-only and a periodic-box control -- holds under a clumpy field, and is no
 hard floor: a probe that listens in flight recovers nearly all of it at the small field where it was first measured, and every one of it at a 262{,}144-star scale. Whether the waste also costs energy is mission-dependent, so we denominate
 the tax in journeys, dominated by fuel and effort and scaling, cleanly, as v/c.

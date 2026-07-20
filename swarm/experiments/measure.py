@@ -78,6 +78,31 @@ SCHEMA_VERSION = 3
 SEEDS = [0x9E3779B9 + 2654435761 * k for k in range(512)]
 
 
+# Per-measurement canonical N for the p2 fixed-N base sweeps (issue #38 follow-up). Each value is
+# the largest power of two whose FULL ensemble regenerates in <= 1 min wall-clock at
+# SWARM_WORKERS=8 on k02 (see docs/HARDWARE.md); different measurements have different per-seed cost
+# (offspring count, in-flight relay, Thomas clustering, fixed-vs-event stepping), so each lands on
+# its own N rather than a shared anchor. The folds are deterministic (CLAUDE.md sec 7), so N is a
+# pure wall-clock choice and never changes a result. SWARM_P2_N_OVERRIDE forces a single N across
+# all of these (used only to probe the 1-min ceiling; unset in normal regeneration).
+P2_FIXED_N = {
+    "lambda_sweep": 2048,   # 30.7s (4096 = 72.6s, over)
+    "branching": 8192,      # 57.9s (16384 would be ~116s)
+    "energy_tax": 2048,     # 57.3s (slingshot policies are the costly part)
+    "concurrency": 32768,   # 33.3s (65536 = 73.6s, over)
+    "floor_bracket": 32768, # 64.2s (marginally over the minute; kept deliberately)
+    "retarget_cap": 32768,  # 52.3s
+    "dt_artifact": 8192,    # 53.4s (fixed-step rows use the pointer path, so this caps lowest)
+    "clumpiness": 4096,     # 26.4s (8192 = 69.5s, over)
+}
+
+
+def _p2_fixed_n(name: str) -> int:
+    """Canonical p2 star count for a fixed-N base sweep, honouring the SWARM_P2_N_OVERRIDE probe."""
+    override = os.environ.get("SWARM_P2_N_OVERRIDE")
+    return int(override) if override else P2_FIXED_N[name]
+
+
 # --------------------------------------------------------------------------------------------
 # seed slicing for distributed ensembles (item 2 of #33's alternative-levers list)
 # --------------------------------------------------------------------------------------------
@@ -532,9 +557,9 @@ def m_lambda_sweep() -> None:
 
 
 def p2_lambda_sweep() -> None:
-    """P2 companion to ``m_lambda_sweep``: N=500 -> N=512 (2% larger, cleanly p2)."""
+    """P2 companion to ``m_lambda_sweep``: N=500 -> the 1-min-ceiling p2 N (see P2_FIXED_N)."""
     seeds = SEEDS[:512]
-    n_stars = 512
+    n_stars = _p2_fixed_n("lambda_sweep")
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
     data = {}
     for lam in lambdas:
@@ -620,9 +645,9 @@ def m_branching() -> None:
 
 
 def p2_branching() -> None:
-    """P2 companion to ``m_branching``: N=400 -> N=512 (28% larger, cleanly p2)."""
+    """P2 companion to ``m_branching``: N=400 -> the 1-min-ceiling p2 N (see P2_FIXED_N)."""
     seeds = SEEDS[:32]
-    n_stars = 512
+    n_stars = _p2_fixed_n("branching")
     offspring = [2, 3, 4, 8, 16]
     lambdas = [0.05, 0.2]
     data = {}
@@ -726,9 +751,9 @@ def m_energy_tax() -> None:
 
 
 def p2_energy_tax() -> None:
-    """P2 companion to ``m_energy_tax``: N=400 -> N=512 (28% larger, cleanly p2)."""
+    """P2 companion to ``m_energy_tax``: N=400 -> the 1-min-ceiling p2 N (see P2_FIXED_N)."""
     seeds = SEEDS[:32]
-    n_stars = 512
+    n_stars = _p2_fixed_n("energy_tax")
     policies = ["powered", "slingshot_nearest", "slingshot_maxboost"]
     data = {}
     for pol in policies:
@@ -885,9 +910,9 @@ def m_concurrency() -> None:
 
 
 def p2_concurrency() -> None:
-    """P2 companion to ``m_concurrency``: N=500 -> N=512 (2% larger, cleanly p2)."""
+    """P2 companion to ``m_concurrency``: N=500 -> the 1-min-ceiling p2 N (see P2_FIXED_N)."""
     seeds = SEEDS[:16]
-    n_stars = 512
+    n_stars = _p2_fixed_n("concurrency")
     lam = 0.2
     bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
     data = _concurrency_ensemble(seeds, n_stars, lam, bins)
@@ -980,9 +1005,9 @@ def m_floor_bracket() -> None:
 
 
 def p2_floor_bracket() -> None:
-    """P2 companion to ``m_floor_bracket``: N=400 -> N=512 (28% larger, cleanly p2)."""
+    """P2 companion to ``m_floor_bracket``: N=400 -> the 1-min-ceiling p2 N (see P2_FIXED_N)."""
     seeds = SEEDS[:48]
-    n_stars = 512
+    n_stars = _p2_fixed_n("floor_bracket")
     lambdas = [0.05, 0.1, 0.2]
     data = _floor_bracket_body(seeds, n_stars, lambdas)
     write_p2_companion("floor_bracket",
@@ -1042,9 +1067,9 @@ def m_retarget_cap() -> None:
 
 
 def p2_retarget_cap() -> None:
-    """P2 companion to ``m_retarget_cap``: N=400 -> N=512 (28% larger, cleanly p2)."""
+    """P2 companion to ``m_retarget_cap``: N=400 -> the 1-min-ceiling p2 N (see P2_FIXED_N)."""
     seeds = SEEDS[:32]
-    n_stars = 512
+    n_stars = _p2_fixed_n("retarget_cap")
     caps = [2, 4, 8, 16, 32]
     data = {}
     for cap in caps:
@@ -1126,10 +1151,11 @@ def p2_dt_artifact() -> None:
 
     Note: this measurement uses stepping='fixed' and stepping='event'; only the event row
     (dt=None) hits the flat p2 kd-tree fast path. The fixed-step rows run through the pointer
-    path even at p2 N. Included per the "no exclusions" scope decision.
+    path even at p2 N, which is why its 1-min-ceiling N (P2_FIXED_N) is the lowest of the base
+    sweeps. Included per the "no exclusions" scope decision.
     """
     seeds = SEEDS[:32]
-    n_stars = 512
+    n_stars = _p2_fixed_n("dt_artifact")
     dts = [5000.0, 2000.0, 1000.0, 500.0, 250.0]
     rows_out = []
     for dt in dts + [None]:
@@ -1253,9 +1279,9 @@ def m_clumpiness() -> None:
 
 
 def p2_clumpiness() -> None:
-    """P2 companion to ``m_clumpiness``: N=500 -> N=512 (2% larger, cleanly p2). Same n_clumps=25."""
+    """P2 companion to ``m_clumpiness``: N=500 -> the 1-min-ceiling p2 N (see P2_FIXED_N). Same n_clumps=25."""
     seeds = SEEDS[:48]
-    n_stars = 512
+    n_stars = _p2_fixed_n("clumpiness")
     lambdas = [0.05, 0.1, 0.2]
     n_clumps = 25
     levels = [
