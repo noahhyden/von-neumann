@@ -403,10 +403,18 @@ try:
     # Tier 2: the whole-fill loop (powered + instant/lightspeed + event). Optional and
     # version-guarded - an older-built crate without it leaves the Python loop in charge.
     _RUST_FILL = getattr(_swarm_rust, "run_fill", None)
+    # Tier 3 (issue #38 p2 substrate): the flat p2 kd-tree fill loop. Same aggregates as
+    # `_RUST_FILL` at matching p2 N (bit-identical, see `tests/test_flat_run_fill_oracle.py`),
+    # so simulate_swarm can prefer it whenever n_stars is a power of two >= 8. Optional and
+    # version-guarded: an older-built crate without it drops back to the pointer-tree path.
+    _RUST_FILL_FLAT = getattr(_swarm_rust, "run_fill_flat", None)
+    _RUST_BUILD_FLAT = getattr(_swarm_rust, "build_flat_kdtree", None)
 except ImportError:
     _HAS_RUST = False
     _RUST_KERNEL = None
     _RUST_FILL = None
+    _RUST_FILL_FLAT = None
+    _RUST_BUILD_FLAT = None
 
 _USE_RUST = _HAS_RUST and os.environ.get("SWARM_NO_RUST") != "1"
 _USE_NJIT = (not _USE_RUST) and _HAS_NJIT and os.environ.get("SWARM_NO_NJIT") != "1"
@@ -1274,6 +1282,26 @@ def _rust_fill_supported(params: SwarmParams) -> bool:
     )
 
 
+def _is_power_of_two(n: int) -> bool:
+    """True when ``n`` is a power of two (and > 0). Matches the Rust ``is_power_of_two`` gate."""
+    return n > 0 and (n & (n - 1)) == 0
+
+
+def _use_flat_fill(n: int) -> bool:
+    """Prefer the flat p2 kd-tree fill (issue #38) at n_stars = 2^k >= 8, when built.
+
+    Env override ``SWARM_NO_RUST_FLAT=1`` forces the pointer-tree path at p2 N (useful for
+    A/B benching, and for the oracle test that exercises both paths on the same config).
+    """
+    return (
+        _RUST_FILL_FLAT is not None
+        and _RUST_BUILD_FLAT is not None
+        and os.environ.get("SWARM_NO_RUST_FLAT") != "1"
+        and n >= 8
+        and _is_power_of_two(n)
+    )
+
+
 def _simulate_swarm_rust(
     params: SwarmParams, *, seed: int = 0x9E3779B9, record_steps: bool = True
 ) -> SwarmResult:
@@ -1282,13 +1310,18 @@ def _simulate_swarm_rust(
     Galaxy generation and the k-d tree build stay in Python (the seeded RNG is not ported);
     Rust owns the ~2M-event loop and returns raw aggregates, from which we assemble the same
     ``SwarmResult`` the Python tail builds. Gated + oracle-checked (``test_rust_fill_loop.py``).
+
+    At ``n_stars = 2^k >= 8`` and when the flat p2 kd-tree functions are compiled (issue
+    #38 substrate; ``test_flat_run_fill_oracle.py``), the flat tree is built in Rust and
+    ``run_fill_flat`` owns the loop instead - byte-identical aggregates, pointer-free
+    parent walk. The pointer path stays authoritative at non-p2 N and when the flat
+    functions are absent (older crate build).
     """
     xs, ys, zs, star_speed, _rng = _generate_galaxy(params, seed_state(seed))
     n = len(xs)
     L = params.box_side_pc
     cx = cy = cz = L / 2.0
     origin = min(range(n), key=lambda i: (xs[i] - cx) ** 2 + (ys[i] - cy) ** 2 + (zs[i] - cz) ** 2)
-    kd = _build_kdtree(xs, ys, zs)  # fresh (nuns = subtree sizes, tsmax = -1); Rust marks origin
     d_nn = 0.55396 * params.density_stars_per_pc3 ** (-1.0 / 3.0)
     inv_d_nn = 1.0 / d_nn if d_nn > 0.0 else 0.0
     xs_np = np.asarray(xs, dtype=np.float64)
@@ -1296,16 +1329,31 @@ def _simulate_swarm_rust(
     zs_np = np.asarray(zs, dtype=np.float64)
     hop_edges = np.asarray(HOP_BIN_EDGES, dtype=np.float64)
     wall_edges = np.asarray(WALL_BIN_EDGES_NN, dtype=np.float64)
-    d = _RUST_FILL(
-        xs_np, ys_np, zs_np, origin,
-        kd["root"], kd["axis"], kd["split"], kd["lo"], kd["hi"], kd["parent"],
-        kd["bxmin"], kd["bxmax"], kd["bymin"], kd["bymax"], kd["bzmin"], kd["bzmax"],
-        kd["nuns"], kd["tsmax"], kd["star_leaf"], kd["bucket_flat"], kd["bucket_offsets"],
-        params.coordination == "instant", params.coordination == "inflight", L, params.periodic,
-        params.probe_speed_pc_per_year, params.offspring_per_settlement,
-        params.settle_time_years, params.max_years, params.max_retargets, inv_d_nn,
-        hop_edges, wall_edges,
-    )
+    if _use_flat_fill(n):
+        flat = _RUST_BUILD_FLAT(xs_np, ys_np, zs_np)  # Rust build; returns numpy views
+        d = _RUST_FILL_FLAT(
+            xs_np, ys_np, zs_np, origin,
+            flat["xs_p"], flat["ys_p"], flat["zs_p"], flat["star_perm"], flat["star_perm_inv"],
+            flat["axis"], flat["split"],
+            flat["bxmin"], flat["bxmax"], flat["bymin"], flat["bymax"], flat["bzmin"], flat["bzmax"],
+            flat["nuns"], flat["tsmax"],
+            params.coordination == "instant", params.coordination == "inflight", L, params.periodic,
+            params.probe_speed_pc_per_year, params.offspring_per_settlement,
+            params.settle_time_years, params.max_years, params.max_retargets, inv_d_nn,
+            hop_edges, wall_edges,
+        )
+    else:
+        kd = _build_kdtree(xs, ys, zs)  # fresh (nuns = subtree sizes, tsmax = -1); Rust marks origin
+        d = _RUST_FILL(
+            xs_np, ys_np, zs_np, origin,
+            kd["root"], kd["axis"], kd["split"], kd["lo"], kd["hi"], kd["parent"],
+            kd["bxmin"], kd["bxmax"], kd["bymin"], kd["bymax"], kd["bzmin"], kd["bzmax"],
+            kd["nuns"], kd["tsmax"], kd["star_leaf"], kd["bucket_flat"], kd["bucket_offsets"],
+            params.coordination == "instant", params.coordination == "inflight", L, params.periodic,
+            params.probe_speed_pc_per_year, params.offspring_per_settlement,
+            params.settle_time_years, params.max_years, params.max_retargets, inv_d_nn,
+            hop_edges, wall_edges,
+        )
     # Single initial snapshot (matches the Python record_steps=False trace: one entry).
     steps = [SwarmStep(year=0.0, n_settled=1, fraction_settled=1 / n,
                        in_flight=d["initial_in_flight"], front_radius_pc=0.0)]

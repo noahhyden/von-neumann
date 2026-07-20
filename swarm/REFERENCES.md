@@ -473,9 +473,16 @@ verified as bit-identical `nearest_unsettled` answers across `N in {8, 16, 32,
 (`swarm/tests/test_flat_kdtree_oracle.py`, 36 tests, mutation-red-teamed for
 parent-walk / tie-break / leaf-boundary bugs). The immediate query-side
 wall-clock win is ~4% at N in {1024, 4096, 32768}
-(`swarm/experiments/bench_flat_kdtree.py`); the substrate value is the
-SIMD-ready 8-star contiguous leaf memory (each leaf fills 1 AVX-512 lane or 4
-AVX-256 lanes worth of f64), reserved for a follow-up. The pointer tree stays
+(`swarm/experiments/bench_flat_kdtree.py`), and the whole-fill loop
+(`run_fill_flat`) posts a 1.3-1.8x speedup on the same sizes because the
+per-query win compounds through ~2M event-loop nearest queries and, under
+inflight, the decrease-key reschedule path
+(`swarm/experiments/bench_flat_run_fill.py`). `simulate_swarm` at p2 N now
+dispatches to the flat path automatically (byte-identical to the pointer path,
+verified in `swarm/tests/test_flat_run_fill_oracle.py` across the three
+coordination modes and periodic/non-periodic). The substrate value beyond
+this is the SIMD-ready 8-star contiguous leaf memory (each leaf fills 1
+AVX-512 lane or 4 AVX-256 lanes worth of f64), reserved for a follow-up. The pointer tree stays
 in place at non-p2 N to keep the frozen result JSONs as oracles; see
 `swarm/rust/SPEC_FLAT_KDTREE.md` for the layout, API, and non-perfect-p2 escape
 paths. Reference: Bentley (1975), "Multidimensional binary search trees",

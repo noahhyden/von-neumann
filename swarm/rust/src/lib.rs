@@ -1466,6 +1466,484 @@ fn mark_settled_flat(
     Ok(())
 }
 
+/// Fold star `star_orig`'s settlement into the flat tree's aggregates. Free
+/// function used inside `run_fill_flat` (which holds mutable borrows to sy, sy_p,
+/// nuns, tsmax and cannot use the `#[pyfunction]` `mark_settled_flat` above).
+///
+/// Updates both `sy` (unpermuted, for O(1) reads by original index in the event
+/// loop) and `sy_p` (permuted, threaded into `flat_nn_impl`). The dual write is
+/// cheap - one memory store each - and eliminates the permutation lookup in the
+/// hot query.
+#[inline]
+fn mark_settled_flat_impl(
+    star_orig: usize,
+    year: f64,
+    sy: &mut [f64],
+    sy_p: &mut [f64],
+    nuns: &mut [i32],
+    tsmax: &mut [f64],
+    star_perm_inv: &[i32],
+    m: usize,
+) {
+    let pidx = star_perm_inv[star_orig] as usize;
+    sy[star_orig] = year;
+    sy_p[pidx] = year;
+    // Leaf containing this star: BFS index `M-1 + pidx / 8`.
+    let mut node: i64 = (m - 1 + pidx / KD_LEAF) as i64;
+    loop {
+        let n_i = node as usize;
+        nuns[n_i] -= 1;
+        if year > tsmax[n_i] {
+            tsmax[n_i] = year;
+        }
+        if node == 0 {
+            break;
+        }
+        node = (node - 1) >> 1;
+    }
+}
+
+/// The p2 twin of `run_fill`: same event loop, same aggregate outputs, but the
+/// tree ops (`nearest_unsettled`, `mark_settled`) go through the flat p2 kd-tree
+/// (issue #38 p2 substrate). At `n_stars = 2^k, k >= 3` this is a drop-in for
+/// `run_fill`; the oracle `test_flat_run_fill_oracle.py` requires the two return
+/// byte-identical aggregates across every coordination mode + periodicity +
+/// (offspring, retarget-cap, seed) combination in the test matrix.
+///
+/// Every f64 discipline of `run_fill` carries over: `sqrt` in the query kernel
+/// (matches numba `nearest_unsettled_njit`), `ref_root` (glibc `pow(x, 0.5)`)
+/// for hop distances (matches CPython `** 0.5`, see the module-level notes on
+/// the 1-ULP glibc pow/sqrt divergence #78 pinned). The heap, `Pool`, event
+/// resolution, and inflight decrease-key are unchanged from `run_fill` because
+/// they are tree-agnostic.
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn run_fill_flat(
+    py: Python<'_>,
+    xs: PyReadonlyArray1<f64>,
+    ys: PyReadonlyArray1<f64>,
+    zs: PyReadonlyArray1<f64>,
+    origin: i64,
+    xs_p: PyReadonlyArray1<f64>,
+    ys_p: PyReadonlyArray1<f64>,
+    zs_p: PyReadonlyArray1<f64>,
+    star_perm: PyReadonlyArray1<i32>,
+    star_perm_inv: PyReadonlyArray1<i32>,
+    kd_axis: PyReadonlyArray1<i8>,
+    kd_split: PyReadonlyArray1<f64>,
+    kd_bxmin: PyReadonlyArray1<f64>,
+    kd_bxmax: PyReadonlyArray1<f64>,
+    kd_bymin: PyReadonlyArray1<f64>,
+    kd_bymax: PyReadonlyArray1<f64>,
+    kd_bzmin: PyReadonlyArray1<f64>,
+    kd_bzmax: PyReadonlyArray1<f64>,
+    kd_nuns: PyReadonlyArray1<i32>,
+    kd_tsmax: PyReadonlyArray1<f64>,
+    is_instant: bool,
+    is_inflight: bool,
+    box_side: f64,
+    periodic: bool,
+    probe_speed: f64,
+    offspring: i64,
+    settle_time: f64,
+    max_years: f64,
+    max_retargets: i64,
+    inv_d_nn: f64,
+    hop_edges: PyReadonlyArray1<f64>,
+    wall_edges: PyReadonlyArray1<f64>,
+) -> PyResult<Py<PyDict>> {
+    let xs = xs.as_slice()?;
+    let ys = ys.as_slice()?;
+    let zs = zs.as_slice()?;
+    let xs_p = xs_p.as_slice()?;
+    let ys_p = ys_p.as_slice()?;
+    let zs_p = zs_p.as_slice()?;
+    let star_perm = star_perm.as_slice()?;
+    let star_perm_inv = star_perm_inv.as_slice()?;
+    let axis = kd_axis.as_slice()?;
+    let split = kd_split.as_slice()?;
+    let bxmin = kd_bxmin.as_slice()?;
+    let bxmax = kd_bxmax.as_slice()?;
+    let bymin = kd_bymin.as_slice()?;
+    let bymax = kd_bymax.as_slice()?;
+    let bzmin = kd_bzmin.as_slice()?;
+    let bzmax = kd_bzmax.as_slice()?;
+    let hop_edges = hop_edges.as_slice()?;
+    let wall_edges = wall_edges.as_slice()?;
+
+    let n = xs.len();
+    if !is_power_of_two(n) || n < KD_LEAF {
+        return Err(pyo3::exceptions::PyValueError::new_err(format!(
+            "run_fill_flat requires n_stars to be a power of two >= {} (got {})",
+            KD_LEAF, n
+        )));
+    }
+    let m_leaves = n / KD_LEAF;
+    let mut sy: Vec<f64> = vec![-1.0; n];
+    let mut sy_p: Vec<f64> = vec![-1.0; n];
+    let mut nuns: Vec<i32> = kd_nuns.as_slice()?.to_vec();
+    let mut tsmax: Vec<f64> = kd_tsmax.as_slice()?.to_vec();
+
+    let n_hop = hop_edges.len() + 1;
+    let n_wall = wall_edges.len() + 1;
+
+    let mut settled_count: i64 = 1;
+    let mut total_launched: i64 = 0;
+    let mut total_arrivals: i64 = 0;
+    let mut wasted_arrivals: i64 = 0;
+    let mut retarget_count: i64 = 0;
+    let mut wasted_travel_pc: f64 = 0.0;
+    let mut front_radius: f64 = 0.0;
+    let mut settle_hop_sum: f64 = 0.0;
+    let mut settle_hop_count: i64 = 0;
+    let mut wasted_hop_sum: f64 = 0.0;
+    let mut wasted_hop_count: i64 = 0;
+    let mut settle_v_sum: f64 = 0.0;
+    let mut settle_v2_sum: f64 = 0.0;
+    let mut wasted_v_sum: f64 = 0.0;
+    let mut wasted_v2_sum: f64 = 0.0;
+    let mut midflight_aborts: i64 = 0;
+    let mut launch_speed_sum: f64 = 0.0;
+    let mut launch_count: i64 = 0;
+    let mut settle_hop_hist: Vec<i64> = vec![0; n_hop];
+    let mut wasted_hop_hist: Vec<i64> = vec![0; n_hop];
+    let mut settle_wall_hist: Vec<i64> = vec![0; n_wall];
+    let mut wasted_wall_hist: Vec<i64> = vec![0; n_wall];
+    let mut wasted_s_hist: Vec<i64> = vec![0; 32];
+
+    let pcts: [f64; 6] = [25.0, 50.0, 75.0, 90.0, 99.0, 100.0];
+    let mut thr: [f64; 6] = [-1.0; 6];
+    let n_f = n as f64;
+    let record_thresholds = |settled_count: i64, year: f64, thr: &mut [f64; 6]| {
+        let frac = settled_count as f64 / n_f * 100.0;
+        for k in 0..6 {
+            if thr[k] < 0.0 && frac >= pcts[k] {
+                thr[k] = year;
+            }
+        }
+    };
+
+    let mut pool = Pool::new();
+    let mut heap: BinaryHeap<Reverse<Ev>> = BinaryHeap::new();
+    let mut by_target: Vec<Vec<i64>> = if is_inflight {
+        (0..n).map(|_| Vec::new()).collect()
+    } else {
+        Vec::new()
+    };
+    let v_over_c = probe_speed / C_PC_PER_YEAR;
+
+    macro_rules! nn {
+        ($px:expr, $py:expr, $pz:expr, $year:expr, $excl:expr, $n_ex:expr) => {
+            flat_nn_impl(
+                $px, $py, $pz, $year, is_instant, m_leaves,
+                xs_p, ys_p, zs_p, &sy_p, star_perm,
+                axis, split, bxmin, bxmax, bymin, bymax, bzmin, bzmax,
+                &nuns, &tsmax, $excl, $n_ex,
+            )
+        };
+    }
+    macro_rules! actionable {
+        ($pu:expr) => {
+            actionable_of($pu, &pool.target, &pool.arrive, &sy, is_inflight, v_over_c)
+        };
+    }
+    macro_rules! add_probe {
+        ($pid:expr) => {{
+            let _pid: i64 = $pid;
+            let _pu = _pid as usize;
+            pool.live[_pu] = true;
+            let _k = actionable!(_pu);
+            heap.push(Reverse(Ev { key: _k, pid: _pid }));
+            if is_inflight {
+                by_target[pool.target[_pu] as usize].push(_pid);
+            }
+        }};
+    }
+
+    let origin_u = origin as usize;
+    mark_settled_flat_impl(
+        origin_u, 0.0,
+        &mut sy, &mut sy_p, &mut nuns, &mut tsmax, star_perm_inv, m_leaves,
+    );
+    {
+        let ox = xs[origin_u];
+        let oy = ys[origin_u];
+        let oz = zs[origin_u];
+        let mut chosen: Vec<i32> = Vec::new();
+        let departing = probe_speed;
+        for _ in 0..offspring {
+            let target = nn!(ox, oy, oz, 0.0, &chosen, chosen.len());
+            if target < 0 {
+                break;
+            }
+            chosen.push(target as i32);
+            let hop = dist(xs, ys, zs, origin_u, target as usize, periodic, box_side);
+            let travel = hop / departing;
+            let pid = pool.push(target, 0.0 + settle_time + travel, hop, 0, 0.0 + settle_time, ox, oy, oz);
+            add_probe!(pid);
+            total_launched += 1;
+            launch_speed_sum += departing;
+            launch_count += 1;
+        }
+    }
+    let initial_in_flight = launch_count;
+    record_thresholds(settled_count, 0.0, &mut thr);
+
+    let mut batch: Vec<i64> = Vec::new();
+    let mut arrivals: Vec<i64> = Vec::new();
+    let mut learns: Vec<i64> = Vec::new();
+    let mut seen: HashSet<i64> = HashSet::new();
+    loop {
+        let ne = loop {
+            match heap.peek() {
+                None => break f64::NAN,
+                Some(&Reverse(top)) => {
+                    let pu = top.pid as usize;
+                    if !pool.live[pu] || actionable!(pu) != top.key {
+                        heap.pop();
+                        continue;
+                    }
+                    break top.key;
+                }
+            }
+        };
+        if ne.is_nan() || ne > max_years {
+            break;
+        }
+        let year = ne;
+        batch.clear();
+        seen.clear();
+        while let Some(&Reverse(e)) = heap.peek() {
+            if e.key > ne {
+                break;
+            }
+            heap.pop();
+            let pu = e.pid as usize;
+            if !pool.live[pu] || seen.contains(&e.pid) || actionable!(pu) != e.key {
+                continue;
+            }
+            seen.insert(e.pid);
+            batch.push(e.pid);
+        }
+        arrivals.clear();
+        learns.clear();
+        for &pid in &batch {
+            let pu = pid as usize;
+            let tu = pool.target[pu] as usize;
+            let is_learn = is_inflight
+                && sy[tu] >= 0.0
+                && learn_year_of(pu, &pool.target, &pool.arrive, &sy, v_over_c) < pool.arrive[pu];
+            if is_learn {
+                learns.push(pid);
+            } else {
+                arrivals.push(pid);
+            }
+        }
+        arrivals.sort_by(|&a, &b| {
+            pool.arrive[a as usize].total_cmp(&pool.arrive[b as usize]).then(a.cmp(&b))
+        });
+        learns.sort_by(|&a, &b| {
+            pool.arrive[a as usize].total_cmp(&pool.arrive[b as usize]).then(a.cmp(&b))
+        });
+
+        for &pid in &arrivals {
+            pool.live[pid as usize] = false;
+        }
+        total_arrivals += arrivals.len() as i64;
+        for &pid in &arrivals {
+            let pu = pid as usize;
+            let target = pool.target[pu];
+            let tu = target as usize;
+            let hop_len = pool.hop[pu];
+            let v = probe_speed;
+
+            let hb = bin_ge(hop_edges, hop_len);
+            let x = xs[tu];
+            let y = ys[tu];
+            let z = zs[tu];
+            let mut wall = if x < box_side - x { x } else { box_side - x };
+            let yy = if y < box_side - y { y } else { box_side - y };
+            if yy < wall {
+                wall = yy;
+            }
+            let zz = if z < box_side - z { z } else { box_side - z };
+            if zz < wall {
+                wall = zz;
+            }
+            let r = wall * inv_d_nn;
+            let wb = bin_ge(wall_edges, r);
+
+            if sy[tu] < 0.0 {
+                mark_settled_flat_impl(
+                    tu, year,
+                    &mut sy, &mut sy_p, &mut nuns, &mut tsmax, star_perm_inv, m_leaves,
+                );
+                settled_count += 1;
+                let d_origin = dist(xs, ys, zs, tu, origin_u, periodic, box_side);
+                if d_origin > front_radius {
+                    front_radius = d_origin;
+                }
+                if is_inflight {
+                    let m = by_target[tu].len();
+                    for k in 0..m {
+                        let qpid = by_target[tu][k];
+                        let qu = qpid as usize;
+                        if pool.live[qu] && pool.target[qu] == target {
+                            let kk = actionable!(qu);
+                            heap.push(Reverse(Ev { key: kk, pid: qpid }));
+                        }
+                    }
+                    by_target[tu].clear();
+                }
+                settle_hop_sum += hop_len;
+                settle_hop_count += 1;
+                settle_hop_hist[hb] += 1;
+                settle_wall_hist[wb] += 1;
+                settle_v_sum += v;
+                settle_v2_sum += v * v;
+                let departing = probe_speed;
+                let mut chosen: Vec<i32> = Vec::new();
+                for _ in 0..offspring {
+                    let nt = nn!(x, y, z, year, &chosen, chosen.len());
+                    if nt < 0 {
+                        break;
+                    }
+                    chosen.push(nt as i32);
+                    let hop = dist(xs, ys, zs, tu, nt as usize, periodic, box_side);
+                    let travel = hop / departing;
+                    let npid =
+                        pool.push(nt, year + settle_time + travel, hop, 0, year + settle_time, x, y, z);
+                    add_probe!(npid);
+                    total_launched += 1;
+                    launch_speed_sum += departing;
+                    launch_count += 1;
+                }
+            } else {
+                wasted_arrivals += 1;
+                wasted_hop_sum += hop_len;
+                wasted_hop_count += 1;
+                wasted_hop_hist[hb] += 1;
+                wasted_wall_hist[wb] += 1;
+                wasted_travel_pc += hop_len;
+                wasted_v_sum += v;
+                wasted_v2_sum += v * v;
+                let span = pool.arrive[pu] - pool.launch[pu];
+                if span > 0.0 {
+                    let s = (sy[tu] - pool.launch[pu]) / span;
+                    let sb: usize = if s < 0.0 {
+                        0
+                    } else if s >= 1.0 {
+                        31
+                    } else {
+                        (s * 32.0) as usize
+                    };
+                    wasted_s_hist[sb] += 1;
+                }
+                if pool.retargets[pu] >= max_retargets {
+                    continue;
+                }
+                let empty: [i32; 0] = [];
+                let nt = nn!(x, y, z, year, &empty, 0);
+                if nt >= 0 {
+                    retarget_count += 1;
+                    let hop = dist(xs, ys, zs, tu, nt as usize, periodic, box_side);
+                    let travel = hop / v;
+                    pool.target[pu] = nt;
+                    pool.arrive[pu] = year + travel;
+                    pool.retargets[pu] += 1;
+                    pool.hop[pu] = hop;
+                    pool.launch[pu] = year;
+                    pool.from_x[pu] = x;
+                    pool.from_y[pu] = y;
+                    pool.from_z[pu] = z;
+                    add_probe!(pid);
+                }
+            }
+        }
+
+        for &pid in &learns {
+            pool.live[pid as usize] = false;
+        }
+        for &pid in &learns {
+            let pu = pid as usize;
+            let tu = pool.target[pu] as usize;
+            let span = pool.arrive[pu] - pool.launch[pu];
+            let mut frac = if span > 0.0 { (year - pool.launch[pu]) / span } else { 1.0 };
+            frac = if frac < 0.0 {
+                0.0
+            } else if frac > 1.0 {
+                1.0
+            } else {
+                frac
+            };
+            let px = pool.from_x[pu] + (xs[tu] - pool.from_x[pu]) * frac;
+            let py = pool.from_y[pu] + (ys[tu] - pool.from_y[pu]) * frac;
+            let pz = pool.from_z[pu] + (zs[tu] - pool.from_z[pu]) * frac;
+            wasted_travel_pc += pool.hop[pu] * frac;
+            midflight_aborts += 1;
+            if pool.retargets[pu] >= max_retargets {
+                continue;
+            }
+            let empty: [i32; 0] = [];
+            let nt = nn!(px, py, pz, year, &empty, 0);
+            if nt < 0 {
+                continue;
+            }
+            retarget_count += 1;
+            let dx = xs[nt as usize] - px;
+            let dy = ys[nt as usize] - py;
+            let dz = zs[nt as usize] - pz;
+            let hop = ref_root(dx * dx + dy * dy + dz * dz);
+            let travel = hop / probe_speed;
+            pool.target[pu] = nt;
+            pool.arrive[pu] = year + travel;
+            pool.retargets[pu] += 1;
+            pool.hop[pu] = hop;
+            pool.from_x[pu] = px;
+            pool.from_y[pu] = py;
+            pool.from_z[pu] = pz;
+            pool.launch[pu] = year;
+            add_probe!(pid);
+        }
+
+        record_thresholds(settled_count, year, &mut thr);
+    }
+
+    let d = PyDict::new_bound(py);
+    d.set_item("final_settled", settled_count)?;
+    d.set_item("total_launched", total_launched)?;
+    d.set_item("total_arrivals", total_arrivals)?;
+    d.set_item("wasted_arrivals", wasted_arrivals)?;
+    d.set_item("retarget_count", retarget_count)?;
+    d.set_item("wasted_travel_pc", wasted_travel_pc)?;
+    d.set_item("midflight_aborts", midflight_aborts)?;
+    d.set_item("front_radius_pc", front_radius)?;
+    d.set_item("max_speed_pc_yr", probe_speed)?;
+    d.set_item("settle_hop_sum_pc", settle_hop_sum)?;
+    d.set_item("settle_hop_count", settle_hop_count)?;
+    d.set_item("wasted_hop_sum_pc", wasted_hop_sum)?;
+    d.set_item("wasted_hop_count", wasted_hop_count)?;
+    d.set_item("settle_v_sum_pc_yr", settle_v_sum)?;
+    d.set_item("settle_v2_sum", settle_v2_sum)?;
+    d.set_item("wasted_v_sum_pc_yr", wasted_v_sum)?;
+    d.set_item("wasted_v2_sum", wasted_v2_sum)?;
+    d.set_item("launch_speed_sum_pc_yr", launch_speed_sum)?;
+    d.set_item("launch_count", launch_count)?;
+    d.set_item("t25", if thr[0] < 0.0 { py.None() } else { thr[0].into_py(py) })?;
+    d.set_item("t50", if thr[1] < 0.0 { py.None() } else { thr[1].into_py(py) })?;
+    d.set_item("t75", if thr[2] < 0.0 { py.None() } else { thr[2].into_py(py) })?;
+    d.set_item("t90", if thr[3] < 0.0 { py.None() } else { thr[3].into_py(py) })?;
+    d.set_item("t99", if thr[4] < 0.0 { py.None() } else { thr[4].into_py(py) })?;
+    d.set_item("t100", if thr[5] < 0.0 { py.None() } else { thr[5].into_py(py) })?;
+    d.set_item("settle_hop_hist", settle_hop_hist)?;
+    d.set_item("wasted_hop_hist", wasted_hop_hist)?;
+    d.set_item("settle_wall_hist", settle_wall_hist)?;
+    d.set_item("wasted_wall_hist", wasted_wall_hist)?;
+    d.set_item("wasted_s_hist", wasted_s_hist)?;
+    d.set_item("initial_in_flight", initial_in_flight)?;
+    Ok(d.into())
+}
+
 #[pymodule]
 fn swarm_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(nearest_unsettled, m)?)?;
@@ -1474,5 +1952,6 @@ fn swarm_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(build_flat_kdtree, m)?)?;
     m.add_function(wrap_pyfunction!(nearest_unsettled_flat, m)?)?;
     m.add_function(wrap_pyfunction!(mark_settled_flat, m)?)?;
+    m.add_function(wrap_pyfunction!(run_fill_flat, m)?)?;
     Ok(())
 }
