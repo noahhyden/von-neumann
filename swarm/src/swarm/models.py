@@ -143,12 +143,18 @@ class SwarmParams(BaseModel):
         return (self.n_stars / self.density_stars_per_pc3) ** (1.0 / 3.0)
 
 
-@dataclass
+@dataclass(slots=True)
 class Probe:
     """One in-flight hop: heading to ``target`` star, arriving at ``arrive_year``.
 
     ``speed_pc_yr`` is the probe's current galactic-frame speed - constant (= powered
     cruise) under the powered policy, but accumulated across slingshots otherwise.
+
+    ``slots=True`` drops the per-instance ``__dict__``: a large fill allocates ~1M+ of
+    these, so cheaper construction and attribute access is a broad wall-clock win at
+    bit-identical results (storage layout only). The two id-reusing retarget sites in
+    ``sim`` mutate a popped Probe in place rather than allocating a fresh one, which relies
+    on this staying a plain (non-frozen) mutable dataclass.
     """
 
     id: int
