@@ -162,6 +162,22 @@ sensitivity estimator computed from the shared Saltelli design.
     output. Design and estimator for the total sensitivity index", Computer Physics
     Communications 181, 259-270.**
     - https://doi.org/10.1016/j.cpc.2009.09.018
+- **Second-order (pairwise interaction) index S_ij (Saltelli 2002/2010), opt-in.**
+  The closed second-order effect `V^c_ij` (main effects of i and j plus their
+  interaction) is estimated from the AB and BA matrices as `mean_j(f(AB^i)_j f(BA^j)_j
+  - f(A)_j f(B)_j)/Var`, and the *pure* interaction is `S_ij = V^c_ij/Var - S_i - S_j`.
+  The `- f(A)f(B)` term is a correlated control (it estimates the same f0^2 the product
+  would otherwise carry), which keeps the estimator numerically well behaved - the same
+  centering discipline the first-order estimator uses. This needs the extra "BA"
+  matrices (B with one column from A), so it doubles the design to `N*(2K+2)` model
+  calls and is therefore off by default. Validated on Ishigami, whose only nonzero
+  interaction is x1-x3: the estimator recovers `S_13 ~ 0.244` (which equals x3's
+  total-order, since x3 has no main effect) and reads x1-x2, x2-x3 as ~0 with CIs
+  straddling zero.
+  - **Saltelli, A. (2002), "Making best use of model evaluations to compute
+    sensitivity indices", Computer Physics Communications 145, 280-297.** The
+    second-order estimator and the AB/BA radial-sampling design.
+    - https://doi.org/10.1016/S0010-4655(02)00280-1
 - **Confidence intervals.** Default is asymptotic: each index is a sample mean of
   per-row terms, so `stderr = pstdev(terms)/sqrt(N)` and the 90% CI is `estimate +-
   z * stderr` with `z = 1.6448536269514722` (the 0.95 standard-normal quantile, a
