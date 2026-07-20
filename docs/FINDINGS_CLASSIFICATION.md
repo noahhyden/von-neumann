@@ -37,8 +37,8 @@ as **C** (numerics-native) is an intentional call, not a placeholder.
 | 11 | reliability / aurora-plateau | Steady-state settled fraction = 1 - T_l/T_s | reliability/README.md | Carroll-Nellenback 2019 Eq. 32 | A |
 | 12 | reliability / array-derate | ~0.2-0.5%/yr solar-array loss -> ~5% over 17 yr | reliability/README.md | Flight-anchored compounding | A |
 | 13 | assembly / rate-band | LPBF 2.9 / WAAM 20.4 / NASA-1980 274 kg/day | assembly/README.md | Multiplicative OEE | A |
-| 14 | thermal / T4-leverage | 530 K radiator ~10x lighter/kW than 300 K | thermal/README.md | Stefan-Boltzmann, 3 kg/m^2 | A |
-| 15 | thermal / ISS-anchor | 35 kW at 275 K -> 67.5 m^2 vs measured 70.3 m^2 (4%) | thermal/README.md | Two-sided eps*sigma*T^4 | A |
+| 14 | thermal / T4-leverage | 530 K radiator ~10x lighter/kW than 300 K | thermal/README.md | Stefan-Boltzmann, 3 kg/m^2 | **A (formalized)** |
+| 15 | thermal / ISS-anchor | 35 kW at 275 K -> 67.5 m^2 vs measured 70.3 m^2 (4%) | thermal/README.md | Two-sided eps*sigma*T^4 | **A (formalized)** |
 | 16 | transfer / Hohmann-anchors | Earth-Mars 5.59 km/s / 259 d; Earth-Jupiter 14.4 km/s / 2.7 yr | transfer/README.md | Coplanar circular | A |
 | 17 | transfer / SEP-vs-Hohmann | SEP spiral Δv >= Hohmann (5.66 vs 5.59) | transfer/README.md | Constant-thrust | A |
 | 18 | comms / DSOC-fit | k~56, two DSOC anchors agree to 2.5%; crossover d ~ 0.46 AU | comms/README.md | Friis-Shannon | A |
@@ -65,6 +65,9 @@ as **C** (numerics-native) is an intentional call, not a placeholder.
 - **#30 autonomy wall = sqrt(P_1AU/P_req)** - identical shape to #24 from the
   demand side; publishing both together shows the 1/d^2 law twice.
 - **#14/#15 thermal T^4 leverage + ISS anchor** - one formula plus one anchor.
+  *Done:* `thermal/tests/test_analytical_companions.py` + `thermal/REFERENCES.md`.
+  The leverage ratio `(T_h^4 - T_s^4)/(T_c^4 - T_s^4)` drops eps, sigma, areal
+  mass, sides, and load - a genuine cancellation, like #24's.
 - **#8/#9 spine copy-time + dwell fraction** - pure composition of #1, #4, #21
   plus a clock conversion.
 - **#11 aurora plateau** - already closed form from CN-2019; restate with the

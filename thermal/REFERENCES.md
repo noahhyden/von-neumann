@@ -55,6 +55,44 @@ flight anchor.
   term falls as 1/d^2, so radiators improve with distance; near the Sun a cold radiator
   can hot-soak (net <= 0) and the function refuses.
 
+## Analytical companion (issue #50, #14/#15)
+
+`docs/FINDINGS_CLASSIFICATION.md` classes both thermal headlines as A. The
+point values are checked in `tests/test_thermal.py`; the companion in
+`tests/test_analytical_companions.py` states the closed forms and proves the
+structural fact the point tests do not - in the leverage *ratio* the emissivity,
+the Stefan-Boltzmann constant, the areal density, the side count, and the heat
+load all cancel.
+
+Stefan-Boltzmann flux and mass-per-kilowatt (mu = areal density, kg/m^2):
+
+    q(T)           = sides * eps * sigma * (T^4 - T_s^4)          [W/m^2]
+    mass_per_kw(T) = 1000 * mu / q(T)  ~  1/T^4    (for T >> T_s)
+
+**T^4 leverage (#14).** The cold-over-hot ratio drops every common factor:
+
+    L(T_h, T_c) = mass_per_kw(T_c) / mass_per_kw(T_h)
+                = q(T_h) / q(T_c)
+                = (T_h^4 - T_s^4) / (T_c^4 - T_s^4)
+                -> (T_h / T_c)^4              as T_s -> 0
+
+so the advantage of running hot depends *only* on the two temperatures and the
+sink - not on coating, material, geometry, or load. `L(533, 300) = 9.96`, the
+"~10x lighter hot radiator". A warm sink *widens* the lead (subtracting the same
+`T_s^4` from a larger numerator and smaller denominator raises the ratio), and
+`L -> infinity` as `T_c -> T_s+` (a radiator barely above its sink rejects almost
+nothing per kg).
+
+**ISS anchor (#15).** Inverting `q` at the flight point (35 kW, 275 K, eps 0.8,
+two-sided, deep-space sink): `A = 35000 / 518.9 = 67.5 m^2`, within ~4% of the
+real 70.3 m^2 assembly. The one closed form reproduces flight hardware.
+
+The test asserts: `mass_per_kw` matches the closed form to 1e-12 across a
+(T, eps, mu, sides) grid; the leverage ratio is invariant to eps, mu, sides,
+and load (the cancellation); the warm-sink sign and the `T_c -> T_s` divergence;
+`T_s -> 0` recovers `(T_h/T_c)^4`; and the ISS closed form matches both the sim
+and the 70.3 m^2 hardware to <5%.
+
 ## Basis / over-nesting notes (CLAUDE.md 1, 3)
 
 - Per-source radiator temperature is mandatory: a ~300 K electronics radiator and a hot
