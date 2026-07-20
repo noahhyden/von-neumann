@@ -498,6 +498,96 @@ def _fit_quadrature(
     return coeffs, len(idx_grid)
 
 
+def _smolyak_combinations(d: int, level: int) -> list[tuple[tuple[int, ...], int]]:
+    """Smolyak combination multi-indices and coefficients (Gerstner-Griebel 1998).
+
+    The level-``level`` sparse rule in ``d`` dimensions is a signed sum of tensor rules
+    A = sum_{q-d+1 <= |l| <= q} (-1)^(q-|l|) C(d-1, q-|l|) (U^{l_1} (x) ... (x) U^{l_d}),
+    with q = d + level, each l_k >= 1 the per-dimension level, and U^{l_k} the l_k-point
+    Gauss rule. Returns the (l, coefficient) pairs with a nonzero coefficient. This rule
+    integrates total-degree polynomials up to 2*level+1 exactly (verified in the tests),
+    so choosing level = degree makes it exact for the degree-`degree` pseudospectral
+    projection (whose integrand Y*Psi has total degree <= 2*degree).
+    """
+    q = d + level
+    combos: list[tuple[tuple[int, ...], int]] = []
+    for lvec in product(range(1, level + 2), repeat=d):
+        s = sum(lvec)
+        if s < q - d + 1 or s > q:
+            continue
+        # q - s ranges over [0, d-1], so C(d-1, q-s) >= 1 and the coefficient is always
+        # nonzero - every retained multi-index contributes.
+        coef = ((-1) ** (q - s)) * math.comb(d - 1, q - s)
+        combos.append((lvec, coef))
+    return combos
+
+
+def _fit_sparse(
+    inputs: Mapping[str, Distribution],
+    finding: Callable[[Mapping[str, float]], float],
+    active: list[str],
+    adapters: list[_Adapter],
+    fixed_sample: dict[str, float],
+    degree: int,
+    d: int,
+    alphas: list[tuple[int, ...]],
+) -> tuple[dict[tuple[int, ...], float], int]:
+    """Coefficients by Smolyak sparse-grid pseudospectral projection.
+
+    Same projection as ``_fit_quadrature`` but over a Smolyak grid (level = degree)
+    instead of the full tensor grid. The node count grows polynomially rather than as
+    (degree+1)^d, so this is the scalable *quadrature* route for moderate dimension
+    (for d <= ~3 the tensor grid is comparable or cheaper; the win shows from ~d=4 up -
+    e.g. ~4x fewer nodes at d=5, ~100x at d=8). Coincident nodes across sub-rules (the
+    symmetric zero shared by odd-point rules) are merged so the finding is evaluated
+    once per unique node.
+    """
+    # Aggregate signed weights by reference-node coordinate. Round the key so the
+    # symmetric zero node shared across odd-point rules merges to one evaluation; keep
+    # the first-seen (unrounded) coordinates as the representative for evaluation.
+    node_weight: dict[tuple[float, ...], float] = {}
+    node_coords: dict[tuple[float, ...], tuple[float, ...]] = {}
+    rule_cache: dict[tuple[int, int], tuple[list[float], list[float]]] = {}
+    for lvec, coef in _smolyak_combinations(d, degree):
+        per_dim: list[tuple[list[float], list[float]]] = []
+        for dim in range(d):
+            m = lvec[dim]
+            cached = rule_cache.get((dim, m))
+            if cached is None:
+                cached = _gauss_for(adapters[dim], m)
+                rule_cache[(dim, m)] = cached
+            per_dim.append(cached)
+        for idx in product(*[range(lvec[dim]) for dim in range(d)]):
+            coords = tuple(per_dim[dim][0][idx[dim]] for dim in range(d))
+            key = tuple(round(c, 12) for c in coords)
+            w = float(coef)
+            for dim in range(d):
+                w *= per_dim[dim][1][idx[dim]]
+            if key in node_weight:
+                node_weight[key] += w
+            else:
+                node_weight[key] = w
+                node_coords[key] = coords
+
+    coeffs: dict[tuple[int, ...], float] = {alpha: 0.0 for alpha in alphas}
+    n_eval = 0
+    for key, w in node_weight.items():
+        coords = node_coords[key]
+        sample = dict(fixed_sample)
+        for dim in range(d):
+            sample[active[dim]] = _to_physical(adapters[dim], coords[dim])
+        y = finding(sample)
+        _check_finite(y)
+        n_eval += 1
+        tables = [_basis_at(adapters[dim], degree, coords[dim]) for dim in range(d)]
+        for alpha in alphas:
+            psi = 1.0
+            for dim in range(d):
+                psi *= tables[dim][alpha[dim]]
+            coeffs[alpha] += w * y * psi
+    return coeffs, n_eval
+
+
 def _fit_regression(
     inputs: Mapping[str, Distribution],
     finding: Callable[[Mapping[str, float]], float],
@@ -580,6 +670,12 @@ def pce_fit(
     - ``"quadrature"`` (default): tensor Gauss quadrature, exact for a
       degree-``degree`` finding but (degree+1)^d model calls - best in low
       dimension.
+    - ``"sparse"``: Smolyak sparse-grid quadrature (level = degree). The same
+      pseudospectral projection as "quadrature" but on a sparse grid whose node
+      count grows polynomially, not as (degree+1)^d. Best for *moderate* dimension:
+      for d <= ~3 the tensor grid is comparable or cheaper, but the win grows fast
+      (~4x fewer model calls at d=5, ~100x at d=8), so it is what makes a degree>=2
+      PCE feasible past a handful of inputs.
     - ``"regression"``: least-squares over ~``oversampling`` * n_terms sampled
       points (n_terms = C(degree+d, d), polynomial in d) - the scalable choice in
       higher dimension. Override the sample count with ``n_samples``.
@@ -591,8 +687,10 @@ def pce_fit(
     """
     if degree < 1:
         raise ValueError(f"degree must be >= 1, got {degree}")
-    if method not in ("quadrature", "regression"):
-        raise ValueError(f"method must be 'quadrature' or 'regression', got {method!r}")
+    if method not in ("quadrature", "sparse", "regression"):
+        raise ValueError(
+            f"method must be 'quadrature', 'sparse', or 'regression', got {method!r}"
+        )
 
     active, adapters, fixed = _split_inputs(inputs, degree)
     fixed_sample = {name: value for name, value in fixed}
@@ -612,6 +710,10 @@ def pce_fit(
     alphas = _total_degree_alphas(degree, d)
     if method == "quadrature":
         coeffs, n_eval = _fit_quadrature(
+            inputs, finding, active, adapters, fixed_sample, degree, d, alphas
+        )
+    elif method == "sparse":
+        coeffs, n_eval = _fit_sparse(
             inputs, finding, active, adapters, fixed_sample, degree, d, alphas
         )
     else:

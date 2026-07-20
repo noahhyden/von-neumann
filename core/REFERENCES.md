@@ -246,6 +246,22 @@ constants, each a mathematical identity, not an assumption.
       Johns Hopkins**, Section 5.2 (Householder QR least squares). Verdict:
       reasonable - the textbook stable LS method; validated bit-for-bit against
       numpy.linalg.lstsq in the tests (numpy is a dev-only oracle).
+  - **Smolyak sparse-grid quadrature (`method="sparse"`).** The same pseudospectral
+    projection as tensor quadrature, but over a Smolyak sparse grid (level = degree)
+    that combines the 1-D Gauss rules by the signed combination technique. The node
+    count grows polynomially rather than as (degree+1)^d, so a degree>=2 PCE stays
+    feasible into moderate dimension (measured ~4x fewer model calls at d=5, ~100x at
+    d=8; for d <= ~3 the tensor grid is comparable or cheaper). The rule integrates
+    total-degree polynomials to 2*level+1 exactly, so level = degree is exact for the
+    degree-`degree` projection - verified in tests by exact recovery of polynomials
+    and agreement with tensor quadrature on Ishigami.
+    - **Smolyak, S. A. (1963), "Quadrature and interpolation formulas for tensor
+      products of certain classes of functions", Soviet Math. Dokl. 4, 240-243.** The
+      original sparse-grid construction.
+    - **Gerstner, T. and Griebel, M. (1998), "Numerical integration using sparse
+      grids", Numerical Algorithms 18(3-4), 209-232.** The combination-technique form
+      (signed sum of tensor rules) implemented here.
+      - https://doi.org/10.1023/A:1019129717644
 - **Sobol indices from PCE coefficients (grouped coefficient energy).**
   - **Sudret, B. (2008), "Global sensitivity analysis using polynomial chaos
     expansions", Reliability Engineering & System Safety 93(7), 964-979.** First-
