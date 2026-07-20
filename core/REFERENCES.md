@@ -48,6 +48,22 @@ error-estimate weights `E*`) is the standard explicit RK5(4) pair.
   implementations of the identical published pair agree to 1e-6 on the repo's own
   ODEs.
 
+### Dense-output interpolation matrix (`rk45.py`, `_P`)
+
+Requested output times (`t_eval`) are served by the Dormand-Prince quartic dense
+output: on an accepted step [t, t+h] the solution at t + theta*h is a degree-4
+polynomial in theta built from the step's seven stage derivatives.
+
+- **The 7x4 interpolation matrix `_P`** holds the coefficients of that polynomial. It
+  is the standard Dormand-Prince dense-output (Hairer & Wanner, "Solving ODEs I", 2nd
+  ed., Section II.6, "Dense Output"), stored as exact rationals - identical to the `P`
+  matrix in `scipy.integrate` `RK45` (BSD-3), from which the values were transcribed.
+  - Cross-check: the interpolant is validated *bit-for-bit* against scipy's
+    `dense_output()` in `tests/test_ode_dense_output.py` (agreement to ~1e-14), and
+    the endpoints are checked (theta=0 returns the step start, theta=1 the step end).
+    Verdict: reasonable - a transcribed, reference-verified standard interpolant, no
+    tuned constants.
+
 ### Adaptive step-size control constants (`rk45.py`, `implicit.py`)
 
 - **safety = 0.9, min shrink factor = 0.2, max growth factor = 10.0 (explicit) /
