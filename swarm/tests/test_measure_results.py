@@ -126,3 +126,101 @@ def test_finite_size_periodic_json_matches_fold() -> None:
         treat = record(simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=seed))
         _assert_record_matches(base, block["per_seed"][i]["base"], f"finite_size_periodic base seed{i}")
         _assert_record_matches(treat, block["per_seed"][i]["treat"], f"finite_size_periodic treat seed{i}")
+
+
+# --- P2 companion drift guards (issue #38 p2 substrate; see SPEC_P2_LADDER.md) --------------
+# Each historical drift guard grows a p2 companion assertion that exercises the smallest N in the
+# p2 block. Skips cleanly if the p2 block isn't present yet (a JSON generated before the
+# dual-ladder migration landed; ``experiments.measure --p2`` fills it in).
+
+
+def _load_p2(name: str) -> dict:
+    """Load the ``p2`` sub-block; skip if absent (JSON pre-dates the p2 companion)."""
+    d = _load(name)
+    if "p2" not in d:
+        pytest.skip(f"{name}.json has no p2 companion (run experiments.measure --p2)")
+    return d["p2"]
+
+
+def test_lambda_sweep_p2_matches_fold() -> None:
+    p2 = _load_p2("lambda_sweep")
+    cfg = p2["config"]
+    lam = cfg["lambdas"][0]
+    block = p2["data"][str(lam)]
+    for i in range(2):
+        seed = SEEDS[i]
+        common = dict(n_stars=cfg["n_stars"], policy=cfg["policy"], probe_speed_c=lam,
+                      speed_cap_c=max(0.05, 2 * lam), stepping=cfg["stepping"])
+        base = record(simulate_swarm(SwarmParams(**common, coordination="instant"), seed=seed))
+        treat = record(simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=seed))
+        _assert_record_matches(base, block["per_seed"][i]["base"], f"lambda_sweep p2 base seed{i}")
+        _assert_record_matches(treat, block["per_seed"][i]["treat"], f"lambda_sweep p2 treat seed{i}")
+
+
+def test_finite_size_p2_matches_fold() -> None:
+    p2 = _load_p2("finite_size")
+    n = min(int(k) for k in p2["data"])  # smallest p2 N (256 in the current ladder)
+    block = p2["data"][str(n)]
+    for i in range(2):
+        seed = SEEDS[i]
+        common = dict(n_stars=n, policy="powered", probe_speed_c=0.2, speed_cap_c=0.4, stepping="event")
+        base = record(simulate_swarm(SwarmParams(**common, coordination="instant"), seed=seed))
+        treat = record(simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=seed))
+        _assert_record_matches(base, block["per_seed"][i]["base"], f"finite_size p2 base seed{i}")
+        _assert_record_matches(treat, block["per_seed"][i]["treat"], f"finite_size p2 treat seed{i}")
+
+
+def test_finite_size_periodic_p2_matches_fold() -> None:
+    p2 = _load_p2("finite_size_periodic")
+    n = min(int(k) for k in p2["data"])
+    block = p2["data"][str(n)]
+    for i in range(2):
+        seed = SEEDS[i]
+        common = dict(n_stars=n, policy="powered", probe_speed_c=0.2, speed_cap_c=0.4,
+                      stepping="event", periodic=True)
+        base = record(simulate_swarm(SwarmParams(**common, coordination="instant"), seed=seed))
+        treat = record(simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=seed))
+        _assert_record_matches(base, block["per_seed"][i]["base"],
+                               f"finite_size_periodic p2 base seed{i}")
+        _assert_record_matches(treat, block["per_seed"][i]["treat"],
+                               f"finite_size_periodic p2 treat seed{i}")
+
+
+def test_floor_bracket_p2_matches_fold() -> None:
+    p2 = _load_p2("floor_bracket")
+    cfg = p2["config"]
+    lam = cfg["lambdas"][0]
+    block = p2["data"][str(lam)]
+    cap = max(0.05, 2 * lam)
+    for mode in ("instant", "lightspeed", "inflight"):
+        seed = SEEDS[0]
+        r = record(simulate_swarm(SwarmParams(n_stars=cfg["n_stars"], policy="powered", probe_speed_c=lam,
+                                              speed_cap_c=cap, stepping=cfg["stepping"], coordination=mode), seed=seed))
+        _assert_record_matches(r, block["per_seed"][mode][0], f"floor_bracket p2 {mode} seed0")
+
+
+def test_clumpiness_p2_matches_fold() -> None:
+    p2 = _load_p2("clumpiness")
+    cfg = p2["config"]
+    lam = cfg["lambdas"][0]
+    block = p2["data"]["uniform"]["per_lambda"][str(lam)]
+    for i in range(2):
+        seed = SEEDS[i]
+        common = dict(n_stars=cfg["n_stars"], policy="powered", probe_speed_c=lam,
+                      speed_cap_c=max(0.05, 2 * lam), stepping="event")
+        base = record(simulate_swarm(SwarmParams(**common, coordination="instant"), seed=seed))
+        treat = record(simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=seed))
+        _assert_record_matches(base, block["per_seed"][i]["base"], f"clumpiness p2 base seed{i}")
+        _assert_record_matches(treat, block["per_seed"][i]["treat"], f"clumpiness p2 treat seed{i}")
+
+
+def test_validation_p2_matches_fold() -> None:
+    p2 = _load_p2("validation")
+    cfg = p2["config"]
+    for pol, want in p2["policies"].items():
+        r = simulate_swarm(SwarmParams(n_stars=cfg["n_stars"], policy=pol, stepping=cfg["stepping"]),
+                           seed=cfg["seed"])
+        assert r.t100_years == pytest.approx(want["t100"], rel=1e-9), f"validation p2 {pol} t100"
+        assert r.max_probe_speed_km_s == pytest.approx(want["max_speed_km_s"], rel=1e-9), (
+            f"validation p2 {pol} max_speed"
+        )

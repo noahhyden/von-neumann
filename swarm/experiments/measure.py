@@ -17,6 +17,12 @@ Run:
     uv run --extra dev python -O -m experiments.measure --force    # recompute all
     uv run --extra dev python -O -m experiments.measure lambda_sweep floor_bracket   # a subset
 
+    # P2 companion (issue #38 p2 substrate; see experiments/SPEC_P2_LADDER.md).
+    # Runs a power-of-two-N sweep alongside every historical measurement and merges the result
+    # under the top-level ``p2`` key of the same file. Historical top-level keys are untouched.
+    uv run --extra dev python -O -m experiments.measure --p2       # p2 companion for every JSON
+    uv run --extra dev python -O -m experiments.measure --p2 --force   # recompute p2 blocks
+
 The ``-O`` strips ``if __debug__:`` invariant checks; ensemble runs get a ~2-3x
 wall-clock win at bit-identical results (see docs/HARDWARE.md "Assertion mode").
 Omit ``-O`` while iterating - you'll get a stderr warning on each run.
@@ -416,6 +422,41 @@ def write_result(name: str, config: dict, payload: dict) -> Path:
     return out
 
 
+def write_p2_companion(name: str, config: dict, payload: dict) -> Path:
+    """Merge a top-level ``p2`` block into the existing ``<name>.json``, preserving every other key.
+
+    Follow-up to PRs #79/#80/#81 (flat p2 kd-tree substrate + wired dispatch at p2 N). This is
+    the paper-side p2 ladder migration: alongside every historical measurement, an
+    ``n_stars = 2^k`` companion sweep lives under the ``p2`` key. The historical top-level keys
+    (``config``, ``data``, ``scale_regression``, ...) stay byte-for-byte untouched - the drift
+    guards on those keys remain load-bearing - and the p2 companion adds its own self-contained
+    ``{config, ...payload}`` under ``p2``.
+
+    See ``swarm/experiments/SPEC_P2_LADDER.md`` for the full schema and the sweep-size choices.
+    """
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    out = RESULTS_DIR / f"{name}.json"
+    if not out.exists():
+        raise SystemExit(
+            f"write_p2_companion({name!r}): expected {out} to exist first "
+            f"(run the historical pass before the p2 companion)."
+        )
+    doc = json.loads(out.read_text())
+    p2_block: dict = {"config": config}
+    p2_block.update(payload)
+    doc["p2"] = p2_block
+    out.write_text(json.dumps(doc, indent=2, sort_keys=False) + "\n")
+    return out
+
+
+def _p2_has_companion(name: str) -> bool:
+    """True if ``<name>.json`` already has a ``p2`` block. Used by the CLI to skip completed work."""
+    out = RESULTS_DIR / f"{name}.json"
+    if not out.exists():
+        return False
+    return "p2" in json.loads(out.read_text())
+
+
 def _paired(mode_treat: str, *, seeds: list[int], mode_base: str = "instant", **params) -> list[tuple[dict, dict]]:
     """Fill each seeded galaxy under ``mode_base`` and ``mode_treat`` (same seed); return records.
 
@@ -490,6 +531,24 @@ def m_lambda_sweep() -> None:
                  {"data": data})
 
 
+def p2_lambda_sweep() -> None:
+    """P2 companion to ``m_lambda_sweep``: N=500 -> N=512 (2% larger, cleanly p2)."""
+    seeds = SEEDS[:512]
+    n_stars = 512
+    lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
+    data = {}
+    for lam in lambdas:
+        print(f"    [p2] Lambda={lam}", flush=True)
+        rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy="powered",
+                       probe_speed_c=lam, speed_cap_c=max(0.05, 2 * lam), stepping="event")
+        data[str(lam)] = _tax_block(rows)
+    write_p2_companion("lambda_sweep",
+                       {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                        "lambdas": lambdas, "mode_base": "instant", "mode_treat": "lightspeed",
+                        "stepping": "event"},
+                       {"data": data})
+
+
 def m_lambda_sweep_scale() -> None:
     """N=200k companion to the headline speed sweep: does tax ~ v/c linearity hold at scale?
 
@@ -516,6 +575,24 @@ def m_lambda_sweep_scale() -> None:
                  {"data": data})
 
 
+def p2_lambda_sweep_scale() -> None:
+    """P2 companion to ``m_lambda_sweep_scale``: N=200_000 -> N=262_144 (next p2 above 200k)."""
+    seeds = SEEDS[:8]
+    n_stars = 262_144
+    lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
+    data = {}
+    for lam in lambdas:
+        print(f"    [p2] Lambda={lam}", flush=True)
+        rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy="powered",
+                       probe_speed_c=lam, speed_cap_c=max(0.05, 2 * lam), stepping="event")
+        data[str(lam)] = _tax_block(rows)
+    write_p2_companion("lambda_sweep_scale",
+                       {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                        "lambdas": lambdas, "mode_base": "instant", "mode_treat": "lightspeed",
+                        "stepping": "event"},
+                       {"data": data})
+
+
 def m_branching() -> None:
     """Fuel/time/energy tax vs the replication branching factor (offspring per settlement)."""
     seeds = SEEDS[:32]
@@ -540,6 +617,28 @@ def m_branching() -> None:
                   "lambdas": lambdas, "offspring": offspring, "mode_treat": "lightspeed",
                   "stepping": "event"},
                  {"data": data})
+
+
+def p2_branching() -> None:
+    """P2 companion to ``m_branching``: N=400 -> N=512 (28% larger, cleanly p2)."""
+    seeds = SEEDS[:32]
+    n_stars = 512
+    offspring = [2, 3, 4, 8, 16]
+    lambdas = [0.05, 0.2]
+    data = {}
+    for lam in lambdas:
+        for off in offspring:
+            key = f"lam{lam}_off{off}"
+            print(f"    [p2] Lambda={lam} offspring={off}", flush=True)
+            rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy="powered",
+                           probe_speed_c=lam, speed_cap_c=max(0.05, 2 * lam),
+                           offspring_per_settlement=off, stepping="event")
+            data[key] = _tax_block(rows)
+    write_p2_companion("branching",
+                       {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                        "lambdas": lambdas, "offspring": offspring, "mode_treat": "lightspeed",
+                        "stepping": "event"},
+                       {"data": data})
 
 
 def m_branching_scale() -> None:
@@ -573,6 +672,32 @@ def m_branching_scale() -> None:
                  {"data": data})
 
 
+def p2_branching_scale() -> None:
+    """P2 companion to ``m_branching_scale``: N=200_000 -> N=262_144 (next p2 above 200k).
+
+    Offspring ladder stops at 8 for the same reason the historical version does (offspring=16 at
+    N>200k over-subscribes RAM per docs/HARDWARE.md); 6 seeds to match the base.
+    """
+    seeds = SEEDS[:6]
+    n_stars = 262_144
+    offspring = [2, 3, 4, 8]
+    lambdas = [0.05, 0.2]
+    data = {}
+    for lam in lambdas:
+        for off in offspring:
+            key = f"lam{lam}_off{off}"
+            print(f"    [p2] Lambda={lam} offspring={off}", flush=True)
+            rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy="powered",
+                           probe_speed_c=lam, speed_cap_c=max(0.05, 2 * lam),
+                           offspring_per_settlement=off, stepping="event")
+            data[key] = _tax_block(rows)
+    write_p2_companion("branching_scale",
+                       {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                        "lambdas": lambdas, "offspring": offspring, "mode_treat": "lightspeed",
+                        "stepping": "event"},
+                       {"data": data})
+
+
 def m_energy_tax() -> None:
     """Energy-weighted tax per policy: count-tax vs (1/2)v^2-weighted tax (1x and 2x brackets).
 
@@ -598,6 +723,27 @@ def m_energy_tax() -> None:
                   "mode_treat": "lightspeed", "stepping": "event",
                   "note": "energy_pct_1x/2x are the flyby/rendezvous bracket; relativistic excess < 3.1% to 0.2c"},
                  {"data": data})
+
+
+def p2_energy_tax() -> None:
+    """P2 companion to ``m_energy_tax``: N=400 -> N=512 (28% larger, cleanly p2)."""
+    seeds = SEEDS[:32]
+    n_stars = 512
+    policies = ["powered", "slingshot_nearest", "slingshot_maxboost"]
+    data = {}
+    for pol in policies:
+        print(f"    [p2] policy={pol}", flush=True)
+        rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy=pol, stepping="event")
+        block = _tax_block(rows)
+        v_wasted = [t["mean_wasted_speed_km_s"] for _, t in rows if t["mean_wasted_speed_km_s"] > 0]
+        block["mean_wasted_speed_km_s"] = statistics.median(v_wasted) if v_wasted else 0.0
+        block["lambda_eff"] = (block["mean_wasted_speed_km_s"] * KM_S_TO_PC_YR / C_PC_PER_YEAR)
+        data[pol] = block
+    write_p2_companion("energy_tax",
+                       {"policies": policies, "n_stars": n_stars, "n_seeds": len(seeds),
+                        "mode_treat": "lightspeed", "stepping": "event",
+                        "note": "energy_pct_1x/2x are the flyby/rendezvous bracket; relativistic excess < 3.1% to 0.2c"},
+                       {"data": data})
 
 
 def m_finite_size() -> None:
@@ -641,6 +787,40 @@ def m_finite_size() -> None:
                   "scale_regression": {"x": "log10(N)", "unit": "percentage points per decade of N",
                                        "resample": "seeds within each N",
                                        "slope": slope, "ci_lo": slope_lo, "ci_hi": slope_hi}})
+
+
+def p2_finite_size() -> None:
+    """P2 companion to ``m_finite_size``: p2 ladder matched to the historical seed pattern.
+
+    Historical: (300, 600, 1200, 2400, 4800, 9600, 24000, 48000, 200000).
+    P2:         (256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 262144).
+
+    Nine points each; seed counts match the historical rows exactly so the two lever arms
+    are directly comparable. Byte-for-byte comparison against the historical points isn't
+    possible (different N), but bit-identity of the flat vs pointer path at matching p2 N is
+    already proven by ``tests/test_flat_run_fill_oracle.py``.
+    """
+    n_seeds_by_n = [(256, 48), (512, 48), (1024, 48), (2048, 48), (4096, 32),
+                    (8192, 32), (16384, 24), (32768, 16), (262144, 8)]
+    data = {}
+    per_n_fuel: dict[int, list[float]] = {}
+    for n, k in n_seeds_by_n:
+        print(f"    [p2] N={n} ({k} seeds)", flush=True)
+        rows = _paired("lightspeed", seeds=SEEDS[:k], n_stars=n, policy="powered",
+                       probe_speed_c=0.2, speed_cap_c=0.4, stepping="event")
+        data[str(n)] = _tax_block(rows)
+        per_n_fuel[n] = [pct_delta(t["wasted_arrivals"], b["wasted_arrivals"]) for b, t in rows]
+    ns = [n for n, _ in n_seeds_by_n]
+    slope, slope_lo, slope_hi = loglog_slope_ci([math.log10(n) for n in ns],
+                                                [per_n_fuel[n] for n in ns])
+    write_p2_companion("finite_size",
+                       {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
+                        "mode_treat": "lightspeed", "stepping": "event"},
+                       {"data": data,
+                        "scale_regression": {"x": "log10(N)",
+                                             "unit": "percentage points per decade of N",
+                                             "resample": "seeds within each N",
+                                             "slope": slope, "ci_lo": slope_lo, "ci_hi": slope_hi}})
 
 
 def _concurrency_ensemble(seeds: list[int], n_stars: int, lam: float,
@@ -704,6 +884,19 @@ def m_concurrency() -> None:
                  {"data": data})
 
 
+def p2_concurrency() -> None:
+    """P2 companion to ``m_concurrency``: N=500 -> N=512 (2% larger, cleanly p2)."""
+    seeds = SEEDS[:16]
+    n_stars = 512
+    lam = 0.2
+    bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
+    data = _concurrency_ensemble(seeds, n_stars, lam, bins)
+    write_p2_companion("concurrency",
+                       {"policy": "powered", "lambda": lam, "n_stars": n_stars, "n_seeds": len(seeds),
+                        "stepping": "event"},
+                       {"data": data})
+
+
 def m_concurrency_scale() -> None:
     """N=200k companion to the concurrency sweep: does the many-probes-in-flight mechanism hold
     at the honest lever arm?
@@ -726,16 +919,25 @@ def m_concurrency_scale() -> None:
                  {"data": data})
 
 
-def m_floor_bracket() -> None:
-    """instant / inflight / lightspeed: how much of the decision-site tax survives in-flight relay.
+def p2_concurrency_scale() -> None:
+    """P2 companion to ``m_concurrency_scale``: N=200_000 -> N=262_144 (next p2 above 200k)."""
+    seeds = SEEDS[:8]
+    n_stars = 262_144
+    lam = 0.2
+    bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
+    data = _concurrency_ensemble(seeds, n_stars, lam, bins)
+    write_p2_companion("concurrency_scale",
+                       {"policy": "powered", "lambda": lam, "n_stars": n_stars, "n_seeds": len(seeds),
+                        "stepping": "event"},
+                       {"data": data})
 
-    inflight is the optimistic bound (a probe redirects the instant a beacon overtakes it). We
-    report, per Lambda, all three modes' wasted arrivals, redundant travel, and fill time, plus
-    the inflight-vs-lightspeed deltas - the referee's requested floor estimate.
+
+def _floor_bracket_body(seeds: list[int], n_stars: int, lambdas: list[float]) -> dict:
+    """Shared floor-bracket ensemble body (used by ``m_floor_bracket`` and its p2 companion).
+
+    Runs the (mode, seed) paired ensemble and computes the standard aggregate + per-seed block.
+    Factored so the historical and p2 pass share code exactly - only ``n_stars`` differs.
     """
-    seeds = SEEDS[:48]
-    n_stars = 400
-    lambdas = [0.05, 0.1, 0.2]
     data = {}
     modes = ("instant", "lightspeed", "inflight")
     for lam in lambdas:
@@ -743,12 +945,9 @@ def m_floor_bracket() -> None:
         cap = max(0.05, 2 * lam)
         params = dict(n_stars=n_stars, policy="powered", probe_speed_c=lam,
                       speed_cap_c=cap, stepping="event")
-        # Parallel over (mode, seed): three modes at each seed are independent, and executor.map
-        # preserves input order so ``runs[mode][i]`` still refers to ``seeds[i]``.
         args = [(mode, params, s) for mode in modes for s in seeds]
         recs = _parallel_map(_single_worker, args, label=f"lam={lam}")
         runs = {mode: recs[i * len(seeds):(i + 1) * len(seeds)] for i, mode in enumerate(modes)}
-        # paired summaries relative to instant
         def rel(mode: str, field: str) -> dict:
             return summarize([pct_delta(runs[mode][i][field], runs["instant"][i][field]) for i in range(len(seeds))])
         data[str(lam)] = {
@@ -760,10 +959,37 @@ def m_floor_bracket() -> None:
             "time_pct_over_instant": {m: rel(m, "t100") for m in ("lightspeed", "inflight")},
             "per_seed": {m: runs[m] for m in runs},
         }
+    return data
+
+
+def m_floor_bracket() -> None:
+    """instant / inflight / lightspeed: how much of the decision-site tax survives in-flight relay.
+
+    inflight is the optimistic bound (a probe redirects the instant a beacon overtakes it). We
+    report, per Lambda, all three modes' wasted arrivals, redundant travel, and fill time, plus
+    the inflight-vs-lightspeed deltas - the referee's requested floor estimate.
+    """
+    seeds = SEEDS[:48]
+    n_stars = 400
+    lambdas = [0.05, 0.1, 0.2]
+    data = _floor_bracket_body(seeds, n_stars, lambdas)
     write_result("floor_bracket",
                  {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
                   "lambdas": lambdas, "modes": ["instant", "lightspeed", "inflight"], "stepping": "event"},
                  {"data": data})
+
+
+def p2_floor_bracket() -> None:
+    """P2 companion to ``m_floor_bracket``: N=400 -> N=512 (28% larger, cleanly p2)."""
+    seeds = SEEDS[:48]
+    n_stars = 512
+    lambdas = [0.05, 0.1, 0.2]
+    data = _floor_bracket_body(seeds, n_stars, lambdas)
+    write_p2_companion("floor_bracket",
+                       {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                        "lambdas": lambdas, "modes": ["instant", "lightspeed", "inflight"],
+                        "stepping": "event"},
+                       {"data": data})
 
 
 def m_floor_bracket_scale() -> None:
@@ -778,31 +1004,24 @@ def m_floor_bracket_scale() -> None:
     seeds = SEEDS[:8]
     n_stars = 200_000
     lambdas = [0.05, 0.1, 0.2]
-    data = {}
-    modes = ("instant", "lightspeed", "inflight")
-    for lam in lambdas:
-        print(f"    Lambda={lam}", flush=True)
-        cap = max(0.05, 2 * lam)
-        params = dict(n_stars=n_stars, policy="powered", probe_speed_c=lam,
-                      speed_cap_c=cap, stepping="event")
-        args = [(mode, params, s) for mode in modes for s in seeds]
-        recs = _parallel_map(_single_worker, args, label=f"lam={lam}")
-        runs = {mode: recs[i * len(seeds):(i + 1) * len(seeds)] for i, mode in enumerate(modes)}
-        def rel(mode: str, field: str) -> dict:
-            return summarize([pct_delta(runs[mode][i][field], runs["instant"][i][field]) for i in range(len(seeds))])
-        data[str(lam)] = {
-            "wasted_arrivals_median": {m: statistics.median([r["wasted_arrivals"] for r in runs[m]]) for m in runs},
-            "wasted_travel_pc_median": {m: statistics.median([r["wasted_travel_pc"] for r in runs[m]]) for m in runs},
-            "t100_median": {m: statistics.median([r["t100"] for r in runs[m] if r["t100"]]) for m in runs},
-            "midflight_aborts_median": {m: statistics.median([r["midflight_aborts"] for r in runs[m]]) for m in runs},
-            "travel_pct_over_instant": {m: rel(m, "wasted_travel_pc") for m in ("lightspeed", "inflight")},
-            "time_pct_over_instant": {m: rel(m, "t100") for m in ("lightspeed", "inflight")},
-            "per_seed": {m: runs[m] for m in runs},
-        }
+    data = _floor_bracket_body(seeds, n_stars, lambdas)
     write_result("floor_bracket_scale",
                  {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
                   "lambdas": lambdas, "modes": ["instant", "lightspeed", "inflight"], "stepping": "event"},
                  {"data": data})
+
+
+def p2_floor_bracket_scale() -> None:
+    """P2 companion to ``m_floor_bracket_scale``: N=200_000 -> N=262_144 (next p2 above 200k)."""
+    seeds = SEEDS[:8]
+    n_stars = 262_144
+    lambdas = [0.05, 0.1, 0.2]
+    data = _floor_bracket_body(seeds, n_stars, lambdas)
+    write_p2_companion("floor_bracket_scale",
+                       {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                        "lambdas": lambdas, "modes": ["instant", "lightspeed", "inflight"],
+                        "stepping": "event"},
+                       {"data": data})
 
 
 def m_retarget_cap() -> None:
@@ -820,6 +1039,23 @@ def m_retarget_cap() -> None:
                  {"policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
                   "caps": caps, "mode_treat": "lightspeed", "stepping": "event"},
                  {"data": data})
+
+
+def p2_retarget_cap() -> None:
+    """P2 companion to ``m_retarget_cap``: N=400 -> N=512 (28% larger, cleanly p2)."""
+    seeds = SEEDS[:32]
+    n_stars = 512
+    caps = [2, 4, 8, 16, 32]
+    data = {}
+    for cap in caps:
+        print(f"    [p2] max_retargets={cap}", flush=True)
+        rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy="powered",
+                       probe_speed_c=0.2, speed_cap_c=0.4, stepping="event", max_retargets=cap)
+        data[str(cap)] = _tax_block(rows)
+    write_p2_companion("retarget_cap",
+                       {"policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
+                        "caps": caps, "mode_treat": "lightspeed", "stepping": "event"},
+                       {"data": data})
 
 
 def m_retarget_cap_scale() -> None:
@@ -845,6 +1081,23 @@ def m_retarget_cap_scale() -> None:
                  {"data": data})
 
 
+def p2_retarget_cap_scale() -> None:
+    """P2 companion to ``m_retarget_cap_scale``: N=200_000 -> N=262_144 (next p2 above 200k)."""
+    seeds = SEEDS[:8]
+    n_stars = 262_144
+    caps = [2, 4, 8, 16, 32]
+    data = {}
+    for cap in caps:
+        print(f"    [p2] max_retargets={cap}", flush=True)
+        rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy="powered",
+                       probe_speed_c=0.2, speed_cap_c=0.4, stepping="event", max_retargets=cap)
+        data[str(cap)] = _tax_block(rows)
+    write_p2_companion("retarget_cap_scale",
+                       {"policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
+                        "caps": caps, "mode_treat": "lightspeed", "stepping": "event"},
+                       {"data": data})
+
+
 def m_dt_artifact() -> None:
     """Fill-time tax vs fixed timestep, collapsing to ~0 at the event (dt->0) limit."""
     seeds = SEEDS[:32]
@@ -866,6 +1119,33 @@ def m_dt_artifact() -> None:
     write_result("dt_artifact",
                  {"policy": "slingshot_nearest", "n_stars": n_stars, "n_seeds": len(seeds), "dts": dts},
                  {"rows": rows_out})
+
+
+def p2_dt_artifact() -> None:
+    """P2 companion to ``m_dt_artifact``: N=300 -> N=512 (70% larger, cleanly p2).
+
+    Note: this measurement uses stepping='fixed' and stepping='event'; only the event row
+    (dt=None) hits the flat p2 kd-tree fast path. The fixed-step rows run through the pointer
+    path even at p2 N. Included per the "no exclusions" scope decision.
+    """
+    seeds = SEEDS[:32]
+    n_stars = 512
+    dts = [5000.0, 2000.0, 1000.0, 500.0, 250.0]
+    rows_out = []
+    for dt in dts + [None]:
+        label = f"dt={dt:.0f}" if dt is not None else "event"
+        print(f"    [p2] {label}", flush=True)
+        common = dict(n_stars=n_stars, policy="slingshot_nearest")
+        common.update({"stepping": "event"} if dt is None else {"stepping": "fixed", "dt_years": dt})
+        args = [(common, s) for s in seeds]
+        pairs = _parallel_map(_dt_paired_worker, args, label=label)
+        pens = [((l - i) / i * 100.0) for (i, l) in pairs if i and l]
+        kpos, nnz, _ = sign_test_positive(pens)
+        rows_out.append({"dt": dt, "label": label, "time_pct": summarize(pens),
+                         "seeds_pos": kpos, "seeds_nonzero": nnz})
+    write_p2_companion("dt_artifact",
+                       {"policy": "slingshot_nearest", "n_stars": n_stars, "n_seeds": len(seeds), "dts": dts},
+                       {"rows": rows_out})
 
 
 def _clumpiness_run(seeds: list[int], n_stars: int, lambdas: list[float],
@@ -972,6 +1252,27 @@ def m_clumpiness() -> None:
                  {"data": data})
 
 
+def p2_clumpiness() -> None:
+    """P2 companion to ``m_clumpiness``: N=500 -> N=512 (2% larger, cleanly p2). Same n_clumps=25."""
+    seeds = SEEDS[:48]
+    n_stars = 512
+    lambdas = [0.05, 0.1, 0.2]
+    n_clumps = 25
+    levels = [
+        ("uniform", {}),
+        ("sigma0.30", {"n_clumps": n_clumps, "clump_sigma_frac": 0.30}),
+        ("sigma0.15", {"n_clumps": n_clumps, "clump_sigma_frac": 0.15}),
+        ("sigma0.08", {"n_clumps": n_clumps, "clump_sigma_frac": 0.08}),
+        ("sigma0.05", {"n_clumps": n_clumps, "clump_sigma_frac": 0.05}),
+    ]
+    data = _clumpiness_run(seeds, n_stars, lambdas, n_clumps, levels)
+    write_p2_companion("clumpiness",
+                       {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                        "lambdas": lambdas, "n_clumps": n_clumps, "levels": [lb for lb, _ in levels],
+                        "mode_base": "instant", "mode_treat": "lightspeed", "stepping": "event"},
+                       {"data": data})
+
+
 def m_clumpiness_scale() -> None:
     """N=200k companion to the clumpy-field sweep: does tax = Lambda still hold on non-uniform
     fields at scale?
@@ -1001,6 +1302,32 @@ def m_clumpiness_scale() -> None:
                  {"data": data})
 
 
+def p2_clumpiness_scale() -> None:
+    """P2 companion to ``m_clumpiness_scale``: N=200_000 -> N=262_144 (next p2 above 200k).
+
+    Same n_clumps=25 as the historical - so at N=262_144 the mega-cluster size scales up
+    proportionally (~10.5k stars/clump at the tightest sigma). See ``m_clumpiness_scale`` docs
+    for the tax-vs-R interpretation this comparison enables.
+    """
+    seeds = SEEDS[:8]
+    n_stars = 262_144
+    lambdas = [0.05, 0.1, 0.2]
+    n_clumps = 25
+    levels = [
+        ("uniform", {}),
+        ("sigma0.30", {"n_clumps": n_clumps, "clump_sigma_frac": 0.30}),
+        ("sigma0.15", {"n_clumps": n_clumps, "clump_sigma_frac": 0.15}),
+        ("sigma0.08", {"n_clumps": n_clumps, "clump_sigma_frac": 0.08}),
+        ("sigma0.05", {"n_clumps": n_clumps, "clump_sigma_frac": 0.05}),
+    ]
+    data = _clumpiness_run(seeds, n_stars, lambdas, n_clumps, levels, r_seed_count=8)
+    write_p2_companion("clumpiness_scale",
+                       {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+                        "lambdas": lambdas, "n_clumps": n_clumps, "levels": [lb for lb, _ in levels],
+                        "mode_base": "instant", "mode_treat": "lightspeed", "stepping": "event"},
+                       {"data": data})
+
+
 def m_validation() -> None:
     """Nicholson & Forgan quantitative reproduction at the event timestep (single canonical seed)."""
     seed = 0x9E3779B9
@@ -1014,6 +1341,25 @@ def m_validation() -> None:
                  {"n_stars": n, "seed": seed, "stepping": "event"},
                  {"policies": out, "nearest_speedup_over_powered": speedup,
                   "nearest_beats_maxboost_on_time": out["slingshot_nearest"]["t100"] < out["slingshot_maxboost"]["t100"]})
+
+
+def p2_validation() -> None:
+    """P2 companion to ``m_validation``: N=400 -> N=512 (28% larger, cleanly p2).
+
+    Not a Nicholson & Forgan reproduction any more - N&F used N=400 for their canonical
+    numbers - just the same three-policy comparison at a p2 scale for shape.
+    """
+    seed = 0x9E3779B9
+    n = 512
+    out = {}
+    for pol in ("powered", "slingshot_nearest", "slingshot_maxboost"):
+        r = simulate_swarm(SwarmParams(n_stars=n, policy=pol, stepping="event"), seed=seed)
+        out[pol] = {"t100": r.t100_years, "max_speed_km_s": r.max_probe_speed_km_s}
+    speedup = out["powered"]["t100"] / out["slingshot_nearest"]["t100"]
+    write_p2_companion("validation",
+                       {"n_stars": n, "seed": seed, "stepping": "event"},
+                       {"policies": out, "nearest_speedup_over_powered": speedup,
+                        "nearest_beats_maxboost_on_time": out["slingshot_nearest"]["t100"] < out["slingshot_maxboost"]["t100"]})
 
 
 def _interior_wasted(rec: dict, start_bin: int) -> int:
@@ -1078,6 +1424,50 @@ def m_finite_size_interior() -> None:
                                        "resample": "seeds within each N", "by_shell": regressions}})
 
 
+def p2_finite_size_interior() -> None:
+    """P2 companion to ``m_finite_size_interior``: p2 ladder matched to the historical seed pattern.
+
+    Historical: (300, 600, 1200, 2400, 4800, 9600, 24000, 48000, 200000) with seeds
+                (32, 32, 24, 16, 12, 12, 10, 8, 6).
+    P2:         (256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 262144) with the same seed counts.
+    """
+    n_seeds_by_n = [(256, 32), (512, 32), (1024, 24), (2048, 16), (4096, 12),
+                    (8192, 12), (16384, 10), (32768, 8), (262144, 6)]
+    shells = {"all": 0, "interior_1nn": 2, "interior_2nn": 4}
+    data = {}
+    per_n: dict[str, dict[int, list]] = {s: {} for s in shells}
+    for n, k in n_seeds_by_n:
+        print(f"    [p2] N={n} ({k} seeds)", flush=True)
+        rows = _paired("lightspeed", seeds=SEEDS[:k], n_stars=n, policy="powered",
+                       probe_speed_c=0.2, speed_cap_c=0.4, stepping="event")
+        block = {"n_seeds": k}
+        for name, sb in shells.items():
+            if sb == 0:
+                tax = [pct_delta(t["wasted_arrivals"], b["wasted_arrivals"]) for b, t in rows]
+            else:
+                tax = [pct_delta(_interior_wasted(t, sb), _interior_wasted(b, sb)) for b, t in rows]
+            per_n[name][n] = tax
+            block[name] = summarize(tax)
+        interior_frac = [_interior_settled(b, 2) / b["final_settled"] for b, _ in rows]
+        block["interior_2nn_settled_frac"] = summarize(interior_frac)
+        data[str(n)] = block
+    ns = [n for n, _ in n_seeds_by_n]
+    regressions = {}
+    for name in shells:
+        slope, lo, hi = loglog_slope_ci([math.log10(n) for n in ns], [per_n[name][n] for n in ns])
+        regressions[name] = {"slope": slope, "ci_lo": lo, "ci_hi": hi}
+    write_p2_companion("finite_size_interior",
+                       {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
+                        "mode_treat": "lightspeed", "stepping": "event",
+                        "shells_nn": {"interior_1nn": 1.0, "interior_2nn": 2.0},
+                        "note": "tax on interior stars only (target >= shell mean-NN distances from any wall)"},
+                       {"data": data,
+                        "scale_regression": {"x": "log10(N)",
+                                             "unit": "percentage points per decade of N",
+                                             "resample": "seeds within each N",
+                                             "by_shell": regressions}})
+
+
 def m_finite_size_periodic() -> None:
     """Finite-size EDGE test, second control (referee finding M1): the periodic-box cross-check.
 
@@ -1127,6 +1517,38 @@ def m_finite_size_periodic() -> None:
                                        "slope": slope, "ci_lo": lo, "ci_hi": hi}})
 
 
+def p2_finite_size_periodic() -> None:
+    """P2 companion to ``m_finite_size_periodic``: p2 ladder matched to the historical seed pattern.
+
+    Not shardable via ``--seed-slice`` for the p2 pass - the historical periodic sweep is the
+    sole shardable measurement today, and its shard/merge machinery is coupled to the historical
+    file name (``finite_size_periodic.json``). The p2 companion runs full seeds always. If a
+    p2 shard mode is ever wanted, ``SHARDABLE`` grows a ``finite_size_periodic_p2`` entry and
+    ``_do_merge`` learns the p2 key routing - but that's out of scope for the migration.
+    """
+    n_seeds_by_n = [(256, 32), (512, 32), (1024, 24), (2048, 16), (4096, 12),
+                    (8192, 12), (16384, 10), (32768, 8), (262144, 6)]
+    data = {}
+    per_n: dict[int, list[float]] = {}
+    for n, k in n_seeds_by_n:
+        seeds = SEEDS[:k]
+        print(f"    [p2] N={n} ({len(seeds)} seeds, periodic)", flush=True)
+        rows = _paired("lightspeed", seeds=seeds, n_stars=n, policy="powered",
+                       probe_speed_c=0.2, speed_cap_c=0.4, stepping="event", periodic=True)
+        data[str(n)] = _tax_block(rows)
+        per_n[n] = [pct_delta(t["wasted_arrivals"], b["wasted_arrivals"]) for b, t in rows]
+    ns = [n for n, _ in n_seeds_by_n]
+    slope, lo, hi = loglog_slope_ci([math.log10(n) for n in ns], [per_n[n] for n in ns])
+    write_p2_companion("finite_size_periodic",
+                       {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
+                        "mode_treat": "lightspeed", "stepping": "event", "periodic": True},
+                       {"data": data,
+                        "scale_regression": {"x": "log10(N)",
+                                             "unit": "percentage points per decade of N",
+                                             "resample": "seeds within each N",
+                                             "slope": slope, "ci_lo": lo, "ci_hi": hi}})
+
+
 MEASUREMENTS = {
     "lambda_sweep": m_lambda_sweep,
     "lambda_sweep_scale": m_lambda_sweep_scale,
@@ -1146,6 +1568,31 @@ MEASUREMENTS = {
     "clumpiness": m_clumpiness,
     "clumpiness_scale": m_clumpiness_scale,
     "validation": m_validation,
+}
+
+# P2 companions: one per measurement above. Each merges its result under the ``p2`` key of the
+# corresponding historical file, so ``experiments.measure --p2`` runs the p2 sweeps on top of
+# already-computed historical JSONs (which stay byte-for-byte untouched). See
+# ``experiments/SPEC_P2_LADDER.md`` for the schema + sweep sizes.
+P2_MEASUREMENTS = {
+    "lambda_sweep": p2_lambda_sweep,
+    "lambda_sweep_scale": p2_lambda_sweep_scale,
+    "branching": p2_branching,
+    "branching_scale": p2_branching_scale,
+    "energy_tax": p2_energy_tax,
+    "finite_size": p2_finite_size,
+    "finite_size_interior": p2_finite_size_interior,
+    "finite_size_periodic": p2_finite_size_periodic,
+    "concurrency": p2_concurrency,
+    "concurrency_scale": p2_concurrency_scale,
+    "floor_bracket": p2_floor_bracket,
+    "floor_bracket_scale": p2_floor_bracket_scale,
+    "retarget_cap": p2_retarget_cap,
+    "retarget_cap_scale": p2_retarget_cap_scale,
+    "dt_artifact": p2_dt_artifact,
+    "clumpiness": p2_clumpiness,
+    "clumpiness_scale": p2_clumpiness_scale,
+    "validation": p2_validation,
 }
 
 # Cheap-first order so an interrupted run lands the quick wins early.
@@ -1286,26 +1733,46 @@ def main(argv: list[str]) -> None:
             _do_merge(n)
         return
 
+    p2_mode = "--p2" in argv
+    if p2_mode:
+        argv = [a for a in argv if a != "--p2"]
     force = "--force" in argv
     names = [a for a in argv if not a.startswith("-")]
     todo = names if names else ORDER
+    dispatch = P2_MEASUREMENTS if p2_mode else MEASUREMENTS
+    have_msg = "p2 companion" if p2_mode else "measurement"
     for name in todo:
-        if name not in MEASUREMENTS:
-            print(f"unknown measurement: {name} (have: {', '.join(ORDER)})")
+        if name not in dispatch:
+            print(f"unknown {have_msg}: {name} (have: {', '.join(ORDER)})")
             continue
-        if _SEED_SLICE is not None and name not in SHARDABLE:
+        if _SEED_SLICE is not None and (p2_mode or name not in SHARDABLE):
+            # p2 companions aren't shardable in this pass - see p2_finite_size_periodic docstring.
             print(
-                f"[skip] {name} (--seed-slice active; only {sorted(SHARDABLE)} are shardable)",
+                f"[skip] {name} ({'--p2' if p2_mode else '--seed-slice active'}; "
+                f"not shardable)",
                 flush=True,
             )
             continue
-        out = RESULTS_DIR / f"{name}{_shard_suffix()}.json"
-        if out.exists() and not force:
-            print(f"[skip] {name} (exists; --force to recompute)", flush=True)
-            continue
-        print(f"[run ] {name}{_shard_suffix()}", flush=True)
-        MEASUREMENTS[name]()
-        print(f"[done] {name} -> results/{name}{_shard_suffix()}.json", flush=True)
+        if p2_mode:
+            out = RESULTS_DIR / f"{name}.json"
+            if not out.exists():
+                print(f"[skip] {name} (no historical file yet - run without --p2 first)",
+                      flush=True)
+                continue
+            if _p2_has_companion(name) and not force:
+                print(f"[skip] {name} (p2 companion present; --force to recompute)", flush=True)
+                continue
+            print(f"[run ] {name} [p2 companion]", flush=True)
+            dispatch[name]()
+            print(f"[done] {name} p2 -> results/{name}.json (p2 key merged)", flush=True)
+        else:
+            out = RESULTS_DIR / f"{name}{_shard_suffix()}.json"
+            if out.exists() and not force:
+                print(f"[skip] {name} (exists; --force to recompute)", flush=True)
+                continue
+            print(f"[run ] {name}{_shard_suffix()}", flush=True)
+            dispatch[name]()
+            print(f"[done] {name} -> results/{name}{_shard_suffix()}.json", flush=True)
 
 
 if __name__ == "__main__":

@@ -461,6 +461,38 @@ a ~670x range (N = 300 .. 200,000), and the decline continues and accelerates:
 | fuel tax % (median) | 19.0 | 18.2 | 17.9 | 16.3 | 13.1 | 11.2 | 6.4 | 3.5 | **1.5** |
 | seeds | 48 | 48 | 48 | 48 | 32 | 32 | 24 | 16 | 8 |
 
+**P2 companion ladder (Issue #38 p2 scope, `experiments/results/*.json`).** Every
+committed measurement JSON now carries a **top-level `p2` key** with a companion
+sweep at `n_stars = 2^k` alongside the historical (non-p2) block. Historical top-level
+keys (`config`, `data`, `scale_regression`, ...) are untouched byte-for-byte and their
+drift guards stay load-bearing; the `p2` companion adds its own self-contained
+`{config, data, scale_regression}` under `p2`. Sweep sizes:
+
+- **N-sweeps** (`finite_size`, `finite_size_interior`, `finite_size_periodic`):
+  historical ladder `[300, 600, 1200, 2400, 4800, 9600, 24000, 48000, 200000]` with
+  p2 companion `[256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 262144]`. Nine
+  points each; seed counts match historical rows exactly so the two lever arms are
+  directly comparable.
+- **Scale companions** (`*_scale.json`, historical N=200_000): p2 companion at
+  N=262_144, the next power of two above 200k. Same seed counts.
+- **Fixed-N base sweeps** (`branching`, `concurrency`, `floor_bracket`,
+  `retarget_cap`, `lambda_sweep`, `dt_artifact`, `validation`, `clumpiness`,
+  `energy_tax`): p2 companion at N=512. Historical N was 300/400/500 depending on
+  the sweep; N=512 is a shared p2 anchor 2%-70% above historical.
+
+Byte-identity of the flat vs pointer path at matching p2 N is proven in
+`swarm/tests/test_flat_run_fill_oracle.py`, so p2 numbers are trustworthy to the
+same standard as the frozen non-p2 numbers - and the p2 pass exercises the fast
+path (`run_fill_flat`; PR #80) end-to-end for every measurement. The p2 companion
+also gives every headline claim a second lever arm: the tax-vs-N slope from
+`finite_size.p2`, the tax-at-scale question from `*_scale.json.p2`, and the
+"does the shape hold?" cross-checks from the fixed-N base sweeps.
+
+Generated with `uv run --extra dev python -O -m experiments.measure --p2`; the
+p2 key is skipped if already present unless `--force` is passed. See
+`swarm/experiments/SPEC_P2_LADDER.md` for the full schema and sweep-size
+justifications.
+
 **Flat p2 kd-tree substrate (Issue #38 p2 scope, `swarm/rust/`).** For sweeps
 at `n_stars = 2^k, k >= 3`, `swarm_rust` exposes a second, heap-indexed kd-tree
 where children of node `i` sit at `2i+1` and `2i+2` and the parent at
