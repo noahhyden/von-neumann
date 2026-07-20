@@ -896,6 +896,7 @@ def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Pro
     settle_wall_hist = state.settle_wall_hist
     wasted_hop_hist = state.wasted_hop_hist
     wasted_wall_hist = state.wasted_wall_hist
+    wasted_s_hist = state.wasted_s_hist
     hop_edges = HOP_BIN_EDGES
     wall_edges = WALL_BIN_EDGES_NN
     box_side = params.box_side_pc
@@ -971,6 +972,18 @@ def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Pro
             state.wasted_travel_pc += hop_len
             state.wasted_v_sum_pc_yr += v
             state.wasted_v2_sum += v * v
+            # Normalized claim margin: s = (settled_year[target] - launch) / (arrive - launch).
+            # Diagnostic-only, does not touch any decision.
+            _span = p.arrive_year - p.launch_year
+            if _span > 0.0:
+                _s = (settled_year[target] - p.launch_year) / _span
+                if _s < 0.0:
+                    _sb = 0
+                elif _s >= 1.0:
+                    _sb = 31
+                else:
+                    _sb = int(_s * 32.0)
+                wasted_s_hist[_sb] += 1
             # Retire a probe after too many lost races (a bounce-chain bound). Applied to BOTH
             # coordination modes: instant also loses in-transit races and re-targets (a probe
             # aims at a truly-unsettled star but another can settle it before it arrives), so it
@@ -1318,5 +1331,6 @@ def simulate_swarm(
         wasted_hop_hist=list(state.wasted_hop_hist),
         settle_wall_hist=list(state.settle_wall_hist),
         wasted_wall_hist=list(state.wasted_wall_hist),
+        wasted_s_hist=list(state.wasted_s_hist),
         steps=steps,
     )
