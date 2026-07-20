@@ -6,8 +6,9 @@ scipy.solve_ivp on purpose: scipy stays a drop-in oracle in the tests, and the
 existing hand-rolled Euler sites migrate without callers learning a new shape.
 
 Methods:
-- ``"rk45"``  - Dormand-Prince, explicit, adaptive. Default; non-stiff workhorse.
-- ``"bdf1"``  - backward Euler, implicit, L-stable. For stiff systems.
+- ``"rk45"``   - Dormand-Prince, explicit, adaptive. Default; non-stiff workhorse.
+- ``"bdf1"``   - backward Euler, implicit, L-stable, order 1. For stiff systems.
+- ``"trbdf2"`` - TR-BDF2, implicit, L-stable, order 2. The accurate stiff choice.
 """
 
 from __future__ import annotations
@@ -16,10 +17,14 @@ import math
 from collections.abc import Sequence
 
 from vn_core.ode.common import RHS, ODEResult
-from vn_core.ode.implicit import integrate_bdf1
+from vn_core.ode.implicit import integrate_bdf1, integrate_trbdf2
 from vn_core.ode.rk45 import integrate_rk45
 
-_INTEGRATORS = {"rk45": integrate_rk45, "bdf1": integrate_bdf1}
+_INTEGRATORS = {
+    "rk45": integrate_rk45,
+    "bdf1": integrate_bdf1,
+    "trbdf2": integrate_trbdf2,
+}
 
 
 def solve(
@@ -37,10 +42,12 @@ def solve(
     """Integrate dy/dt = f(t, y) from t_span[0] to t_span[1] starting at y0.
 
     ``y0`` is the initial state vector (length 1 for a scalar ODE). ``method`` is
-    "rk45" (default, explicit adaptive) or "bdf1" (implicit, L-stable, for stiff
-    systems). ``rtol``/``atol`` set the per-step accuracy; the step size adapts to
-    meet them, so there is no dt to guess. If ``t_eval`` is given, the result is
-    sampled exactly at those times; otherwise at every accepted step.
+    "rk45" (default, explicit adaptive), "bdf1" (implicit, L-stable, order 1, for
+    stiff systems), or "trbdf2" (implicit, L-stable, order 2 - the accurate stiff
+    choice, far fewer steps than bdf1). ``rtol``/``atol`` set the per-step accuracy;
+    the step size adapts to meet them, so there is no dt to guess. If ``t_eval`` is
+    given, the result is sampled exactly at those times; otherwise at every accepted
+    step.
 
     Raises ValueError on bad inputs. On a non-finite RHS value the returned
     ``ODEResult.success`` is False with an explanatory message rather than a
@@ -101,7 +108,10 @@ def solve(
     )
     if success:
         message = "integration successful"
-    elif not all(math.isfinite(v) for v in ys[-1]):
+    elif not all(math.isfinite(v) for v in ys[-1]):  # pragma: no cover - defensive: the
+        # integrators never *record* a non-finite state (a step producing inf/nan is
+        # rejected, or the RHS guard shrinks it), so a stall shows up as the branch
+        # below; this message is kept as a floor against a future integrator.
         message = "integration produced a non-finite state (RHS blew up); result is not trustworthy"
     else:
         message = f"integration stalled at t={reached!r} before t1={t1!r} (step size collapsed)"

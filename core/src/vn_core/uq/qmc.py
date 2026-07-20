@@ -1,10 +1,18 @@
 """Randomized quasi-Monte Carlo (RQMC): a faster-converging mean estimator.
 
 Plain Monte Carlo places samples randomly; its mean estimate converges as
-1/sqrt(N). Quasi-Monte Carlo places them on a low-discrepancy sequence (here a
-Halton sequence) that fills the input cube far more evenly, so for a smooth,
-low-dimensional finding the mean converges close to 1/N - a large win at small N
-(on the Ishigami mean, Halton at N=64 beat plain MC by ~20x).
+1/sqrt(N). Quasi-Monte Carlo places them on a low-discrepancy sequence that fills the
+input cube far more evenly, so for a smooth, low-dimensional finding the mean
+converges close to 1/N - a large win at small N (on the Ishigami mean, QMC at N=64
+beat plain MC by ~20x).
+
+Two sequences are available (both from [[sequences]]):
+- ``"halton"`` (default) - van der Corput in the first primes. The historical
+  default; kept as the default so existing seeded results stay bit-identical.
+- ``"sobol"`` - a digital (t,s)-sequence with better equidistribution as the input
+  count grows (Halton's high-prime bases correlate; Sobol's do not). Prefer it for
+  moderate dimension; opt in explicitly so downstream pinned results do not move
+  underneath a caller who did not ask.
 
 The honest catch: QMC points are *not* iid, so the usual `std/sqrt(N)` error bar
 is invalid for them - reporting it would be a confident lie. The fix is
@@ -16,9 +24,9 @@ seeded fold (§7).
 
 Scope: this estimates the **mean** (the headline "X" of a finding). For the full
 output distribution / quantile error bars, iid `monte_carlo` stays cleaner - QMC's
-guarantees are about integrals, not order statistics. Low-dimensional only: Halton
-degrades in high dimension (high-prime bases correlate), so more inputs than the
-prime table below raises rather than quietly returning a bad estimate.
+guarantees are about integrals, not order statistics. Low-dimensional only: both
+sequences have a dimension cap, and more inputs than that raises rather than quietly
+returning a bad estimate.
 """
 
 from __future__ import annotations
@@ -30,11 +38,12 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from vn_core.uq.distributions import Distribution
-
-# First primes, used as the per-dimension Halton bases. Halton is a low-dimension
-# tool; beyond this many inputs the high-prime bases correlate and the sequence is
-# no better than random, so we stop rather than mislead.
-_PRIMES = (2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71)
+from vn_core.uq.sequences import (
+    MAX_HALTON_DIM,
+    MAX_SOBOL_DIM,
+    halton_point,
+    sobol_points,
+)
 
 _Z90 = 1.6448536269514722  # 0.95 standard-normal quantile, for the 90% CI
 
@@ -49,17 +58,32 @@ class QMCMean:
     n: int  # points per replicate
     replicates: int
     n_evaluations: int  # n * replicates
+    sequence: str  # "halton" or "sobol" - which low-discrepancy sequence was used
 
 
-def _radical_inverse(i: int, base: int) -> float:
-    """The base-``base`` radical inverse of ``i`` - the 1-D Halton value in [0, 1)."""
-    f = 1.0
-    r = 0.0
-    while i > 0:
-        f /= base
-        r += f * (i % base)
-        i //= base
-    return r
+def _base_points(sequence: str, n: int, k: int) -> list[tuple[float, ...]]:
+    """The n un-randomized quasi-random points in [0,1)^k for the chosen sequence.
+
+    Computed once and reused across replicates (only the Cranley-Patterson shift
+    differs per replicate), so the sequence work is not repeated R times.
+    """
+    if sequence == "halton":
+        if k > MAX_HALTON_DIM:
+            raise ValueError(
+                f"qmc_mean(sequence='halton') is low-dimensional: {k} inputs exceeds the "
+                f"{MAX_HALTON_DIM} Halton bases. Try sequence='sobol' or monte_carlo."
+            )
+        # Start at index 1 to avoid the origin corner (index 0 is all zeros).
+        return [halton_point(i, k) for i in range(1, n + 1)]
+    if sequence == "sobol":
+        if k > MAX_SOBOL_DIM:
+            raise ValueError(
+                f"qmc_mean(sequence='sobol') is low-dimensional: {k} inputs exceeds the "
+                f"{MAX_SOBOL_DIM} tabulated Sobol' dimensions. Use monte_carlo instead."
+            )
+        # skip=1 drops the Sobol' origin, mirroring Halton's start-at-1 convention.
+        return sobol_points(n, k, skip=1)
+    raise ValueError(f"unknown sequence {sequence!r}; choose 'halton' or 'sobol'")
 
 
 def qmc_mean(
@@ -69,6 +93,7 @@ def qmc_mean(
     n: int,
     seed: int,
     replicates: int = 16,
+    sequence: str = "halton",
 ) -> QMCMean:
     """Estimate the mean of ``finding`` by randomized quasi-Monte Carlo.
 
@@ -77,8 +102,11 @@ def qmc_mean(
     Monte Carlo for smooth low-dimensional findings, and the error bar comes from
     the spread between replicate means (honest, unlike QMC's invalid iid stderr).
 
-    Raises if there are more inputs than available Halton bases (high-dimensional
-    QMC is not honest here) or if the finding returns a nonfinite value.
+    ``sequence`` picks the low-discrepancy sequence: ``"halton"`` (default, the
+    historical behavior - seeded results are unchanged) or ``"sobol"`` (better in
+    moderate dimension). Raises if there are more inputs than the chosen sequence's
+    dimension cap (high-dimensional QMC is not honest here) or if the finding returns
+    a nonfinite value.
     """
     if n < 1:
         raise ValueError(f"n must be >= 1, got {n}")
@@ -88,11 +116,8 @@ def qmc_mean(
     k = len(names)
     if k < 1:
         raise ValueError("qmc_mean requires at least one input")
-    if k > len(_PRIMES):
-        raise ValueError(
-            f"qmc_mean is a low-dimensional tool: {k} inputs exceeds the {len(_PRIMES)} "
-            "Halton bases. Use monte_carlo for high-dimensional findings."
-        )
+
+    base = _base_points(sequence, n, k)
 
     rng = random.Random(seed)
     replicate_means: list[float] = []
@@ -100,11 +125,9 @@ def qmc_mean(
         # Cranley-Patterson: one random shift per dimension, applied mod 1.
         shift = [rng.random() for _ in range(k)]
         acc = 0.0
-        for i in range(1, n + 1):
+        for point in base:
             sample = {
-                names[d]: inputs[names[d]].quantile(
-                    (_radical_inverse(i, _PRIMES[d]) + shift[d]) % 1.0
-                )
+                names[d]: inputs[names[d]].quantile((point[d] + shift[d]) % 1.0)
                 for d in range(k)
             }
             y = finding(sample)
@@ -123,4 +146,5 @@ def qmc_mean(
         n=n,
         replicates=replicates,
         n_evaluations=n * replicates,
+        sequence=sequence,
     )

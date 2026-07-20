@@ -37,8 +37,14 @@ Distributed as the `vn-core` package (Python name `vn_core`). Currently holds:
   quasi-Monte Carlo - ~1/N convergence for smooth low-dim findings, with an honest
   error bar from replicate spread) and `pce_control_variate` (PCE as a control
   variate - an unbiased mean with far lower variance, and it stays honest even
-  where PCE alone is untrustworthy). Every von-neumann module reaches for this so
-  no one re-implements the RNG discipline or the propagation loop.
+  where PCE alone is untrustworthy). Both variance-reduction paths and the Saltelli
+  sensitivity design draw their base points from `vn_core.uq.sequences` - a shared
+  source of deterministic low-discrepancy sequences (`halton_point`, `sobol_points`).
+  The Sobol' points are built from the Joe-Kuo direction numbers and pinned
+  bit-identical to `scipy.stats.qmc.Sobol` by a committed oracle test, so the
+  quasi-random sampler is verified against the reference rather than hand-rolled.
+  Every von-neumann module reaches for this so no one re-implements the RNG
+  discipline or the propagation loop.
 - **`vn_core.ode`** - ordinary differential equation solvers (issue
   [#38](https://github.com/noahhyden/von-neumann/issues/38)). One entry point,
   `solve(f, y0, t_span, ...)`, with two methods: `"rk45"` (Dormand-Prince,
@@ -74,9 +80,30 @@ Python today; when the rust drop-in appears it inherits the same rule.
 ## Develop
 
 ```sh
-uv run --extra dev pytest -q     # smoke tests
+uv run --extra dev pytest -q                        # the test suite
+uv run --extra dev coverage run -m pytest && \
+  uv run --extra dev coverage report                # + the 100% coverage gate
 ```
 
-The comprehensive UQ tests live where the findings do (see
-`probe-sim/tests/test_uq_*.py`); this package's own tests only prove the
-package is importable and round-trips end-to-end.
+The package holds at **100% line+branch coverage**, enforced in CI (the `core` job
+in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)) via `fail_under = 100`
+in `pyproject.toml`. The comprehensive downstream UQ tests still live where the
+findings do (see `probe-sim/tests/test_uq_*.py`); the tests here validate each
+primitive directly - RNG JS-parity, ODE vs scipy, Sobol' vs scipy, PCE vs analytic -
+and pin bit-reproducible golden values.
+
+## Deferred (Tier 3 roadmap options, intentionally not built)
+
+Per CLAUDE.md §3 (don't build the elaborate path before it is justified) and the
+repo's "extract/add on the second consumer" rule, these have a clear design but no
+firing consumer yet, so they are documented rather than shipped:
+
+- **Owen-scrambled QMC** - a stronger randomization than the Cranley-Patterson shift
+  `qmc_mean` uses today. Current randomization already gives an honest error bar; Owen
+  is a refinement to add when a finding needs it.
+- **More distributions** (Beta, Gamma, Triangular, Truncated Normal) - trivial to add
+  behind `Distribution.quantile`, but gated on a real consumer so the surface does not
+  grow unused.
+- **Lanczos recurrence for arbitrary PCE** - an alternative to the discretized
+  Stieltjes procedure for robustness on ill-conditioned moment problems; the current
+  route is validated and sufficient for the distributions in use.

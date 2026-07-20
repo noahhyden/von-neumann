@@ -120,9 +120,9 @@ def output_targets(
 ) -> list[float]:
     """Validate and order requested output times inside (t0, t1]. Empty if None.
 
-    Shared by both integrators: when the caller asks for specific times, each
-    integrator caps its steps to land on them exactly (see the integrators for
-    the trade this makes vs. a continuous interpolant).
+    Shared by both integrators. rk45 serves these times from its dense-output
+    interpolant (no change to the step sequence); bdf1 still caps its steps to land on
+    them exactly (a dense output for the implicit method is a later follow-up).
     """
     if t_eval is None:
         return []

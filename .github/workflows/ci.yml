@@ -13,6 +13,22 @@ on:
   workflow_dispatch:
 
 jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      # The shared vn_core package (RNG, UQ, ODE, linalg). Runs its own suite under
+      # coverage and fails the build below the gate configured in core/pyproject.toml
+      # ([tool.coverage.report] fail_under). scipy/numpy are dev-only test oracles.
+      - name: pytest + coverage gate (vn_core)
+        working-directory: core
+        run: |
+          uv run --extra dev coverage run -m pytest -q
+          uv run --extra dev coverage report
+
   closure-sim:
     runs-on: ubuntu-latest
     steps:

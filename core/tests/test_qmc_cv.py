@@ -89,9 +89,84 @@ def test_qmc_needs_at_least_two_replicates():
         qmc_mean(_ISH, _ishigami, n=64, seed=1, replicates=1)
 
 
+def test_qmc_rejects_nonpositive_n():
+    with pytest.raises(ValueError, match="n must be >= 1"):
+        qmc_mean(_ISH, _ishigami, n=0, seed=1, replicates=4)
+
+
+def test_qmc_rejects_empty_inputs():
+    with pytest.raises(ValueError, match="at least one input"):
+        qmc_mean({}, lambda s: 0.0, n=16, seed=1, replicates=4)
+
+
 def test_qmc_rejects_nonfinite():
     with pytest.raises(ValueError, match="nan/inf"):
         qmc_mean({"a": Uniform(0, 1)}, lambda s: float("inf"), n=16, seed=1, replicates=4)
+
+
+def test_qmc_default_sequence_is_halton():
+    q = qmc_mean(_ISH, _ishigami, n=64, seed=1, replicates=4)
+    assert q.sequence == "halton"
+
+
+def test_qmc_sobol_sequence_is_accurate():
+    """The Sobol' path is a genuine, accurate estimator on a smooth known-mean
+    integrand, and it records which sequence it used."""
+    q = qmc_mean(_ISH, _ishigami, n=512, seed=1, replicates=16, sequence="sobol")
+    assert q.sequence == "sobol"
+    assert abs(q.mean - _ISH_MEAN) < 0.02
+    lo, hi = q.ci
+    assert lo <= _ISH_MEAN <= hi
+
+
+def test_qmc_sobol_brackets_truth_and_is_deterministic():
+    a = qmc_mean(_ISH, _ishigami, n=256, seed=9, replicates=12, sequence="sobol")
+    b = qmc_mean(_ISH, _ishigami, n=256, seed=9, replicates=12, sequence="sobol")
+    assert (a.mean, a.stderr, a.ci) == (b.mean, b.stderr, b.ci)
+
+
+def test_qmc_sobol_beats_plain_mc():
+    q = qmc_mean(_ISH, _ishigami, n=512, seed=2, replicates=16, sequence="sobol")
+    mc = monte_carlo(_ISH, _ishigami, n=512 * 16, seed=2)
+    assert abs(q.mean - _ISH_MEAN) <= abs(mc.mean - _ISH_MEAN)
+
+
+def test_qmc_golden_values_are_bit_reproducible():
+    """Pin exact replay (CLAUDE.md §7): a fixed setup must return byte-identical means
+    on any machine. This also kills any mutation that silently perturbs the points or
+    the shift arithmetic within tolerance - the estimate is not just 'close', it is
+    exactly this."""
+    inp = {"a": Uniform(0.0, 1.0), "b": Uniform(0.0, 10.0)}
+    f = lambda s: s["a"] + s["b"]  # noqa: E731
+    h = qmc_mean(inp, f, n=32, seed=7, replicates=4, sequence="halton")
+    s = qmc_mean(inp, f, n=32, seed=7, replicates=4, sequence="sobol")
+    assert h.mean == 5.6359904145385435
+    assert h.stderr == 0.04562311169782555
+    assert s.mean == 5.592659974723728
+    assert s.stderr == 0.03466166243841826
+
+
+def test_qmc_rejects_unknown_sequence():
+    with pytest.raises(ValueError, match="unknown sequence"):
+        qmc_mean(_ISH, _ishigami, n=64, seed=1, replicates=4, sequence="latin")
+
+
+def test_qmc_sobol_refuses_too_many_dimensions():
+    many = {f"x{i}": Uniform(0.0, 1.0) for i in range(22)}  # > 21 tabulated Sobol' dims
+    with pytest.raises(ValueError, match="tabulated Sobol"):
+        qmc_mean(many, lambda s: sum(s.values()), n=64, seed=1, replicates=4, sequence="sobol")
+
+
+def test_qmc_accepts_exactly_the_max_dimension():
+    """Boundary: exactly the cap is allowed (the cap is a strict '>', not '>=')."""
+    from vn_core.uq.sequences import MAX_HALTON_DIM, MAX_SOBOL_DIM
+
+    hmany = {f"x{i}": Uniform(0.0, 1.0) for i in range(MAX_HALTON_DIM)}
+    q = qmc_mean(hmany, lambda s: sum(s.values()), n=16, seed=1, replicates=3, sequence="halton")
+    assert q.sequence == "halton"
+    smany = {f"x{i}": Uniform(0.0, 1.0) for i in range(MAX_SOBOL_DIM)}
+    q = qmc_mean(smany, lambda s: sum(s.values()), n=16, seed=1, replicates=3, sequence="sobol")
+    assert q.sequence == "sobol"
 
 
 # --- PCE control variate ------------------------------------------------------

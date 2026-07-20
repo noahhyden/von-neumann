@@ -22,6 +22,13 @@ from vn_core.uq.pce import CVResult, PCEResult, pce_control_variate, pce_fit
 from vn_core.uq.qmc import QMCMean, qmc_mean
 from vn_core.uq.report import one_line_finding
 from vn_core.uq.sample import MCResult, monte_carlo, summarize
+from vn_core.uq.sequences import (
+    MAX_HALTON_DIM,
+    MAX_SOBOL_DIM,
+    halton_point,
+    radical_inverse,
+    sobol_points,
+)
 from vn_core.uq.sobol import Analysis, SobolResult, sobol_total_order, uq_and_gsa
 
 __all__ = [
@@ -34,6 +41,11 @@ __all__ = [
     "MCResult",
     "monte_carlo",
     "summarize",
+    "radical_inverse",
+    "halton_point",
+    "sobol_points",
+    "MAX_HALTON_DIM",
+    "MAX_SOBOL_DIM",
     "SobolResult",
     "sobol_total_order",
     "Analysis",

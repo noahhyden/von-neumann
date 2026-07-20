@@ -48,18 +48,48 @@ error-estimate weights `E*`) is the standard explicit RK5(4) pair.
   implementations of the identical published pair agree to 1e-6 on the repo's own
   ODEs.
 
+### Dense-output interpolation matrix (`rk45.py`, `_P`)
+
+Requested output times (`t_eval`) are served by the Dormand-Prince quartic dense
+output: on an accepted step [t, t+h] the solution at t + theta*h is a degree-4
+polynomial in theta built from the step's seven stage derivatives.
+
+- **The 7x4 interpolation matrix `_P`** holds the coefficients of that polynomial. It
+  is the standard Dormand-Prince dense-output (Hairer & Wanner, "Solving ODEs I", 2nd
+  ed., Section II.6, "Dense Output"), stored as exact rationals - identical to the `P`
+  matrix in `scipy.integrate` `RK45` (BSD-3), from which the values were transcribed.
+  - Cross-check: the interpolant is validated *bit-for-bit* against scipy's
+    `dense_output()` in `tests/test_ode_dense_output.py` (agreement to ~1e-14), and
+    the endpoints are checked (theta=0 returns the step start, theta=1 the step end).
+    Verdict: reasonable - a transcribed, reference-verified standard interpolant, no
+    tuned constants.
+
 ### Adaptive step-size control constants (`rk45.py`, `implicit.py`)
 
 - **safety = 0.9, min shrink factor = 0.2, max growth factor = 10.0 (explicit) /
-  5.0 (implicit).** Standard PI-free step controller factors.
+  5.0 (implicit).** Standard step-controller clamp factors.
   - **Hairer, E., Norsett, S. P., Wanner, G. (1993), "Solving Ordinary
     Differential Equations I: Nonstiff Problems", 2nd ed., Springer**, Section
-    II.4 ("Automatic Step Size Control"). These are the textbook default factors,
-    and match scipy's `RK45` implementation. Verdict: reasonable - conventional
-    values, not tuned to any one problem.
-- **Error-estimate exponent = -1/(order+1):** -1/5 for RK45 (estimator order 4),
-  -1/2 for backward Euler (order 1). Same source (Hairer/Wanner II.4). This is the
-  order the local error scales at, so it is derived, not chosen.
+    II.4 ("Automatic Step Size Control"). These are the textbook default factors.
+    Verdict: reasonable - conventional values, not tuned to any one problem.
+- **PI step controller (`rk45.py`): beta = 0.04, alpha = 1/5 - 0.75*beta = 0.17.**
+  The step factor is `clamp(safety * err**(-alpha) * err_prev**beta, 0.2, 10)`, a
+  Gustafsson PI controller: the `err_prev**beta` integral term damps the step-size
+  oscillation a pure proportional controller (`err**(-1/5)`) shows on problems with
+  abruptly changing scales, cutting rejected steps (measured 68 -> 46 rejects on the
+  mu=5 van der Pol oscillator) at the same accuracy. These are the exact defaults in
+  Hairer's reference DOPRI5. This is a deliberate change from the earlier elementary
+  `err**(-1/5)` controller: the accepted-step sequence differs (it is no longer
+  bit-identical to scipy's RK45, which uses an elementary controller), but the method
+  order and accuracy are unchanged, and no core result is pinned to the old sequence.
+  - **Gustafsson, K. (1991), "Control theoretic techniques for stepsize selection in
+    explicit Runge-Kutta methods", ACM TOMS 17(4), 533-554.** The PI controller.
+    - https://doi.org/10.1145/210232.210242
+  - **Hairer/Wanner (1993), Section II.4**, and Hairer's DOPRI5 source, for the
+    beta = 0.04 default and the alpha = 1/(q+1) - 0.75*beta form (q = 4).
+- **Error-estimate exponent -1/(order+1) (implicit solver):** -1/2 for backward Euler
+  (order 1); same source (Hairer/Wanner II.4). The order the local error scales at,
+  so it is derived, not chosen. (rk45 uses the PI exponents above instead.)
 - **Automatic first-step heuristic (`common.select_initial_step`).** The
   balance-of-scales starting-step formula is Hairer/Wanner I, "Starting Step Size"
   (the routine `hinit`). Verdict: reasonable - a start value only; the controller
@@ -73,11 +103,26 @@ error-estimate weights `E*`) is the standard explicit RK5(4) pair.
 
 ### Backward Euler + finite-difference Jacobian (`implicit.py`, `linalg.py`)
 
-- **Backward (implicit) Euler**, the order-1 L-stable method, is textbook
+- **Backward (implicit) Euler** (`bdf1`), the order-1 L-stable method, is textbook
   (Hairer & Wanner, "Solving ODEs II: Stiff and Differential-Algebraic Problems",
-  Section IV). Chosen for L-stability + simplicity to meet the stiff validation
-  gate; a higher-order L-stable method (Radau IIA-5, BDF2) is the flagged Phase-3+
-  follow-up in issue #38.
+  Section IV). Chosen for L-stability + simplicity; kept as the simple, robust option.
+- **TR-BDF2** (`trbdf2`), an order-2 L-stable one-step method: a trapezoidal sub-step
+  to t + gamma*h then a BDF2 sub-step to t + h, with `gamma = 2 - sqrt(2)`. The
+  BDF2-stage coefficients are `a = 1/(gamma(2-gamma))`, `b = (1-gamma)^2/(gamma(2-
+  gamma))`, `c = (1-gamma)/(2-gamma)` (with `a - b = 1`, exact for constants). The
+  gamma value is the standard choice that makes the two stages' Newton iteration
+  matrices share a coefficient (`gamma/2 = c`) and yields an L-stable, second-order,
+  stiffly-accurate method. On a stiff system this reaches a given accuracy in far
+  fewer / larger steps than backward Euler (measured ~14x fewer steps, ~6x fewer RHS
+  evaluations on `y' = -1000(y - cos t)` at rtol 1e-6), while staying bounded.
+  - **Bank, R. E., Coughran, W. M., Fichtner, W., Grosse, E. H., Rose, D. J., Smith,
+    R. K. (1985), "Transient simulation of silicon devices and circuits", IEEE Trans.
+    CAD 4(4), 436-451.** The origin of TR-BDF2 and the gamma = 2 - sqrt(2) choice.
+    - https://doi.org/10.1109/TCAD.1985.1270142
+  - **Hosea, M. E. and Shampine, L. F. (1996), "Analysis and implementation of
+    TR-BDF2", Applied Numerical Mathematics 20(1-2), 21-37.** The modern analysis
+    (order 2, L-stability). Verdict: reasonable - a standard L-stable order-2 method;
+    validated here against scipy's stiff solvers (BDF/Radau) to tolerance.
 - **Finite-difference Jacobian perturbation `h = sqrt(eps_machine) * max(|y_j|,
   1)`** with `eps_machine ~ 2.22e-16`. The `sqrt(eps)` forward-difference step is
   the standard optimum trading truncation against round-off.
@@ -90,15 +135,41 @@ error-estimate weights `E*`) is the standard explicit RK5(4) pair.
   nonlinear solve is not the accuracy bottleneck. Verdict: reasonable - loose by
   design, tightening it would only cost iterations.
 
-## UQ: variance-reduction mean estimators (`vn_core.uq.qmc`, `vn_core.uq.pce`)
+## UQ: low-discrepancy sequences (`vn_core.uq.sequences`)
 
-- **Halton low-discrepancy sequence (`qmc.py`).** Per-dimension radical inverse in
-  the first primes as bases - a quasi-random sequence that fills the cube evenly,
-  giving ~1/N mean convergence vs Monte Carlo's 1/sqrt(N) for smooth low-dim
+The shared quasi-random point sources for the QMC mean estimator and the Saltelli
+sensitivity design. Method choices, not physical numbers; the Sobol' direction
+integers are tabulated data whose provenance is pinned below.
+
+- **Halton low-discrepancy sequence.** Per-dimension radical inverse (van der
+  Corput) in the first primes as bases - a quasi-random sequence that fills the cube
+  evenly, giving ~1/N mean convergence vs Monte Carlo's 1/sqrt(N) for smooth low-dim
   findings.
   - **Halton, J. H. (1964), "Algorithm 247: Radical-inverse quasi-random point
     sequence", Comm. ACM 7(12), 701-702.**
     - https://doi.org/10.1145/355588.365104
+- **Sobol' sequence (direction numbers).** A digital (t, s)-sequence with far better
+  high-dimensional equidistribution than Halton, generated by the standard gray-code
+  recurrence over per-dimension direction integers. Better than Halton because the
+  high-prime Halton bases correlate as dimension grows; Sobol' does not.
+  - **Sobol', I. M. (1967), "On the distribution of points in a cube and the
+    approximate evaluation of integrals", USSR Comp. Math. and Math. Phys. 7(4),
+    86-112.** The original sequence.
+    - https://doi.org/10.1016/0041-5553(67)90144-9
+  - **Joe, S. and Kuo, F. Y. (2008), "Constructing Sobol sequences with better
+    two-dimensional projections", SIAM J. Sci. Comput. 30(5), 2635-2654.** The source
+    of the specific direction numbers used here.
+    - https://doi.org/10.1137/070709359
+    - Direction-number data: https://web.maths.unsw.edu.au/~fkuo/sobol/ (BSD-style
+      licence, free use with attribution).
+  - **Provenance of the embedded table (CLAUDE.md §1).** The direction integers in
+    `sequences.py` (`_SOBOL_V`) are the Joe-Kuo values as distributed with SciPy
+    (BSD-3), transcribed so the runtime needs no SciPy. They are not tunable and not
+    guessed. `tests/test_sequences.py` regenerates them from `scipy.stats.qmc.Sobol`
+    and asserts (a) the embedded table equals scipy's computed direction matrix and
+    (b) this module's points are bit-identical to scipy's - so a drift is a red test,
+    the same discipline the RNG's JS-parity fixture holds. Verdict: reasonable -
+    verified bit-for-bit against the reference implementation.
 - **Randomization (Cranley-Patterson rotation).** A seeded uniform shift per
   dimension, applied mod 1, per replicate - makes each replicate an unbiased QMC
   estimate so the spread between replicate means is an honest error bar (plain
@@ -136,6 +207,22 @@ sensitivity estimator computed from the shared Saltelli design.
     output. Design and estimator for the total sensitivity index", Computer Physics
     Communications 181, 259-270.**
     - https://doi.org/10.1016/j.cpc.2009.09.018
+- **Second-order (pairwise interaction) index S_ij (Saltelli 2002/2010), opt-in.**
+  The closed second-order effect `V^c_ij` (main effects of i and j plus their
+  interaction) is estimated from the AB and BA matrices as `mean_j(f(AB^i)_j f(BA^j)_j
+  - f(A)_j f(B)_j)/Var`, and the *pure* interaction is `S_ij = V^c_ij/Var - S_i - S_j`.
+  The `- f(A)f(B)` term is a correlated control (it estimates the same f0^2 the product
+  would otherwise carry), which keeps the estimator numerically well behaved - the same
+  centering discipline the first-order estimator uses. This needs the extra "BA"
+  matrices (B with one column from A), so it doubles the design to `N*(2K+2)` model
+  calls and is therefore off by default. Validated on Ishigami, whose only nonzero
+  interaction is x1-x3: the estimator recovers `S_13 ~ 0.244` (which equals x3's
+  total-order, since x3 has no main effect) and reads x1-x2, x2-x3 as ~0 with CIs
+  straddling zero.
+  - **Saltelli, A. (2002), "Making best use of model evaluations to compute
+    sensitivity indices", Computer Physics Communications 145, 280-297.** The
+    second-order estimator and the AB/BA radial-sampling design.
+    - https://doi.org/10.1016/S0010-4655(02)00280-1
 - **Confidence intervals.** Default is asymptotic: each index is a sample mean of
   per-row terms, so `stderr = pstdev(terms)/sqrt(N)` and the 90% CI is `estimate +-
   z * stderr` with `z = 1.6448536269514722` (the 0.95 standard-normal quantile, a
@@ -191,9 +278,35 @@ constants, each a mathematical identity, not an assumption.
     non-intrusive polynomial chaos expansions with high number of random
     variables", AIAA 2007-1939.** Source of the ~2x oversampling ratio (runs vs.
     basis terms). Verdict: reasonable - with the orthonormal basis and samples
-    drawn from the input distribution, the normal-equations Gram matrix tends to
+    drawn from the input distribution, the design's Gram matrix tends to
     N * identity, so it is well-conditioned; tests confirm machine-precision
     recovery of a degree-2 polynomial in 8 inputs from ~90 runs.
+  - **Least-squares solve: Householder QR (`vn_core.linalg.solve_lstsq`).** The
+    regression fit solves the design system M c ~= y by Householder QR rather than
+    the normal equations (M^T M) c = M^T y. The normal equations square the
+    condition number of M, discarding up to half the significant digits on a mildly
+    ill-conditioned design; QR on M keeps them (a test shows QR ~8 orders of
+    magnitude more accurate than the normal equations on a near-collinear design).
+    - **Golub, G. H. and Van Loan, C. F. (2013), "Matrix Computations", 4th ed.,
+      Johns Hopkins**, Section 5.2 (Householder QR least squares). Verdict:
+      reasonable - the textbook stable LS method; validated bit-for-bit against
+      numpy.linalg.lstsq in the tests (numpy is a dev-only oracle).
+  - **Smolyak sparse-grid quadrature (`method="sparse"`).** The same pseudospectral
+    projection as tensor quadrature, but over a Smolyak sparse grid (level = degree)
+    that combines the 1-D Gauss rules by the signed combination technique. The node
+    count grows polynomially rather than as (degree+1)^d, so a degree>=2 PCE stays
+    feasible into moderate dimension (measured ~4x fewer model calls at d=5, ~100x at
+    d=8; for d <= ~3 the tensor grid is comparable or cheaper). The rule integrates
+    total-degree polynomials to 2*level+1 exactly, so level = degree is exact for the
+    degree-`degree` projection - verified in tests by exact recovery of polynomials
+    and agreement with tensor quadrature on Ishigami.
+    - **Smolyak, S. A. (1963), "Quadrature and interpolation formulas for tensor
+      products of certain classes of functions", Soviet Math. Dokl. 4, 240-243.** The
+      original sparse-grid construction.
+    - **Gerstner, T. and Griebel, M. (1998), "Numerical integration using sparse
+      grids", Numerical Algorithms 18(3-4), 209-232.** The combination-technique form
+      (signed sum of tensor rules) implemented here.
+      - https://doi.org/10.1023/A:1019129717644
 - **Sobol indices from PCE coefficients (grouped coefficient energy).**
   - **Sudret, B. (2008), "Global sensitivity analysis using polynomial chaos
     expansions", Reliability Engineering & System Safety 93(7), 964-979.** First-
