@@ -25,7 +25,7 @@
 //!     history). For powered/instant+lightspeed no heap entry is ever stale
 //!     (each pid has at most one live entry), so no lazy-validation is needed.
 
-use numpy::PyReadonlyArray1;
+use numpy::{IntoPyArray, PyReadonlyArray1, PyReadwriteArray1};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::cmp::Reverse;
@@ -714,10 +714,567 @@ fn c_pc_per_year() -> f64 {
     C_PC_PER_YEAR
 }
 
+// ============================================================================
+// Flat p2 kd-tree (issue #38 P2 spec: swarm/rust/SPEC_FLAT_KDTREE.md).
+//
+// At `N = 2^k, k >= 3` and `_KD_LEAF = 8`, the pointer tree collapses to a
+// perfect binary tree with `M = N/8` leaves. Heap indexing (`children = 2i+1,
+// 2i+2; parent = (i-1) >> 1; leaf iff i >= M-1`) replaces the `lo`, `hi`,
+// `parent` arrays entirely - the "bit-shift shenanigans" the p2 standardization
+// buys. The build's median-split rule (widest axis, sort by `(coord, index)`,
+// split at `mid = len/2`) is byte-for-byte identical to `sim._build_kdtree`,
+// so the flat tree is a drop-in for the pointer tree at matching p2 N and
+// returns star indices in the *original* space via `star_perm`.
+// ============================================================================
+
+const KD_LEAF: usize = 8;
+
+/// Kd-tree leaf capacity (mirrors `sim._KD_LEAF` = 8). Exposed as a `const` so
+/// the compiler can bake the value into the leaf indexing arithmetic.
+#[inline]
+fn is_power_of_two(n: usize) -> bool {
+    n > 0 && (n & (n - 1)) == 0
+}
+
+/// Recursive median-split build (matches the pointer tree's recursion). Not a
+/// closure: passes each buffer by `&mut` so the compiler can prove aliasing.
+#[allow(clippy::too_many_arguments)]
+fn flat_build(
+    node: usize,
+    start: usize,
+    end: usize,
+    xs: &[f64],
+    ys: &[f64],
+    zs: &[f64],
+    star_perm: &mut [i32],
+    axis: &mut [i8],
+    split: &mut [f64],
+    bxmin: &mut [f64],
+    bxmax: &mut [f64],
+    bymin: &mut [f64],
+    bymax: &mut [f64],
+    bzmin: &mut [f64],
+    bzmax: &mut [f64],
+    m_minus_one: usize,
+) {
+    // Bounding box over this node's stars (in permuted order).
+    let i0 = star_perm[start] as usize;
+    let mut xmn = xs[i0];
+    let mut xmx = xmn;
+    let mut ymn = ys[i0];
+    let mut ymx = ymn;
+    let mut zmn = zs[i0];
+    let mut zmx = zmn;
+    for &p in &star_perm[start + 1..end] {
+        let pu = p as usize;
+        let xi = xs[pu];
+        if xi < xmn {
+            xmn = xi;
+        } else if xi > xmx {
+            xmx = xi;
+        }
+        let yi = ys[pu];
+        if yi < ymn {
+            ymn = yi;
+        } else if yi > ymx {
+            ymx = yi;
+        }
+        let zi = zs[pu];
+        if zi < zmn {
+            zmn = zi;
+        } else if zi > zmx {
+            zmx = zi;
+        }
+    }
+    bxmin[node] = xmn;
+    bxmax[node] = xmx;
+    bymin[node] = ymn;
+    bymax[node] = ymx;
+    bzmin[node] = zmn;
+    bzmax[node] = zmx;
+
+    if node >= m_minus_one {
+        // Leaf: exactly 8 stars at start..end. Nothing to do beyond bbox+aggregates.
+        axis[node] = -1;
+        split[node] = 0.0;
+        return;
+    }
+
+    // Widest axis (ties: x > y > z, matching the pointer tree).
+    let ex = xmx - xmn;
+    let ey = ymx - ymn;
+    let ez = zmx - zmn;
+    let ax: i8 = if ex >= ey && ex >= ez {
+        0
+    } else if ey >= ez {
+        1
+    } else {
+        2
+    };
+    let coord: &[f64] = match ax {
+        0 => xs,
+        1 => ys,
+        _ => zs,
+    };
+    // Sort star_perm[start..end] by (coord[perm], perm) - the pointer tree's exact tie-break.
+    star_perm[start..end].sort_by(|&a, &b| {
+        let ca = coord[a as usize];
+        let cb = coord[b as usize];
+        ca.total_cmp(&cb).then(a.cmp(&b))
+    });
+    let mid = start + (end - start) / 2;
+    axis[node] = ax;
+    split[node] = coord[star_perm[mid] as usize];
+    flat_build(
+        2 * node + 1,
+        start,
+        mid,
+        xs,
+        ys,
+        zs,
+        star_perm,
+        axis,
+        split,
+        bxmin,
+        bxmax,
+        bymin,
+        bymax,
+        bzmin,
+        bzmax,
+        m_minus_one,
+    );
+    flat_build(
+        2 * node + 2,
+        mid,
+        end,
+        xs,
+        ys,
+        zs,
+        star_perm,
+        axis,
+        split,
+        bxmin,
+        bxmax,
+        bymin,
+        bymax,
+        bzmin,
+        bzmax,
+        m_minus_one,
+    );
+}
+
+/// Build a perfect binary flat kd-tree over N stars, `N = 2^k, k >= 3`.
+///
+/// Returns a dict with the tree arrays (see `SPEC_FLAT_KDTREE.md`). Raises
+/// `ValueError` for any N that is not a power of two >= 8 - the p2 discipline
+/// is enforced at the build boundary so callers never silently get a broken
+/// tree.
+#[pyfunction]
+fn build_flat_kdtree(
+    py: Python<'_>,
+    xs: PyReadonlyArray1<f64>,
+    ys: PyReadonlyArray1<f64>,
+    zs: PyReadonlyArray1<f64>,
+) -> PyResult<Py<PyDict>> {
+    let xs = xs.as_slice()?;
+    let ys = ys.as_slice()?;
+    let zs = zs.as_slice()?;
+    let n = xs.len();
+    if ys.len() != n || zs.len() != n {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "xs, ys, zs must have equal length",
+        ));
+    }
+    if n < KD_LEAF || !is_power_of_two(n) {
+        return Err(pyo3::exceptions::PyValueError::new_err(format!(
+            "build_flat_kdtree requires n_stars to be a power of two >= {} (got {})",
+            KD_LEAF, n
+        )));
+    }
+    let m = n / KD_LEAF;
+    if !is_power_of_two(m) {
+        // Redundant given `n` is p2 and `KD_LEAF` is 8 (also p2), but a defense against a future
+        // KD_LEAF bump breaking the invariant silently.
+        return Err(pyo3::exceptions::PyValueError::new_err(format!(
+            "n_stars / KD_LEAF must also be a power of two (got m={})",
+            m
+        )));
+    }
+    let total = 2 * m - 1;
+
+    let mut star_perm: Vec<i32> = (0..n as i32).collect();
+    let mut axis: Vec<i8> = vec![-1; total];
+    let mut split: Vec<f64> = vec![0.0; total];
+    let mut bxmin: Vec<f64> = vec![0.0; total];
+    let mut bxmax: Vec<f64> = vec![0.0; total];
+    let mut bymin: Vec<f64> = vec![0.0; total];
+    let mut bymax: Vec<f64> = vec![0.0; total];
+    let mut bzmin: Vec<f64> = vec![0.0; total];
+    let mut bzmax: Vec<f64> = vec![0.0; total];
+
+    flat_build(
+        0,
+        0,
+        n,
+        xs,
+        ys,
+        zs,
+        &mut star_perm,
+        &mut axis,
+        &mut split,
+        &mut bxmin,
+        &mut bxmax,
+        &mut bymin,
+        &mut bymax,
+        &mut bzmin,
+        &mut bzmax,
+        m - 1,
+    );
+
+    // Permuted coordinates for cache-tight leaf scans (each leaf's 8 stars contiguous).
+    let mut xs_p: Vec<f64> = Vec::with_capacity(n);
+    let mut ys_p: Vec<f64> = Vec::with_capacity(n);
+    let mut zs_p: Vec<f64> = Vec::with_capacity(n);
+    let mut star_perm_inv: Vec<i32> = vec![-1; n];
+    for i in 0..n {
+        let orig = star_perm[i] as usize;
+        xs_p.push(xs[orig]);
+        ys_p.push(ys[orig]);
+        zs_p.push(zs[orig]);
+        star_perm_inv[orig] = i as i32;
+    }
+
+    // Subtree aggregates at build: every star unsettled -> nuns = subtree_size, tsmax = -1.
+    // subtree_size for a perfect binary tree with M leaves and 8 stars/leaf: node i's subtree
+    // holds N / 2^depth(i) stars. At the root (depth 0) that's N; at each leaf that's 8. Easier
+    // to compute in one BFS pass than to track depth explicitly.
+    let mut nuns: Vec<i32> = vec![0; total];
+    let tsmax: Vec<f64> = vec![-1.0; total];
+    // Leaves (indices m-1..2m-2) each hold 8 stars.
+    for leaf in (m - 1)..total {
+        nuns[leaf] = KD_LEAF as i32;
+    }
+    // Internal nodes in reverse BFS order: nuns[i] = nuns[2i+1] + nuns[2i+2].
+    if m >= 2 {
+        for i in (0..(m - 1)).rev() {
+            nuns[i] = nuns[2 * i + 1] + nuns[2 * i + 2];
+        }
+    }
+
+    let d = PyDict::new_bound(py);
+    d.set_item("m", m as i64)?;
+    d.set_item("total_nodes", total as i64)?;
+    d.set_item("xs_p", xs_p.into_pyarray_bound(py))?;
+    d.set_item("ys_p", ys_p.into_pyarray_bound(py))?;
+    d.set_item("zs_p", zs_p.into_pyarray_bound(py))?;
+    d.set_item("star_perm", star_perm.into_pyarray_bound(py))?;
+    d.set_item("star_perm_inv", star_perm_inv.into_pyarray_bound(py))?;
+    d.set_item("axis", axis.into_pyarray_bound(py))?;
+    d.set_item("split", split.into_pyarray_bound(py))?;
+    d.set_item("bxmin", bxmin.into_pyarray_bound(py))?;
+    d.set_item("bxmax", bxmax.into_pyarray_bound(py))?;
+    d.set_item("bymin", bymin.into_pyarray_bound(py))?;
+    d.set_item("bymax", bymax.into_pyarray_bound(py))?;
+    d.set_item("bzmin", bzmin.into_pyarray_bound(py))?;
+    d.set_item("bzmax", bzmax.into_pyarray_bound(py))?;
+    d.set_item("nuns", nuns.into_pyarray_bound(py))?;
+    d.set_item("tsmax", tsmax.into_pyarray_bound(py))?;
+    Ok(d.into())
+}
+
+/// Nearest believed-unsettled star to (px, py, pz) at `year`, flat-tree edition.
+///
+/// Bit-identical mirror of `nn_impl` (the pointer-tree query) with two mechanical
+/// substitutions: `2i+1, 2i+2` for children, `i >= M-1` for the leaf test. The
+/// `dhi`/`dlo` pruning, lightcone gate, and (d^2, lowest-original-index) tie-break
+/// are copied verbatim, so at matching p2 N this returns the SAME original index
+/// as the pointer tree for every query - the acceptance criterion in
+/// `test_flat_kdtree_oracle.py`.
+///
+/// `excl` contains ORIGINAL star indices; the leaf scan checks each candidate's
+/// original index (via `star_perm`) against `excl[..n_ex]`, matching the pointer
+/// tree's semantics.
+#[allow(clippy::too_many_arguments)]
+fn flat_nn_impl(
+    px: f64,
+    py: f64,
+    pz: f64,
+    year: f64,
+    is_instant: bool,
+    m: usize,
+    xs_p: &[f64],
+    ys_p: &[f64],
+    zs_p: &[f64],
+    sy_p: &[f64],
+    star_perm: &[i32],
+    axis: &[i8],
+    split: &[f64],
+    bxmin: &[f64],
+    bxmax: &[f64],
+    bymin: &[f64],
+    bymax: &[f64],
+    bzmin: &[f64],
+    bzmax: &[f64],
+    nuns: &[i32],
+    tsmax: &[f64],
+    excl: &[i32],
+    n_ex: usize,
+) -> i64 {
+    let c = C_PC_PER_YEAR;
+    let mut best: i64 = -1;
+    let mut best_d2 = f64::INFINITY;
+
+    // Traversal stack. At N=2^k the tree has depth k-3, so at most k-3 <= ~29 nodes on the
+    // stack at once (log2 of 2^32); a fixed 128 is defensively over-sized (matches nn_impl).
+    let mut stack: [i32; 128] = [0; 128];
+    stack[0] = 0; // root
+    let mut sp: usize = 1;
+    let m_minus_one = m - 1;
+
+    while sp > 0 {
+        sp -= 1;
+        let node = stack[sp] as usize;
+
+        let mut dlo2: f64 = 0.0;
+        let mut t = bxmin[node] - px;
+        if t > 0.0 {
+            dlo2 = t * t;
+        } else {
+            t = px - bxmax[node];
+            if t > 0.0 {
+                dlo2 = t * t;
+            }
+        }
+        t = bymin[node] - py;
+        if t > 0.0 {
+            dlo2 += t * t;
+        } else {
+            t = py - bymax[node];
+            if t > 0.0 {
+                dlo2 += t * t;
+            }
+        }
+        t = bzmin[node] - pz;
+        if t > 0.0 {
+            dlo2 += t * t;
+        } else {
+            t = pz - bzmax[node];
+            if t > 0.0 {
+                dlo2 += t * t;
+            }
+        }
+        if dlo2 > best_d2 {
+            continue;
+        }
+        if nuns[node] == 0 {
+            if is_instant {
+                continue;
+            }
+            // dhi: farthest corner; if that beacon has arrived, all inside have.
+            let mut a = px - bxmin[node];
+            let mut b = px - bxmax[node];
+            let mut a2 = a * a;
+            let mut b2 = b * b;
+            let mut dhi2 = if a2 > b2 { a2 } else { b2 };
+            a = py - bymin[node];
+            b = py - bymax[node];
+            a2 = a * a;
+            b2 = b * b;
+            dhi2 += if a2 > b2 { a2 } else { b2 };
+            a = pz - bzmin[node];
+            b = pz - bzmax[node];
+            a2 = a * a;
+            b2 = b * b;
+            dhi2 += if a2 > b2 { a2 } else { b2 };
+            if tsmax[node] + dhi2.sqrt() / c <= year {
+                continue;
+            }
+        }
+        if node >= m_minus_one {
+            // Leaf: 8 contiguous permuted stars at [leaf_offset .. leaf_offset+8).
+            let leaf_offset = (node - m_minus_one) * KD_LEAF;
+            for k in 0..KD_LEAF {
+                let i = leaf_offset + k;
+                let orig = star_perm[i] as i64;
+                // Skip excluded stars (original-index comparison, matches pointer tree).
+                let mut skipped = false;
+                for j in 0..n_ex {
+                    if excl[j] as i64 == orig {
+                        skipped = true;
+                        break;
+                    }
+                }
+                if skipped {
+                    continue;
+                }
+                let sy_i = sy_p[i];
+                if sy_i >= 0.0 {
+                    if is_instant {
+                        continue;
+                    }
+                    let dx = xs_p[i] - px;
+                    let dy = ys_p[i] - py;
+                    let dz = zs_p[i] - pz;
+                    let d = (dx * dx + dy * dy + dz * dz).sqrt();
+                    if sy_i + d / c <= year {
+                        continue;
+                    }
+                }
+                let dx = xs_p[i] - px;
+                let dy = ys_p[i] - py;
+                let dz = zs_p[i] - pz;
+                let d2 = dx * dx + dy * dy + dz * dz;
+                if d2 < best_d2 || (d2 == best_d2 && best >= 0 && orig < best) {
+                    best_d2 = d2;
+                    best = orig;
+                }
+            }
+        } else {
+            let ax = axis[node];
+            let p_ax = if ax == 0 {
+                px
+            } else if ax == 1 {
+                py
+            } else {
+                pz
+            };
+            // Same "near-first" ordering as the pointer tree: push far first, then near, so
+            // the near child pops next (DFS matches, same visitation order, same pruning).
+            let (lo_idx, hi_idx) = (2 * node + 1, 2 * node + 2);
+            if p_ax < split[node] {
+                stack[sp] = hi_idx as i32;
+                sp += 1;
+                stack[sp] = lo_idx as i32;
+                sp += 1;
+            } else {
+                stack[sp] = lo_idx as i32;
+                sp += 1;
+                stack[sp] = hi_idx as i32;
+                sp += 1;
+            }
+        }
+    }
+    best
+}
+
+/// pyfunction wrapper for `flat_nn_impl` - exposes the query to Python callers.
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn nearest_unsettled_flat(
+    px: f64,
+    py: f64,
+    pz: f64,
+    year: f64,
+    is_instant: bool,
+    xs_p: PyReadonlyArray1<f64>,
+    ys_p: PyReadonlyArray1<f64>,
+    zs_p: PyReadonlyArray1<f64>,
+    sy_p: PyReadonlyArray1<f64>,
+    star_perm: PyReadonlyArray1<i32>,
+    axis: PyReadonlyArray1<i8>,
+    split: PyReadonlyArray1<f64>,
+    bxmin: PyReadonlyArray1<f64>,
+    bxmax: PyReadonlyArray1<f64>,
+    bymin: PyReadonlyArray1<f64>,
+    bymax: PyReadonlyArray1<f64>,
+    bzmin: PyReadonlyArray1<f64>,
+    bzmax: PyReadonlyArray1<f64>,
+    nuns: PyReadonlyArray1<i32>,
+    tsmax: PyReadonlyArray1<f64>,
+    exclude: PyReadonlyArray1<i32>,
+    n_excludes: i64,
+) -> PyResult<i64> {
+    let n = xs_p.len()?;
+    if n == 0 || n % KD_LEAF != 0 {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "flat tree arrays must have length that is a multiple of KD_LEAF (8)",
+        ));
+    }
+    let m = n / KD_LEAF;
+    Ok(flat_nn_impl(
+        px,
+        py,
+        pz,
+        year,
+        is_instant,
+        m,
+        xs_p.as_slice()?,
+        ys_p.as_slice()?,
+        zs_p.as_slice()?,
+        sy_p.as_slice()?,
+        star_perm.as_slice()?,
+        axis.as_slice()?,
+        split.as_slice()?,
+        bxmin.as_slice()?,
+        bxmax.as_slice()?,
+        bymin.as_slice()?,
+        bymax.as_slice()?,
+        bzmin.as_slice()?,
+        bzmax.as_slice()?,
+        nuns.as_slice()?,
+        tsmax.as_slice()?,
+        exclude.as_slice()?,
+        n_excludes as usize,
+    ))
+}
+
+/// Fold star `original_idx`'s settlement into the flat tree's leaf-to-root
+/// aggregates. Pointer-free: parent walk uses `(i - 1) >> 1`.
+///
+/// Mutates `sy_p`, `nuns`, `tsmax` in place; `star_perm_inv` is read to find the
+/// star's permuted position. Must be called exactly once per star, at the time
+/// its `settled_year` is first assigned - same contract as
+/// `swarm.sim._kd_mark_settled` for the pointer tree.
+#[pyfunction]
+fn mark_settled_flat(
+    original_idx: i64,
+    year: f64,
+    mut sy_p: PyReadwriteArray1<f64>,
+    mut nuns: PyReadwriteArray1<i32>,
+    mut tsmax: PyReadwriteArray1<f64>,
+    star_perm_inv: PyReadonlyArray1<i32>,
+) -> PyResult<()> {
+    let perm_inv = star_perm_inv.as_slice()?;
+    let n = perm_inv.len();
+    if !is_power_of_two(n) || n < KD_LEAF {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "star_perm_inv length must be a power of two >= KD_LEAF (8)",
+        ));
+    }
+    let m = n / KD_LEAF;
+    if original_idx < 0 || (original_idx as usize) >= n {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "original_idx out of range for star_perm_inv",
+        ));
+    }
+    let pidx = perm_inv[original_idx as usize] as usize;
+    let sy_slice = sy_p.as_slice_mut()?;
+    sy_slice[pidx] = year;
+    let nuns_slice = nuns.as_slice_mut()?;
+    let tsmax_slice = tsmax.as_slice_mut()?;
+    // Leaf node containing this star: BFS index `M-1 + pidx / 8`.
+    let mut node: i64 = (m - 1 + pidx / KD_LEAF) as i64;
+    loop {
+        let n_i = node as usize;
+        nuns_slice[n_i] -= 1;
+        if year > tsmax_slice[n_i] {
+            tsmax_slice[n_i] = year;
+        }
+        if node == 0 {
+            break;
+        }
+        node = (node - 1) >> 1;
+    }
+    Ok(())
+}
+
 #[pymodule]
 fn swarm_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(nearest_unsettled, m)?)?;
     m.add_function(wrap_pyfunction!(run_fill, m)?)?;
     m.add_function(wrap_pyfunction!(c_pc_per_year, m)?)?;
+    m.add_function(wrap_pyfunction!(build_flat_kdtree, m)?)?;
+    m.add_function(wrap_pyfunction!(nearest_unsettled_flat, m)?)?;
+    m.add_function(wrap_pyfunction!(mark_settled_flat, m)?)?;
     Ok(())
 }
