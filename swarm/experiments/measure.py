@@ -313,7 +313,8 @@ def _kd_nn_other_d2(kd: dict, xs: list[float], ys: list[float], zs: list[float],
     split = kd["split"]
     lo = kd["lo"]
     hi = kd["hi"]
-    bucket = kd["bucket"]
+    bucket_flat = kd["bucket_flat"]
+    bucket_offsets = kd["bucket_offsets"]
     bxmin = kd["bxmin"]
     bxmax = kd["bxmax"]
     bymin = kd["bymin"]
@@ -351,7 +352,10 @@ def _kd_nn_other_d2(kd: dict, xs: list[float], ys: list[float], zs: list[float],
             continue
         ax = axis[node]
         if ax == -1:
-            for j in bucket[node]:
+            start = int(bucket_offsets[node])
+            end = int(bucket_offsets[node + 1])
+            for k in range(start, end):
+                j = int(bucket_flat[k])
                 if j == i:
                     continue
                 dx = xs[j] - px

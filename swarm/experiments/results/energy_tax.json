@@ -120,7 +120,21 @@
             "wasted_energy_c2": 7.254000000000191e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.8152108565937592
+            "mean_wasted_hop_pc": 1.8152108565937592,
+            "settle_wall_hist": [
+              89,
+              69,
+              58,
+              48,
+              135
+            ],
+            "wasted_wall_hist": [
+              693,
+              348,
+              202,
+              123,
+              246
+            ]
           },
           "treat": {
             "t25": 677705.4925850017,
@@ -140,7 +154,21 @@
             "wasted_energy_c2": 7.254000000000191e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.8152037804691976
+            "mean_wasted_hop_pc": 1.8152037804691976,
+            "settle_wall_hist": [
+              89,
+              69,
+              58,
+              48,
+              135
+            ],
+            "wasted_wall_hist": [
+              693,
+              348,
+              202,
+              123,
+              246
+            ]
           }
         },
         {
@@ -162,7 +190,21 @@
             "wasted_energy_c2": 6.871500000000171e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377374000014,
-            "mean_wasted_hop_pc": 1.857556532990421
+            "mean_wasted_hop_pc": 1.857556532990421,
+            "settle_wall_hist": [
+              84,
+              64,
+              61,
+              50,
+              140
+            ],
+            "wasted_wall_hist": [
+              545,
+              289,
+              175,
+              197,
+              321
+            ]
           },
           "treat": {
             "t25": 666029.8926372267,
@@ -182,7 +224,21 @@
             "wasted_energy_c2": 6.871500000000171e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377374000014,
-            "mean_wasted_hop_pc": 1.857556532990421
+            "mean_wasted_hop_pc": 1.857556532990421,
+            "settle_wall_hist": [
+              84,
+              64,
+              61,
+              50,
+              140
+            ],
+            "wasted_wall_hist": [
+              545,
+              289,
+              175,
+              197,
+              321
+            ]
           }
         },
         {
@@ -204,7 +260,21 @@
             "wasted_energy_c2": 8.113500000000238e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000048,
-            "mean_wasted_hop_pc": 1.921760223780358
+            "mean_wasted_hop_pc": 1.921760223780358,
+            "settle_wall_hist": [
+              82,
+              72,
+              53,
+              54,
+              138
+            ],
+            "wasted_wall_hist": [
+              675,
+              419,
+              254,
+              131,
+              324
+            ]
           },
           "treat": {
             "t25": 718128.3170662444,
@@ -224,7 +294,21 @@
             "wasted_energy_c2": 8.113500000000238e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000048,
-            "mean_wasted_hop_pc": 1.921760223780358
+            "mean_wasted_hop_pc": 1.921760223780358,
+            "settle_wall_hist": [
+              82,
+              72,
+              53,
+              54,
+              138
+            ],
+            "wasted_wall_hist": [
+              675,
+              419,
+              254,
+              131,
+              324
+            ]
           }
         },
         {
@@ -246,7 +330,21 @@
             "wasted_energy_c2": 7.560000000000208e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000144,
-            "mean_wasted_hop_pc": 2.1028655297013206
+            "mean_wasted_hop_pc": 2.1028655297013206,
+            "settle_wall_hist": [
+              92,
+              63,
+              56,
+              45,
+              143
+            ],
+            "wasted_wall_hist": [
+              768,
+              342,
+              242,
+              130,
+              198
+            ]
           },
           "treat": {
             "t25": 719906.0260109114,
@@ -266,7 +364,21 @@
             "wasted_energy_c2": 7.560000000000208e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000144,
-            "mean_wasted_hop_pc": 2.1028655297013206
+            "mean_wasted_hop_pc": 2.1028655297013206,
+            "settle_wall_hist": [
+              92,
+              63,
+              56,
+              45,
+              143
+            ],
+            "wasted_wall_hist": [
+              768,
+              342,
+              242,
+              130,
+              198
+            ]
           }
         },
         {
@@ -288,7 +400,21 @@
             "wasted_energy_c2": 8.51400000000026e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773739999973,
-            "mean_wasted_hop_pc": 1.7207115506365402
+            "mean_wasted_hop_pc": 1.7207115506365402,
+            "settle_wall_hist": [
+              80,
+              70,
+              58,
+              62,
+              129
+            ],
+            "wasted_wall_hist": [
+              594,
+              549,
+              187,
+              214,
+              348
+            ]
           },
           "treat": {
             "t25": 739430.6695910234,
@@ -308,7 +434,21 @@
             "wasted_energy_c2": 8.51400000000026e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773739999973,
-            "mean_wasted_hop_pc": 1.7207115506365402
+            "mean_wasted_hop_pc": 1.7207115506365402,
+            "settle_wall_hist": [
+              80,
+              70,
+              58,
+              62,
+              129
+            ],
+            "wasted_wall_hist": [
+              594,
+              549,
+              187,
+              214,
+              348
+            ]
           }
         },
         {
@@ -330,7 +470,21 @@
             "wasted_energy_c2": 8.293500000000247e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000012,
-            "mean_wasted_hop_pc": 1.7213246170794663
+            "mean_wasted_hop_pc": 1.7213246170794663,
+            "settle_wall_hist": [
+              74,
+              70,
+              78,
+              57,
+              120
+            ],
+            "wasted_wall_hist": [
+              645,
+              445,
+              258,
+              198,
+              297
+            ]
           },
           "treat": {
             "t25": 796811.3196273084,
@@ -350,7 +504,21 @@
             "wasted_energy_c2": 8.293500000000247e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000012,
-            "mean_wasted_hop_pc": 1.7213246170794663
+            "mean_wasted_hop_pc": 1.7213246170794663,
+            "settle_wall_hist": [
+              74,
+              70,
+              78,
+              57,
+              120
+            ],
+            "wasted_wall_hist": [
+              645,
+              445,
+              258,
+              198,
+              297
+            ]
           }
         },
         {
@@ -372,7 +540,21 @@
             "wasted_energy_c2": 6.381000000000144e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000139,
-            "mean_wasted_hop_pc": 1.4897836354406409
+            "mean_wasted_hop_pc": 1.4897836354406409,
+            "settle_wall_hist": [
+              91,
+              69,
+              46,
+              38,
+              155
+            ],
+            "wasted_wall_hist": [
+              468,
+              340,
+              175,
+              134,
+              301
+            ]
           },
           "treat": {
             "t25": 565696.5896419428,
@@ -392,7 +574,21 @@
             "wasted_energy_c2": 6.381000000000144e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000139,
-            "mean_wasted_hop_pc": 1.4897836354406409
+            "mean_wasted_hop_pc": 1.4897836354406409,
+            "settle_wall_hist": [
+              91,
+              69,
+              46,
+              38,
+              155
+            ],
+            "wasted_wall_hist": [
+              468,
+              340,
+              175,
+              134,
+              301
+            ]
           }
         },
         {
@@ -414,7 +610,21 @@
             "wasted_energy_c2": 7.4160000000002e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.9292408372663399
+            "mean_wasted_hop_pc": 1.9292408372663399,
+            "settle_wall_hist": [
+              81,
+              60,
+              59,
+              51,
+              148
+            ],
+            "wasted_wall_hist": [
+              677,
+              227,
+              268,
+              163,
+              313
+            ]
           },
           "treat": {
             "t25": 634562.0694863795,
@@ -434,7 +644,21 @@
             "wasted_energy_c2": 7.4160000000002e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.9292408372663399
+            "mean_wasted_hop_pc": 1.9292408372663399,
+            "settle_wall_hist": [
+              81,
+              60,
+              59,
+              51,
+              148
+            ],
+            "wasted_wall_hist": [
+              677,
+              227,
+              268,
+              163,
+              313
+            ]
           }
         },
         {
@@ -456,7 +680,21 @@
             "wasted_energy_c2": 7.177500000000188e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.817884633620616
+            "mean_wasted_hop_pc": 1.817884633620616,
+            "settle_wall_hist": [
+              79,
+              72,
+              68,
+              44,
+              136
+            ],
+            "wasted_wall_hist": [
+              555,
+              433,
+              178,
+              166,
+              263
+            ]
           },
           "treat": {
             "t25": 595727.3976698935,
@@ -476,7 +714,21 @@
             "wasted_energy_c2": 7.177500000000188e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.817884633620616
+            "mean_wasted_hop_pc": 1.817884633620616,
+            "settle_wall_hist": [
+              79,
+              72,
+              68,
+              44,
+              136
+            ],
+            "wasted_wall_hist": [
+              555,
+              433,
+              178,
+              166,
+              263
+            ]
           }
         },
         {
@@ -498,7 +750,21 @@
             "wasted_energy_c2": 9.085500000000291e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377373999988,
-            "mean_wasted_hop_pc": 1.5612298418557242
+            "mean_wasted_hop_pc": 1.5612298418557242,
+            "settle_wall_hist": [
+              92,
+              74,
+              60,
+              49,
+              124
+            ],
+            "wasted_wall_hist": [
+              638,
+              338,
+              342,
+              220,
+              481
+            ]
           },
           "treat": {
             "t25": 812504.6639524999,
@@ -518,7 +784,21 @@
             "wasted_energy_c2": 9.090000000000291e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377373999988,
-            "mean_wasted_hop_pc": 1.5646881914075077
+            "mean_wasted_hop_pc": 1.5646881914075077,
+            "settle_wall_hist": [
+              92,
+              74,
+              60,
+              49,
+              124
+            ],
+            "wasted_wall_hist": [
+              639,
+              338,
+              342,
+              220,
+              481
+            ]
           }
         },
         {
@@ -540,7 +820,21 @@
             "wasted_energy_c2": 7.573500000000209e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000144,
-            "mean_wasted_hop_pc": 1.6700004309399494
+            "mean_wasted_hop_pc": 1.6700004309399494,
+            "settle_wall_hist": [
+              85,
+              60,
+              60,
+              51,
+              143
+            ],
+            "wasted_wall_hist": [
+              630,
+              248,
+              352,
+              153,
+              300
+            ]
           },
           "treat": {
             "t25": 680861.6831240439,
@@ -560,7 +854,21 @@
             "wasted_energy_c2": 7.573500000000209e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000144,
-            "mean_wasted_hop_pc": 1.6700004309399494
+            "mean_wasted_hop_pc": 1.6700004309399494,
+            "settle_wall_hist": [
+              85,
+              60,
+              60,
+              51,
+              143
+            ],
+            "wasted_wall_hist": [
+              630,
+              248,
+              352,
+              153,
+              300
+            ]
           }
         },
         {
@@ -582,7 +890,21 @@
             "wasted_energy_c2": 7.924500000000228e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000083,
-            "mean_wasted_hop_pc": 1.6515956558868639
+            "mean_wasted_hop_pc": 1.6515956558868639,
+            "settle_wall_hist": [
+              76,
+              76,
+              58,
+              50,
+              139
+            ],
+            "wasted_wall_hist": [
+              651,
+              378,
+              250,
+              168,
+              314
+            ]
           },
           "treat": {
             "t25": 775051.1541454626,
@@ -602,7 +924,21 @@
             "wasted_energy_c2": 7.924500000000228e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000083,
-            "mean_wasted_hop_pc": 1.6515956558868639
+            "mean_wasted_hop_pc": 1.6515956558868639,
+            "settle_wall_hist": [
+              76,
+              76,
+              58,
+              50,
+              139
+            ],
+            "wasted_wall_hist": [
+              651,
+              378,
+              250,
+              168,
+              314
+            ]
           }
         },
         {
@@ -624,7 +960,21 @@
             "wasted_energy_c2": 7.4070000000002e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.5535034468511306
+            "mean_wasted_hop_pc": 1.5535034468511306,
+            "settle_wall_hist": [
+              88,
+              59,
+              62,
+              52,
+              138
+            ],
+            "wasted_wall_hist": [
+              689,
+              224,
+              262,
+              163,
+              308
+            ]
           },
           "treat": {
             "t25": 712882.7906078787,
@@ -644,7 +994,21 @@
             "wasted_energy_c2": 7.4070000000002e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.5535034468511306
+            "mean_wasted_hop_pc": 1.5535034468511306,
+            "settle_wall_hist": [
+              88,
+              59,
+              62,
+              52,
+              138
+            ],
+            "wasted_wall_hist": [
+              689,
+              224,
+              262,
+              163,
+              308
+            ]
           }
         },
         {
@@ -666,7 +1030,21 @@
             "wasted_energy_c2": 7.636500000000212e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000144,
-            "mean_wasted_hop_pc": 1.7834669501975504
+            "mean_wasted_hop_pc": 1.7834669501975504,
+            "settle_wall_hist": [
+              87,
+              74,
+              56,
+              41,
+              141
+            ],
+            "wasted_wall_hist": [
+              440,
+              513,
+              221,
+              134,
+              389
+            ]
           },
           "treat": {
             "t25": 700756.2080127968,
@@ -686,7 +1064,21 @@
             "wasted_energy_c2": 7.636500000000212e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000144,
-            "mean_wasted_hop_pc": 1.7834669501975504
+            "mean_wasted_hop_pc": 1.7834669501975504,
+            "settle_wall_hist": [
+              87,
+              74,
+              56,
+              41,
+              141
+            ],
+            "wasted_wall_hist": [
+              440,
+              513,
+              221,
+              134,
+              389
+            ]
           }
         },
         {
@@ -708,7 +1100,21 @@
             "wasted_energy_c2": 7.974000000000231e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000075,
-            "mean_wasted_hop_pc": 2.6132784783113694
+            "mean_wasted_hop_pc": 2.6132784783113694,
+            "settle_wall_hist": [
+              82,
+              82,
+              60,
+              51,
+              124
+            ],
+            "wasted_wall_hist": [
+              818,
+              388,
+              204,
+              136,
+              226
+            ]
           },
           "treat": {
             "t25": 676308.7921714267,
@@ -728,7 +1134,21 @@
             "wasted_energy_c2": 7.974000000000231e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000075,
-            "mean_wasted_hop_pc": 2.6132784783113694
+            "mean_wasted_hop_pc": 2.6132784783113694,
+            "settle_wall_hist": [
+              82,
+              82,
+              60,
+              51,
+              124
+            ],
+            "wasted_wall_hist": [
+              818,
+              388,
+              204,
+              136,
+              226
+            ]
           }
         },
         {
@@ -750,7 +1170,21 @@
             "wasted_energy_c2": 7.753500000000218e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377374000012,
-            "mean_wasted_hop_pc": 1.8753769898063781
+            "mean_wasted_hop_pc": 1.8753769898063781,
+            "settle_wall_hist": [
+              86,
+              75,
+              56,
+              45,
+              137
+            ],
+            "wasted_wall_hist": [
+              632,
+              422,
+              174,
+              170,
+              325
+            ]
           },
           "treat": {
             "t25": 738855.0107870433,
@@ -770,7 +1204,21 @@
             "wasted_energy_c2": 7.753500000000218e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377374000012,
-            "mean_wasted_hop_pc": 1.8753769898063781
+            "mean_wasted_hop_pc": 1.8753769898063781,
+            "settle_wall_hist": [
+              86,
+              75,
+              56,
+              45,
+              137
+            ],
+            "wasted_wall_hist": [
+              632,
+              422,
+              174,
+              170,
+              325
+            ]
           }
         },
         {
@@ -792,7 +1240,21 @@
             "wasted_energy_c2": 8.473500000000258e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377373999998,
-            "mean_wasted_hop_pc": 1.8389118633507773
+            "mean_wasted_hop_pc": 1.8389118633507773,
+            "settle_wall_hist": [
+              90,
+              68,
+              55,
+              56,
+              130
+            ],
+            "wasted_wall_hist": [
+              634,
+              346,
+              217,
+              305,
+              381
+            ]
           },
           "treat": {
             "t25": 718611.9784905558,
@@ -812,7 +1274,21 @@
             "wasted_energy_c2": 8.473500000000258e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377373999998,
-            "mean_wasted_hop_pc": 1.8389118633507773
+            "mean_wasted_hop_pc": 1.8389118633507773,
+            "settle_wall_hist": [
+              90,
+              68,
+              55,
+              56,
+              130
+            ],
+            "wasted_wall_hist": [
+              634,
+              346,
+              217,
+              305,
+              381
+            ]
           }
         },
         {
@@ -834,7 +1310,21 @@
             "wasted_energy_c2": 6.588000000000155e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377374000014,
-            "mean_wasted_hop_pc": 1.5710462715621591
+            "mean_wasted_hop_pc": 1.5710462715621591,
+            "settle_wall_hist": [
+              88,
+              64,
+              74,
+              46,
+              127
+            ],
+            "wasted_wall_hist": [
+              394,
+              263,
+              286,
+              123,
+              398
+            ]
           },
           "treat": {
             "t25": 670807.8935196568,
@@ -854,7 +1344,21 @@
             "wasted_energy_c2": 6.588000000000155e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377374000014,
-            "mean_wasted_hop_pc": 1.5710462715621591
+            "mean_wasted_hop_pc": 1.5710462715621591,
+            "settle_wall_hist": [
+              88,
+              64,
+              74,
+              46,
+              127
+            ],
+            "wasted_wall_hist": [
+              394,
+              263,
+              286,
+              123,
+              398
+            ]
           }
         },
         {
@@ -876,7 +1380,21 @@
             "wasted_energy_c2": 7.978500000000231e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000075,
-            "mean_wasted_hop_pc": 1.768575126602672
+            "mean_wasted_hop_pc": 1.768575126602672,
+            "settle_wall_hist": [
+              81,
+              63,
+              56,
+              52,
+              147
+            ],
+            "wasted_wall_hist": [
+              599,
+              289,
+              331,
+              229,
+              325
+            ]
           },
           "treat": {
             "t25": 617861.1678016186,
@@ -896,7 +1414,21 @@
             "wasted_energy_c2": 7.978500000000231e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000075,
-            "mean_wasted_hop_pc": 1.7681543892373532
+            "mean_wasted_hop_pc": 1.7681543892373532,
+            "settle_wall_hist": [
+              81,
+              63,
+              56,
+              52,
+              147
+            ],
+            "wasted_wall_hist": [
+              599,
+              289,
+              332,
+              228,
+              325
+            ]
           }
         },
         {
@@ -918,7 +1450,21 @@
             "wasted_energy_c2": 7.659000000000213e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377374000014,
-            "mean_wasted_hop_pc": 1.8965250676529002
+            "mean_wasted_hop_pc": 1.8965250676529002,
+            "settle_wall_hist": [
+              83,
+              61,
+              56,
+              51,
+              148
+            ],
+            "wasted_wall_hist": [
+              607,
+              198,
+              306,
+              168,
+              423
+            ]
           },
           "treat": {
             "t25": 677235.6355692911,
@@ -938,7 +1484,21 @@
             "wasted_energy_c2": 7.659000000000213e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377374000014,
-            "mean_wasted_hop_pc": 1.8965250676529002
+            "mean_wasted_hop_pc": 1.8965250676529002,
+            "settle_wall_hist": [
+              83,
+              61,
+              56,
+              51,
+              148
+            ],
+            "wasted_wall_hist": [
+              607,
+              198,
+              306,
+              168,
+              423
+            ]
           }
         },
         {
@@ -960,7 +1520,21 @@
             "wasted_energy_c2": 7.393500000000199e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.5102916246967408
+            "mean_wasted_hop_pc": 1.5102916246967408,
+            "settle_wall_hist": [
+              81,
+              71,
+              52,
+              40,
+              155
+            ],
+            "wasted_wall_hist": [
+              577,
+              333,
+              167,
+              164,
+              402
+            ]
           },
           "treat": {
             "t25": 627620.9341428394,
@@ -980,7 +1554,21 @@
             "wasted_energy_c2": 7.393500000000199e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.5102916246967408
+            "mean_wasted_hop_pc": 1.5102916246967408,
+            "settle_wall_hist": [
+              81,
+              71,
+              52,
+              40,
+              155
+            ],
+            "wasted_wall_hist": [
+              577,
+              333,
+              167,
+              164,
+              402
+            ]
           }
         },
         {
@@ -1002,7 +1590,21 @@
             "wasted_energy_c2": 7.861500000000224e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000098,
-            "mean_wasted_hop_pc": 1.6045440081674398
+            "mean_wasted_hop_pc": 1.6045440081674398,
+            "settle_wall_hist": [
+              73,
+              80,
+              60,
+              42,
+              144
+            ],
+            "wasted_wall_hist": [
+              628,
+              336,
+              261,
+              147,
+              375
+            ]
           },
           "treat": {
             "t25": 744117.6263394918,
@@ -1022,7 +1624,21 @@
             "wasted_energy_c2": 7.861500000000224e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000098,
-            "mean_wasted_hop_pc": 1.6045440081674398
+            "mean_wasted_hop_pc": 1.6045440081674398,
+            "settle_wall_hist": [
+              73,
+              80,
+              60,
+              42,
+              144
+            ],
+            "wasted_wall_hist": [
+              628,
+              336,
+              261,
+              147,
+              375
+            ]
           }
         },
         {
@@ -1044,7 +1660,21 @@
             "wasted_energy_c2": 7.942500000000228e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377374000008,
-            "mean_wasted_hop_pc": 1.537937518391388
+            "mean_wasted_hop_pc": 1.537937518391388,
+            "settle_wall_hist": [
+              89,
+              66,
+              60,
+              44,
+              140
+            ],
+            "wasted_wall_hist": [
+              544,
+              413,
+              256,
+              139,
+              413
+            ]
           },
           "treat": {
             "t25": 866579.638776803,
@@ -1064,7 +1694,21 @@
             "wasted_energy_c2": 7.942500000000228e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377374000008,
-            "mean_wasted_hop_pc": 1.5377098328239
+            "mean_wasted_hop_pc": 1.5377098328239,
+            "settle_wall_hist": [
+              89,
+              66,
+              60,
+              44,
+              140
+            ],
+            "wasted_wall_hist": [
+              545,
+              412,
+              256,
+              139,
+              413
+            ]
           }
         },
         {
@@ -1086,7 +1730,21 @@
             "wasted_energy_c2": 7.375500000000198e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.6331761505521205
+            "mean_wasted_hop_pc": 1.6331761505521205,
+            "settle_wall_hist": [
+              74,
+              56,
+              46,
+              46,
+              177
+            ],
+            "wasted_wall_hist": [
+              550,
+              320,
+              186,
+              142,
+              441
+            ]
           },
           "treat": {
             "t25": 749898.8271084778,
@@ -1106,7 +1764,21 @@
             "wasted_energy_c2": 7.375500000000198e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.6327849441048656
+            "mean_wasted_hop_pc": 1.6327849441048656,
+            "settle_wall_hist": [
+              74,
+              56,
+              46,
+              46,
+              177
+            ],
+            "wasted_wall_hist": [
+              550,
+              319,
+              186,
+              143,
+              441
+            ]
           }
         },
         {
@@ -1128,7 +1800,21 @@
             "wasted_energy_c2": 6.579000000000154e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000139,
-            "mean_wasted_hop_pc": 1.8602397664003616
+            "mean_wasted_hop_pc": 1.8602397664003616,
+            "settle_wall_hist": [
+              99,
+              66,
+              53,
+              60,
+              121
+            ],
+            "wasted_wall_hist": [
+              708,
+              308,
+              138,
+              135,
+              173
+            ]
           },
           "treat": {
             "t25": 621160.5688448993,
@@ -1148,7 +1834,21 @@
             "wasted_energy_c2": 6.579000000000154e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000139,
-            "mean_wasted_hop_pc": 1.8602397664003616
+            "mean_wasted_hop_pc": 1.8602397664003616,
+            "settle_wall_hist": [
+              99,
+              66,
+              53,
+              60,
+              121
+            ],
+            "wasted_wall_hist": [
+              708,
+              308,
+              138,
+              135,
+              173
+            ]
           }
         },
         {
@@ -1170,7 +1870,21 @@
             "wasted_energy_c2": 7.623000000000212e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000144,
-            "mean_wasted_hop_pc": 1.7845350139973832
+            "mean_wasted_hop_pc": 1.7845350139973832,
+            "settle_wall_hist": [
+              75,
+              68,
+              56,
+              51,
+              149
+            ],
+            "wasted_wall_hist": [
+              673,
+              319,
+              202,
+              159,
+              341
+            ]
           },
           "treat": {
             "t25": 799400.6212140877,
@@ -1190,7 +1904,21 @@
             "wasted_energy_c2": 7.623000000000212e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000144,
-            "mean_wasted_hop_pc": 1.7845091910402702
+            "mean_wasted_hop_pc": 1.7845091910402702,
+            "settle_wall_hist": [
+              75,
+              68,
+              56,
+              51,
+              149
+            ],
+            "wasted_wall_hist": [
+              673,
+              319,
+              202,
+              159,
+              341
+            ]
           }
         },
         {
@@ -1212,7 +1940,21 @@
             "wasted_energy_c2": 7.654500000000213e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.6519533259735115
+            "mean_wasted_hop_pc": 1.6519533259735115,
+            "settle_wall_hist": [
+              63,
+              66,
+              70,
+              56,
+              144
+            ],
+            "wasted_wall_hist": [
+              412,
+              348,
+              266,
+              164,
+              511
+            ]
           },
           "treat": {
             "t25": 592413.907194737,
@@ -1232,7 +1974,21 @@
             "wasted_energy_c2": 7.654500000000213e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.6519533259735115
+            "mean_wasted_hop_pc": 1.6519533259735115,
+            "settle_wall_hist": [
+              63,
+              66,
+              70,
+              56,
+              144
+            ],
+            "wasted_wall_hist": [
+              412,
+              348,
+              266,
+              164,
+              511
+            ]
           }
         },
         {
@@ -1254,7 +2010,21 @@
             "wasted_energy_c2": 7.992000000000231e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000071,
-            "mean_wasted_hop_pc": 2.0236945167663665
+            "mean_wasted_hop_pc": 2.0236945167663665,
+            "settle_wall_hist": [
+              85,
+              67,
+              63,
+              36,
+              148
+            ],
+            "wasted_wall_hist": [
+              817,
+              319,
+              265,
+              80,
+              295
+            ]
           },
           "treat": {
             "t25": 681412.9028990939,
@@ -1274,7 +2044,21 @@
             "wasted_energy_c2": 7.992000000000231e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000071,
-            "mean_wasted_hop_pc": 2.0236945167663665
+            "mean_wasted_hop_pc": 2.0236945167663665,
+            "settle_wall_hist": [
+              85,
+              67,
+              63,
+              36,
+              148
+            ],
+            "wasted_wall_hist": [
+              817,
+              319,
+              265,
+              80,
+              295
+            ]
           }
         },
         {
@@ -1296,7 +2080,21 @@
             "wasted_energy_c2": 8.163000000000241e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000037,
-            "mean_wasted_hop_pc": 1.8287786203852758
+            "mean_wasted_hop_pc": 1.8287786203852758,
+            "settle_wall_hist": [
+              103,
+              60,
+              49,
+              61,
+              126
+            ],
+            "wasted_wall_hist": [
+              745,
+              269,
+              166,
+              367,
+              267
+            ]
           },
           "treat": {
             "t25": 732954.2498162618,
@@ -1316,7 +2114,21 @@
             "wasted_energy_c2": 8.163000000000241e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000037,
-            "mean_wasted_hop_pc": 1.8287786203852758
+            "mean_wasted_hop_pc": 1.8287786203852758,
+            "settle_wall_hist": [
+              103,
+              60,
+              49,
+              61,
+              126
+            ],
+            "wasted_wall_hist": [
+              745,
+              269,
+              166,
+              367,
+              267
+            ]
           }
         },
         {
@@ -1338,7 +2150,21 @@
             "wasted_energy_c2": 8.680500000000269e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773739999945,
-            "mean_wasted_hop_pc": 1.492556557617172
+            "mean_wasted_hop_pc": 1.492556557617172,
+            "settle_wall_hist": [
+              91,
+              62,
+              68,
+              45,
+              133
+            ],
+            "wasted_wall_hist": [
+              699,
+              347,
+              337,
+              256,
+              290
+            ]
           },
           "treat": {
             "t25": 733454.1427729157,
@@ -1358,7 +2184,21 @@
             "wasted_energy_c2": 8.680500000000269e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773739999945,
-            "mean_wasted_hop_pc": 1.492556557617172
+            "mean_wasted_hop_pc": 1.492556557617172,
+            "settle_wall_hist": [
+              91,
+              62,
+              68,
+              45,
+              133
+            ],
+            "wasted_wall_hist": [
+              699,
+              347,
+              337,
+              256,
+              290
+            ]
           }
         },
         {
@@ -1380,7 +2220,21 @@
             "wasted_energy_c2": 8.581500000000264e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377373999996,
-            "mean_wasted_hop_pc": 1.612629179269785
+            "mean_wasted_hop_pc": 1.612629179269785,
+            "settle_wall_hist": [
+              86,
+              75,
+              65,
+              44,
+              129
+            ],
+            "wasted_wall_hist": [
+              597,
+              491,
+              313,
+              162,
+              344
+            ]
           },
           "treat": {
             "t25": 706417.0147446676,
@@ -1400,7 +2254,21 @@
             "wasted_energy_c2": 8.581500000000264e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.99377373999996,
-            "mean_wasted_hop_pc": 1.612629179269785
+            "mean_wasted_hop_pc": 1.612629179269785,
+            "settle_wall_hist": [
+              86,
+              75,
+              65,
+              44,
+              129
+            ],
+            "wasted_wall_hist": [
+              597,
+              491,
+              313,
+              162,
+              344
+            ]
           }
         },
         {
@@ -1422,7 +2290,21 @@
             "wasted_energy_c2": 7.389000000000198e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.5770842522887842
+            "mean_wasted_hop_pc": 1.5770842522887842,
+            "settle_wall_hist": [
+              72,
+              69,
+              52,
+              57,
+              149
+            ],
+            "wasted_wall_hist": [
+              552,
+              301,
+              274,
+              187,
+              328
+            ]
           },
           "treat": {
             "t25": 766026.8988952272,
@@ -1442,7 +2324,21 @@
             "wasted_energy_c2": 7.389000000000198e-07,
             "mean_launch_speed_km_s": 8.993773740000115,
             "mean_wasted_speed_km_s": 8.993773740000142,
-            "mean_wasted_hop_pc": 1.5770842522887842
+            "mean_wasted_hop_pc": 1.5770842522887842,
+            "settle_wall_hist": [
+              72,
+              69,
+              52,
+              57,
+              149
+            ],
+            "wasted_wall_hist": [
+              552,
+              301,
+              274,
+              187,
+              328
+            ]
           }
         }
       ],
@@ -1554,7 +2450,21 @@
             "wasted_energy_c2": 0.08165720847141086,
             "mean_launch_speed_km_s": 2692.72912447602,
             "mean_wasted_speed_km_s": 2758.2845685514494,
-            "mean_wasted_hop_pc": 1.5387087536176471
+            "mean_wasted_hop_pc": 1.5387087536176471,
+            "settle_wall_hist": [
+              89,
+              69,
+              58,
+              48,
+              135
+            ],
+            "wasted_wall_hist": [
+              491,
+              504,
+              276,
+              263,
+              334
+            ]
           },
           "treat": {
             "t25": 5342.991031747164,
@@ -1574,7 +2484,21 @@
             "wasted_energy_c2": 0.08170039226829412,
             "mean_launch_speed_km_s": 2693.8169288892095,
             "mean_wasted_speed_km_s": 2758.9042965477925,
-            "mean_wasted_hop_pc": 1.5408900914199015
+            "mean_wasted_hop_pc": 1.5408900914199015,
+            "settle_wall_hist": [
+              89,
+              69,
+              58,
+              48,
+              135
+            ],
+            "wasted_wall_hist": [
+              501,
+              499,
+              277,
+              256,
+              335
+            ]
           }
         },
         {
@@ -1596,7 +2520,21 @@
             "wasted_energy_c2": 0.05172069809714606,
             "mean_launch_speed_km_s": 2523.9481226997314,
             "mean_wasted_speed_km_s": 2566.559317023897,
-            "mean_wasted_hop_pc": 1.8422855048368671
+            "mean_wasted_hop_pc": 1.8422855048368671,
+            "settle_wall_hist": [
+              84,
+              64,
+              61,
+              50,
+              140
+            ],
+            "wasted_wall_hist": [
+              532,
+              275,
+              154,
+              139,
+              271
+            ]
           },
           "treat": {
             "t25": 5422.521984786902,
@@ -1616,7 +2554,21 @@
             "wasted_energy_c2": 0.052256892345606556,
             "mean_launch_speed_km_s": 2521.572246379872,
             "mean_wasted_speed_km_s": 2565.8907314296916,
-            "mean_wasted_hop_pc": 1.8318129488401316
+            "mean_wasted_hop_pc": 1.8318129488401316,
+            "settle_wall_hist": [
+              84,
+              64,
+              61,
+              50,
+              140
+            ],
+            "wasted_wall_hist": [
+              529,
+              275,
+              163,
+              141,
+              279
+            ]
           }
         },
         {
@@ -1638,7 +2590,21 @@
             "wasted_energy_c2": 0.06053386509338488,
             "mean_launch_speed_km_s": 2567.624565580024,
             "mean_wasted_speed_km_s": 2590.9458756953004,
-            "mean_wasted_hop_pc": 1.8493504982854667
+            "mean_wasted_hop_pc": 1.8493504982854667,
+            "settle_wall_hist": [
+              82,
+              72,
+              53,
+              54,
+              138
+            ],
+            "wasted_wall_hist": [
+              566,
+              386,
+              225,
+              109,
+              296
+            ]
           },
           "treat": {
             "t25": 6298.939518831384,
@@ -1658,7 +2624,21 @@
             "wasted_energy_c2": 0.060814276633499365,
             "mean_launch_speed_km_s": 2567.916616132769,
             "mean_wasted_speed_km_s": 2591.2002056599313,
-            "mean_wasted_hop_pc": 1.8315093592020366
+            "mean_wasted_hop_pc": 1.8315093592020366,
+            "settle_wall_hist": [
+              82,
+              72,
+              53,
+              54,
+              138
+            ],
+            "wasted_wall_hist": [
+              556,
+              394,
+              229,
+              110,
+              300
+            ]
           }
         },
         {
@@ -1680,7 +2660,21 @@
             "wasted_energy_c2": 0.06641506940951576,
             "mean_launch_speed_km_s": 2644.9640321766437,
             "mean_wasted_speed_km_s": 2654.6763912301867,
-            "mean_wasted_hop_pc": 1.925773798762115
+            "mean_wasted_hop_pc": 1.925773798762115,
+            "settle_wall_hist": [
+              92,
+              63,
+              56,
+              45,
+              143
+            ],
+            "wasted_wall_hist": [
+              732,
+              327,
+              211,
+              138,
+              240
+            ]
           },
           "treat": {
             "t25": 6424.75011011384,
@@ -1700,7 +2694,21 @@
             "wasted_energy_c2": 0.06699446224394168,
             "mean_launch_speed_km_s": 2649.392722783418,
             "mean_wasted_speed_km_s": 2655.698339502069,
-            "mean_wasted_hop_pc": 1.9300799583231536
+            "mean_wasted_hop_pc": 1.9300799583231536,
+            "settle_wall_hist": [
+              92,
+              63,
+              56,
+              45,
+              143
+            ],
+            "wasted_wall_hist": [
+              716,
+              355,
+              207,
+              143,
+              240
+            ]
           }
         },
         {
@@ -1722,7 +2730,21 @@
             "wasted_energy_c2": 0.0866479329956109,
             "mean_launch_speed_km_s": 2972.127093249584,
             "mean_wasted_speed_km_s": 2937.7343933320594,
-            "mean_wasted_hop_pc": 1.7682729510203956
+            "mean_wasted_hop_pc": 1.7682729510203956,
+            "settle_wall_hist": [
+              80,
+              70,
+              58,
+              62,
+              129
+            ],
+            "wasted_wall_hist": [
+              555,
+              508,
+              148,
+              186,
+              362
+            ]
           },
           "treat": {
             "t25": 4531.454407075489,
@@ -1742,7 +2764,21 @@
             "wasted_energy_c2": 0.08804617941893134,
             "mean_launch_speed_km_s": 2970.9053205653404,
             "mean_wasted_speed_km_s": 2940.0030576316503,
-            "mean_wasted_hop_pc": 1.7795850308069208
+            "mean_wasted_hop_pc": 1.7795850308069208,
+            "settle_wall_hist": [
+              80,
+              70,
+              58,
+              62,
+              129
+            ],
+            "wasted_wall_hist": [
+              601,
+              509,
+              150,
+              178,
+              347
+            ]
           }
         },
         {
@@ -1764,7 +2800,21 @@
             "wasted_energy_c2": 0.07197991417408213,
             "mean_launch_speed_km_s": 2755.8677399245257,
             "mean_wasted_speed_km_s": 2779.1788894605615,
-            "mean_wasted_hop_pc": 1.8414889306058881
+            "mean_wasted_hop_pc": 1.8414889306058881,
+            "settle_wall_hist": [
+              74,
+              70,
+              78,
+              57,
+              120
+            ],
+            "wasted_wall_hist": [
+              531,
+              416,
+              261,
+              210,
+              213
+            ]
           },
           "treat": {
             "t25": 5739.841099437362,
@@ -1784,7 +2834,21 @@
             "wasted_energy_c2": 0.0722789337636509,
             "mean_launch_speed_km_s": 2761.735495885814,
             "mean_wasted_speed_km_s": 2782.119638937495,
-            "mean_wasted_hop_pc": 1.8233431579329427
+            "mean_wasted_hop_pc": 1.8233431579329427,
+            "settle_wall_hist": [
+              74,
+              70,
+              78,
+              57,
+              120
+            ],
+            "wasted_wall_hist": [
+              509,
+              440,
+              268,
+              201,
+              216
+            ]
           }
         },
         {
@@ -1806,7 +2870,21 @@
             "wasted_energy_c2": 0.049141637320043494,
             "mean_launch_speed_km_s": 2510.130394757839,
             "mean_wasted_speed_km_s": 2500.753074792387,
-            "mean_wasted_hop_pc": 1.5460466376912498
+            "mean_wasted_hop_pc": 1.5460466376912498,
+            "settle_wall_hist": [
+              91,
+              69,
+              46,
+              38,
+              155
+            ],
+            "wasted_wall_hist": [
+              507,
+              287,
+              135,
+              128,
+              319
+            ]
           },
           "treat": {
             "t25": 4693.480151904044,
@@ -1826,7 +2904,21 @@
             "wasted_energy_c2": 0.057245813130316126,
             "mean_launch_speed_km_s": 2519.3219259722996,
             "mean_wasted_speed_km_s": 2526.1595584906877,
-            "mean_wasted_hop_pc": 1.926791229563071
+            "mean_wasted_hop_pc": 1.926791229563071,
+            "settle_wall_hist": [
+              91,
+              69,
+              46,
+              38,
+              155
+            ],
+            "wasted_wall_hist": [
+              659,
+              338,
+              128,
+              122,
+              324
+            ]
           }
         },
         {
@@ -1848,7 +2940,21 @@
             "wasted_energy_c2": 0.05372112267669766,
             "mean_launch_speed_km_s": 2563.4817152829605,
             "mean_wasted_speed_km_s": 2563.5391793307163,
-            "mean_wasted_hop_pc": 1.828469844576789
+            "mean_wasted_hop_pc": 1.828469844576789,
+            "settle_wall_hist": [
+              81,
+              60,
+              59,
+              51,
+              148
+            ],
+            "wasted_wall_hist": [
+              534,
+              287,
+              203,
+              135,
+              265
+            ]
           },
           "treat": {
             "t25": 5819.894829135866,
@@ -1868,7 +2974,21 @@
             "wasted_energy_c2": 0.05455128011722096,
             "mean_launch_speed_km_s": 2562.7914714797216,
             "mean_wasted_speed_km_s": 2566.3737639850506,
-            "mean_wasted_hop_pc": 1.852581902582098
+            "mean_wasted_hop_pc": 1.852581902582098,
+            "settle_wall_hist": [
+              81,
+              60,
+              59,
+              51,
+              148
+            ],
+            "wasted_wall_hist": [
+              540,
+              272,
+              232,
+              132,
+              267
+            ]
           }
         },
         {
@@ -1890,7 +3010,21 @@
             "wasted_energy_c2": 0.05071927741039623,
             "mean_launch_speed_km_s": 2388.9117728097435,
             "mean_wasted_speed_km_s": 2418.7564625998234,
-            "mean_wasted_hop_pc": 1.8923239912934395
+            "mean_wasted_hop_pc": 1.8923239912934395,
+            "settle_wall_hist": [
+              79,
+              72,
+              68,
+              44,
+              136
+            ],
+            "wasted_wall_hist": [
+              425,
+              507,
+              167,
+              129,
+              293
+            ]
           },
           "treat": {
             "t25": 5270.479670414708,
@@ -1910,7 +3044,21 @@
             "wasted_energy_c2": 0.051223198028765946,
             "mean_launch_speed_km_s": 2389.1014013509,
             "mean_wasted_speed_km_s": 2422.0747899219855,
-            "mean_wasted_hop_pc": 1.8474335960056867
+            "mean_wasted_hop_pc": 1.8474335960056867,
+            "settle_wall_hist": [
+              79,
+              72,
+              68,
+              44,
+              136
+            ],
+            "wasted_wall_hist": [
+              438,
+              498,
+              172,
+              128,
+              296
+            ]
           }
         },
         {
@@ -1932,7 +3080,21 @@
             "wasted_energy_c2": 0.07869459942154185,
             "mean_launch_speed_km_s": 2855.7784498196606,
             "mean_wasted_speed_km_s": 2816.256989232778,
-            "mean_wasted_hop_pc": 1.60553753419237
+            "mean_wasted_hop_pc": 1.60553753419237,
+            "settle_wall_hist": [
+              92,
+              74,
+              60,
+              49,
+              124
+            ],
+            "wasted_wall_hist": [
+              574,
+              255,
+              247,
+              211,
+              431
+            ]
           },
           "treat": {
             "t25": 6438.2904545717765,
@@ -1952,7 +3114,21 @@
             "wasted_energy_c2": 0.07953335182956632,
             "mean_launch_speed_km_s": 2855.468292896458,
             "mean_wasted_speed_km_s": 2818.294494576383,
-            "mean_wasted_hop_pc": 1.6237157270700522
+            "mean_wasted_hop_pc": 1.6237157270700522,
+            "settle_wall_hist": [
+              92,
+              74,
+              60,
+              49,
+              124
+            ],
+            "wasted_wall_hist": [
+              593,
+              259,
+              244,
+              210,
+              428
+            ]
           }
         },
         {
@@ -1974,7 +3150,21 @@
             "wasted_energy_c2": 0.06253490987612245,
             "mean_launch_speed_km_s": 2590.594384629792,
             "mean_wasted_speed_km_s": 2595.454754916479,
-            "mean_wasted_hop_pc": 1.7230619351764467
+            "mean_wasted_hop_pc": 1.7230619351764467,
+            "settle_wall_hist": [
+              85,
+              60,
+              60,
+              51,
+              143
+            ],
+            "wasted_wall_hist": [
+              680,
+              234,
+              281,
+              144,
+              285
+            ]
           },
           "treat": {
             "t25": 5437.226470178772,
@@ -1994,7 +3184,21 @@
             "wasted_energy_c2": 0.06285135565679836,
             "mean_launch_speed_km_s": 2595.487202048369,
             "mean_wasted_speed_km_s": 2596.8083289784277,
-            "mean_wasted_hop_pc": 1.7385655269490417
+            "mean_wasted_hop_pc": 1.7385655269490417,
+            "settle_wall_hist": [
+              85,
+              60,
+              60,
+              51,
+              143
+            ],
+            "wasted_wall_hist": [
+              684,
+              235,
+              282,
+              145,
+              284
+            ]
           }
         },
         {
@@ -2016,7 +3220,21 @@
             "wasted_energy_c2": 0.07310514132140353,
             "mean_launch_speed_km_s": 2745.5767835402107,
             "mean_wasted_speed_km_s": 2765.8405202050217,
-            "mean_wasted_hop_pc": 1.8967141435613226
+            "mean_wasted_hop_pc": 1.8967141435613226,
+            "settle_wall_hist": [
+              76,
+              76,
+              58,
+              50,
+              139
+            ],
+            "wasted_wall_hist": [
+              532,
+              491,
+              204,
+              142,
+              304
+            ]
           },
           "treat": {
             "t25": 6243.553379577068,
@@ -2036,7 +3254,21 @@
             "wasted_energy_c2": 0.07355116245766564,
             "mean_launch_speed_km_s": 2747.4911244726272,
             "mean_wasted_speed_km_s": 2765.85422931169,
-            "mean_wasted_hop_pc": 1.8850539874104777
+            "mean_wasted_hop_pc": 1.8850539874104777,
+            "settle_wall_hist": [
+              76,
+              76,
+              58,
+              50,
+              139
+            ],
+            "wasted_wall_hist": [
+              541,
+              474,
+              215,
+              141,
+              312
+            ]
           }
         },
         {
@@ -2058,7 +3290,21 @@
             "wasted_energy_c2": 0.07388548313789108,
             "mean_launch_speed_km_s": 2710.358138812506,
             "mean_wasted_speed_km_s": 2742.5698164035302,
-            "mean_wasted_hop_pc": 2.020720309193086
+            "mean_wasted_hop_pc": 2.020720309193086,
+            "settle_wall_hist": [
+              88,
+              59,
+              62,
+              52,
+              138
+            ],
+            "wasted_wall_hist": [
+              654,
+              327,
+              301,
+              122,
+              303
+            ]
           },
           "treat": {
             "t25": 5629.994527006268,
@@ -2078,7 +3324,21 @@
             "wasted_energy_c2": 0.07529305690575122,
             "mean_launch_speed_km_s": 2703.951019438219,
             "mean_wasted_speed_km_s": 2738.3373595851117,
-            "mean_wasted_hop_pc": 1.9426837082256858
+            "mean_wasted_hop_pc": 1.9426837082256858,
+            "settle_wall_hist": [
+              88,
+              59,
+              62,
+              52,
+              138
+            ],
+            "wasted_wall_hist": [
+              705,
+              313,
+              270,
+              125,
+              334
+            ]
           }
         },
         {
@@ -2100,7 +3360,21 @@
             "wasted_energy_c2": 0.059462817330763626,
             "mean_launch_speed_km_s": 2619.086870505031,
             "mean_wasted_speed_km_s": 2637.943466334534,
-            "mean_wasted_hop_pc": 1.8823293683099627
+            "mean_wasted_hop_pc": 1.8823293683099627,
+            "settle_wall_hist": [
+              87,
+              74,
+              56,
+              41,
+              141
+            ],
+            "wasted_wall_hist": [
+              386,
+              566,
+              187,
+              110,
+              248
+            ]
           },
           "treat": {
             "t25": 5357.599900487399,
@@ -2120,7 +3394,21 @@
             "wasted_energy_c2": 0.05963706006716588,
             "mean_launch_speed_km_s": 2631.0847685268527,
             "mean_wasted_speed_km_s": 2648.9665944070916,
-            "mean_wasted_hop_pc": 1.8335896799411404
+            "mean_wasted_hop_pc": 1.8335896799411404,
+            "settle_wall_hist": [
+              87,
+              74,
+              56,
+              41,
+              141
+            ],
+            "wasted_wall_hist": [
+              389,
+              555,
+              174,
+              114,
+              256
+            ]
           }
         },
         {
@@ -2142,7 +3430,21 @@
             "wasted_energy_c2": 0.06710449490622594,
             "mean_launch_speed_km_s": 2618.988145220469,
             "mean_wasted_speed_km_s": 2649.2489008308785,
-            "mean_wasted_hop_pc": 2.6745760881444856
+            "mean_wasted_hop_pc": 2.6745760881444856,
+            "settle_wall_hist": [
+              82,
+              82,
+              60,
+              51,
+              124
+            ],
+            "wasted_wall_hist": [
+              792,
+              338,
+              194,
+              129,
+              227
+            ]
           },
           "treat": {
             "t25": 4661.7159661257865,
@@ -2162,7 +3464,21 @@
             "wasted_energy_c2": 0.067501357933515,
             "mean_launch_speed_km_s": 2618.988145220469,
             "mean_wasted_speed_km_s": 2650.0411442397485,
-            "mean_wasted_hop_pc": 2.6505569672014584
+            "mean_wasted_hop_pc": 2.6505569672014584,
+            "settle_wall_hist": [
+              82,
+              82,
+              60,
+              51,
+              124
+            ],
+            "wasted_wall_hist": [
+              804,
+              342,
+              195,
+              129,
+              219
+            ]
           }
         },
         {
@@ -2184,7 +3500,21 @@
             "wasted_energy_c2": 0.06333437461479145,
             "mean_launch_speed_km_s": 2637.825244895391,
             "mean_wasted_speed_km_s": 2628.042013698239,
-            "mean_wasted_hop_pc": 1.7684528741042025
+            "mean_wasted_hop_pc": 1.7684528741042025,
+            "settle_wall_hist": [
+              86,
+              75,
+              56,
+              45,
+              137
+            ],
+            "wasted_wall_hist": [
+              582,
+              354,
+              178,
+              149,
+              340
+            ]
           },
           "treat": {
             "t25": 6099.375560917755,
@@ -2204,7 +3534,21 @@
             "wasted_energy_c2": 0.0640590815789393,
             "mean_launch_speed_km_s": 2638.4030089691664,
             "mean_wasted_speed_km_s": 2628.9983318705076,
-            "mean_wasted_hop_pc": 1.7265286738241798
+            "mean_wasted_hop_pc": 1.7265286738241798,
+            "settle_wall_hist": [
+              86,
+              75,
+              56,
+              45,
+              137
+            ],
+            "wasted_wall_hist": [
+              593,
+              356,
+              182,
+              146,
+              343
+            ]
           }
         },
         {
@@ -2226,7 +3570,21 @@
             "wasted_energy_c2": 0.06871252529251828,
             "mean_launch_speed_km_s": 2733.8727117309995,
             "mean_wasted_speed_km_s": 2702.596027219538,
-            "mean_wasted_hop_pc": 1.8554859365170433
+            "mean_wasted_hop_pc": 1.8554859365170433,
+            "settle_wall_hist": [
+              90,
+              68,
+              55,
+              56,
+              130
+            ],
+            "wasted_wall_hist": [
+              695,
+              239,
+              160,
+              194,
+              352
+            ]
           },
           "treat": {
             "t25": 5144.582140368263,
@@ -2246,7 +3604,21 @@
             "wasted_energy_c2": 0.06916944911114824,
             "mean_launch_speed_km_s": 2734.6072542110305,
             "mean_wasted_speed_km_s": 2703.7159899903363,
-            "mean_wasted_hop_pc": 1.791293749283261
+            "mean_wasted_hop_pc": 1.791293749283261,
+            "settle_wall_hist": [
+              90,
+              68,
+              55,
+              56,
+              130
+            ],
+            "wasted_wall_hist": [
+              651,
+              248,
+              177,
+              216,
+              358
+            ]
           }
         },
         {
@@ -2268,7 +3640,21 @@
             "wasted_energy_c2": 0.04789578609757884,
             "mean_launch_speed_km_s": 2505.3111211752866,
             "mean_wasted_speed_km_s": 2504.412897427298,
-            "mean_wasted_hop_pc": 1.5965686382642583
+            "mean_wasted_hop_pc": 1.5965686382642583,
+            "settle_wall_hist": [
+              88,
+              64,
+              74,
+              46,
+              127
+            ],
+            "wasted_wall_hist": [
+              367,
+              306,
+              239,
+              112,
+              312
+            ]
           },
           "treat": {
             "t25": 5656.110524340055,
@@ -2288,7 +3674,21 @@
             "wasted_energy_c2": 0.04723302703899253,
             "mean_launch_speed_km_s": 2494.9968792602413,
             "mean_wasted_speed_km_s": 2488.8459261491944,
-            "mean_wasted_hop_pc": 1.5661466252840692
+            "mean_wasted_hop_pc": 1.5661466252840692,
+            "settle_wall_hist": [
+              88,
+              64,
+              74,
+              46,
+              127
+            ],
+            "wasted_wall_hist": [
+              376,
+              295,
+              240,
+              106,
+              318
+            ]
           }
         },
         {
@@ -2310,7 +3710,21 @@
             "wasted_energy_c2": 0.061306944747888455,
             "mean_launch_speed_km_s": 2568.7761913448503,
             "mean_wasted_speed_km_s": 2575.6636680053507,
-            "mean_wasted_hop_pc": 1.8260358136502188
+            "mean_wasted_hop_pc": 1.8260358136502188,
+            "settle_wall_hist": [
+              81,
+              63,
+              56,
+              52,
+              147
+            ],
+            "wasted_wall_hist": [
+              515,
+              251,
+              219,
+              292,
+              335
+            ]
           },
           "treat": {
             "t25": 5420.335169208813,
@@ -2330,7 +3744,21 @@
             "wasted_energy_c2": 0.06177845868599125,
             "mean_launch_speed_km_s": 2568.7761913448503,
             "mean_wasted_speed_km_s": 2576.917151994607,
-            "mean_wasted_hop_pc": 1.8168542664134757
+            "mean_wasted_hop_pc": 1.8168542664134757,
+            "settle_wall_hist": [
+              81,
+              63,
+              56,
+              52,
+              147
+            ],
+            "wasted_wall_hist": [
+              513,
+              259,
+              224,
+              288,
+              339
+            ]
           }
         },
         {
@@ -2352,7 +3780,21 @@
             "wasted_energy_c2": 0.07132891082782578,
             "mean_launch_speed_km_s": 2723.338731005126,
             "mean_wasted_speed_km_s": 2742.7856878559246,
-            "mean_wasted_hop_pc": 1.7675066526326735
+            "mean_wasted_hop_pc": 1.7675066526326735,
+            "settle_wall_hist": [
+              83,
+              61,
+              56,
+              51,
+              148
+            ],
+            "wasted_wall_hist": [
+              634,
+              186,
+              222,
+              154,
+              443
+            ]
           },
           "treat": {
             "t25": 5501.371853834736,
@@ -2372,7 +3814,21 @@
             "wasted_energy_c2": 0.07191805669277279,
             "mean_launch_speed_km_s": 2729.9669323166922,
             "mean_wasted_speed_km_s": 2744.384536811973,
-            "mean_wasted_hop_pc": 1.753638512982934
+            "mean_wasted_hop_pc": 1.753638512982934,
+            "settle_wall_hist": [
+              83,
+              61,
+              56,
+              51,
+              148
+            ],
+            "wasted_wall_hist": [
+              629,
+              192,
+              222,
+              161,
+              446
+            ]
           }
         },
         {
@@ -2394,7 +3850,21 @@
             "wasted_energy_c2": 0.06767625223138526,
             "mean_launch_speed_km_s": 2675.4944736490315,
             "mean_wasted_speed_km_s": 2695.3463551048217,
-            "mean_wasted_hop_pc": 1.9140847161352088
+            "mean_wasted_hop_pc": 1.9140847161352088,
+            "settle_wall_hist": [
+              81,
+              71,
+              52,
+              40,
+              155
+            ],
+            "wasted_wall_hist": [
+              502,
+              299,
+              275,
+              89,
+              443
+            ]
           },
           "treat": {
             "t25": 5783.988491194721,
@@ -2414,7 +3884,21 @@
             "wasted_energy_c2": 0.06858654050557181,
             "mean_launch_speed_km_s": 2679.1436785109477,
             "mean_wasted_speed_km_s": 2699.4612338908832,
-            "mean_wasted_hop_pc": 1.9275775867316691
+            "mean_wasted_hop_pc": 1.9275775867316691,
+            "settle_wall_hist": [
+              81,
+              71,
+              52,
+              40,
+              155
+            ],
+            "wasted_wall_hist": [
+              505,
+              301,
+              280,
+              89,
+              449
+            ]
           }
         },
         {
@@ -2436,7 +3920,21 @@
             "wasted_energy_c2": 0.06917440904981292,
             "mean_launch_speed_km_s": 2664.2152321058493,
             "mean_wasted_speed_km_s": 2692.2743727929055,
-            "mean_wasted_hop_pc": 1.6118490287922476
+            "mean_wasted_hop_pc": 1.6118490287922476,
+            "settle_wall_hist": [
+              73,
+              80,
+              60,
+              42,
+              144
+            ],
+            "wasted_wall_hist": [
+              619,
+              388,
+              212,
+              168,
+              285
+            ]
           },
           "treat": {
             "t25": 5913.821017900716,
@@ -2456,7 +3954,21 @@
             "wasted_energy_c2": 0.06992330350191261,
             "mean_launch_speed_km_s": 2665.892740748876,
             "mean_wasted_speed_km_s": 2693.801406208718,
-            "mean_wasted_hop_pc": 1.5964507593445403
+            "mean_wasted_hop_pc": 1.5964507593445403,
+            "settle_wall_hist": [
+              73,
+              80,
+              60,
+              42,
+              144
+            ],
+            "wasted_wall_hist": [
+              634,
+              388,
+              217,
+              170,
+              279
+            ]
           }
         },
         {
@@ -2478,7 +3990,21 @@
             "wasted_energy_c2": 0.07422434042240822,
             "mean_launch_speed_km_s": 2888.3935700657257,
             "mean_wasted_speed_km_s": 2843.957387703136,
-            "mean_wasted_hop_pc": 1.6714251893214602
+            "mean_wasted_hop_pc": 1.6714251893214602,
+            "settle_wall_hist": [
+              89,
+              66,
+              60,
+              44,
+              140
+            ],
+            "wasted_wall_hist": [
+              573,
+              307,
+              234,
+              134,
+              349
+            ]
           },
           "treat": {
             "t25": 6914.923423155818,
@@ -2498,7 +4024,21 @@
             "wasted_energy_c2": 0.08011051875614411,
             "mean_launch_speed_km_s": 2891.328823099412,
             "mean_wasted_speed_km_s": 2864.454654059794,
-            "mean_wasted_hop_pc": 1.878008476703982
+            "mean_wasted_hop_pc": 1.878008476703982,
+            "settle_wall_hist": [
+              89,
+              66,
+              60,
+              44,
+              140
+            ],
+            "wasted_wall_hist": [
+              645,
+              330,
+              246,
+              128,
+              351
+            ]
           }
         },
         {
@@ -2520,7 +4060,21 @@
             "wasted_energy_c2": 0.07157646981950067,
             "mean_launch_speed_km_s": 2827.692691906872,
             "mean_wasted_speed_km_s": 2805.755180855298,
-            "mean_wasted_hop_pc": 1.826594963811585
+            "mean_wasted_hop_pc": 1.826594963811585,
+            "settle_wall_hist": [
+              74,
+              56,
+              46,
+              46,
+              177
+            ],
+            "wasted_wall_hist": [
+              561,
+              284,
+              177,
+              173,
+              394
+            ]
           },
           "treat": {
             "t25": 4654.1892987284855,
@@ -2540,7 +4094,21 @@
             "wasted_energy_c2": 0.07202912982826132,
             "mean_launch_speed_km_s": 2828.081659484086,
             "mean_wasted_speed_km_s": 2805.9467925642084,
-            "mean_wasted_hop_pc": 1.7924169924400368
+            "mean_wasted_hop_pc": 1.7924169924400368,
+            "settle_wall_hist": [
+              74,
+              56,
+              46,
+              46,
+              177
+            ],
+            "wasted_wall_hist": [
+              571,
+              277,
+              180,
+              175,
+              396
+            ]
           }
         },
         {
@@ -2562,7 +4130,21 @@
             "wasted_energy_c2": 0.05081160538341073,
             "mean_launch_speed_km_s": 2426.482189672851,
             "mean_wasted_speed_km_s": 2465.649700130429,
-            "mean_wasted_hop_pc": 2.0953712785229848
+            "mean_wasted_hop_pc": 2.0953712785229848,
+            "settle_wall_hist": [
+              99,
+              66,
+              53,
+              60,
+              121
+            ],
+            "wasted_wall_hist": [
+              695,
+              274,
+              135,
+              145,
+              220
+            ]
           },
           "treat": {
             "t25": 5284.880989758087,
@@ -2582,7 +4164,21 @@
             "wasted_energy_c2": 0.0523201381937569,
             "mean_launch_speed_km_s": 2439.8019225548624,
             "mean_wasted_speed_km_s": 2470.484046441829,
-            "mean_wasted_hop_pc": 2.0246070172338717
+            "mean_wasted_hop_pc": 2.0246070172338717,
+            "settle_wall_hist": [
+              99,
+              66,
+              53,
+              60,
+              121
+            ],
+            "wasted_wall_hist": [
+              708,
+              275,
+              131,
+              186,
+              207
+            ]
           }
         },
         {
@@ -2604,7 +4200,21 @@
             "wasted_energy_c2": 0.07188317901927477,
             "mean_launch_speed_km_s": 2761.3819177404616,
             "mean_wasted_speed_km_s": 2784.3471581284607,
-            "mean_wasted_hop_pc": 1.623136070751965
+            "mean_wasted_hop_pc": 1.623136070751965,
+            "settle_wall_hist": [
+              75,
+              68,
+              56,
+              51,
+              149
+            ],
+            "wasted_wall_hist": [
+              463,
+              320,
+              198,
+              216,
+              407
+            ]
           },
           "treat": {
             "t25": 6399.191882008369,
@@ -2624,7 +4234,21 @@
             "wasted_energy_c2": 0.07258499081355035,
             "mean_launch_speed_km_s": 2762.2590194594886,
             "mean_wasted_speed_km_s": 2786.712705063979,
-            "mean_wasted_hop_pc": 1.62309323971184
+            "mean_wasted_hop_pc": 1.62309323971184,
+            "settle_wall_hist": [
+              75,
+              68,
+              56,
+              51,
+              149
+            ],
+            "wasted_wall_hist": [
+              464,
+              325,
+              200,
+              218,
+              410
+            ]
           }
         },
         {
@@ -2646,7 +4270,21 @@
             "wasted_energy_c2": 0.053795352337538696,
             "mean_launch_speed_km_s": 2415.3848511975157,
             "mean_wasted_speed_km_s": 2453.7751001370143,
-            "mean_wasted_hop_pc": 1.7834995637599262
+            "mean_wasted_hop_pc": 1.7834995637599262,
+            "settle_wall_hist": [
+              63,
+              66,
+              70,
+              56,
+              144
+            ],
+            "wasted_wall_hist": [
+              449,
+              371,
+              216,
+              152,
+              383
+            ]
           },
           "treat": {
             "t25": 4986.509593222017,
@@ -2666,7 +4304,21 @@
             "wasted_energy_c2": 0.05440276844419589,
             "mean_launch_speed_km_s": 2416.4619630319785,
             "mean_wasted_speed_km_s": 2455.725699453159,
-            "mean_wasted_hop_pc": 1.7959513042630306
+            "mean_wasted_hop_pc": 1.7959513042630306,
+            "settle_wall_hist": [
+              63,
+              66,
+              70,
+              56,
+              144
+            ],
+            "wasted_wall_hist": [
+              462,
+              376,
+              212,
+              155,
+              381
+            ]
           }
         },
         {
@@ -2688,7 +4340,21 @@
             "wasted_energy_c2": 0.06584724196613978,
             "mean_launch_speed_km_s": 2646.551359502491,
             "mean_wasted_speed_km_s": 2672.921747878093,
-            "mean_wasted_hop_pc": 2.0415656093577708
+            "mean_wasted_hop_pc": 2.0415656093577708,
+            "settle_wall_hist": [
+              85,
+              67,
+              63,
+              36,
+              148
+            ],
+            "wasted_wall_hist": [
+              765,
+              294,
+              231,
+              54,
+              274
+            ]
           },
           "treat": {
             "t25": 4358.41215999206,
@@ -2708,7 +4374,21 @@
             "wasted_energy_c2": 0.06671891336926417,
             "mean_launch_speed_km_s": 2649.9867127350667,
             "mean_wasted_speed_km_s": 2671.478735981772,
-            "mean_wasted_hop_pc": 2.0644741832646263
+            "mean_wasted_hop_pc": 2.0644741832646263,
+            "settle_wall_hist": [
+              85,
+              67,
+              63,
+              36,
+              148
+            ],
+            "wasted_wall_hist": [
+              741,
+              281,
+              234,
+              92,
+              294
+            ]
           }
         },
         {
@@ -2730,7 +4410,21 @@
             "wasted_energy_c2": 0.06335408699592768,
             "mean_launch_speed_km_s": 2619.951038975563,
             "mean_wasted_speed_km_s": 2657.766170690956,
-            "mean_wasted_hop_pc": 1.8624364069598986
+            "mean_wasted_hop_pc": 1.8624364069598986,
+            "settle_wall_hist": [
+              103,
+              60,
+              49,
+              61,
+              126
+            ],
+            "wasted_wall_hist": [
+              680,
+              228,
+              192,
+              261,
+              209
+            ]
           },
           "treat": {
             "t25": 5649.6342761755595,
@@ -2750,7 +4444,21 @@
             "wasted_energy_c2": 0.06379766790622399,
             "mean_launch_speed_km_s": 2622.9258967456976,
             "mean_wasted_speed_km_s": 2659.3594809832116,
-            "mean_wasted_hop_pc": 1.8370393320656224
+            "mean_wasted_hop_pc": 1.8370393320656224,
+            "settle_wall_hist": [
+              103,
+              60,
+              49,
+              61,
+              126
+            ],
+            "wasted_wall_hist": [
+              677,
+              232,
+              190,
+              261,
+              219
+            ]
           }
         },
         {
@@ -2772,7 +4480,21 @@
             "wasted_energy_c2": 0.08113448652061195,
             "mean_launch_speed_km_s": 2786.5226295753055,
             "mean_wasted_speed_km_s": 2783.4608524054984,
-            "mean_wasted_hop_pc": 1.6925475413936566
+            "mean_wasted_hop_pc": 1.6925475413936566,
+            "settle_wall_hist": [
+              91,
+              62,
+              68,
+              45,
+              133
+            ],
+            "wasted_wall_hist": [
+              714,
+              294,
+              275,
+              209,
+              326
+            ]
           },
           "treat": {
             "t25": 5881.148155877981,
@@ -2792,7 +4514,21 @@
             "wasted_energy_c2": 0.0814080115620618,
             "mean_launch_speed_km_s": 2786.5226295753055,
             "mean_wasted_speed_km_s": 2783.6563606639957,
-            "mean_wasted_hop_pc": 1.6913579790958375
+            "mean_wasted_hop_pc": 1.6913579790958375,
+            "settle_wall_hist": [
+              91,
+              62,
+              68,
+              45,
+              133
+            ],
+            "wasted_wall_hist": [
+              720,
+              298,
+              272,
+              211,
+              323
+            ]
           }
         },
         {
@@ -2814,7 +4550,21 @@
             "wasted_energy_c2": 0.0746994642843384,
             "mean_launch_speed_km_s": 2614.4185191894153,
             "mean_wasted_speed_km_s": 2629.932210468576,
-            "mean_wasted_hop_pc": 1.7437633797602186
+            "mean_wasted_hop_pc": 1.7437633797602186,
+            "settle_wall_hist": [
+              86,
+              75,
+              65,
+              44,
+              129
+            ],
+            "wasted_wall_hist": [
+              634,
+              410,
+              274,
+              170,
+              391
+            ]
           },
           "treat": {
             "t25": 6006.830614992658,
@@ -2834,7 +4584,21 @@
             "wasted_energy_c2": 0.07606666875215115,
             "mean_launch_speed_km_s": 2626.6401055594724,
             "mean_wasted_speed_km_s": 2639.4398489213268,
-            "mean_wasted_hop_pc": 1.746250926369247
+            "mean_wasted_hop_pc": 1.746250926369247,
+            "settle_wall_hist": [
+              86,
+              75,
+              65,
+              44,
+              129
+            ],
+            "wasted_wall_hist": [
+              661,
+              406,
+              273,
+              171,
+              388
+            ]
           }
         },
         {
@@ -2856,7 +4620,21 @@
             "wasted_energy_c2": 0.06508742035809634,
             "mean_launch_speed_km_s": 2688.1144312719794,
             "mean_wasted_speed_km_s": 2693.7940480109196,
-            "mean_wasted_hop_pc": 1.7691837420212768
+            "mean_wasted_hop_pc": 1.7691837420212768,
+            "settle_wall_hist": [
+              72,
+              69,
+              52,
+              57,
+              149
+            ],
+            "wasted_wall_hist": [
+              547,
+              322,
+              277,
+              184,
+              234
+            ]
           },
           "treat": {
             "t25": 6586.062366480464,
@@ -2876,7 +4654,21 @@
             "wasted_energy_c2": 0.06855422077095319,
             "mean_launch_speed_km_s": 2700.2392380224715,
             "mean_wasted_speed_km_s": 2707.533072145261,
-            "mean_wasted_hop_pc": 1.7343825384285418
+            "mean_wasted_hop_pc": 1.7343825384285418,
+            "settle_wall_hist": [
+              72,
+              69,
+              52,
+              57,
+              149
+            ],
+            "wasted_wall_hist": [
+              509,
+              412,
+              270,
+              176,
+              263
+            ]
           }
         }
       ],
@@ -2988,7 +4780,21 @@
             "wasted_energy_c2": 0.2675532739876875,
             "mean_launch_speed_km_s": 3434.21008163866,
             "mean_wasted_speed_km_s": 3450.6624360221963,
-            "mean_wasted_hop_pc": 3.0717653527273856
+            "mean_wasted_hop_pc": 3.0717653527273856,
+            "settle_wall_hist": [
+              89,
+              69,
+              58,
+              48,
+              135
+            ],
+            "wasted_wall_hist": [
+              869,
+              548,
+              510,
+              389,
+              1363
+            ]
           },
           "treat": {
             "t25": 14789.286135952192,
@@ -3008,7 +4814,21 @@
             "wasted_energy_c2": 0.2554563431663381,
             "mean_launch_speed_km_s": 3345.2323647984836,
             "mean_wasted_speed_km_s": 3374.753544286744,
-            "mean_wasted_hop_pc": 3.084045793529526
+            "mean_wasted_hop_pc": 3.084045793529526,
+            "settle_wall_hist": [
+              89,
+              69,
+              58,
+              48,
+              135
+            ],
+            "wasted_wall_hist": [
+              884,
+              578,
+              538,
+              550,
+              1184
+            ]
           }
         },
         {
@@ -3030,7 +4850,21 @@
             "wasted_energy_c2": 0.21626489582116634,
             "mean_launch_speed_km_s": 3060.9455283880393,
             "mean_wasted_speed_km_s": 3127.653042834901,
-            "mean_wasted_hop_pc": 2.973460381077455
+            "mean_wasted_hop_pc": 2.973460381077455,
+            "settle_wall_hist": [
+              84,
+              64,
+              61,
+              50,
+              140
+            ],
+            "wasted_wall_hist": [
+              684,
+              482,
+              588,
+              450,
+              1481
+            ]
           },
           "treat": {
             "t25": 11598.449455750315,
@@ -3050,7 +4884,21 @@
             "wasted_energy_c2": 0.2218949077661371,
             "mean_launch_speed_km_s": 3092.8171458091383,
             "mean_wasted_speed_km_s": 3151.5533498393634,
-            "mean_wasted_hop_pc": 2.921147673978799
+            "mean_wasted_hop_pc": 2.921147673978799,
+            "settle_wall_hist": [
+              84,
+              64,
+              61,
+              50,
+              140
+            ],
+            "wasted_wall_hist": [
+              659,
+              487,
+              702,
+              461,
+              1406
+            ]
           }
         },
         {
@@ -3072,7 +4920,21 @@
             "wasted_energy_c2": 0.21614761102922456,
             "mean_launch_speed_km_s": 3051.8056283517312,
             "mean_wasted_speed_km_s": 3105.5074075548664,
-            "mean_wasted_hop_pc": 3.062809659454219
+            "mean_wasted_hop_pc": 3.062809659454219,
+            "settle_wall_hist": [
+              82,
+              72,
+              53,
+              54,
+              138
+            ],
+            "wasted_wall_hist": [
+              681,
+              795,
+              371,
+              471,
+              1380
+            ]
           },
           "treat": {
             "t25": 12896.424223278509,
@@ -3092,7 +4954,21 @@
             "wasted_energy_c2": 0.20316798286373908,
             "mean_launch_speed_km_s": 2947.599667660755,
             "mean_wasted_speed_km_s": 3022.7706587093526,
-            "mean_wasted_hop_pc": 3.0628091176414767
+            "mean_wasted_hop_pc": 3.0628091176414767,
+            "settle_wall_hist": [
+              82,
+              72,
+              53,
+              54,
+              138
+            ],
+            "wasted_wall_hist": [
+              788,
+              700,
+              481,
+              504,
+              1262
+            ]
           }
         },
         {
@@ -3114,7 +4990,21 @@
             "wasted_energy_c2": 0.23921683995152263,
             "mean_launch_speed_km_s": 3262.936968487103,
             "mean_wasted_speed_km_s": 3287.6594144319556,
-            "mean_wasted_hop_pc": 2.99562360665587
+            "mean_wasted_hop_pc": 2.99562360665587,
+            "settle_wall_hist": [
+              92,
+              63,
+              56,
+              45,
+              143
+            ],
+            "wasted_wall_hist": [
+              755,
+              550,
+              627,
+              323,
+              1434
+            ]
           },
           "treat": {
             "t25": 11888.382089970617,
@@ -3134,7 +5024,21 @@
             "wasted_energy_c2": 0.2522802621310063,
             "mean_launch_speed_km_s": 3316.893189729065,
             "mean_wasted_speed_km_s": 3329.774575676525,
-            "mean_wasted_hop_pc": 3.086687386204789
+            "mean_wasted_hop_pc": 3.086687386204789,
+            "settle_wall_hist": [
+              92,
+              63,
+              56,
+              45,
+              143
+            ],
+            "wasted_wall_hist": [
+              871,
+              562,
+              535,
+              352,
+              1432
+            ]
           }
         },
         {
@@ -3156,7 +5060,21 @@
             "wasted_energy_c2": 0.21577217360024917,
             "mean_launch_speed_km_s": 3055.428969922858,
             "mean_wasted_speed_km_s": 3099.3959645195673,
-            "mean_wasted_hop_pc": 3.2007283317516255
+            "mean_wasted_hop_pc": 3.2007283317516255,
+            "settle_wall_hist": [
+              80,
+              70,
+              58,
+              62,
+              129
+            ],
+            "wasted_wall_hist": [
+              780,
+              615,
+              459,
+              701,
+              1207
+            ]
           },
           "treat": {
             "t25": 12585.073833499859,
@@ -3176,7 +5094,21 @@
             "wasted_energy_c2": 0.23987378193242526,
             "mean_launch_speed_km_s": 3208.3303393062456,
             "mean_wasted_speed_km_s": 3256.901095454687,
-            "mean_wasted_hop_pc": 3.1970422028534458
+            "mean_wasted_hop_pc": 3.1970422028534458,
+            "settle_wall_hist": [
+              80,
+              70,
+              58,
+              62,
+              129
+            ],
+            "wasted_wall_hist": [
+              757,
+              624,
+              549,
+              645,
+              1159
+            ]
           }
         },
         {
@@ -3198,7 +5130,21 @@
             "wasted_energy_c2": 0.21894189405731618,
             "mean_launch_speed_km_s": 3081.392726569633,
             "mean_wasted_speed_km_s": 3143.9487238783154,
-            "mean_wasted_hop_pc": 3.0990654088512968
+            "mean_wasted_hop_pc": 3.0990654088512968,
+            "settle_wall_hist": [
+              74,
+              70,
+              78,
+              57,
+              120
+            ],
+            "wasted_wall_hist": [
+              763,
+              511,
+              629,
+              605,
+              1185
+            ]
           },
           "treat": {
             "t25": 13387.32457316859,
@@ -3218,7 +5164,21 @@
             "wasted_energy_c2": 0.22599567626379524,
             "mean_launch_speed_km_s": 3130.7684746498367,
             "mean_wasted_speed_km_s": 3185.1037749631682,
-            "mean_wasted_hop_pc": 3.1837652193748696
+            "mean_wasted_hop_pc": 3.1837652193748696,
+            "settle_wall_hist": [
+              74,
+              70,
+              78,
+              57,
+              120
+            ],
+            "wasted_wall_hist": [
+              734,
+              544,
+              631,
+              596,
+              1166
+            ]
           }
         },
         {
@@ -3240,7 +5200,21 @@
             "wasted_energy_c2": 0.24198326900956166,
             "mean_launch_speed_km_s": 3195.2365925718013,
             "mean_wasted_speed_km_s": 3261.094777907438,
-            "mean_wasted_hop_pc": 3.0663715012296127
+            "mean_wasted_hop_pc": 3.0663715012296127,
+            "settle_wall_hist": [
+              91,
+              69,
+              46,
+              38,
+              155
+            ],
+            "wasted_wall_hist": [
+              785,
+              669,
+              495,
+              343,
+              1460
+            ]
           },
           "treat": {
             "t25": 10996.442958685822,
@@ -3260,7 +5234,21 @@
             "wasted_energy_c2": 0.23294284799399248,
             "mean_launch_speed_km_s": 3159.226617448333,
             "mean_wasted_speed_km_s": 3209.786381496032,
-            "mean_wasted_hop_pc": 3.188283015727838
+            "mean_wasted_hop_pc": 3.188283015727838,
+            "settle_wall_hist": [
+              91,
+              69,
+              46,
+              38,
+              155
+            ],
+            "wasted_wall_hist": [
+              915,
+              575,
+              483,
+              333,
+              1443
+            ]
           }
         },
         {
@@ -3282,7 +5270,21 @@
             "wasted_energy_c2": 0.21424026376511332,
             "mean_launch_speed_km_s": 3062.808490392926,
             "mean_wasted_speed_km_s": 3117.7161860608257,
-            "mean_wasted_hop_pc": 2.970260752521239
+            "mean_wasted_hop_pc": 2.970260752521239,
+            "settle_wall_hist": [
+              81,
+              60,
+              59,
+              51,
+              148
+            ],
+            "wasted_wall_hist": [
+              743,
+              600,
+              483,
+              484,
+              1379
+            ]
           },
           "treat": {
             "t25": 12508.599407140004,
@@ -3302,7 +5304,21 @@
             "wasted_energy_c2": 0.19316919810827,
             "mean_launch_speed_km_s": 2889.5709801577955,
             "mean_wasted_speed_km_s": 2948.3394852155484,
-            "mean_wasted_hop_pc": 2.9816627711029122
+            "mean_wasted_hop_pc": 2.9816627711029122,
+            "settle_wall_hist": [
+              81,
+              60,
+              59,
+              51,
+              148
+            ],
+            "wasted_wall_hist": [
+              732,
+              537,
+              658,
+              397,
+              1441
+            ]
           }
         },
         {
@@ -3324,7 +5340,21 @@
             "wasted_energy_c2": 0.20456680812850508,
             "mean_launch_speed_km_s": 2928.7303764097373,
             "mean_wasted_speed_km_s": 3006.3174891527296,
-            "mean_wasted_hop_pc": 3.0129739120876486
+            "mean_wasted_hop_pc": 3.0129739120876486,
+            "settle_wall_hist": [
+              79,
+              72,
+              68,
+              44,
+              136
+            ],
+            "wasted_wall_hist": [
+              614,
+              778,
+              644,
+              407,
+              1281
+            ]
           },
           "treat": {
             "t25": 13686.028497323254,
@@ -3344,7 +5374,21 @@
             "wasted_energy_c2": 0.2102553702493716,
             "mean_launch_speed_km_s": 3001.891054587665,
             "mean_wasted_speed_km_s": 3058.319034491732,
-            "mean_wasted_hop_pc": 3.0416034264845844
+            "mean_wasted_hop_pc": 3.0416034264845844,
+            "settle_wall_hist": [
+              79,
+              72,
+              68,
+              44,
+              136
+            ],
+            "wasted_wall_hist": [
+              646,
+              680,
+              638,
+              437,
+              1260
+            ]
           }
         },
         {
@@ -3366,7 +5410,21 @@
             "wasted_energy_c2": 0.25113466176305677,
             "mean_launch_speed_km_s": 3343.115878079786,
             "mean_wasted_speed_km_s": 3346.6458605491307,
-            "mean_wasted_hop_pc": 3.068516108315886
+            "mean_wasted_hop_pc": 3.068516108315886,
+            "settle_wall_hist": [
+              92,
+              74,
+              60,
+              49,
+              124
+            ],
+            "wasted_wall_hist": [
+              902,
+              752,
+              526,
+              394,
+              1107
+            ]
           },
           "treat": {
             "t25": 10883.188915454699,
@@ -3386,7 +5444,21 @@
             "wasted_energy_c2": 0.24882066219045035,
             "mean_launch_speed_km_s": 3326.916569561937,
             "mean_wasted_speed_km_s": 3339.7286811899558,
-            "mean_wasted_hop_pc": 3.015011804154738
+            "mean_wasted_hop_pc": 3.015011804154738,
+            "settle_wall_hist": [
+              92,
+              74,
+              60,
+              49,
+              124
+            ],
+            "wasted_wall_hist": [
+              925,
+              613,
+              440,
+              389,
+              1315
+            ]
           }
         },
         {
@@ -3408,7 +5480,21 @@
             "wasted_energy_c2": 0.2500015485876114,
             "mean_launch_speed_km_s": 3299.5175648277595,
             "mean_wasted_speed_km_s": 3329.249066073148,
-            "mean_wasted_hop_pc": 2.9426503883431288
+            "mean_wasted_hop_pc": 2.9426503883431288,
+            "settle_wall_hist": [
+              85,
+              60,
+              60,
+              51,
+              143
+            ],
+            "wasted_wall_hist": [
+              670,
+              574,
+              516,
+              548,
+              1402
+            ]
           },
           "treat": {
             "t25": 11556.098562108986,
@@ -3428,7 +5514,21 @@
             "wasted_energy_c2": 0.2333148428428258,
             "mean_launch_speed_km_s": 3185.417580530745,
             "mean_wasted_speed_km_s": 3239.0118496106206,
-            "mean_wasted_hop_pc": 2.9731404350672057
+            "mean_wasted_hop_pc": 2.9731404350672057,
+            "settle_wall_hist": [
+              85,
+              60,
+              60,
+              51,
+              143
+            ],
+            "wasted_wall_hist": [
+              736,
+              550,
+              454,
+              564,
+              1423
+            ]
           }
         },
         {
@@ -3450,7 +5550,21 @@
             "wasted_energy_c2": 0.2252243588710779,
             "mean_launch_speed_km_s": 3148.068810365566,
             "mean_wasted_speed_km_s": 3191.175162784841,
-            "mean_wasted_hop_pc": 3.0977009762361414
+            "mean_wasted_hop_pc": 3.0977009762361414,
+            "settle_wall_hist": [
+              76,
+              76,
+              58,
+              50,
+              139
+            ],
+            "wasted_wall_hist": [
+              665,
+              894,
+              448,
+              373,
+              1335
+            ]
           },
           "treat": {
             "t25": 12680.064215971062,
@@ -3470,7 +5584,21 @@
             "wasted_energy_c2": 0.23191029825320444,
             "mean_launch_speed_km_s": 3188.7691997019438,
             "mean_wasted_speed_km_s": 3209.6495244667854,
-            "mean_wasted_hop_pc": 3.076778039319095
+            "mean_wasted_hop_pc": 3.076778039319095,
+            "settle_wall_hist": [
+              76,
+              76,
+              58,
+              50,
+              139
+            ],
+            "wasted_wall_hist": [
+              792,
+              812,
+              427,
+              409,
+              1269
+            ]
           }
         },
         {
@@ -3492,7 +5620,21 @@
             "wasted_energy_c2": 0.22664925927790067,
             "mean_launch_speed_km_s": 3130.993046802552,
             "mean_wasted_speed_km_s": 3194.0372334018225,
-            "mean_wasted_hop_pc": 3.039721674400582
+            "mean_wasted_hop_pc": 3.039721674400582,
+            "settle_wall_hist": [
+              88,
+              59,
+              62,
+              52,
+              138
+            ],
+            "wasted_wall_hist": [
+              834,
+              541,
+              430,
+              450,
+              1472
+            ]
           },
           "treat": {
             "t25": 11926.921403994636,
@@ -3512,7 +5654,21 @@
             "wasted_energy_c2": 0.21625890253575553,
             "mean_launch_speed_km_s": 3109.1336801989187,
             "mean_wasted_speed_km_s": 3145.711701461381,
-            "mean_wasted_hop_pc": 3.078038868618879
+            "mean_wasted_hop_pc": 3.078038868618879,
+            "settle_wall_hist": [
+              88,
+              59,
+              62,
+              52,
+              138
+            ],
+            "wasted_wall_hist": [
+              897,
+              618,
+              442,
+              420,
+              1293
+            ]
           }
         },
         {
@@ -3534,7 +5690,21 @@
             "wasted_energy_c2": 0.2140399352138555,
             "mean_launch_speed_km_s": 3020.1738734180954,
             "mean_wasted_speed_km_s": 3057.1186238803434,
-            "mean_wasted_hop_pc": 3.0288252927317756
+            "mean_wasted_hop_pc": 3.0288252927317756,
+            "settle_wall_hist": [
+              87,
+              74,
+              56,
+              41,
+              141
+            ],
+            "wasted_wall_hist": [
+              747,
+              585,
+              435,
+              383,
+              1584
+            ]
           },
           "treat": {
             "t25": 12547.384672125896,
@@ -3554,7 +5724,21 @@
             "wasted_energy_c2": 0.22618596859349088,
             "mean_launch_speed_km_s": 3095.7092758538915,
             "mean_wasted_speed_km_s": 3148.0388927986264,
-            "mean_wasted_hop_pc": 3.0579953840474277
+            "mean_wasted_hop_pc": 3.0579953840474277,
+            "settle_wall_hist": [
+              87,
+              74,
+              56,
+              41,
+              141
+            ],
+            "wasted_wall_hist": [
+              690,
+              627,
+              320,
+              410,
+              1662
+            ]
           }
         },
         {
@@ -3576,7 +5760,21 @@
             "wasted_energy_c2": 0.2209269994304467,
             "mean_launch_speed_km_s": 3087.9382335526393,
             "mean_wasted_speed_km_s": 3122.989488912223,
-            "mean_wasted_hop_pc": 3.141932342443415
+            "mean_wasted_hop_pc": 3.141932342443415,
+            "settle_wall_hist": [
+              82,
+              82,
+              60,
+              51,
+              124
+            ],
+            "wasted_wall_hist": [
+              728,
+              786,
+              395,
+              622,
+              1161
+            ]
           },
           "treat": {
             "t25": 14363.993186527545,
@@ -3596,7 +5794,21 @@
             "wasted_energy_c2": 0.21370584862424027,
             "mean_launch_speed_km_s": 3021.0866376140502,
             "mean_wasted_speed_km_s": 3061.849648750043,
-            "mean_wasted_hop_pc": 3.0959481774013207
+            "mean_wasted_hop_pc": 3.0959481774013207,
+            "settle_wall_hist": [
+              82,
+              82,
+              60,
+              51,
+              124
+            ],
+            "wasted_wall_hist": [
+              657,
+              842,
+              465,
+              576,
+              1186
+            ]
           }
         },
         {
@@ -3618,7 +5830,21 @@
             "wasted_energy_c2": 0.23549791637500045,
             "mean_launch_speed_km_s": 3186.8306281880205,
             "mean_wasted_speed_km_s": 3231.5741361156856,
-            "mean_wasted_hop_pc": 3.082931785930557
+            "mean_wasted_hop_pc": 3.082931785930557,
+            "settle_wall_hist": [
+              86,
+              75,
+              56,
+              45,
+              137
+            ],
+            "wasted_wall_hist": [
+              815,
+              718,
+              576,
+              230,
+              1399
+            ]
           },
           "treat": {
             "t25": 14099.680098120254,
@@ -3638,7 +5864,21 @@
             "wasted_energy_c2": 0.2328937260529373,
             "mean_launch_speed_km_s": 3176.1571223758706,
             "mean_wasted_speed_km_s": 3204.387310757667,
-            "mean_wasted_hop_pc": 3.138966909872995
+            "mean_wasted_hop_pc": 3.138966909872995,
+            "settle_wall_hist": [
+              86,
+              75,
+              56,
+              45,
+              137
+            ],
+            "wasted_wall_hist": [
+              895,
+              732,
+              637,
+              293,
+              1202
+            ]
           }
         },
         {
@@ -3660,7 +5900,21 @@
             "wasted_energy_c2": 0.20626372725082995,
             "mean_launch_speed_km_s": 2991.099178270782,
             "mean_wasted_speed_km_s": 3046.454107471963,
-            "mean_wasted_hop_pc": 3.057807494833293
+            "mean_wasted_hop_pc": 3.057807494833293,
+            "settle_wall_hist": [
+              90,
+              68,
+              55,
+              56,
+              130
+            ],
+            "wasted_wall_hist": [
+              935,
+              614,
+              480,
+              580,
+              1126
+            ]
           },
           "treat": {
             "t25": 14132.00798753183,
@@ -3680,7 +5934,21 @@
             "wasted_energy_c2": 0.21712872577794978,
             "mean_launch_speed_km_s": 3060.48021581213,
             "mean_wasted_speed_km_s": 3104.5999899741164,
-            "mean_wasted_hop_pc": 3.0456023218150112
+            "mean_wasted_hop_pc": 3.0456023218150112,
+            "settle_wall_hist": [
+              90,
+              68,
+              55,
+              56,
+              130
+            ],
+            "wasted_wall_hist": [
+              782,
+              676,
+              525,
+              649,
+              1098
+            ]
           }
         },
         {
@@ -3702,7 +5970,21 @@
             "wasted_energy_c2": 0.19954122600674368,
             "mean_launch_speed_km_s": 2985.772526553168,
             "mean_wasted_speed_km_s": 3019.734201508038,
-            "mean_wasted_hop_pc": 3.0794434872455
+            "mean_wasted_hop_pc": 3.0794434872455,
+            "settle_wall_hist": [
+              88,
+              64,
+              74,
+              46,
+              127
+            ],
+            "wasted_wall_hist": [
+              656,
+              781,
+              668,
+              354,
+              1205
+            ]
           },
           "treat": {
             "t25": 12617.863369044002,
@@ -3722,7 +6004,21 @@
             "wasted_energy_c2": 0.2007594584856594,
             "mean_launch_speed_km_s": 2987.726238435114,
             "mean_wasted_speed_km_s": 3037.056807592534,
-            "mean_wasted_hop_pc": 3.0311559838976363
+            "mean_wasted_hop_pc": 3.0311559838976363,
+            "settle_wall_hist": [
+              88,
+              64,
+              74,
+              46,
+              127
+            ],
+            "wasted_wall_hist": [
+              683,
+              790,
+              619,
+              350,
+              1230
+            ]
           }
         },
         {
@@ -3744,7 +6040,21 @@
             "wasted_energy_c2": 0.28757036434830124,
             "mean_launch_speed_km_s": 3574.4452523839723,
             "mean_wasted_speed_km_s": 3593.3862658288954,
-            "mean_wasted_hop_pc": 3.019014810548776
+            "mean_wasted_hop_pc": 3.019014810548776,
+            "settle_wall_hist": [
+              81,
+              63,
+              56,
+              52,
+              147
+            ],
+            "wasted_wall_hist": [
+              860,
+              653,
+              494,
+              577,
+              1116
+            ]
           },
           "treat": {
             "t25": 14838.894064622944,
@@ -3764,7 +6074,21 @@
             "wasted_energy_c2": 0.2817605687844114,
             "mean_launch_speed_km_s": 3533.103278411179,
             "mean_wasted_speed_km_s": 3593.8870542900404,
-            "mean_wasted_hop_pc": 3.0825142807825823
+            "mean_wasted_hop_pc": 3.0825142807825823,
+            "settle_wall_hist": [
+              81,
+              63,
+              56,
+              52,
+              147
+            ],
+            "wasted_wall_hist": [
+              819,
+              631,
+              608,
+              427,
+              1213
+            ]
           }
         },
         {
@@ -3786,7 +6110,21 @@
             "wasted_energy_c2": 0.21359994298114546,
             "mean_launch_speed_km_s": 3041.563759657516,
             "mean_wasted_speed_km_s": 3077.2298699806647,
-            "mean_wasted_hop_pc": 3.0282257833043422
+            "mean_wasted_hop_pc": 3.0282257833043422,
+            "settle_wall_hist": [
+              83,
+              61,
+              56,
+              51,
+              148
+            ],
+            "wasted_wall_hist": [
+              984,
+              614,
+              441,
+              450,
+              1284
+            ]
           },
           "treat": {
             "t25": 11406.139875590387,
@@ -3806,7 +6144,21 @@
             "wasted_energy_c2": 0.2531584622743609,
             "mean_launch_speed_km_s": 3285.1711944335525,
             "mean_wasted_speed_km_s": 3353.4563074115213,
-            "mean_wasted_hop_pc": 3.1536795927649854
+            "mean_wasted_hop_pc": 3.1536795927649854,
+            "settle_wall_hist": [
+              83,
+              61,
+              56,
+              51,
+              148
+            ],
+            "wasted_wall_hist": [
+              932,
+              668,
+              398,
+              517,
+              1182
+            ]
           }
         },
         {
@@ -3828,7 +6180,21 @@
             "wasted_energy_c2": 0.1968804668088378,
             "mean_launch_speed_km_s": 2926.8018513125726,
             "mean_wasted_speed_km_s": 2991.5199743358185,
-            "mean_wasted_hop_pc": 2.980762271149833
+            "mean_wasted_hop_pc": 2.980762271149833,
+            "settle_wall_hist": [
+              81,
+              71,
+              52,
+              40,
+              155
+            ],
+            "wasted_wall_hist": [
+              703,
+              676,
+              378,
+              253,
+              1675
+            ]
           },
           "treat": {
             "t25": 14358.041754247914,
@@ -3848,7 +6214,21 @@
             "wasted_energy_c2": 0.21444055969627895,
             "mean_launch_speed_km_s": 3034.816708674765,
             "mean_wasted_speed_km_s": 3083.045847902106,
-            "mean_wasted_hop_pc": 3.0284875255786337
+            "mean_wasted_hop_pc": 3.0284875255786337,
+            "settle_wall_hist": [
+              81,
+              71,
+              52,
+              40,
+              155
+            ],
+            "wasted_wall_hist": [
+              718,
+              753,
+              442,
+              273,
+              1518
+            ]
           }
         },
         {
@@ -3870,7 +6250,21 @@
             "wasted_energy_c2": 0.21954786449926667,
             "mean_launch_speed_km_s": 3107.4688567395906,
             "mean_wasted_speed_km_s": 3140.3757932191675,
-            "mean_wasted_hop_pc": 2.9995967241501984
+            "mean_wasted_hop_pc": 2.9995967241501984,
+            "settle_wall_hist": [
+              73,
+              80,
+              60,
+              42,
+              144
+            ],
+            "wasted_wall_hist": [
+              656,
+              740,
+              633,
+              238,
+              1441
+            ]
           },
           "treat": {
             "t25": 12826.814486632156,
@@ -3890,7 +6284,21 @@
             "wasted_energy_c2": 0.21050970539041627,
             "mean_launch_speed_km_s": 3050.7707540078654,
             "mean_wasted_speed_km_s": 3084.768297538007,
-            "mean_wasted_hop_pc": 2.9393299227039544
+            "mean_wasted_hop_pc": 2.9393299227039544,
+            "settle_wall_hist": [
+              73,
+              80,
+              60,
+              42,
+              144
+            ],
+            "wasted_wall_hist": [
+              647,
+              700,
+              700,
+              312,
+              1348
+            ]
           }
         },
         {
@@ -3912,7 +6320,21 @@
             "wasted_energy_c2": 0.2503107567138825,
             "mean_launch_speed_km_s": 3309.104270766319,
             "mean_wasted_speed_km_s": 3346.876830362537,
-            "mean_wasted_hop_pc": 3.121977120256461
+            "mean_wasted_hop_pc": 3.121977120256461,
+            "settle_wall_hist": [
+              89,
+              66,
+              60,
+              44,
+              140
+            ],
+            "wasted_wall_hist": [
+              869,
+              540,
+              477,
+              396,
+              1414
+            ]
           },
           "treat": {
             "t25": 13960.27378615303,
@@ -3932,7 +6354,21 @@
             "wasted_energy_c2": 0.26241382221501036,
             "mean_launch_speed_km_s": 3316.9512598196766,
             "mean_wasted_speed_km_s": 3355.980427529527,
-            "mean_wasted_hop_pc": 3.1955203025213845
+            "mean_wasted_hop_pc": 3.1955203025213845,
+            "settle_wall_hist": [
+              89,
+              66,
+              60,
+              44,
+              140
+            ],
+            "wasted_wall_hist": [
+              784,
+              557,
+              484,
+              523,
+              1464
+            ]
           }
         },
         {
@@ -3954,7 +6390,21 @@
             "wasted_energy_c2": 0.2524523987404914,
             "mean_launch_speed_km_s": 3284.0655999624532,
             "mean_wasted_speed_km_s": 3331.246265241222,
-            "mean_wasted_hop_pc": 3.004358998403059
+            "mean_wasted_hop_pc": 3.004358998403059,
+            "settle_wall_hist": [
+              74,
+              56,
+              46,
+              46,
+              177
+            ],
+            "wasted_wall_hist": [
+              779,
+              650,
+              461,
+              450,
+              1415
+            ]
           },
           "treat": {
             "t25": 11158.26311481184,
@@ -3974,7 +6424,21 @@
             "wasted_energy_c2": 0.24660345371824294,
             "mean_launch_speed_km_s": 3257.853782157922,
             "mean_wasted_speed_km_s": 3288.75440842515,
-            "mean_wasted_hop_pc": 2.915823451422472
+            "mean_wasted_hop_pc": 2.915823451422472,
+            "settle_wall_hist": [
+              74,
+              56,
+              46,
+              46,
+              177
+            ],
+            "wasted_wall_hist": [
+              738,
+              663,
+              320,
+              383,
+              1644
+            ]
           }
         },
         {
@@ -3996,7 +6460,21 @@
             "wasted_energy_c2": 0.2117307923224777,
             "mean_launch_speed_km_s": 3018.5103538040985,
             "mean_wasted_speed_km_s": 3066.928777385567,
-            "mean_wasted_hop_pc": 3.113077631509998
+            "mean_wasted_hop_pc": 3.113077631509998,
+            "settle_wall_hist": [
+              99,
+              66,
+              53,
+              60,
+              121
+            ],
+            "wasted_wall_hist": [
+              957,
+              605,
+              459,
+              688,
+              995
+            ]
           },
           "treat": {
             "t25": 11865.189552388218,
@@ -4016,7 +6494,21 @@
             "wasted_energy_c2": 0.21709393800242052,
             "mean_launch_speed_km_s": 3051.126367756176,
             "mean_wasted_speed_km_s": 3108.333553037274,
-            "mean_wasted_hop_pc": 3.0679269040603976
+            "mean_wasted_hop_pc": 3.0679269040603976,
+            "settle_wall_hist": [
+              99,
+              66,
+              53,
+              60,
+              121
+            ],
+            "wasted_wall_hist": [
+              926,
+              485,
+              393,
+              815,
+              1065
+            ]
           }
         },
         {
@@ -4038,7 +6530,21 @@
             "wasted_energy_c2": 0.24644394911096043,
             "mean_launch_speed_km_s": 3287.274717371592,
             "mean_wasted_speed_km_s": 3319.3755403177656,
-            "mean_wasted_hop_pc": 2.9185357757572303
+            "mean_wasted_hop_pc": 2.9185357757572303,
+            "settle_wall_hist": [
+              75,
+              68,
+              56,
+              51,
+              149
+            ],
+            "wasted_wall_hist": [
+              637,
+              733,
+              522,
+              458,
+              1318
+            ]
           },
           "treat": {
             "t25": 13095.842523744876,
@@ -4058,7 +6564,21 @@
             "wasted_energy_c2": 0.24250380735828353,
             "mean_launch_speed_km_s": 3246.877862536169,
             "mean_wasted_speed_km_s": 3297.9233442974155,
-            "mean_wasted_hop_pc": 2.8966437453513456
+            "mean_wasted_hop_pc": 2.8966437453513456,
+            "settle_wall_hist": [
+              75,
+              68,
+              56,
+              51,
+              149
+            ],
+            "wasted_wall_hist": [
+              586,
+              686,
+              551,
+              454,
+              1418
+            ]
           }
         },
         {
@@ -4080,7 +6600,21 @@
             "wasted_energy_c2": 0.22061702786665843,
             "mean_launch_speed_km_s": 3116.1159278574205,
             "mean_wasted_speed_km_s": 3152.9024082950777,
-            "mean_wasted_hop_pc": 3.0550030405398276
+            "mean_wasted_hop_pc": 3.0550030405398276,
+            "settle_wall_hist": [
+              63,
+              66,
+              70,
+              56,
+              144
+            ],
+            "wasted_wall_hist": [
+              670,
+              727,
+              497,
+              410,
+              1391
+            ]
           },
           "treat": {
             "t25": 12235.850629331817,
@@ -4100,7 +6634,21 @@
             "wasted_energy_c2": 0.23199282227310347,
             "mean_launch_speed_km_s": 3200.677962024968,
             "mean_wasted_speed_km_s": 3222.5260335643516,
-            "mean_wasted_hop_pc": 3.0368080879310404
+            "mean_wasted_hop_pc": 3.0368080879310404,
+            "settle_wall_hist": [
+              63,
+              66,
+              70,
+              56,
+              144
+            ],
+            "wasted_wall_hist": [
+              682,
+              655,
+              447,
+              516,
+              1371
+            ]
           }
         },
         {
@@ -4122,7 +6670,21 @@
             "wasted_energy_c2": 0.2363808173573386,
             "mean_launch_speed_km_s": 3174.1682760717185,
             "mean_wasted_speed_km_s": 3215.9939213120047,
-            "mean_wasted_hop_pc": 3.072115200708543
+            "mean_wasted_hop_pc": 3.072115200708543,
+            "settle_wall_hist": [
+              85,
+              67,
+              63,
+              36,
+              148
+            ],
+            "wasted_wall_hist": [
+              831,
+              544,
+              596,
+              356,
+              1416
+            ]
           },
           "treat": {
             "t25": 13544.78187223658,
@@ -4142,7 +6704,21 @@
             "wasted_energy_c2": 0.2403560881548101,
             "mean_launch_speed_km_s": 3217.196676608639,
             "mean_wasted_speed_km_s": 3253.9143447339998,
-            "mean_wasted_hop_pc": 3.069955449695404
+            "mean_wasted_hop_pc": 3.069955449695404,
+            "settle_wall_hist": [
+              85,
+              67,
+              63,
+              36,
+              148
+            ],
+            "wasted_wall_hist": [
+              836,
+              552,
+              609,
+              349,
+              1377
+            ]
           }
         },
         {
@@ -4164,7 +6740,21 @@
             "wasted_energy_c2": 0.23874289228329315,
             "mean_launch_speed_km_s": 3276.9779239959835,
             "mean_wasted_speed_km_s": 3295.429328482596,
-            "mean_wasted_hop_pc": 3.017048235120501
+            "mean_wasted_hop_pc": 3.017048235120501,
+            "settle_wall_hist": [
+              103,
+              60,
+              49,
+              61,
+              126
+            ],
+            "wasted_wall_hist": [
+              1071,
+              453,
+              560,
+              602,
+              1014
+            ]
           },
           "treat": {
             "t25": 12138.17361813947,
@@ -4184,7 +6774,21 @@
             "wasted_energy_c2": 0.251017523958707,
             "mean_launch_speed_km_s": 3358.4654129101514,
             "mean_wasted_speed_km_s": 3357.3922313523567,
-            "mean_wasted_hop_pc": 3.088435552448477
+            "mean_wasted_hop_pc": 3.088435552448477,
+            "settle_wall_hist": [
+              103,
+              60,
+              49,
+              61,
+              126
+            ],
+            "wasted_wall_hist": [
+              953,
+              520,
+              486,
+              554,
+              1192
+            ]
           }
         },
         {
@@ -4206,7 +6810,21 @@
             "wasted_energy_c2": 0.24163492770355388,
             "mean_launch_speed_km_s": 3250.1426447176536,
             "mean_wasted_speed_km_s": 3289.9324200338397,
-            "mean_wasted_hop_pc": 3.054214581858746
+            "mean_wasted_hop_pc": 3.054214581858746,
+            "settle_wall_hist": [
+              91,
+              62,
+              68,
+              45,
+              133
+            ],
+            "wasted_wall_hist": [
+              828,
+              531,
+              926,
+              324,
+              1108
+            ]
           },
           "treat": {
             "t25": 11595.723999233058,
@@ -4226,7 +6844,21 @@
             "wasted_energy_c2": 0.23289917823263667,
             "mean_launch_speed_km_s": 3188.3721553976675,
             "mean_wasted_speed_km_s": 3225.9571526960744,
-            "mean_wasted_hop_pc": 3.012685849202669
+            "mean_wasted_hop_pc": 3.012685849202669,
+            "settle_wall_hist": [
+              91,
+              62,
+              68,
+              45,
+              133
+            ],
+            "wasted_wall_hist": [
+              811,
+              494,
+              673,
+              291,
+              1468
+            ]
           }
         },
         {
@@ -4248,7 +6880,21 @@
             "wasted_energy_c2": 0.2121651962595584,
             "mean_launch_speed_km_s": 3041.3954153133773,
             "mean_wasted_speed_km_s": 3104.3778462692203,
-            "mean_wasted_hop_pc": 3.1362546837603404
+            "mean_wasted_hop_pc": 3.1362546837603404,
+            "settle_wall_hist": [
+              86,
+              75,
+              65,
+              44,
+              129
+            ],
+            "wasted_wall_hist": [
+              873,
+              586,
+              567,
+              498,
+              1162
+            ]
           },
           "treat": {
             "t25": 11734.266013726874,
@@ -4268,7 +6914,21 @@
             "wasted_energy_c2": 0.2129647218325699,
             "mean_launch_speed_km_s": 3054.68102633885,
             "mean_wasted_speed_km_s": 3102.6863746958525,
-            "mean_wasted_hop_pc": 3.0822846974296065
+            "mean_wasted_hop_pc": 3.0822846974296065,
+            "settle_wall_hist": [
+              86,
+              75,
+              65,
+              44,
+              129
+            ],
+            "wasted_wall_hist": [
+              878,
+              595,
+              544,
+              543,
+              1134
+            ]
           }
         },
         {
@@ -4290,7 +6950,21 @@
             "wasted_energy_c2": 0.24769782703466056,
             "mean_launch_speed_km_s": 3287.086625867673,
             "mean_wasted_speed_km_s": 3330.918347752941,
-            "mean_wasted_hop_pc": 3.010813295228341
+            "mean_wasted_hop_pc": 3.010813295228341,
+            "settle_wall_hist": [
+              72,
+              69,
+              52,
+              57,
+              149
+            ],
+            "wasted_wall_hist": [
+              706,
+              571,
+              455,
+              501,
+              1522
+            ]
           },
           "treat": {
             "t25": 14265.137145514624,
@@ -4310,7 +6984,21 @@
             "wasted_energy_c2": 0.27494505336806796,
             "mean_launch_speed_km_s": 3459.631757147596,
             "mean_wasted_speed_km_s": 3511.1176467446694,
-            "mean_wasted_hop_pc": 3.0085173796896356
+            "mean_wasted_hop_pc": 3.0085173796896356,
+            "settle_wall_hist": [
+              72,
+              69,
+              52,
+              57,
+              149
+            ],
+            "wasted_wall_hist": [
+              702,
+              551,
+              464,
+              530,
+              1450
+            ]
           }
         }
       ],
