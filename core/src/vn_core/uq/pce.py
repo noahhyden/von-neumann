@@ -105,7 +105,9 @@ def _jacobi_eigen(a: list[list[float]]) -> tuple[list[float], list[list[float]]]
     v = [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
     if n == 1:
         return [m[0][0]], v
-    for _ in range(100):
+    for _ in range(100):  # pragma: no cover - the 100-sweep cap is never exhausted:
+        # Jacobi converges quadratically on these small symmetric matrices and always
+        # breaks (off < 1e-300) first; the cap is a floor, not a normal exit.
         off = math.sqrt(sum(m[p][q] ** 2 for p in range(n) for q in range(p + 1, n)))
         if off < 1e-300:
             break
@@ -238,7 +240,9 @@ def _stieltjes(
     p_cur = [1.0] * n_disc
     inner_prev = 1.0
     inner_cur = sum(w * p_cur[i] ** 2 for i in range(n_disc))  # = 1
-    for k in range(max_degree + 1):
+    for k in range(max_degree + 1):  # pragma: no cover - the range never exhausts: the
+        # k == max_degree branch below always breaks on the final index, so the loop's
+        # natural-exit edge is unreachable (the recurrence needs one alpha per degree).
         num = sum(w * z[i] * p_cur[i] ** 2 for i in range(n_disc))
         alpha.append(num / inner_cur)
         if k == max_degree:

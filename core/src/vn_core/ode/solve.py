@@ -108,7 +108,10 @@ def solve(
     )
     if success:
         message = "integration successful"
-    elif not all(math.isfinite(v) for v in ys[-1]):
+    elif not all(math.isfinite(v) for v in ys[-1]):  # pragma: no cover - defensive: the
+        # integrators never *record* a non-finite state (a step producing inf/nan is
+        # rejected, or the RHS guard shrinks it), so a stall shows up as the branch
+        # below; this message is kept as a floor against a future integrator.
         message = "integration produced a non-finite state (RHS blew up); result is not trustworthy"
     else:
         message = f"integration stalled at t={reached!r} before t1={t1!r} (step size collapsed)"

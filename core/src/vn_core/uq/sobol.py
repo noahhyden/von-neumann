@@ -231,7 +231,9 @@ def _bootstrap_ci(
             boot_first[nm].append(first_num / (n * var_b))
 
     def ci(vals: list[float]) -> tuple[float, float]:
-        if not vals:
+        if not vals:  # pragma: no cover - vals is empty only if every bootstrap resample
+            # had zero variance, which needs a (near-)constant finding - but a constant
+            # finding is caught by the var == 0 early return before bootstrap runs.
             return (0.0, 0.0)
         s = sorted(vals)
         lo = s[int(0.05 * (len(s) - 1))]
