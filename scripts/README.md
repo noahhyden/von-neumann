@@ -31,7 +31,7 @@ with the code:
 
 The figure edges reproduce the hand-maintained CI `paths-filter`
 (`coordination-tax -> swarm`, `electronics-wall -> closure-sim`, `spine -> spine`)
-with zero hardcoding - so the CI filter could eventually be generated from this.
+with zero hardcoding. That duplication is now guarded (see `--check-ci-filter` below).
 
 ### Usage
 
@@ -42,7 +42,18 @@ python scripts/depgraph.py --changed swarm/src/swarm/sim.py   # ...or a file pat
 python scripts/depgraph.py --changed core,closure-sim --json  # machine output
 python scripts/depgraph.py --dot | dot -Tsvg -o deps.svg      # visualize the DAG
 python scripts/depgraph.py --selftest         # assert the correctness contract
+python scripts/depgraph.py --check-ci-filter  # assert ci.yml's paths-filter matches
+python scripts/depgraph.py --ci-filter        # emit the paper filter groups for ci.yml
 ```
+
+### Keeping the CI paths-filter honest
+
+`ci.yml`'s `dorny/paths-filter` block hand-lists each paper's source modules
+(`coordination_tax -> swarm/**`, ...). `--check-ci-filter` parses that block and
+asserts it matches depgraph's paper edges, so a new figure sourced from a module
+nobody added to the filter fails CI (in the `scripts` job) instead of silently
+skipping that paper's rebuild. `--ci-filter` emits the correct paper groups to paste
+back into `ci.yml` when they drift. The `shared: &shared` anchor stays hand-kept.
 
 `--changed` accepts module dir names (`swarm`), package names (`vn_core`), or file
 paths (the first path component that is a module wins), comma-separated.

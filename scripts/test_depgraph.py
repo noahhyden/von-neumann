@@ -82,6 +82,28 @@ def mini(tmp_path: Path) -> Path:
     (fsrc / "aa-model.ts").write_text("// port of aa\n")
     (fsrc / "reactive-model.ts").write_text("// generic base, not a module\n")
 
+    # a ci.yml whose paths-filter matches the graph (paper p1 sourced from module aa).
+    # Exercises the parser: shared anchor group, *shared ref, non-module globs, a blank
+    # line inside the block, and a dedent that ends the block.
+    wf = tmp_path / ".github" / "workflows"
+    wf.mkdir(parents=True)
+    (wf / "ci.yml").write_text(
+        "jobs:\n"
+        "  papers:\n"
+        "    steps:\n"
+        "      - uses: dorny/paths-filter@v3\n"
+        "        with:\n"
+        "          filters: |\n"
+        "            shared: &shared\n"
+        "              - 'papers/scripts/**'\n"
+        "\n"
+        "            p1:\n"
+        "              - *shared\n"
+        "              - 'papers/p1/**'\n"
+        "              - 'aa/**'\n"
+        "      - uses: actions/setup-node@v4\n"
+    )
+
     return tmp_path
 
 
@@ -151,6 +173,61 @@ def test_frontend_ports(mini: Path):
 
 def test_frontend_ports_no_frontend_dir(tmp_path: Path):
     assert dg.build_frontend_ports(tmp_path, ["aa"]) == {}        # frontend/src absent
+
+
+# --------------------------------------------------------------------------- #
+# CI paths-filter: parse, expected, check (pass + drift)
+# --------------------------------------------------------------------------- #
+def test_parse_ci_filter(mini: Path):
+    mods = set(dg.discover_modules(mini).values())
+    # 'shared' skipped; papers/** non-module glob skipped; *shared ref skipped; aa kept.
+    assert dg.parse_ci_filter(mini, mods) == {"p1": {"aa"}}
+
+
+def test_parse_ci_filter_no_ci(tmp_path: Path):
+    assert dg.parse_ci_filter(tmp_path, {"aa"}) == {}             # ci.yml absent
+
+
+def test_parse_ci_filter_block_at_eof(tmp_path: Path):
+    # The filter block runs to end-of-file (no trailing dedent) -> loop ends naturally.
+    wf = tmp_path / ".github" / "workflows"
+    wf.mkdir(parents=True)
+    (wf / "ci.yml").write_text(
+        "        with:\n"
+        "          filters: |\n"
+        "            g1:\n"
+        "              - 'aa/**'\n"
+    )
+    assert dg.parse_ci_filter(tmp_path, {"aa"}) == {"g1": {"aa"}}
+
+
+def test_expected_ci_filter(mini: Path):
+    assert dg.expected_ci_filter(dg.Graph(mini)) == {"p1": {"aa"}}
+
+
+def test_check_ci_filter_pass(mini: Path, capsys):
+    assert dg.check_ci_filter(mini) == 0
+    assert "ci filter OK" in capsys.readouterr().out
+
+
+def test_check_ci_filter_drift(mini: Path, capsys):
+    # Point p1's filter at the wrong module -> depgraph expects aa, ci.yml says bb.
+    ci = mini / ".github" / "workflows" / "ci.yml"
+    ci.write_text(ci.read_text().replace("- 'aa/**'", "- 'bb/**'"))
+    assert dg.check_ci_filter(mini) == 1
+    out = capsys.readouterr().out
+    assert "CI FILTER DRIFT" in out and "p1" in out
+
+
+def test_fmt_ci_filter(mini: Path):
+    out = dg._fmt_ci_filter(dg.Graph(mini))
+    assert "p1:" in out and "- 'aa/**'" in out and "- *shared" in out
+
+
+def test_live_ci_filter_matches(capsys):
+    # The real ci.yml paths-filter must match depgraph's paper edges.
+    assert dg.check_ci_filter(REPO) == 0
+    assert "ci filter OK" in capsys.readouterr().out
 
 
 # --------------------------------------------------------------------------- #
@@ -261,6 +338,16 @@ def test_main_dot(capsys):
 def test_main_selftest(capsys):
     assert dg.main(["--selftest"]) == 0
     assert "selftest OK" in capsys.readouterr().out
+
+
+def test_main_check_ci_filter(capsys):
+    assert dg.main(["--check-ci-filter"]) == 0
+    assert "ci filter OK" in capsys.readouterr().out
+
+
+def test_main_ci_filter(capsys):
+    assert dg.main(["--ci-filter"]) == 0
+    assert "coordination_tax:" in capsys.readouterr().out
 
 
 def test_main_changed_text(capsys):
