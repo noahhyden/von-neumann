@@ -400,9 +400,13 @@ try:
     import swarm_rust as _swarm_rust  # type: ignore[import-not-found]
     _HAS_RUST = True
     _RUST_KERNEL = _swarm_rust.nearest_unsettled
+    # Tier 2: the whole-fill loop (powered + instant/lightspeed + event). Optional and
+    # version-guarded - an older-built crate without it leaves the Python loop in charge.
+    _RUST_FILL = getattr(_swarm_rust, "run_fill", None)
 except ImportError:
     _HAS_RUST = False
     _RUST_KERNEL = None
+    _RUST_FILL = None
 
 _USE_RUST = _HAS_RUST and os.environ.get("SWARM_NO_RUST") != "1"
 _USE_NJIT = (not _USE_RUST) and _HAS_NJIT and os.environ.get("SWARM_NO_NJIT") != "1"
@@ -1253,7 +1257,119 @@ def _snapshot(s: SwarmState, n_stars: int) -> SwarmStep:
     )
 
 
+def _rust_fill_supported(params: SwarmParams) -> bool:
+    """Whether the Rust whole-fill loop (Tier 2) covers this config.
+
+    The fast path handles the powered policy under instant/lightspeed coordination in event
+    mode - the config every 200k scale sweep uses. inflight (mid-flight relay) and the
+    slingshot policies fall back to the Python reference, which stays the source of truth.
+    """
+    return (
+        _RUST_FILL is not None
+        and os.environ.get("SWARM_NO_RUST") != "1"
+        and os.environ.get("SWARM_NO_RUST_FILL") != "1"
+        and params.policy == "powered"
+        and params.coordination in ("instant", "lightspeed")
+        and params.stepping == "event"
+    )
+
+
+def _simulate_swarm_rust(
+    params: SwarmParams, *, seed: int = 0x9E3779B9, record_steps: bool = True
+) -> SwarmResult:
+    """Rust-accelerated fill for the supported config; bit-identical to the Python fold.
+
+    Galaxy generation and the k-d tree build stay in Python (the seeded RNG is not ported);
+    Rust owns the ~2M-event loop and returns raw aggregates, from which we assemble the same
+    ``SwarmResult`` the Python tail builds. Gated + oracle-checked (``test_rust_fill_loop.py``).
+    """
+    xs, ys, zs, star_speed, _rng = _generate_galaxy(params, seed_state(seed))
+    n = len(xs)
+    L = params.box_side_pc
+    cx = cy = cz = L / 2.0
+    origin = min(range(n), key=lambda i: (xs[i] - cx) ** 2 + (ys[i] - cy) ** 2 + (zs[i] - cz) ** 2)
+    kd = _build_kdtree(xs, ys, zs)  # fresh (nuns = subtree sizes, tsmax = -1); Rust marks origin
+    d_nn = 0.55396 * params.density_stars_per_pc3 ** (-1.0 / 3.0)
+    inv_d_nn = 1.0 / d_nn if d_nn > 0.0 else 0.0
+    xs_np = np.asarray(xs, dtype=np.float64)
+    ys_np = np.asarray(ys, dtype=np.float64)
+    zs_np = np.asarray(zs, dtype=np.float64)
+    hop_edges = np.asarray(HOP_BIN_EDGES, dtype=np.float64)
+    wall_edges = np.asarray(WALL_BIN_EDGES_NN, dtype=np.float64)
+    d = _RUST_FILL(
+        xs_np, ys_np, zs_np, origin,
+        kd["root"], kd["axis"], kd["split"], kd["lo"], kd["hi"], kd["parent"],
+        kd["bxmin"], kd["bxmax"], kd["bymin"], kd["bymax"], kd["bzmin"], kd["bzmax"],
+        kd["nuns"], kd["tsmax"], kd["star_leaf"], kd["bucket_flat"], kd["bucket_offsets"],
+        params.coordination == "instant", L, params.periodic,
+        params.probe_speed_pc_per_year, params.offspring_per_settlement,
+        params.settle_time_years, params.max_years, params.max_retargets, inv_d_nn,
+        hop_edges, wall_edges,
+    )
+    # Single initial snapshot (matches the Python record_steps=False trace: one entry).
+    steps = [SwarmStep(year=0.0, n_settled=1, fraction_settled=1 / n,
+                       in_flight=d["initial_in_flight"], front_radius_pc=0.0)]
+    c2 = C_PC_PER_YEAR * C_PC_PER_YEAR
+    return SwarmResult(
+        n_stars=n,
+        final_settled=d["final_settled"],
+        total_probes_launched=d["total_launched"],
+        t50_years=d["t50"], t90_years=d["t90"], t100_years=d["t100"],
+        t25_years=d["t25"], t75_years=d["t75"], t99_years=d["t99"],
+        front_radius_pc=d["front_radius_pc"],
+        max_probe_speed_km_s=d["max_speed_pc_yr"] / KM_S_TO_PC_YR,
+        policy=params.policy, coordination=params.coordination,
+        total_arrivals=d["total_arrivals"], wasted_arrivals=d["wasted_arrivals"],
+        retarget_count=d["retarget_count"], wasted_travel_pc=d["wasted_travel_pc"],
+        midflight_aborts=0,  # no mid-flight relay in the powered instant/lightspeed fast path
+        mean_launch_speed_km_s=(
+            d["launch_speed_sum_pc_yr"] / d["launch_count"] / KM_S_TO_PC_YR
+            if d["launch_count"] else 0.0
+        ),
+        mean_settle_hop_pc=(
+            d["settle_hop_sum_pc"] / d["settle_hop_count"] if d["settle_hop_count"] else 0.0
+        ),
+        mean_wasted_hop_pc=(
+            d["wasted_hop_sum_pc"] / d["wasted_hop_count"] if d["wasted_hop_count"] else 0.0
+        ),
+        settle_energy_c2=0.5 * d["settle_v2_sum"] / c2,
+        wasted_energy_c2=0.5 * d["wasted_v2_sum"] / c2,
+        mean_settle_speed_km_s=(
+            d["settle_v_sum_pc_yr"] / d["settle_hop_count"] / KM_S_TO_PC_YR
+            if d["settle_hop_count"] else 0.0
+        ),
+        mean_wasted_speed_km_s=(
+            d["wasted_v_sum_pc_yr"] / d["wasted_hop_count"] / KM_S_TO_PC_YR
+            if d["wasted_hop_count"] else 0.0
+        ),
+        settle_hop_hist=list(d["settle_hop_hist"]),
+        wasted_hop_hist=list(d["wasted_hop_hist"]),
+        settle_wall_hist=list(d["settle_wall_hist"]),
+        wasted_wall_hist=list(d["wasted_wall_hist"]),
+        wasted_s_hist=list(d["wasted_s_hist"]),
+        steps=steps,
+    )
+
+
 def simulate_swarm(
+    params: SwarmParams, *, seed: int = 0x9E3779B9, record_steps: bool = True
+) -> SwarmResult:
+    """Run the settlement front and summarize; routes to the Rust fast path when it applies.
+
+    For the powered/instant-or-lightspeed/event config (the 200k scale sweeps), and when the
+    Rust ``run_fill`` extension is built, this dispatches to ``_simulate_swarm_rust`` - a
+    bit-identical, much faster path. Everything else (inflight, slingshot, fixed-step, or a
+    caller that needs the full per-event ``steps`` trace) uses the Python reference fold. The
+    two are byte-for-byte equal on the fast-path config (``test_rust_fill_loop.py``).
+    """
+    # The fast path returns only the single initial snapshot, so a caller that walks the full
+    # per-event trace (record_steps=True) must use the Python fold.
+    if not record_steps and _rust_fill_supported(params):
+        return _simulate_swarm_rust(params, seed=seed, record_steps=record_steps)
+    return _simulate_swarm_python(params, seed=seed, record_steps=record_steps)
+
+
+def _simulate_swarm_python(
     params: SwarmParams, *, seed: int = 0x9E3779B9, record_steps: bool = True
 ) -> SwarmResult:
     """Run the settlement front to completion (or ``max_years``) and summarize.

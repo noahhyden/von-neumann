@@ -48,9 +48,20 @@ bug at runtime.
 
 ## Optional Rust toolchain (issue #33, swarm only)
 
-The swarm module ships an optional pyo3 Rust drop-in for its nearest-unsettled
-k-d tree query (`swarm/rust/`), gated behind the `[project.optional-dependencies]
-rust` extra. Building it needs a stable Rust toolchain (`cargo`, `rustc`) plus
+The swarm module ships an optional pyo3 Rust drop-in (`swarm/rust/`) for two hot
+paths, gated behind the `[project.optional-dependencies] rust` extra:
+
+- the nearest-unsettled k-d tree **query** (`nearest_unsettled`, issue #33 Phase 1); and
+- the whole-fill **event loop** (`run_fill`, Tier 2 of the 200k speedup): for
+  `policy="powered"`, `coordination in {instant, lightspeed}`, `stepping="event"`
+  (the config every 200k scale sweep uses), `sim.simulate_swarm` hands the
+  Python-built seeded field + k-d tree to Rust, which runs the ~2M-event fill and
+  returns aggregates. **Measured ~4.5-5x** over the Python fold on k02 (200k fill:
+  ~20s -> ~4.5s), bit-identical. Everything else (inflight relay, slingshot
+  policies, fixed-step, or a caller needing the full per-event `steps` trace)
+  stays on the Python reference, which remains the source of truth.
+
+Building it needs a stable Rust toolchain (`cargo`, `rustc`) plus
 `maturin`; the extra pulls maturin, and any recent `rustup default stable`
 provides Cargo. To build and install the extension into `swarm`'s venv:
 
@@ -63,15 +74,21 @@ uv run --extra rust maturin develop --release --manifest-path rust/Cargo.toml
 Determinism note (repeats §7): the crate's `[profile.release]` disables LTO,
 pins `codegen-units = 1`, and never enables `fastmath`. `f64::sqrt` delegates
 to the hardware SQRTSD/FSQRT (correctly-rounded IEEE 754 on every modern
-platform), so Rust and Python produce bit-identical outputs. Verified end-to-end
-by `swarm/tests/test_kdtree_backends.py` (A/B/C oracle: Rust, numba, and pure
-Python return the same star for the same query) plus every committed drift-guard
-fixture (`tests/test_measure_results.py`) run through each backend.
+platform), so Rust and Python produce bit-identical outputs. The `run_fill` loop
+holds the same discipline: identical f64 op order to `sim.py`, the one
+`density**(-1/3)` precomputed in Python and passed as `inv_d_nn` (no `powf` in the
+loop), and periodic wrap via `round_ties_even` to match Python's banker's-rounding
+`round()`. Verified by `swarm/tests/test_kdtree_backends.py` (A/B/C query oracle)
+and `swarm/tests/test_rust_fill_loop.py` (the fill oracle: Rust `SwarmResult` ==
+Python `SwarmResult`, plus a direct check against the committed `finite_size.json`).
 
 Optional at runtime. A checkout without Cargo, without `maturin`, or without
 building the extension still runs and passes the whole test suite; `swarm/sim.py`
-falls back to numba (`swarm.kd_njit`) or pure Python. Override via
-`SWARM_NO_RUST=1` / `SWARM_NO_NJIT=1`.
+falls back to numba (`swarm.kd_njit`) or pure Python for the query, and to the
+Python fold for the loop. Override via `SWARM_NO_RUST=1` / `SWARM_NO_NJIT=1`, or
+`SWARM_NO_RUST_FILL=1` to keep the Rust query but force the Python loop. CI runs
+without the rust extra (the rust oracles skip), so the Python reference is what CI
+guards - the same convention as the query backend.
 
 ## Machines
 
