@@ -21,6 +21,15 @@ The ``-O`` strips ``if __debug__:`` invariant checks; ensemble runs get a ~2-3x
 wall-clock win at bit-identical results (see docs/HARDWARE.md "Assertion mode").
 Omit ``-O`` while iterating - you'll get a stderr warning on each run.
 
+Distributed across K boxes (issue #33, item 2 - only for measurements in SHARDABLE):
+
+    # On each box i in 0..K-1:
+    uv run --extra dev python -O -m experiments.measure --seed-slice $i/$K finite_size_periodic
+    # Then, with all shard files under experiments/results/:
+    uv run --extra dev python -O -m experiments.measure --merge finite_size_periodic
+
+The merge is bit-identical to a single-machine full run; see swarm/tests/test_seed_slice.py.
+
 Measurements (referee asks in brackets):
     lambda_sweep   - fuel/time/energy tax vs Lambda = v/c, powered, event [headline]
     branching      - tax vs offspring branching factor 2/3/4 [ask 1: the parameter that makes contention]
@@ -61,6 +70,52 @@ SCHEMA_VERSION = 3
 # uses the full 512; the larger sweeps (finite_size, near-linear since #30) use short prefixes.
 # Extending the pool past the old 64 leaves every existing prefix (<= 48) byte-identical.
 SEEDS = [0x9E3779B9 + 2654435761 * k for k in range(512)]
+
+
+# --------------------------------------------------------------------------------------------
+# seed slicing for distributed ensembles (item 2 of #33's alternative-levers list)
+# --------------------------------------------------------------------------------------------
+# The seed ensemble is map-only (each `(seed, mode)` run is independent), so it can be split
+# across machines with linear speedup. ``--seed-slice N/K`` runs only every K-th seed starting
+# at N (i.e., seeds at positions `i` where `i % K == N`), and writes to a shard file. The user
+# runs K shards on K boxes (any way that suits them: ssh, cloud batch, spot fleet) then runs
+# ``--merge <name> --slice-count K`` to reconstruct the full result from the shards.
+#
+# Bit-identical guarantee: ``merge(shard 0..K-1) == single-machine full run`` at the JSON
+# byte level. The fold is deterministic in (params, seed), so per-seed results are unchanged;
+# the merge step just re-interleaves them in the original seed order and re-runs aggregates
+# through the same summary functions. Verified by ``tests/test_seed_slice.py``.
+#
+# Scope: not every measurement is shardable yet. See ``SHARDABLE`` below; extending is
+# straightforward - each new measurement registers a merger function that concatenates its
+# shard-per-seed rows and calls its own aggregator.
+
+_SEED_SLICE: tuple[int, int] | None = None  # (index, count) - set by --seed-slice; else full run
+
+
+def _apply_slice(seeds: list[int]) -> list[int]:
+    """Filter ``seeds`` down to the active seed slice, or return unchanged when no slice.
+
+    ``--seed-slice N/K`` selects ``[seeds[i] for i in range(len(seeds)) if i % K == N]``.
+    Every shardable measurement wraps its ``SEEDS[:X]`` in a call to this helper.
+    """
+    if _SEED_SLICE is None:
+        return seeds
+    idx, count = _SEED_SLICE
+    return [s for i, s in enumerate(seeds) if i % count == idx]
+
+
+def _shard_suffix() -> str:
+    """Filename suffix for the active slice, or empty when running the full ensemble."""
+    if _SEED_SLICE is None:
+        return ""
+    return f".shard{_SEED_SLICE[0]}_{_SEED_SLICE[1]}"
+
+
+# Measurements that support ``--seed-slice`` / ``--merge`` today. Each entry needs a matching
+# entry in ``MERGERS`` (see below). Adding a measurement: refactor it to gather per-seed rows
+# through ``_paired`` (already deterministic under slicing) and register the merger.
+SHARDABLE = {"finite_size_periodic"}
 
 
 # --------------------------------------------------------------------------------------------
@@ -341,10 +396,18 @@ def clark_evans_R(xs: list[float], ys: list[float], zs: list[float], box_side_pc
 
 
 def write_result(name: str, config: dict, payload: dict) -> Path:
+    """Write ``<name>.json`` (or ``<name>.shardN_K.json`` when running a seed slice).
+
+    When a slice is active the output carries a top-level ``_shard`` block; ``--merge`` reads
+    that block to interleave shards back into full seed order before re-aggregating.
+    """
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    out = RESULTS_DIR / f"{name}.json"
-    doc = {"schema_version": SCHEMA_VERSION, "generator": "experiments.measure",
-           "measurement": name, "config": config, **payload}
+    out = RESULTS_DIR / f"{name}{_shard_suffix()}.json"
+    doc: dict = {"schema_version": SCHEMA_VERSION, "generator": "experiments.measure",
+                 "measurement": name, "config": config}
+    if _SEED_SLICE is not None:
+        doc["_shard"] = {"index": _SEED_SLICE[0], "count": _SEED_SLICE[1]}
+    doc.update(payload)
     out.write_text(json.dumps(doc, indent=2, sort_keys=False) + "\n")
     return out
 
@@ -1027,13 +1090,30 @@ def m_finite_size_periodic() -> None:
     data = {}
     per_n: dict[int, list[float]] = {}
     for n, k in n_seeds_by_n:
-        print(f"    N={n} ({k} seeds, periodic)", flush=True)
-        rows = _paired("lightspeed", seeds=SEEDS[:k], n_stars=n, policy="powered",
+        seeds = _apply_slice(SEEDS[:k])
+        if not seeds:
+            # Under an aggressive slice (K larger than k) some N's shard may be empty; the merge
+            # step tolerates this and reconstructs from other shards.
+            data[str(n)] = _tax_block([])
+            per_n[n] = []
+            print(f"    N={n} (skipped: empty slice)", flush=True)
+            continue
+        label = f"    N={n} ({len(seeds)} seeds, periodic)"
+        if _SEED_SLICE is not None:
+            label += f" [shard {_SEED_SLICE[0]}/{_SEED_SLICE[1]}]"
+        print(label, flush=True)
+        rows = _paired("lightspeed", seeds=seeds, n_stars=n, policy="powered",
                        probe_speed_c=0.2, speed_cap_c=0.4, stepping="event", periodic=True)
         data[str(n)] = _tax_block(rows)
         per_n[n] = [pct_delta(t["wasted_arrivals"], b["wasted_arrivals"]) for b, t in rows]
     ns = [n for n, _ in n_seeds_by_n]
-    slope, lo, hi = loglog_slope_ci([math.log10(n) for n in ns], [per_n[n] for n in ns])
+    # Under a shard, scale_regression is a subset regression; the merge step recomputes it from
+    # the concatenated per-seed data. Write ``None``s here so an accidentally-used shard file
+    # never masquerades as a full result.
+    if _SEED_SLICE is None:
+        slope, lo, hi = loglog_slope_ci([math.log10(n) for n in ns], [per_n[n] for n in ns])
+    else:
+        slope = lo = hi = None
     write_result("finite_size_periodic",
                  {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
                   "mode_treat": "lightspeed", "stepping": "event", "periodic": True},
@@ -1072,7 +1152,136 @@ ORDER = ["validation", "dt_artifact", "retarget_cap", "energy_tax", "branching",
          "floor_bracket_scale", "clumpiness_scale", "branching_scale"]
 
 
+def _merge_finite_size_periodic(shards: list[dict], config: dict) -> dict:
+    """Reconstruct the full ``finite_size_periodic`` JSON from its K shards.
+
+    For each N block, interleaves per-seed rows across shards in the original SEED order
+    (position ``i`` came from shard ``i % K`` at that shard's ``i // K`` row) and recomputes
+    the per-block ``_tax_block`` and the top-level ``scale_regression`` via the same
+    ``loglog_slope_ci`` the single-machine run used. Bit-identical by construction.
+    """
+    k = len(shards)
+    n_and_seeds = config["n_and_seeds"]  # JSON: [[N, k_seeds], ...]
+    data: dict = {}
+    per_n: dict[int, list[float]] = {}
+    for entry in n_and_seeds:
+        n, k_seeds = int(entry[0]), int(entry[1])
+        merged_rows: list[tuple[dict, dict]] = []
+        for i in range(k_seeds):
+            shard_idx = i % k
+            row_idx = i // k
+            per_seed_list = shards[shard_idx]["data"][str(n)]["per_seed"]
+            if row_idx >= len(per_seed_list):
+                raise ValueError(
+                    f"shard {shard_idx} of {k} is missing row {row_idx} for N={n}; "
+                    f"re-run the shard or check the slice_count matches every shard's _shard.count"
+                )
+            e = per_seed_list[row_idx]
+            merged_rows.append((e["base"], e["treat"]))
+        data[str(n)] = _tax_block(merged_rows)
+        per_n[n] = [pct_delta(t["wasted_arrivals"], b["wasted_arrivals"]) for b, t in merged_rows]
+    ns = [int(e[0]) for e in n_and_seeds]
+    slope, lo, hi = loglog_slope_ci([math.log10(n) for n in ns], [per_n[n] for n in ns])
+    return {
+        "data": data,
+        "scale_regression": {"x": "log10(N)", "unit": "percentage points per decade of N",
+                             "resample": "seeds within each N",
+                             "slope": slope, "ci_lo": lo, "ci_hi": hi},
+    }
+
+
+# Per-measurement mergers - one entry per shardable measurement (see SHARDABLE).
+MERGERS = {
+    "finite_size_periodic": _merge_finite_size_periodic,
+}
+
+
+def _do_merge(name: str) -> None:
+    """Discover ``<name>.shard*_K.json`` files, verify they cover the slice, and merge to ``<name>.json``."""
+    if name not in SHARDABLE:
+        raise SystemExit(
+            f"--merge: measurement '{name}' is not shardable. Shardable today: "
+            f"{sorted(SHARDABLE)}. See measure.py's SHARDABLE / MERGERS to add a new one."
+        )
+    shard_files = sorted(RESULTS_DIR.glob(f"{name}.shard*_*.json"))
+    if not shard_files:
+        raise SystemExit(f"--merge: no shard files found matching {name}.shard*_*.json")
+    shards: list[dict] = []
+    for path in shard_files:
+        with open(path) as f:
+            doc = json.load(f)
+        if "_shard" not in doc:
+            raise SystemExit(f"{path.name}: missing _shard metadata; not a shard file")
+        shards.append(doc)
+    # Every shard must belong to the same slice count.
+    counts = {s["_shard"]["count"] for s in shards}
+    if len(counts) != 1:
+        raise SystemExit(f"shards disagree on slice_count: {counts}")
+    (k,) = counts
+    # And every index 0..K-1 must be present exactly once.
+    indices = sorted(s["_shard"]["index"] for s in shards)
+    if indices != list(range(k)):
+        raise SystemExit(
+            f"shards for {name} are incomplete: have indices {indices}, need {list(range(k))}"
+        )
+    # Sort by shard index so the merger can address them positionally.
+    shards.sort(key=lambda s: s["_shard"]["index"])
+    # Configs must agree byte-for-byte, otherwise the shards ran different sweeps.
+    configs = {json.dumps(s["config"], sort_keys=True) for s in shards}
+    if len(configs) != 1:
+        raise SystemExit(f"shards for {name} disagree on config; refusing to merge")
+    config = shards[0]["config"]
+    payload = MERGERS[name](shards, config)
+    # Write the full JSON using the same code path as an end-to-end run (no _shard block).
+    global _SEED_SLICE
+    saved = _SEED_SLICE
+    _SEED_SLICE = None
+    try:
+        out = write_result(name, config, payload)
+    finally:
+        _SEED_SLICE = saved
+    print(f"[merged] {name} <- {len(shards)} shards -> {out}", flush=True)
+
+
+def _parse_seed_slice(argv: list[str]) -> tuple[int, int] | None:
+    """Extract ``--seed-slice N/K`` from argv. Returns (N, K) or None. Mutates argv in place."""
+    for i, a in enumerate(argv):
+        if a == "--seed-slice" and i + 1 < len(argv):
+            spec = argv[i + 1]
+            del argv[i : i + 2]
+            break
+        if a.startswith("--seed-slice="):
+            spec = a.split("=", 1)[1]
+            del argv[i]
+            break
+    else:
+        return None
+    if "/" not in spec:
+        raise SystemExit(f"--seed-slice expects N/K, got {spec!r}")
+    n_str, k_str = spec.split("/", 1)
+    try:
+        n, k = int(n_str), int(k_str)
+    except ValueError as ex:
+        raise SystemExit(f"--seed-slice: N and K must be integers ({ex})") from ex
+    if not (0 <= n < k):
+        raise SystemExit(f"--seed-slice: need 0 <= N < K, got N={n} K={k}")
+    return n, k
+
+
 def main(argv: list[str]) -> None:
+    global _SEED_SLICE
+    _SEED_SLICE = _parse_seed_slice(argv)
+
+    if "--merge" in argv:
+        # --merge <name> [<name>...]: reconstruct full JSONs from shard files.
+        i = argv.index("--merge")
+        merge_names = [a for a in argv[i + 1 :] if not a.startswith("-")]
+        if not merge_names:
+            raise SystemExit("--merge: expected one or more measurement names")
+        for n in merge_names:
+            _do_merge(n)
+        return
+
     force = "--force" in argv
     names = [a for a in argv if not a.startswith("-")]
     todo = names if names else ORDER
@@ -1080,13 +1289,19 @@ def main(argv: list[str]) -> None:
         if name not in MEASUREMENTS:
             print(f"unknown measurement: {name} (have: {', '.join(ORDER)})")
             continue
-        out = RESULTS_DIR / f"{name}.json"
+        if _SEED_SLICE is not None and name not in SHARDABLE:
+            print(
+                f"[skip] {name} (--seed-slice active; only {sorted(SHARDABLE)} are shardable)",
+                flush=True,
+            )
+            continue
+        out = RESULTS_DIR / f"{name}{_shard_suffix()}.json"
         if out.exists() and not force:
             print(f"[skip] {name} (exists; --force to recompute)", flush=True)
             continue
-        print(f"[run ] {name}", flush=True)
+        print(f"[run ] {name}{_shard_suffix()}", flush=True)
         MEASUREMENTS[name]()
-        print(f"[done] {name} -> results/{name}.json", flush=True)
+        print(f"[done] {name} -> results/{name}{_shard_suffix()}.json", flush=True)
 
 
 if __name__ == "__main__":
