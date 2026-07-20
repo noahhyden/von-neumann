@@ -36,6 +36,17 @@ Distributed across K boxes (issue #33, item 2 - only for measurements in SHARDAB
 
 The merge is bit-identical to a single-machine full run; see swarm/tests/test_seed_slice.py.
 
+Paired-free retarget-cap plateau locator (issue #73; see experiments/SPEC_PLATEAU_LOCATOR.md):
+
+    # Locate cap*(N) from instant-only bounce depth b = W_inst/N (no paired treatment run).
+    uv run --extra dev python -O -m experiments.measure --locate-plateau 200000
+    # Options: --plateau-caps 8,16,32  --plateau-seeds 8  --plateau-threshold 0.05
+    #          --plateau-paired  (run ONE paired measurement at cap* for the tax value)
+
+It prints the cap ladder (cap, b_median, delta_b) and cap* - the smallest cap past which the
+bounce depth stops moving - or reports no plateau in range. ~3x cheaper than the paired sweep for
+finding the plateau; the tax VALUE at cap* still needs the (optional) one paired run.
+
 Measurements (referee asks in brackets):
     lambda_sweep   - fuel/time/energy tax vs Lambda = v/c, powered, event [headline]
     branching      - tax vs offspring branching factor 2/3/4 [ask 1: the parameter that makes contention]
@@ -528,6 +539,117 @@ def _tax_block(rows: list[tuple[dict, dict]]) -> dict:
         "probes_pct": summarize(probes_pct),
         "per_seed": [{"base": b, "treat": t} for b, t in rows],
     }
+
+
+# --------------------------------------------------------------------------------------------
+# paired-free retarget-cap plateau locator (issue #73; see SPEC_PLATEAU_LOCATOR.md)
+# --------------------------------------------------------------------------------------------
+# The retarget_cap sweep finds cap*(N) - the smallest max_retargets cap past which the fuel tax
+# stops moving - via the full PAIRED (instant + lightspeed) sweep. The shortcut: the plateau
+# LOCATION is fixed by the instant baseline's bounce depth b = W_inst / N alone. Across the cap
+# ladder, b and the paired tax move together, so Delta b -> 0 locates the same plateau as
+# Delta tau -> 0. This locates cap* from instant-only runs (~3x cheaper); the tax VALUE at cap*
+# still needs one paired run. None means "no plateau in the tested ladder" - the honest large-N
+# regime (issue #86), where cap is a lower bound, not a saturation point.
+
+def bounce_depth(wasted_arrivals: int, n_stars: int) -> float:
+    """Instant-run bounce depth b = W_inst / N (wasted arrivals per star)."""
+    if n_stars <= 0:
+        raise ValueError(f"n_stars must be positive, got {n_stars}")
+    return wasted_arrivals / n_stars
+
+
+def median_bounce_depth(records: list[dict]) -> float:
+    """Median bounce depth over a list of per-seed instant records (each carrying
+    ``wasted_arrivals`` and ``n_stars``)."""
+    return statistics.median(bounce_depth(r["wasted_arrivals"], r["n_stars"]) for r in records)
+
+
+def locate_plateau(b_by_cap: dict[int, float], threshold: float = 0.05) -> int | None:
+    """Smallest cap ``k`` whose doubling ``2*k`` no longer moves the bounce depth, or None.
+
+    For each cap ``k`` (ascending) whose double is also present, ``Delta b = b[2k] - b[k]``; the
+    plateau is reached at the smallest ``k`` with ``Delta b < threshold``. ``b`` is monotonically
+    non-decreasing in cap, so a small positive step is convergence and the strict ``<`` also treats
+    a noise-driven negative step as converged; ``Delta b == threshold`` is not. None => no doubling
+    pair converges (plateau above the ladder, or no plateau at all at this N).
+    """
+    for k in sorted(b_by_cap):
+        two_k = 2 * k
+        if two_k in b_by_cap and (b_by_cap[two_k] - b_by_cap[k]) < threshold:
+            return k
+    return None
+
+
+def _instant_bounce_sweep(seeds: list[int], n_stars: int, caps: list[int]) -> dict[int, list[float]]:
+    """Instant-only fold at each cap over the seed ensemble; returns ``{cap: [b per seed]}``.
+
+    Reuses the shared instant params of ``m_retarget_cap`` (powered, Lambda=0.2, event), so at
+    N=400 these runs are bit-identical to that sweep's ``base`` records. Parallel over (cap, seed)
+    via ``_single_worker``; results stay in input order, so any worker count is deterministic.
+    """
+    args = [("instant",
+             dict(n_stars=n_stars, policy="powered", probe_speed_c=0.2, speed_cap_c=0.4,
+                  stepping="event", max_retargets=cap),
+             seed)
+            for cap in caps for seed in seeds]
+    recs = _parallel_map(_single_worker, args, label="instant")
+    out: dict[int, list[float]] = {}
+    idx = 0
+    for cap in caps:
+        out[cap] = [bounce_depth(recs[idx + j]["wasted_arrivals"], n_stars) for j in range(len(seeds))]
+        idx += len(seeds)
+    return out
+
+
+def locate_plateau_report(n_stars: int, *, caps: list[int] | None = None,
+                          seeds: list[int] | None = None, threshold: float = 0.05,
+                          paired: bool = False) -> dict:
+    """Locate cap*(N) from instant-only bounce depth; optionally one paired run for the tax.
+
+    Returns a plain dict: the per-cap ladder (``cap``, ``b_median``, consecutive ``delta_b``),
+    the located ``cap_star`` (or None), and - when ``paired`` and a plateau was found - the paired
+    fuel tax at ``cap_star``. This is the body behind ``--locate-plateau``; kept as a returning
+    function so the whole flow is testable without the CLI.
+    """
+    caps = sorted(set(caps if caps is not None else [8, 16, 32]))
+    seeds = seeds if seeds is not None else SEEDS[:8]
+    sweep = _instant_bounce_sweep(seeds, n_stars, caps)
+    b_by_cap = {cap: statistics.median(vs) for cap, vs in sweep.items()}
+    cap_star = locate_plateau(b_by_cap, threshold)
+    ladder: list[dict] = []
+    prev: float | None = None
+    for cap in caps:
+        b = b_by_cap[cap]
+        ladder.append({"cap": cap, "b_median": b, "delta_b": None if prev is None else b - prev})
+        prev = b
+    report = {"n_stars": n_stars, "n_seeds": len(seeds), "caps": caps,
+              "threshold": threshold, "ladder": ladder, "cap_star": cap_star, "paired": None}
+    if paired and cap_star is not None:
+        rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy="powered",
+                       probe_speed_c=0.2, speed_cap_c=0.4, stepping="event", max_retargets=cap_star)
+        report["paired"] = {"cap": cap_star, "fuel_pct": _tax_block(rows)["fuel_pct"]}
+    return report
+
+
+def _print_plateau_report(rep: dict) -> None:
+    """Human-readable dump of a ``locate_plateau_report`` result."""
+    print(f"plateau locator: N={rep['n_stars']}, {rep['n_seeds']} seeds, "
+          f"threshold={rep['threshold']} (b = W_inst/N)")
+    print(f"  {'cap':>5}  {'b_median':>10}  {'delta_b':>10}")
+    for row in rep["ladder"]:
+        db = "" if row["delta_b"] is None else f"{row['delta_b']:+.3f}"
+        print(f"  {row['cap']:>5}  {row['b_median']:>10.3f}  {db:>10}")
+    if rep["cap_star"] is None:
+        print("  cap* = none: no plateau in the tested ladder (cap is a lower bound; "
+              "extend --plateau-caps or run larger caps)")
+    else:
+        print(f"  cap* = {rep['cap_star']} (bounce depth flat past here; "
+              f"run one paired measurement here for the tax value)")
+    if rep["paired"] is not None:
+        fp = rep["paired"]["fuel_pct"]
+        print(f"  paired tax at cap {rep['paired']['cap']}: "
+              f"fuel {fp['median']:.3f}% (95% CI {fp['ci_lo']:.3f}..{fp['ci_hi']:.3f})")
 
 
 # --------------------------------------------------------------------------------------------
@@ -1745,9 +1867,52 @@ def _parse_seed_slice(argv: list[str]) -> tuple[int, int] | None:
     return n, k
 
 
+def _extract_opt(argv: list[str], flag: str) -> str | None:
+    """Pop ``--flag VALUE`` or ``--flag=VALUE`` from argv, returning VALUE (or None if absent)."""
+    for i, a in enumerate(argv):
+        if a == flag and i + 1 < len(argv):
+            val = argv[i + 1]
+            del argv[i : i + 2]
+            return val
+        if a.startswith(flag + "="):
+            val = a.split("=", 1)[1]
+            del argv[i]
+            return val
+    return None
+
+
+def _run_locate_plateau(argv: list[str]) -> None:
+    """Handle ``--locate-plateau N`` and its ``--plateau-*`` options (issue #73)."""
+    n_str = _extract_opt(argv, "--locate-plateau")
+    if n_str is None:
+        raise SystemExit("--locate-plateau expects a star count N, e.g. --locate-plateau 200000")
+    try:
+        n_stars = int(n_str)
+    except ValueError as ex:
+        raise SystemExit(f"--locate-plateau: N must be an integer ({ex})") from ex
+
+    caps_str = _extract_opt(argv, "--plateau-caps")
+    caps = [int(c) for c in caps_str.split(",")] if caps_str else [8, 16, 32]
+    seeds_str = _extract_opt(argv, "--plateau-seeds")
+    n_seeds = int(seeds_str) if seeds_str else 8
+    thr_str = _extract_opt(argv, "--plateau-threshold")
+    threshold = float(thr_str) if thr_str else 0.05
+    paired = "--plateau-paired" in argv
+    if paired:
+        argv[:] = [a for a in argv if a != "--plateau-paired"]
+
+    rep = locate_plateau_report(n_stars, caps=caps, seeds=SEEDS[:n_seeds],
+                                threshold=threshold, paired=paired)
+    _print_plateau_report(rep)
+
+
 def main(argv: list[str]) -> None:
     global _SEED_SLICE
     _SEED_SLICE = _parse_seed_slice(argv)
+
+    if any(a == "--locate-plateau" or a.startswith("--locate-plateau=") for a in argv):
+        _run_locate_plateau(argv)
+        return
 
     if "--merge" in argv:
         # --merge <name> [<name>...]: reconstruct full JSONs from shard files.
