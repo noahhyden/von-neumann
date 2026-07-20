@@ -27,6 +27,7 @@ with the code:
 | `imports` module -> module | AST-parsed absolute `import`/`from` of an intra-repo package (src-layout `dir/src/<pkg>/`) |
 | `results` module -> `*.json` | the committed `results/*.json` a module owns |
 | `figures` paper -> module | a paper's `\includegraphics{X.pdf}` matched to the module whose `paper_figures.py` emits the literal `"X.pdf"` |
+| `frontend` module -> port | a module's TS re-implementation, by the convention `frontend/src/<module>-model.ts` (a forward edge: a fold change makes the parity-tested port stale) |
 
 The figure edges reproduce the hand-maintained CI `paths-filter`
 (`coordination-tax -> swarm`, `electronics-wall -> closure-sim`, `spine -> spine`)
@@ -76,9 +77,10 @@ Asserted by `--selftest` and by `test_depgraph.py`:
 
 ### Non-goals (known gaps)
 
-- **Frontend TypeScript ports** (`swarm-model.ts`, ...) consume the folds but are not
-  Python imports, so they are absent from the DAG. Their bit-identity is covered by
-  the parity fixtures; their *staleness* is not yet tracked here.
+- **Frontend edges are convention-based**, not import-based: a module's port is found
+  by the `frontend/src/<module>-model.ts` name, and the edge flags the port for
+  re-verification against the parity fixtures - depgraph does not parse the TS. A port
+  that breaks the naming convention is invisible here.
 - Dynamic / `importlib` / conditional imports are not seen (literal AST imports only).
 - Third-party and stdlib imports are ignored (only intra-repo packages are edges).
 

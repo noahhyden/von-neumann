@@ -21,11 +21,14 @@ must re-run and A's results/papers may have drifted.
                                 module whose paper_figures.py emits the string
                                 "X.pdf". Derived from CONTENT, so it cannot drift
                                 from the code the way a hand-kept list would.
+  - frontend module -> port   : a module's TS re-implementation, by the convention
+                                frontend/src/<module>-model.ts. A fold change makes
+                                the parity-tested port stale (a forward edge).
 
 === NON-GOALS (deliberately out of scope; do not assume these are covered) ===
-  - Frontend TypeScript ports (swarm-model.ts, ...) are consumers of the folds
-    but are NOT Python imports, so they are absent from the DAG. Their bit-identity
-    is covered by the parity fixtures; their STALENESS is a known gap (see README).
+  - The frontend edge is CONVENTION-based (the -model.ts name), not import-based: it
+    flags the port for re-verification against the parity fixtures, it does not parse
+    the TS. A port that breaks the naming convention is invisible here.
   - Dynamic/`importlib`/conditional imports are not seen (AST of literal imports only).
   - Third-party and stdlib imports are ignored (only intra-repo packages are edges).
   - Runtime/data dependencies that are not Python imports (e.g. a module reading
@@ -39,6 +42,7 @@ must re-run and A's results/papers may have drifted.
   - Result owners are exactly the modules with committed ensembles (swarm, spine).
   - paper->module edges equal the CI paths-filter: coordination-tax->swarm,
     electronics-wall->closure-sim, spine->spine.
+  - swarm's frontend port is frontend/src/swarm-model.ts.
 
 Pure stdlib, deterministic (everything sorted). Wall-clock only; it reads the tree,
 it never runs a fold - so it can never change a number (CLAUDE.md 7).
@@ -184,6 +188,27 @@ def build_paper_edges(repo: Path, module_figures: dict[str, set[str]]) -> dict[s
     return edges
 
 
+def build_frontend_ports(repo: Path, modules: list[str]) -> dict[str, str]:
+    """{module: frontend TS model-port path}. Convention: frontend/src/<module>-model.ts.
+
+    A convention-based edge, not an import edge: the TS port re-implements the module's
+    fold and must stay bit-identical to it (the parity fixtures), so a fold change makes
+    the port stale even though no Python import connects them. `reactive-model.ts` and
+    any other `*-model.ts` not named after a module are ignored.
+    """
+    out: dict[str, str] = {}
+    src = repo / "frontend" / "src"
+    if not src.is_dir():
+        return out
+    modset = set(modules)
+    suffix = "-model.ts"
+    for f in sorted(src.glob("*" + suffix)):
+        mod = f.name[: -len(suffix)]
+        if mod in modset:
+            out[mod] = str(f.relative_to(repo))
+    return out
+
+
 def reverse_reachable(edges: dict[str, set[str]], changed: set[str]) -> set[str]:
     """All modules affected by a change to `changed`: the set plus every transitive importer."""
     importers: dict[str, set[str]] = defaultdict(set)
@@ -233,6 +258,7 @@ class Graph:
         self.results = build_results(repo, self.modules)
         self.figures = build_figures(repo, self.modules)
         self.papers = build_paper_edges(repo, self.figures)
+        self.frontend = build_frontend_ports(repo, self.modules)
 
     def impact(self, changed: set[str]) -> dict[str, list[str]]:
         affected = reverse_reachable(self.edges, changed)
@@ -241,6 +267,7 @@ class Graph:
             "test_impact": sorted(affected),
             "stale_results": sorted(j for m in affected for j in self.results.get(m, [])),
             "stale_papers": sorted(s for s, srcs in self.papers.items() if srcs & affected),
+            "stale_frontend": sorted(self.frontend[m] for m in affected if m in self.frontend),
         }
 
 
@@ -265,6 +292,8 @@ def selftest(repo: Path) -> int:
     expected = {"coordination-tax": {"swarm"}, "electronics-wall": {"closure-sim"}, "spine": {"spine"}}
     for slug, want in expected.items():
         check(g.papers.get(slug) == want, f"paper {slug} -> {sorted(g.papers.get(slug, set()))}, expected {sorted(want)}")
+    check(g.frontend.get("swarm") == "frontend/src/swarm-model.ts",
+          f"swarm frontend port -> {g.frontend.get('swarm')}, expected frontend/src/swarm-model.ts")
 
     if failures:
         print("SELFTEST FAILED:")
@@ -285,6 +314,8 @@ def _fmt_impact(payload: dict[str, list[str]], changed: set[str]) -> str:
     lines += [f"    {j}" for j in payload["stale_results"]] or ["    (none)"]
     lines.append(f"\nstale papers ({len(payload['stale_papers'])} to rebuild):")
     lines += [f"    {s}" for s in payload["stale_papers"]] or ["    (none)"]
+    lines.append(f"\nstale frontend ports ({len(payload['stale_frontend'])} to re-verify vs parity):")
+    lines += [f"    {p}" for p in payload["stale_frontend"]] or ["    (none)"]
     return "\n".join(lines)
 
 
@@ -308,6 +339,9 @@ def _fmt_graph(g: Graph) -> str:
     lines.append("\npaper -> source module(s):")
     for s, srcs in sorted(g.papers.items()):
         lines.append(f"  {s:18s} -> {', '.join(sorted(srcs)) if srcs else '(no matched figures)'}")
+    lines.append("\nfrontend TS port -> source module:")
+    for m, port in sorted(g.frontend.items()):
+        lines.append(f"  {port:32s} <- {m}")
     return "\n".join(lines)
 
 
@@ -359,6 +393,7 @@ def main(argv: list[str] | None = None) -> int:
             "imports": {m: sorted(g.edges[m]) for m in g.modules},
             "results": g.results,
             "papers": {s: sorted(v) for s, v in g.papers.items()},
+            "frontend": g.frontend,
         }, indent=2))
         return 0
 

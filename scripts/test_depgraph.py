@@ -76,6 +76,12 @@ def mini(tmp_path: Path) -> Path:
     # a non-module top-level dir named in _NON_MODULE
     (tmp_path / "docs").mkdir()
 
+    # frontend TS ports: aa-model.ts matches module aa; reactive-model.ts does not.
+    fsrc = tmp_path / "frontend" / "src"
+    fsrc.mkdir(parents=True)
+    (fsrc / "aa-model.ts").write_text("// port of aa\n")
+    (fsrc / "reactive-model.ts").write_text("// generic base, not a module\n")
+
     return tmp_path
 
 
@@ -137,6 +143,16 @@ def test_paper_edges_no_papers_dir(tmp_path: Path):
     assert dg.build_paper_edges(tmp_path, {}) == {}               # papers/ absent
 
 
+def test_frontend_ports(mini: Path):
+    mods = sorted(set(dg.discover_modules(mini).values()))
+    # aa-model.ts maps to module aa; reactive-model.ts (no module) is ignored.
+    assert dg.build_frontend_ports(mini, mods) == {"aa": "frontend/src/aa-model.ts"}
+
+
+def test_frontend_ports_no_frontend_dir(tmp_path: Path):
+    assert dg.build_frontend_ports(tmp_path, ["aa"]) == {}        # frontend/src absent
+
+
 # --------------------------------------------------------------------------- #
 # reachability / impact
 # --------------------------------------------------------------------------- #
@@ -152,9 +168,11 @@ def test_graph_impact(mini: Path):
     assert imp["test_impact"] == ["aa", "bb", "cc"]
     assert imp["stale_results"] == ["cc/experiments/results/out.json"]  # cc reached
     assert imp["stale_papers"] == ["p1"]                               # aa reached
-    # a change with no downstream results/papers
+    assert imp["stale_frontend"] == ["frontend/src/aa-model.ts"]       # aa's port reached
+    # a change with no downstream results/papers/ports
     imp2 = g.impact({"dd"})
     assert imp2["stale_results"] == [] and imp2["stale_papers"] == []
+    assert imp2["stale_frontend"] == []
 
 
 # --------------------------------------------------------------------------- #
@@ -211,6 +229,14 @@ def test_live_swarm_reaches_spine():
     imp = g.impact({"swarm"})
     assert "spine" in imp["test_impact"]
     assert any("spine/experiments/results" in j for j in imp["stale_results"])
+
+
+def test_live_frontend_ports():
+    g = dg.Graph(REPO)
+    assert g.frontend["swarm"] == "frontend/src/swarm-model.ts"
+    assert "reactive" not in g.frontend            # generic base is not a module
+    # a swarm change marks its TS port stale
+    assert "frontend/src/swarm-model.ts" in g.impact({"swarm"})["stale_frontend"]
 
 
 # --------------------------------------------------------------------------- #
