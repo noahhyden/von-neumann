@@ -46,6 +46,23 @@ python scripts/depgraph.py --selftest         # assert the correctness contract
 `--changed` accepts module dir names (`swarm`), package names (`vn_core`), or file
 paths (the first path component that is a module wins), comma-separated.
 
+### `make affected M=<module>`
+
+The repo's `Makefile` wraps `depgraph --changed ... --list` into a runner that tests
+exactly the reachable set:
+
+```sh
+make affected M=swarm        # runs swarm + spine (spine imports swarm)
+make affected M=vn_core      # runs every module (core is the universal substrate)
+make affected M=shielding    # runs shielding + reliability
+```
+
+It prints the full impact report (test impact + stale results + papers) first, then
+runs each reachable module's `pytest` suite via `uv run --extra dev`. This is the
+repo-scale replacement for "re-run everything" (too slow) and "re-run just what I
+touched" (misses downstream drift). Note: `M` must be a graph module (a src-layout
+package); `scripts` itself is tooling and is not in the DAG.
+
 ### Correctness contract
 
 Asserted by `--selftest` and by `test_depgraph.py`:

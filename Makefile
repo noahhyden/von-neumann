@@ -23,7 +23,7 @@ WORKERS ?=
 NAME ?=
 
 .DEFAULT_GOAL := help
-.PHONY: help test test-py test-frontend frontend sweep papers list
+.PHONY: help test test-py test-frontend frontend sweep papers list affected
 
 help:
 	@echo "von-neumann dev-suite"
@@ -31,6 +31,7 @@ help:
 	@echo "  make test              run all module tests (python + frontend)"
 	@echo "  make test-py           run all python module tests"
 	@echo "  make test M=<module>   run one module's tests (e.g. M=swarm)"
+	@echo "  make affected M=<module>   run tests for every module a change to M reaches"
 	@echo "  make test-frontend     run frontend Layer A + Layer B (pimas contract)"
 	@echo "  make frontend          live-rebuild the frontend (npm run serve)"
 	@echo "  make sweep NAME=<name> [WORKERS=N]   run one swarm experiment"
@@ -57,6 +58,22 @@ test-py:
 		echo ">> tests: $$m"; \
 		( cd $$m && uv run pytest -q ) || exit $$?; \
 	done
+
+# `make affected M=<module>` runs the tests of every module a change to M reaches
+# (M plus its transitive importers), via scripts/depgraph.py, and prints the stale
+# results/papers as a heads-up. The reachable set is computed, not remembered - the
+# repo-scale replacement for "re-run everything" or "re-run just what I touched".
+affected:
+ifeq ($(strip $(M)),)
+	@echo "usage: make affected M=<module>   (module dir, package name, or file path)"; exit 2
+else
+	@python3 scripts/depgraph.py --changed $(M)
+	@echo ""
+	@for m in $$(python3 scripts/depgraph.py --changed $(M) --list); do \
+		echo ">> tests: $$m"; \
+		( cd $$m && uv run --extra dev pytest -q ) || exit $$?; \
+	done
+endif
 
 test-frontend:
 	@echo ">> tests: frontend (Layer A + Layer B)"

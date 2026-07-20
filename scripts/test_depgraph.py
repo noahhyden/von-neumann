@@ -249,6 +249,13 @@ def test_main_changed_json(capsys):
     assert set(payload["test_impact"]) == set(dg.Graph(REPO).modules)
 
 
+def test_main_changed_list(capsys):
+    # --list emits just the test-impact module names, one per line, sorted (for `make affected`).
+    assert dg.main(["--changed", "swarm", "--list"]) == 0
+    lines = capsys.readouterr().out.split()
+    assert lines == ["spine", "swarm"]
+
+
 def test_main_changed_none_stale(capsys):
     # comms owns no results and nothing imports it -> the "(none)" formatting branches.
     assert dg.main(["--changed", "comms"]) == 0

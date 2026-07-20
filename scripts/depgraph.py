@@ -324,6 +324,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="monorepo dependency graph", formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--changed", help="comma-separated module names / package names / file paths")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
+    ap.add_argument("--list", action="store_true", help="with --changed: print only the test-impact module names, one per line (for `make affected`)")
     ap.add_argument("--dot", action="store_true", help="emit Graphviz DOT of the import DAG")
     ap.add_argument("--selftest", action="store_true", help="assert the correctness contract, exit nonzero on drift")
     args = ap.parse_args(argv)
@@ -344,7 +345,12 @@ def main(argv: list[str] | None = None) -> int:
             print("no valid modules in --changed", file=sys.stderr)
             return 1
         payload = g.impact(changed)
-        print(json.dumps(payload, indent=2) if args.json else _fmt_impact(payload, changed))
+        if args.list:
+            print("\n".join(payload["test_impact"]))
+        elif args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print(_fmt_impact(payload, changed))
         return 0
 
     if args.json:
