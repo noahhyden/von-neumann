@@ -7,12 +7,13 @@ seen in a fixed-timestep model collapses -- it was a discretization artifact -- 
 speed-up survives intact, reproducing Nicholson and Forgan to the same order of magnitude. The genuine cost is
 redundant travel: every star is still settled, with a negligible change in the number of probes
 built, but stale views send probes to stars others have already claimed. That waste follows a
-simple law we both derive and measure -- the delay multiplies the wasted journeys by $1 + v/c$, so the
-tax, the extra wasted trips as a fraction of those a perfect-information swarm already flies, equals
-the probe's speed in units of light, $\Lambda = v/c$ -- from negligible at the powered cruise, through
-about a percent at slingshot speeds, to a fifth at the directed-energy speeds beamed propulsion
-targets. (The baseline is itself wasteful, about four in five journeys even with a perfect map, so
-this is a $v/c$ surcharge, not a fifth of all trips.) The law holds under a clumpy field, where if
+simple law we both derive and measure -- the delay multiplies the wasted journeys by at most $1 + v/c$,
+so the tax, the extra wasted trips as a fraction of those a perfect-information swarm already flies,
+scales with the probe's speed in units of light, $\Lambda = v/c$, at a coefficient that saturation
+holds below one (about $0.8$ on the canonical field) and that shrinks with system size -- from
+negligible at the powered cruise, through about a percent at slingshot speeds, to a sixth at the
+directed-energy speeds beamed propulsion targets. (The baseline is itself wasteful, about five in six
+journeys even with a perfect map, so this is a $v/c$ surcharge, not a sixth of all trips.) The law holds under a clumpy field, where if
 anything it softens; it grows with the replication branching factor without saturating up to sixteen
 offspring; and whether it also costs energy is mission-dependent: only a rendezvous that must brake
 pays for a wasted trip's kinetic energy, which for the fast policies was largely gravitationally

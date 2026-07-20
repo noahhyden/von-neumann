@@ -496,24 +496,48 @@ justifications.
 **The coordination-tax paper cites the p2 ladder as canonical (Issue #38).** Every
 quantitative claim in `papers/coordination-tax/` now sources from the `p2` keys
 above (the ladder `run_fill_flat` computes; figures read them via
-`experiments.paper_figures.load(..., p2=True)`), with two deliberate exceptions
-that stay on the historical (non-p2) block:
+`experiments.paper_figures.load(..., p2=True)`).
+
+**Each fixed-N base sweep runs at its own 1-minute-ceiling N.** Rather than a shared
+N=512 anchor, every fixed-N p2 base sweep runs on the largest power-of-two field it
+completes in <= ~1 min wall-clock at SWARM_WORKERS=8 on k02 (`P2_FIXED_N` in
+`experiments/measure.py`; the folds are deterministic, so N is a pure wall-clock
+choice). The chosen N and their measured wall-clock: lambda_sweep 2048 (30.7s),
+branching 8192 (57.9s), energy_tax 2048 (57.3s), concurrency 32768 (33.3s),
+floor_bracket 32768 (64.2s, marginally over and kept), retarget_cap 32768 (52.3s),
+dt_artifact 8192 (53.4s, fixed-step rows use the pointer path so this caps lowest),
+clumpiness 4096 (26.4s). The measurements therefore sit at different points on the
+size decline, and the paper reads each on its own terms rather than as a shared-N
+cross-check.
+
+Two exceptions stay on the historical (non-p2) block:
 - The Nicholson & Forgan speed-up replication (`validation.json`, "about 166x on a
   400-star field, against their factor of about 100") is kept on the historical
   N=400 measurement, because its whole purpose is to reproduce the external result
-  at a comparable field; the p2 companion reports 195.7x at N=512 for reference.
+  at a comparable field.
 - The clumpiness slope narrative (`clumpiness.json`, `fig_fuel_tax_vs_clumpiness`)
   stays on the historical N=500 ensemble, because its scale companion
   (`clumpiness_scale.json`) is the one measurement Issue #38 left without a p2
-  rerun; the p2 companion (a = 1.06 [0.97, 1.12] at N=512) is cited only as a
-  consistency check. The `clumpiness_scale` uniform slope (a = 0.078 at N=200,000)
-  is likewise the historical value the paper still quotes at scale.
+  rerun. The `clumpiness_scale` uniform slope (a = 0.078 at N=200,000) is likewise
+  the historical value the paper still quotes at scale.
 
-One number moved as a side effect: the in-flight-relay fill-time cost at Lambda=0.2
-in `floor_bracket.json` reads ~9% (p2 N=512; ~10% on the current historical N=400
-block), not the "about 2%" an earlier paper draft quoted - that figure predated the
-PR #78 pow/sqrt hop fix that shifted the inflight fill times, and the paper text now
-matches the committed JSON.
+**Two findings that the larger fields turned from clean claims into honest caveats
+(these are results, not bugs):**
+- The headline through-origin coefficient of tax = a*v/c is a = 0.82 at the N=2048
+  headline field (`lambda_sweep.json` p2), resolvably below the derived ceiling of
+  one. The v/c *form* holds; the coefficient sits below one because saturation
+  removes waste the delay would add, and it *declines with N*: a ~ 0.97 at N=500
+  (clumpiness), 0.82 at N=2048, 0.73 at N=4096, 0.068 at N=262,144. The paper reframes
+  "tax IS v/c" as "tax scales as v/c with a coefficient below one that shrinks with N."
+- The retarget-cap plateau that justified the default cap=8 does not survive to
+  N=32768 (`retarget_cap.json` p2): the tax climbs monotonically 0.4/1.4/5.9/12.1/
+  15.4% across caps 2/4/8/16/32 with no levelling, so cap=8 captures under 40% of the
+  cap-32 tax. cap=8 is now documented as a *lower bound* whose downward bias grows
+  with N; every fuel-tax figure using it is "at least this much."
+- The in-flight-relay fill-time cost at Lambda=0.2 is ~30% at N=32768 (was quoted as
+  "about 2%" in an earlier draft, which predated the PR #78 pow/sqrt hop fix); the
+  relay still drives completed wasted arrivals to zero, but the fill-time price grows
+  with field size.
 
 **Flat p2 kd-tree substrate (Issue #38 p2 scope, `swarm/rust/`).** For sweeps
 at `n_stars = 2^k, k >= 3`, `swarm_rust` exposes a second, heap-indexed kd-tree

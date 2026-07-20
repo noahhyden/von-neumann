@@ -52,13 +52,16 @@ chiefly changes is how many wasted journeys the swarm flies to stars other probe
 claimed. That is a cost paid mostly in fuel and effort rather than time, and a
 perfect-information model hides it entirely. It is governed cleanly by a single dimensionless
 number, the probe's speed in units of the speed of light. The delay multiplies the wasted
-journeys by $1+\Lambda$, so the tax -- the extra wasted trips as a fraction of those a
+journeys by at most $1+\Lambda$, so the tax -- the extra wasted trips as a fraction of those a
 perfect-information swarm already flies -- is negligible for a powered cruise, about a percent at
-slingshot speeds, and a fifth at the directed-energy speeds that beamed-propulsion concepts target.
-That baseline is itself wasteful: even with a perfect map about four in five journeys are
-redundant, so the tax is a $v/c$ surcharge on an already-redundant process, not a fifth of all
-journeys. We derive from a short collision argument that this relative tax should equal $\Lambda$
-itself and confirm it in simulation, show the tax grows with the replication branching factor
+slingshot speeds, and a sixth at the directed-energy speeds that beamed-propulsion concepts target
+(measured on a two-thousand-star field; the coefficient shrinks with system size). That baseline is
+itself wasteful: even with a perfect map about five in six journeys are
+redundant, so the tax is a $v/c$ surcharge on an already-redundant process, not a sixth of all
+journeys. We derive from a short collision argument that this relative tax has $\Lambda$ as its
+leading-order ceiling, and find in simulation that the measured coefficient sits below it -- about
+$0.8$ on the canonical field and declining with size, as saturation removes waste the delay would
+otherwise add. We show the tax grows with the replication branching factor
 without saturating up to sixteen offspring and survives a clumpy (non-uniform) field, and -- because a probe deciding only
 at its stops is pessimistic -- that a probe which listens in flight recovers almost all of it,
 bounding how much coordination can ever buy back. The cost is dominated

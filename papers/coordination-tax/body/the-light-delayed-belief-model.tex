@@ -86,12 +86,14 @@ baseline -- is just $p_{\text{lag}}/p_{\text{perfect}} - 1 \approx \Lambda$. Two
 (\ref{eq:tax}) are worth stating because the simulation independently reproduces both: the hop
 length $d$ cancels, so the tax cannot depend on how far apart the stars are, and the local claim
 rate cancels, so it cannot depend on the stellar density. This is a leading-order estimate -- it
-assumes claims of a candidate are independent and locally uniform in time, and it ignores the
-geometry of which stars are in contention -- so it predicts the coefficient of proportionality is
-one, not its small corrections. Section~\ref{sec:results} shows the measured tax follows
-$\Lambda$ with a through-origin slope of $0.95$, and a more robust slope interval of $[0.89, 1.19]$
-(from the clumpy-field sweep's uniform null; Section~\ref{sec:clumpy}) that brackets the predicted
-unit coefficient, and confirms the $d$- and density-independence directly.
+assumes claims of a candidate are independent and locally uniform in time, and it ignores both the
+geometry of which stars are in contention and the saturation of already-doomed hops -- so it predicts
+the coefficient of proportionality is one, as a ceiling that those corrections can only lower.
+Section~\ref{sec:results} shows the measured tax follows $\Lambda$ in \emph{form} but with a
+coefficient below that ceiling: a through-origin slope of $0.82$ on the $N = 2{,}048$ headline field,
+resolvably under one and declining with system size as saturation strengthens (from $a \approx 0.97$
+at a few hundred stars to $0.068$ at a quarter-million). The simulation confirms the $d$- and
+density-independence of the form directly.
 
 \subsection{Experimental design and parameters}
 The field is a box of stars at a uniform density of one star per cubic parsec, the convention of
@@ -105,10 +107,13 @@ undercounts what a probe could know and so makes the measured waste a conservati
 we measure the opposite, optimistic bound (a probe that listens in flight) separately in
 Section~\ref{sec:floor}. Second, a probe that loses a race re-targets, but only up to a fixed
 number of times before it is retired; this cap is applied identically under both coordination
-regimes, so the paired comparison is fair, and the measured tax converges as the cap is raised --
-at $\Lambda = 0.2$ the fuel tax is $5.1$, $12.0$, $19.7$, $22.7$, $22.8\%$ for caps of $2, 4, 8, 16,
-32$, rising while the cap still truncates live bounce chains and saturating by $16$ -- so our
-default of $8$ is a near-converged mild lower bound, not a free knob. Third, the whole simulation is a pure,
+regimes, so the paired comparison is fair. On the few-hundred-star fields of earlier work the tax
+plateaued above about $\text{cap} = 8$, which is why we adopt $\text{cap} = 8$ as the default -- but
+that plateau does not survive to larger fields (Section~\ref{sec:scale-companions}): at $\Lambda =
+0.2$ and $N = 32{,}768$ the fuel tax is $0.4$, $1.4$, $5.9$, $12.1$, $15.4\%$ for caps of
+$2, 4, 8, 16, 32$, still climbing with no sign of levelling. The default cap of $8$ is therefore a
+documented \emph{lower bound}, not a converged value, and every fuel-tax figure it produces is an
+underestimate whose size grows with the field (negligible at small $N$, substantial at scale). Third, the whole simulation is a pure,
 seeded, event-driven fold: fixing the seed fixes the star field, every arrival, and every target
 choice, so a run with the light-speed gate and a run without it can be compared on the
 \emph{identical} galaxy. That paired design attributes a difference to the delay alone rather than
@@ -137,11 +142,13 @@ seeds and differ only in the stated star count.
   \centering
   \caption{The paired ensemble used by each measurement. All are event-driven and paired (each seed
     filled under both coordination regimes on the identical field); seed counts are prefixes of one
-    fixed 512-seed set, sized to each measurement's cost. Star counts are the power-of-two ladder the
-    \texttt{run\_fill\_flat} fast path computes (Issue \#38), which the paper cites as canonical; the
-    clumpy-field sweep is the one exception, kept on its historical $N = 500$ ensemble. The lower block
-    repeats each fixed-$N$ sweep at $N = 262{,}144$ (the clumpy-field companion excepted -- it has no
-    power-of-two rerun and stays at $N = 200{,}000$) using the finite-size arm's precision-target seed
+    fixed 512-seed set, sized to each measurement's cost. Star counts are powers of two computed by
+    the \texttt{run\_fill\_flat} fast path (Issue \#38); each fixed-$N$ sweep runs on the largest
+    power-of-two field it can complete in about a minute of wall-clock, so the measurements sit at
+    different $N$ rather than a shared anchor (the clumpy-field sweep is kept on its historical
+    $N = 500$ ensemble, its scale companion having no power-of-two rerun). The lower block
+    repeats each fixed-$N$ sweep at $N = 262{,}144$ (the clumpy-field companion excepted -- it stays
+    at $N = 200{,}000$) using the finite-size arm's precision-target seed
     count, so every claim rests on a scale companion in addition to its headline result -- discussed
     together in Section~\ref{sec:scale-companions}.}
   \label{tab:ensembles}
@@ -149,16 +156,16 @@ seeds and differ only in the stated star count.
     \toprule
     Measurement & Seeds & Stars & Reported in \\
     \midrule
-    Speed sweep (headline)  & 512 & 512 & Table~\ref{tab:lambda}, Fig.~\ref{fig:lambda} \\
-    Branching sweep         & 32 & 512 & Fig.~\ref{fig:branching} \\
-    Re-target-cap sweep     & 32 & 512 & Section~\ref{sec:results} \\
-    In-flight floor         & 48 & 512 & Fig.~\ref{fig:floor} \\
-    Concurrency             & 16 & 512 & Fig.~\ref{fig:concurrency} \\
+    Speed sweep (headline)  & 512 & 2{,}048 & Table~\ref{tab:lambda}, Fig.~\ref{fig:lambda} \\
+    Branching sweep         & 32 & 8{,}192 & Fig.~\ref{fig:branching} \\
+    Re-target-cap sweep     & 32 & 32{,}768 & Section~\ref{sec:results} \\
+    In-flight floor         & 48 & 32{,}768 & Fig.~\ref{fig:floor} \\
+    Concurrency             & 16 & 32{,}768 & Fig.~\ref{fig:concurrency} \\
     Finite-size sweep       & 48 down to 8 & 256--262{,}144 & Fig.~\ref{fig:scale} \\
     Finite-size, interior edge test & 32 down to 6 & 256--262{,}144 & Section~\ref{sec:scale} \\
     Finite-size, periodic control   & 32 down to 6 & 256--262{,}144 & Section~\ref{sec:scale} \\
     Clumpy-field sweep      & 48 & 500 & Fig.~\ref{fig:clumpiness} \\
-    Timestep artifact       & 32 & 512 & Fig.~\ref{fig:dt} \\
+    Timestep artifact       & 32 & 8{,}192 & Fig.~\ref{fig:dt} \\
     \midrule
     \multicolumn{4}{l}{\emph{Scale companions, precision-target seed count (Section~\ref{sec:scale-companions})}} \\
     Speed sweep, at scale   & 8  & 262{,}144 & Section~\ref{sec:scale-companions} \\
