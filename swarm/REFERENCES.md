@@ -461,6 +461,27 @@ a ~670x range (N = 300 .. 200,000), and the decline continues and accelerates:
 | fuel tax % (median) | 19.0 | 18.2 | 17.9 | 16.3 | 13.1 | 11.2 | 6.4 | 3.5 | **1.5** |
 | seeds | 48 | 48 | 48 | 48 | 32 | 32 | 24 | 16 | 8 |
 
+**Flat p2 kd-tree substrate (Issue #38 p2 scope, `swarm/rust/`).** For sweeps
+at `n_stars = 2^k, k >= 3`, `swarm_rust` exposes a second, heap-indexed kd-tree
+where children of node `i` sit at `2i+1` and `2i+2` and the parent at
+`(i-1) >> 1` - so the `lo`, `hi`, `parent` arrays vanish and each leaf's 8 stars
+are stored contiguously in permuted coordinate arrays. Same median-split rule as
+the pointer tree above (widest axis, sort by `(coord, index)`, split at
+`len/2`), which at matching p2 N makes the flat tree partition-identical -
+verified as bit-identical `nearest_unsettled` answers across `N in {8, 16, 32,
+128, 512, 4096}` and half-settled interleaved settle/query schedules
+(`swarm/tests/test_flat_kdtree_oracle.py`, 36 tests, mutation-red-teamed for
+parent-walk / tie-break / leaf-boundary bugs). The immediate query-side
+wall-clock win is ~4% at N in {1024, 4096, 32768}
+(`swarm/experiments/bench_flat_kdtree.py`); the substrate value is the
+SIMD-ready 8-star contiguous leaf memory (each leaf fills 1 AVX-512 lane or 4
+AVX-256 lanes worth of f64), reserved for a follow-up. The pointer tree stays
+in place at non-p2 N to keep the frozen result JSONs as oracles; see
+`swarm/rust/SPEC_FLAT_KDTREE.md` for the layout, API, and non-perfect-p2 escape
+paths. Reference: Bentley (1975), "Multidimensional binary search trees",
+CACM 18(9):509-517 (the median-split kd-tree); the heap-indexed flat layout is
+the standard perfect-binary-tree array embedding, applied here to a kd-tree.
+
 The 300..4800 records are byte-identical to the prior committed sweep (the fold is bit-identical);
 the higher-N points are new. OLS regression of the median tax on log10(N) over the full ladder is
 **-7.0 percentage points per decade** (95% CI [-7.8, -6.4]), and the drop is convex/accelerating. At
