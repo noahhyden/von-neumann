@@ -90,8 +90,11 @@ intermediate N.
 - Data: feed the committed `b` medians from all four `retarget_cap*` blocks into
   `locate_plateau` and assert `cap*` = 16 at N=400 and `None` at N >= 32 768 (the
   #86 no-plateau regime), at the default threshold.
-- Correspondence: across every consecutive cap pair in all four blocks,
-  `sign(Delta b) == sign(Delta tau)` (issue #73's verification path).
+- Correspondence: across every consecutive cap pair in all four blocks, `b` and `tau`
+  are co-monotone up to seed noise - neither falls (while the other climbs) by more
+  than a small noise floor (issue #73's verification path). Strict sign equality is
+  too tight in the near-zero-tax regime at large N, where a physically flat step
+  (e.g. cap 2 vs 4 at N=262,144, tau ~ 0.27%) can jitter by ~0.0002pp.
 - End-to-end fold: the instant-only sweep at a tiny N reproduces a direct
   `simulate_swarm(coordination="instant", ...)` bounce depth exactly
   (deterministic fold).
