@@ -997,12 +997,21 @@ def _process_arrivals(state: SwarmState, params: SwarmParams, arrivals: list[Pro
                 state.retarget_count += 1
                 hop = _dist(state, target, new_target)
                 travel = hop / v
-                _add_probe(state, params, Probe(
-                    id=p.id, target=new_target, arrive_year=year + travel,
-                    speed_pc_yr=v, retargets=p.retargets + 1, hop_len_pc=hop,
-                    from_x=x, from_y=y, from_z=z,
-                    launch_year=year,
-                ))
+                # In-place reuse: this probe was already popped from state.probes (top of
+                # _process_arrivals) and all its old fields have been read above, so we mutate it
+                # rather than allocate a fresh Probe with the same id. Every non-id field is
+                # reassigned, so the re-added probe is byte-identical to the old `Probe(id=p.id,
+                # ...)` construction; only the allocation is saved (numerous under lightspeed).
+                p.target = new_target
+                p.arrive_year = year + travel
+                p.speed_pc_yr = v
+                p.retargets = p.retargets + 1
+                p.hop_len_pc = hop
+                p.from_x = x
+                p.from_y = y
+                p.from_z = z
+                p.launch_year = year
+                _add_probe(state, params, p)
 
 
 def _learn_year(p: Probe, settled_year: list[float]) -> float:
@@ -1082,11 +1091,19 @@ def _process_learns(state: SwarmState, params: SwarmParams, learns: list[Probe])
         dz = state.zs[target] - pz
         hop = (dx * dx + dy * dy + dz * dz) ** 0.5
         travel = hop / p.speed_pc_yr
-        _add_probe(state, params, Probe(
-            id=p.id, target=target, arrive_year=state.year + travel,
-            speed_pc_yr=p.speed_pc_yr, retargets=p.retargets + 1, hop_len_pc=hop,
-            from_x=px, from_y=py, from_z=pz, launch_year=state.year,
-        ))
+        # In-place reuse (as in _process_arrivals): the learner was popped up top and its old
+        # fields (arrive_year, launch_year, from_*, hop_len_pc, speed_pc_yr) were all read above,
+        # so mutate it instead of allocating a fresh Probe with the same id. Byte-identical result,
+        # one fewer allocation per mid-flight redirect.
+        p.target = target
+        p.arrive_year = state.year + travel
+        p.retargets = p.retargets + 1
+        p.hop_len_pc = hop
+        p.from_x = px
+        p.from_y = py
+        p.from_z = pz
+        p.launch_year = state.year
+        _add_probe(state, params, p)
 
 
 def _resolve_events(state: SwarmState, params: SwarmParams, cutoff: float) -> None:
