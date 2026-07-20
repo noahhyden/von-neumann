@@ -10,7 +10,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.." # repo root
 ROOT="$(pwd)"
 
-PY_MODULES=(closure-sim probe-sim power-budget launch-economics mission multi-probe swarm spine transfer comms assembly isru propellant thermal power-source autonomy shielding reliability)
+PY_MODULES=(closure-sim probe-sim power-budget launch-economics mission multi-probe swarm spine transfer comms assembly isru propellant thermal power-source autonomy shielding reliability scripts)
 fail=0
 
 for m in "${PY_MODULES[@]}"; do

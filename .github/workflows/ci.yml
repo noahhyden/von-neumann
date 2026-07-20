@@ -29,6 +29,23 @@ jobs:
           uv run --extra dev coverage run -m pytest -q
           uv run --extra dev coverage report
 
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      # Repo-level tooling (depgraph.py). Runs under coverage and fails below the
+      # gate in scripts/pyproject.toml. depgraph's live tests assert the real import
+      # DAG / paper edges, so a structural drift (a new cross-module import, a moved
+      # result, a renamed figure) fails here rather than silently.
+      - name: pytest + coverage gate (depgraph)
+        working-directory: scripts
+        run: |
+          uv run --extra dev coverage run -m pytest -q
+          uv run --extra dev coverage report
+
   closure-sim:
     runs-on: ubuntu-latest
     steps:
