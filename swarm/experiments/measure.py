@@ -85,13 +85,16 @@ SEEDS = [0x9E3779B9 + 2654435761 * k for k in range(512)]
 # its own N rather than a shared anchor. The folds are deterministic (CLAUDE.md sec 7), so N is a
 # pure wall-clock choice and never changes a result. SWARM_P2_N_OVERRIDE forces a single N across
 # all of these (used only to probe the 1-min ceiling; unset in normal regeneration).
+# Exception: retarget_cap is pinned at the TOP of the ladder (262144), not the 1-min ceiling -
+# the no-plateau-at-scale finding is the whole point of its p2 companion and is sharpest at max N.
 P2_FIXED_N = {
     "lambda_sweep": 2048,   # 30.7s (4096 = 72.6s, over)
     "branching": 8192,      # 57.9s (16384 would be ~116s)
     "energy_tax": 2048,     # 57.3s (slingshot policies are the costly part)
     "concurrency": 32768,   # 33.3s (65536 = 73.6s, over)
     "floor_bracket": 32768, # 64.2s (marginally over the minute; kept deliberately)
-    "retarget_cap": 32768,  # 52.3s
+    "retarget_cap": 262144, # deliberately the top of the ladder, not the 1-min ceiling: the
+                            #   no-plateau finding is strongest at max N. 723s @ 32 seeds, k02.
     "dt_artifact": 8192,    # 53.4s (fixed-step rows use the pointer path, so this caps lowest)
     "clumpiness": 4096,     # 26.4s (8192 = 69.5s, over)
 }
