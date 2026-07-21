@@ -542,12 +542,14 @@ Two exceptions stay on the historical (non-p2) block:
 
 **Two findings that the larger fields turned from clean claims into honest caveats
 (these are results, not bugs):**
-- The headline through-origin coefficient of tax = a*v/c is a = 0.82 at the N=2048
-  headline field (`lambda_sweep.json` p2), resolvably below the derived ceiling of
+- The headline through-origin coefficient of tax = a*v/c is a = 0.069 at the N=262,144
+  headline field (`lambda_sweep.json` p2, 128 seeds), resolvably below the derived ceiling of
   one. The v/c *form* holds; the coefficient sits below one because saturation
   removes waste the delay would add, and it *declines with N*: a ~ 0.97 at N=500
-  (clumpiness), 0.82 at N=2048, 0.73 at N=4096, 0.068 at N=262,144. The paper reframes
-  "tax IS v/c" as "tax scales as v/c with a coefficient below one that shrinks with N."
+  (clumpiness), ~0.85 at N=2048 and ~0.71 at N=4096 (from finite_size tax/Lambda), 0.069 at
+  the N=262,144 headline, and 0.040 at the N=524,288 scale companion. The paper reframes
+  "tax IS v/c" as "tax scales as v/c with a coefficient below one that shrinks with N," and the
+  Lambda=0.2 headline fuel tax falls from ~16% (N=2048) to ~1.3% (N=262,144).
 - The retarget-cap plateau that justified the default cap=8 does not survive to
   scale (`retarget_cap.json` p2, now at N=262,144, 32 seeds): the tax climbs
   monotonically 0.27/0.27/1.31/4.79/8.97% across caps 2/4/8/16/32 with no levelling,
@@ -556,10 +558,13 @@ Two exceptions stay on the historical (non-p2) block:
   `retarget_cap_scale` p2 at the same N=262,144 agrees (0.27 .. 8.60%). cap=8 is
   documented as a *lower bound* whose downward bias grows with N; every fuel-tax
   figure using it is "at least this much."
-- The in-flight-relay fill-time cost at Lambda=0.2 is ~30% at N=32768 (was quoted as
-  "about 2%" in an earlier draft, which predated the PR #78 pow/sqrt hop fix); the
-  relay still drives completed wasted arrivals to zero, but the fill-time price grows
-  with field size.
+- The in-flight-relay fill-time cost at Lambda=0.2 is ~27% at the N=262,144 headline
+  (`floor_bracket.json` p2, 32 seeds), and ~28% at the N=524,288 scale companion; the
+  relay still drives completed wasted arrivals to exactly zero, at a substantial fill-time price.
+- New at scale: the *fill-time* tax overtakes the *fuel* tax. On the N=262,144 headline the
+  Lambda=0.2 fill-time (completion) tax is ~10.5% [8.9,13.3] against a ~1.35% fuel tax - the
+  parallel population dilutes wasted-arrival (fuel) waste as N grows, but not the front lag at the
+  fill tail, so the small-field "fuel-dominated" ordering reverses at galactic scale.
 
 **Flat p2 kd-tree substrate (Issue #38 p2 scope, `swarm/rust/`).** For sweeps
 at `n_stars = 2^k, k >= 3`, `swarm_rust` exposes a second, heap-indexed kd-tree
@@ -602,16 +607,21 @@ extrapolation caution ("a sixteen-fold lever arm cannot support" a galactic-scal
 against a much longer arm. The `finite_size_interior` and `finite_size_periodic` edge controls are
 regenerated to the same 200,000-star range so the bulk-vs-boundary comparison holds at scale.
 
-**Scale companions: every fixed-N sweep repeated at 200,000 stars.** With the k-d tree unlocking the
-sweep at 200,000 stars, we also repeat each fixed-N measurement of `tab:ensembles` at that scale
+**Scale companions: every fixed-N sweep repeated beyond the headline.** With the k-d tree unlocking
+the sweep at large N, we repeat each fixed-N measurement of `tab:ensembles` at scale
 (`*_scale.json`, seed count set to the finite-size sweep's precision target). This turns each
-small-N result into a paired claim: the fixed-N number for a tight CI on the coefficient, and the
-scale companion to test whether the number was a scale-dependent artifact.
+result into a paired claim: the fixed-N number for a tight CI on the coefficient, and the
+scale companion to test whether the number was a scale-dependent artifact. Since the at-scale batch
+moved the fixed-N sweeps themselves to N=262,144, the `p2` scale companions now run one power of two
+further, at **N=524,288** (the paper's canonical scale point; `clumpiness_scale` stays at 200,000 with
+no p2 rerun, and `retarget_cap_scale` stays at 262,144 as the 8-seed cross-check). The top-level
+(non-p2) `*_scale.json` blocks below stay at N=200,000, byte-identical to before.
 
 - `concurrency_scale.json` - the median peak in-flight rises to ~75,500 (instant) and ~69,500
   (lightspeed) at N=200,000 (up from ~480 at N=500), and stays above 47,000 at the 99% coverage
-  tail bin. The two regimes still track. The "loser is not on the critical path" mechanism the
-  fill-time claim rests on scales.
+  tail bin. The two regimes still track: this near-identical population dilutes the *fuel* waste,
+  while the fill-time cost is set by the front lag at the tail (which, on the 262,144 headline,
+  overtakes the fuel tax - see the "findings" caveats above).
 - `lambda_sweep_scale.json` - the through-origin slope `a` of tax = a*Lambda drops from
   ~0.97 at N=500 to ~0.076 at N=200,000, a ~13x reduction that matches the finite-size
   decline of the tax at fixed Lambda. Linearity persists (fuel taxes: -0.13, 0.16, 0.40, 0.82, 1.52

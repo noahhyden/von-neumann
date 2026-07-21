@@ -90,9 +90,9 @@ assumes claims of a candidate are independent and locally uniform in time, and i
 geometry of which stars are in contention and the saturation of already-doomed hops -- so it predicts
 the coefficient of proportionality is one, as a ceiling that those corrections can only lower.
 Section~\ref{sec:results} shows the measured tax follows $\Lambda$ in \emph{form} but with a
-coefficient below that ceiling: a through-origin slope of $0.82$ on the $N = 2{,}048$ headline field,
-resolvably under one and declining with system size as saturation strengthens (from $a \approx 0.97$
-at a few hundred stars to $0.068$ at a quarter-million). The simulation confirms the $d$- and
+coefficient below that ceiling: a through-origin slope of $0.069$ on the $N = 262{,}144$ headline
+field, resolvably under one, the endpoint of a decline with system size as saturation strengthens
+(from $a \approx 0.97$ at a few hundred stars down to this value at a quarter-million). The simulation confirms the $d$- and
 density-independence of the form directly.
 
 \subsection{Experimental design and parameters}
@@ -143,37 +143,36 @@ seeds and differ only in the stated star count.
   \caption{The paired ensemble used by each measurement. All are event-driven and paired (each seed
     filled under both coordination regimes on the identical field); seed counts are prefixes of one
     fixed 512-seed set, sized to each measurement's cost. Star counts are powers of two computed by
-    the \texttt{run\_fill\_flat} fast path (Issue \#38); each fixed-$N$ sweep runs on the largest
-    power-of-two field it can complete in about a minute of wall-clock, so the measurements sit at
-    different $N$ rather than a shared anchor (two exceptions: the clumpy-field sweep is kept on its
-    historical $N = 500$ ensemble, its scale companion having no power-of-two rerun; and the
-    re-target-cap sweep runs at the top of the ladder, $N = 262{,}144$, because its whole purpose is
-    to test whether the cap plateau survives to scale). The lower block
-    repeats each fixed-$N$ sweep at $N = 262{,}144$ (the clumpy-field companion excepted -- it stays
-    at $N = 200{,}000$) using the finite-size arm's precision-target seed
-    count, so every claim rests on a scale companion in addition to its headline result -- discussed
-    together in Section~\ref{sec:scale-companions}.}
+    the \texttt{run\_fill\_flat} fast path (Issue \#38); the headline fixed-$N$ sweeps now share the
+    top of the ladder, $N = 262{,}144$, so every claim is read at the same maximal field (the
+    clumpy-field sweep is the exception, kept on its historical $N = 500$ ensemble, its scale
+    companion having no power-of-two rerun). The lower block carries each fixed-$N$ sweep one power of
+    two further, to $N = 524{,}288$ (the clumpy-field companion at $N = 200{,}000$ and the
+    re-target-cap cross-check at $N = 262{,}144$ excepted), using the finite-size arm's
+    precision-target seed count, so every claim rests on a scale companion beyond its headline result
+    -- discussed together in Section~\ref{sec:scale-companions}.}
   \label{tab:ensembles}
   \begin{tabular}{lccl}
     \toprule
     Measurement & Seeds & Stars & Reported in \\
     \midrule
-    Speed sweep (headline)  & 512 & 2{,}048 & Table~\ref{tab:lambda}, Fig.~\ref{fig:lambda} \\
-    Branching sweep         & 32 & 8{,}192 & Fig.~\ref{fig:branching} \\
+    Speed sweep (headline)  & 128 & 262{,}144 & Table~\ref{tab:lambda}, Fig.~\ref{fig:lambda} \\
+    Branching sweep         & 32 & 262{,}144 & Fig.~\ref{fig:branching} \\
     Re-target-cap sweep     & 32 & 262{,}144 & Section~\ref{sec:results} \\
-    In-flight floor         & 48 & 32{,}768 & Fig.~\ref{fig:floor} \\
-    Concurrency             & 16 & 32{,}768 & Fig.~\ref{fig:concurrency} \\
-    Finite-size sweep       & 48 down to 8 & 256--262{,}144 & Fig.~\ref{fig:scale} \\
-    Finite-size, interior edge test & 32 down to 6 & 256--262{,}144 & Section~\ref{sec:scale} \\
-    Finite-size, periodic control   & 32 down to 6 & 256--262{,}144 & Section~\ref{sec:scale} \\
+    In-flight floor         & 32 & 262{,}144 & Fig.~\ref{fig:floor} \\
+    Concurrency             & 32 & 262{,}144 & Fig.~\ref{fig:concurrency} \\
+    Finite-size sweep       & 32 down to 8 & 256--262{,}144 & Fig.~\ref{fig:scale} \\
+    Finite-size, interior edge test & 32 down to 8 & 256--262{,}144 & Section~\ref{sec:scale} \\
+    Finite-size, periodic control   & 32 down to 8 & 256--262{,}144 & Section~\ref{sec:scale} \\
     Clumpy-field sweep      & 48 & 500 & Fig.~\ref{fig:clumpiness} \\
-    Timestep artifact       & 32 & 8{,}192 & Fig.~\ref{fig:dt} \\
+    Timestep artifact       & 32 & 262{,}144 & Fig.~\ref{fig:dt} \\
     \midrule
     \multicolumn{4}{l}{\emph{Scale companions, precision-target seed count (Section~\ref{sec:scale-companions})}} \\
-    Speed sweep, at scale   & 8  & 262{,}144 & Section~\ref{sec:scale-companions} \\
+    Speed sweep, at scale   & 8  & 524{,}288 & Section~\ref{sec:scale-companions} \\
+    Branching, at scale     & 6  & 524{,}288 & Section~\ref{sec:scale-companions} \\
     Re-target-cap, at scale & 8  & 262{,}144 & Section~\ref{sec:scale-companions} \\
-    In-flight floor, at scale & 8 & 262{,}144 & Section~\ref{sec:scale-companions} \\
-    Concurrency, at scale   & 8  & 262{,}144 & Section~\ref{sec:scale-companions} \\
+    In-flight floor, at scale & 8 & 524{,}288 & Section~\ref{sec:scale-companions} \\
+    Concurrency, at scale   & 8  & 524{,}288 & Section~\ref{sec:scale-companions} \\
     Clumpy-field, at scale  & 8  & 200{,}000 & Section~\ref{sec:scale-companions} \\
     \bottomrule
   \end{tabular}

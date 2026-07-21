@@ -700,8 +700,12 @@ def m_lambda_sweep() -> None:
 
 
 def p2_lambda_sweep() -> None:
-    """P2 companion to ``m_lambda_sweep``: at-scale N=262,144, 32 seeds (see P2_FIXED_N)."""
-    seeds = SEEDS[:32]
+    """P2 companion to ``m_lambda_sweep``: at-scale N=262,144, 128 seeds (see P2_FIXED_N).
+
+    The canonical Lambda sweep: bumped to 128 seeds (from the 32 the other at-scale sweeps use)
+    to tighten the headline fuel- and fill-time-tax intervals, which are the paper's lead numbers.
+    """
+    seeds = SEEDS[:128]
     n_stars = _p2_fixed_n("lambda_sweep")
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
     data = {}
@@ -851,7 +855,7 @@ def p2_branching_scale() -> None:
     N>200k over-subscribes RAM per docs/HARDWARE.md); 6 seeds to match the base.
     """
     seeds = SEEDS[:6]
-    n_stars = 262_144
+    n_stars = 524_288
     offspring = [2, 3, 4, 8]
     lambdas = [0.05, 0.2]
     data = {}
@@ -1091,7 +1095,7 @@ def m_concurrency_scale() -> None:
 def p2_concurrency_scale() -> None:
     """P2 companion to ``m_concurrency_scale``: N=200_000 -> N=262_144 (next p2 above 200k)."""
     seeds = SEEDS[:8]
-    n_stars = 262_144
+    n_stars = 524_288
     lam = 0.2
     bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
     data = _concurrency_ensemble(seeds, n_stars, lam, bins)
