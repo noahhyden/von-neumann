@@ -96,18 +96,25 @@ SEEDS = [0x9E3779B9 + 2654435761 * k for k in range(512)]
 # its own N rather than a shared anchor. The folds are deterministic (CLAUDE.md sec 7), so N is a
 # pure wall-clock choice and never changes a result. SWARM_P2_N_OVERRIDE forces a single N across
 # all of these (used only to probe the 1-min ceiling; unset in normal regeneration).
-# Exception: retarget_cap is pinned at the TOP of the ladder (262144), not the 1-min ceiling -
-# the no-plateau-at-scale finding is the whole point of its p2 companion and is sharpest at max N.
+#
+# At-scale batch: the six headline fixed-N sweeps now run at the TOP of the p2 ladder, N=262,144,
+# rather than each measurement's 1-min-ceiling N. Larger fields are affordable (the k-d tree is
+# near-linear and RAM fits: measured per-fold peak RSS at 262,144 is ~0.24 GB light / ~0.75 GB
+# for concurrency's step trace / ~0.5 GB for branching offspring=16, so 8 workers stay well under
+# 14 GB), and reading every claim at the same maximal field makes the size-decline story a clean
+# cross-measurement statement instead of a per-measurement footnote. energy_tax and clumpiness
+# stay on their 1-min N (energy_tax's slingshot policies and clumpiness's Thomas-cluster fields
+# are the costly outliers, and neither is part of the at-scale headline set). The 1-min-ceiling
+# values they moved off are kept in comments. Folds are deterministic (CLAUDE.md sec 7).
 P2_FIXED_N = {
-    "lambda_sweep": 2048,   # 30.7s (4096 = 72.6s, over)
-    "branching": 8192,      # 57.9s (16384 would be ~116s)
-    "energy_tax": 2048,     # 57.3s (slingshot policies are the costly part)
-    "concurrency": 32768,   # 33.3s (65536 = 73.6s, over)
-    "floor_bracket": 32768, # 64.2s (marginally over the minute; kept deliberately)
-    "retarget_cap": 262144, # deliberately the top of the ladder, not the 1-min ceiling: the
-                            #   no-plateau finding is strongest at max N. 723s @ 32 seeds, k02.
-    "dt_artifact": 8192,    # 53.4s (fixed-step rows use the pointer path, so this caps lowest)
-    "clumpiness": 4096,     # 26.4s (8192 = 69.5s, over)
+    "lambda_sweep": 262144,  # at-scale (1-min N was 2048)
+    "branching": 262144,     # at-scale (1-min N was 8192)
+    "energy_tax": 2048,      # 57.3s 1-min N (slingshot policies are the costly part; not at-scale)
+    "concurrency": 262144,   # at-scale (1-min N was 32768); records the per-event step trace
+    "floor_bracket": 262144, # at-scale (1-min N was 32768)
+    "retarget_cap": 262144,  # at-scale: the no-plateau finding is sharpest at max N. 723s @ 32 seeds
+    "dt_artifact": 262144,   # at-scale (1-min N was 8192; fixed-step rows use the pointer path)
+    "clumpiness": 4096,      # 26.4s 1-min N (Thomas-cluster fields are costly; not at-scale)
 }
 
 
@@ -115,6 +122,17 @@ def _p2_fixed_n(name: str) -> int:
     """Canonical p2 star count for a fixed-N base sweep, honouring the SWARM_P2_N_OVERRIDE probe."""
     override = os.environ.get("SWARM_P2_N_OVERRIDE")
     return int(override) if override else P2_FIXED_N[name]
+
+
+# At-scale finite-size p2 ladder (measurements-at-scale batch). The full power-of-two ladder
+# 2^8..2^18 (256..262,144, 11 points) with a linear 32->8 seed ramp: dense in N for the
+# size-decline figure, seeds tapering as the per-seed tax spread narrows at large N so fewer hold
+# the median tight. All three finite-size p2 companions (base, interior-edge, periodic-control)
+# share this ladder so their lever arms are directly comparable. The historical (non-p2)
+# ladders (300..200,000) stay pinned as the original artifacts. The N=262,144 point is light
+# (~0.24 GB/fold), so 8 seeds x 2 modes fits comfortably.
+_FS_P2_LADDER = [(256, 32), (512, 30), (1024, 27), (2048, 25), (4096, 22), (8192, 20),
+                 (16384, 18), (32768, 15), (65536, 13), (131072, 10), (262144, 8)]
 
 
 # --------------------------------------------------------------------------------------------
@@ -682,8 +700,8 @@ def m_lambda_sweep() -> None:
 
 
 def p2_lambda_sweep() -> None:
-    """P2 companion to ``m_lambda_sweep``: N=500 -> the 1-min-ceiling p2 N (see P2_FIXED_N)."""
-    seeds = SEEDS[:512]
+    """P2 companion to ``m_lambda_sweep``: at-scale N=262,144, 32 seeds (see P2_FIXED_N)."""
+    seeds = SEEDS[:32]
     n_stars = _p2_fixed_n("lambda_sweep")
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
     data = {}
@@ -726,9 +744,13 @@ def m_lambda_sweep_scale() -> None:
 
 
 def p2_lambda_sweep_scale() -> None:
-    """P2 companion to ``m_lambda_sweep_scale``: N=200_000 -> N=262_144 (next p2 above 200k)."""
+    """P2 companion to ``m_lambda_sweep_scale``: at-scale N=524_288.
+
+    Bumped from 262_144 to 2^19 in the at-scale batch: the fixed-N lambda_sweep p2 now runs at
+    262_144, so the scale companion moves one power of two above it to stay a genuine larger lever.
+    """
     seeds = SEEDS[:8]
-    n_stars = 262_144
+    n_stars = 524_288
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
     data = {}
     for lam in lambdas:
@@ -940,18 +962,15 @@ def m_finite_size() -> None:
 
 
 def p2_finite_size() -> None:
-    """P2 companion to ``m_finite_size``: p2 ladder matched to the historical seed pattern.
+    """P2 companion to ``m_finite_size``: the full power-of-two ladder 256..262,144.
 
-    Historical: (300, 600, 1200, 2400, 4800, 9600, 24000, 48000, 200000).
-    P2:         (256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 262144).
-
-    Nine points each; seed counts match the historical rows exactly so the two lever arms
-    are directly comparable. Byte-for-byte comparison against the historical points isn't
-    possible (different N), but bit-identity of the flat vs pointer path at matching p2 N is
-    already proven by ``tests/test_flat_run_fill_oracle.py``.
+    Historical (non-p2, pinned): (300, 600, 1200, 2400, 4800, 9600, 24000, 48000, 200000).
+    P2 (at-scale batch): the 11-point ladder 2^8..2^18 with a linear 32->8 seed ramp
+    (``_FS_P2_LADDER``), denser in N than the old 9-point companion (adds 65536, 131072) so the
+    size-decline curve is well resolved to the maximal field. Bit-identity of the flat vs pointer
+    path at matching p2 N is proven by ``tests/test_flat_run_fill_oracle.py``.
     """
-    n_seeds_by_n = [(256, 48), (512, 48), (1024, 48), (2048, 48), (4096, 32),
-                    (8192, 32), (16384, 24), (32768, 16), (262144, 8)]
+    n_seeds_by_n = _FS_P2_LADDER
     data = {}
     per_n_fuel: dict[int, list[float]] = {}
     for n, k in n_seeds_by_n:
@@ -1035,8 +1054,8 @@ def m_concurrency() -> None:
 
 
 def p2_concurrency() -> None:
-    """P2 companion to ``m_concurrency``: N=500 -> the 1-min-ceiling p2 N (see P2_FIXED_N)."""
-    seeds = SEEDS[:16]
+    """P2 companion to ``m_concurrency``: at-scale N=262,144, 32 seeds (see P2_FIXED_N)."""
+    seeds = SEEDS[:32]
     n_stars = _p2_fixed_n("concurrency")
     lam = 0.2
     bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
@@ -1130,8 +1149,8 @@ def m_floor_bracket() -> None:
 
 
 def p2_floor_bracket() -> None:
-    """P2 companion to ``m_floor_bracket``: N=400 -> the 1-min-ceiling p2 N (see P2_FIXED_N)."""
-    seeds = SEEDS[:48]
+    """P2 companion to ``m_floor_bracket``: at-scale N=262,144, 32 seeds (see P2_FIXED_N)."""
+    seeds = SEEDS[:32]
     n_stars = _p2_fixed_n("floor_bracket")
     lambdas = [0.05, 0.1, 0.2]
     data = _floor_bracket_body(seeds, n_stars, lambdas)
@@ -1162,9 +1181,13 @@ def m_floor_bracket_scale() -> None:
 
 
 def p2_floor_bracket_scale() -> None:
-    """P2 companion to ``m_floor_bracket_scale``: N=200_000 -> N=262_144 (next p2 above 200k)."""
+    """P2 companion to ``m_floor_bracket_scale``: at-scale N=524_288.
+
+    Bumped from 262_144 to 2^19 in the at-scale batch (one power of two above the fixed-N
+    floor_bracket p2, which now runs at 262_144).
+    """
     seeds = SEEDS[:8]
-    n_stars = 262_144
+    n_stars = 524_288
     lambdas = [0.05, 0.1, 0.2]
     data = _floor_bracket_body(seeds, n_stars, lambdas)
     write_p2_companion("floor_bracket_scale",
@@ -1578,12 +1601,12 @@ def m_finite_size_interior() -> None:
 def p2_finite_size_interior() -> None:
     """P2 companion to ``m_finite_size_interior``: p2 ladder matched to the historical seed pattern.
 
-    Historical: (300, 600, 1200, 2400, 4800, 9600, 24000, 48000, 200000) with seeds
-                (32, 32, 24, 16, 12, 12, 10, 8, 6).
-    P2:         (256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 262144) with the same seed counts.
+    Historical (non-p2, pinned): (300, 600, 1200, 2400, 4800, 9600, 24000, 48000, 200000) with
+                seeds (32, 32, 24, 16, 12, 12, 10, 8, 6).
+    P2 (at-scale batch): the shared 11-point ladder 2^8..2^18 with a linear 32->8 seed ramp
+    (``_FS_P2_LADDER``).
     """
-    n_seeds_by_n = [(256, 32), (512, 32), (1024, 24), (2048, 16), (4096, 12),
-                    (8192, 12), (16384, 10), (32768, 8), (262144, 6)]
+    n_seeds_by_n = _FS_P2_LADDER
     shells = {"all": 0, "interior_1nn": 2, "interior_2nn": 4}
     data = {}
     per_n: dict[str, dict[int, list]] = {s: {} for s in shells}
@@ -1676,9 +1699,11 @@ def p2_finite_size_periodic() -> None:
     file name (``finite_size_periodic.json``). The p2 companion runs full seeds always. If a
     p2 shard mode is ever wanted, ``SHARDABLE`` grows a ``finite_size_periodic_p2`` entry and
     ``_do_merge`` learns the p2 key routing - but that's out of scope for the migration.
+
+    P2 (at-scale batch): the shared 11-point ladder 2^8..2^18 with a linear 32->8 seed ramp
+    (``_FS_P2_LADDER``).
     """
-    n_seeds_by_n = [(256, 32), (512, 32), (1024, 24), (2048, 16), (4096, 12),
-                    (8192, 12), (16384, 10), (32768, 8), (262144, 6)]
+    n_seeds_by_n = _FS_P2_LADDER
     data = {}
     per_n: dict[int, list[float]] = {}
     for n, k in n_seeds_by_n:

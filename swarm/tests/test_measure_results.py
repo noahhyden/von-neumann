@@ -19,9 +19,23 @@ from pathlib import Path
 import pytest
 
 from swarm import SwarmParams, simulate_swarm
+from swarm.sim import _USE_RUST
 from experiments.measure import SEEDS, record
 
 RESULTS = Path(__file__).resolve().parents[1] / "experiments" / "results"
+
+# The at-scale p2 guards (lambda_sweep, floor_bracket) re-run folds at N=262,144. Only the Rust
+# fill loop makes that tractable in a test; the numba / pure-Python paths share the same slow
+# event-loop fill, so a single fold there is minutes. The fold is backend-independent by
+# construction (nearest-kernel bit-identity across backends is proven in test_kdtree_backends),
+# so re-verifying these large-N measurements on the slow backends is redundant - skip them there.
+# This keeps the backend-drift-guard subprocesses (test_kdtree_backends) inside their timeout.
+_AT_SCALE_N = 100_000
+
+
+def _skip_heavy_without_rust(n_stars: int) -> None:
+    if n_stars >= _AT_SCALE_N and not _USE_RUST:
+        pytest.skip(f"N={n_stars} p2 guard needs the Rust fill (redundant + too slow otherwise)")
 
 
 def _load(name: str) -> dict:
@@ -145,14 +159,15 @@ def _load_p2(name: str) -> dict:
 def test_lambda_sweep_p2_matches_fold() -> None:
     p2 = _load_p2("lambda_sweep")
     cfg = p2["config"]
+    _skip_heavy_without_rust(cfg["n_stars"])
     lam = cfg["lambdas"][0]
     block = p2["data"][str(lam)]
     for i in range(2):
         seed = SEEDS[i]
         common = dict(n_stars=cfg["n_stars"], policy=cfg["policy"], probe_speed_c=lam,
                       speed_cap_c=max(0.05, 2 * lam), stepping=cfg["stepping"])
-        base = record(simulate_swarm(SwarmParams(**common, coordination="instant"), seed=seed))
-        treat = record(simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=seed))
+        base = record(simulate_swarm(SwarmParams(**common, coordination="instant"), seed=seed, record_steps=False))
+        treat = record(simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=seed, record_steps=False))
         _assert_record_matches(base, block["per_seed"][i]["base"], f"lambda_sweep p2 base seed{i}")
         _assert_record_matches(treat, block["per_seed"][i]["treat"], f"lambda_sweep p2 treat seed{i}")
 
@@ -189,13 +204,15 @@ def test_finite_size_periodic_p2_matches_fold() -> None:
 def test_floor_bracket_p2_matches_fold() -> None:
     p2 = _load_p2("floor_bracket")
     cfg = p2["config"]
+    _skip_heavy_without_rust(cfg["n_stars"])
     lam = cfg["lambdas"][0]
     block = p2["data"][str(lam)]
     cap = max(0.05, 2 * lam)
     for mode in ("instant", "lightspeed", "inflight"):
         seed = SEEDS[0]
         r = record(simulate_swarm(SwarmParams(n_stars=cfg["n_stars"], policy="powered", probe_speed_c=lam,
-                                              speed_cap_c=cap, stepping=cfg["stepping"], coordination=mode), seed=seed))
+                                              speed_cap_c=cap, stepping=cfg["stepping"], coordination=mode),
+                                   seed=seed, record_steps=False))
         _assert_record_matches(r, block["per_seed"][mode][0], f"floor_bracket p2 {mode} seed0")
 
 
