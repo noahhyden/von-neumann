@@ -49,19 +49,21 @@ while the slingshot speed-up survives contact with finite information intact, re
 source model to the same order of magnitude. The dominant cost shows up elsewhere. Every star still gets settled,
 and with a negligible change in how many probes are built, well under a percent; what the delay
 chiefly changes is how many wasted journeys the swarm flies to stars other probes have already
-claimed. That is a cost paid mostly in fuel and effort rather than time, and a
-perfect-information model hides it entirely. It is governed cleanly by a single dimensionless
+claimed. That is a cost paid in fuel and effort, and -- as the field grows large -- in fill time,
+which a perfect-information model hides entirely. It is governed cleanly by a single dimensionless
 number, the probe's speed in units of the speed of light. The delay multiplies the wasted
-journeys by at most $1+\Lambda$, so the tax -- the extra wasted trips as a fraction of those a
+journeys by at most $1+\Lambda$, so the fuel tax -- the extra wasted trips as a fraction of those a
 perfect-information swarm already flies -- is negligible for a powered cruise, about a percent at
 slingshot speeds, and a sixth at the directed-energy speeds that beamed-propulsion concepts target
-(measured on a two-thousand-star field; the coefficient shrinks with system size). That baseline is
-itself wasteful: even with a perfect map about five in six journeys are
-redundant, so the tax is a $v/c$ surcharge on an already-redundant process, not a sixth of all
-journeys. We derive from a short collision argument that this relative tax has $\Lambda$ as its
-leading-order ceiling, and find in simulation that the measured coefficient sits below it -- about
-$0.8$ on the canonical field and declining with size, as saturation removes waste the delay would
-otherwise add. We show the tax grows with the replication branching factor
+on a few-thousand-star field; on our quarter-million-star headline field that same coefficient has
+fallen to about $0.07$, a fuel tax of about $1.3\%$ at directed-energy speed. That baseline is
+itself wasteful: even with a perfect map about nine in ten journeys are
+redundant, so the tax is a $v/c$ surcharge on an already-saturated process. We derive from a short
+collision argument that this relative tax has $\Lambda$ as its leading-order ceiling, and find in
+simulation that the measured coefficient sits below it -- about $0.8$ on a few-thousand-star field,
+$0.07$ at a quarter million, declining with size as saturation removes waste the delay would
+otherwise add. The fill-time cost runs the other way, negligible beside the fuel tax on small fields
+but exceeding it at scale. We show the tax grows with the replication branching factor
 without saturating up to sixteen offspring and survives a clumpy (non-uniform) field, and -- because a probe deciding only
 at its stops is pessimistic -- that a probe which listens in flight recovers almost all of it,
 bounding how much coordination can ever buy back. The cost is dominated
