@@ -116,6 +116,30 @@ This is physics-heavy. Grounding is not optional.
 - **Git:** commit or push only when asked. The repo is **public** at
   `noahhyden/von-neumann`. **Never push anywhere else**.
 - New numbers in a change → update that module's `REFERENCES.md` in the same change.
+- **Explanation in code is capped at ONE line.** A module, class or function gets a
+  one-line docstring or none, and a run of standalone comments is one line.
+  `make lint-rules` enforces it at zero over tracked `.py/.ts/.tsx/.yml/.yaml/.toml`;
+  a run carrying a pragma (`noqa`, `type: ignore`, `eslint-disable`) and a generated
+  file are exempt. What the cap evicts does not get deleted: the *why* goes to the
+  module README, the *number, its source and its basis* to `REFERENCES.md`, and a
+  *trap for the next agent* to an `AGENTS.d/` rule. Markdown is never scanned, so
+  prose has room - always-loaded code context does not.
+- **Adding an agent rule? Add a FILE, never edit `AGENTS.md`.** Every `AGENTS.md` is
+  generated from the `AGENTS.d/` beside it and is gitignored. Write
+  `<dir>/AGENTS.d/NNN-<slug>.md` - a `## heading` plus ONE body line of at most 255
+  characters, `NNN` a sort key seeded in steps of 10 - then run `make agents`. One
+  file per rule means two branches adding rules never conflict. Any directory may
+  hold an `AGENTS.d/`; put the rule at the shallowest directory that contains
+  everything it governs, and reference a rule by its **heading**, never its number.
+- **Delegation is one level deep, and never to Opus.** An orchestrating session may
+  spawn agents; **a spawned agent may not spawn anything.** It has no `Agent` tool and
+  does the work itself. Every spawned agent is explicitly `model: "sonnet"` or
+  `model: "haiku"` - Opus is for the orchestrating session only, and a `fork` inherits
+  the parent model, so a fork is never delegated work. The failure this prevents is
+  real: four agents sent to purge comments here quietly spawned seven more, and the
+  fan-out is invisible from the orchestrator until the bill arrives. Use the
+  `slice-worker` agent (`.claude/agents/slice-worker.md`), which has no `Agent` tool at
+  all, rather than trusting a prompt instruction to hold.
 - **Compute hardware is inventoried in [`docs/HARDWARE.md`](docs/HARDWARE.md).** Consult
   it whenever you reason about run time, parallelism, or what a machine can handle, and
   update it when the hardware stack changes (new machine, GPU, cloud ensemble). It is a
