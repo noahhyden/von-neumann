@@ -7,7 +7,7 @@
  */
 import { createSignal, createMemo } from "pimas";
 import type { Accessor } from "pimas";
-import type { ParamSignal } from "./reactive-model.js";
+import { param, type ParamSignal } from "./reactive-model.js";
 import { comparisonFromClosure } from "./launch-economics.js";
 import type { ReplicationLaunchComparison } from "./launch-economics.js";
 
@@ -18,26 +18,26 @@ export interface LaunchModel {
 }
 
 export function createLaunchEconomicsModel(): LaunchModel {
-  const [closurePct, setClosurePct] = createSignal(70);
-  const [targetTonnes, setTargetTonnes] = createSignal(1000);
-  const [seedTonnes, setSeedTonnes] = createSignal(10);
-  const [costPerKg, setCostPerKg] = createSignal(3000);
+  const closurePct = param(70, { min: 0, max: 100, step: 1, label: "Mass closure", unit: "%" });
+  const targetTonnes = param(1000, { min: 10, max: 5000, step: 10, label: "Target installed mass", unit: "t" });
+  const seedTonnes = param(10, { min: 1, max: 200, step: 1, label: "Seed mass (landed)", unit: "t" });
+  const costPerKg = param(3000, { min: 100, max: 5000, step: 50, label: "Launch cost", unit: "$/kg" });
 
   const params: ParamSignal[] = [
-    { get: closurePct, set: setClosurePct, min: 0, max: 100, step: 1, label: "Mass closure", unit: "%" },
-    { get: targetTonnes, set: setTargetTonnes, min: 10, max: 5000, step: 10, label: "Target installed mass", unit: "t" },
-    { get: seedTonnes, set: setSeedTonnes, min: 1, max: 200, step: 1, label: "Seed mass (landed)", unit: "t" },
-    { get: costPerKg, set: setCostPerKg, min: 100, max: 5000, step: 50, label: "Launch cost", unit: "$/kg" },
+    closurePct,
+    targetTonnes,
+    seedTonnes,
+    costPerKg,
   ];
 
   const comparison = createMemo(() =>
     comparisonFromClosure({
-      closureRatio: closurePct() / 100,
-      targetInstalledMassKg: targetTonnes() * 1000,
-      seedMassKg: seedTonnes() * 1000,
-      costPerKgUsd: costPerKg(),
+      closureRatio: closurePct.get() / 100,
+      targetInstalledMassKg: targetTonnes.get() * 1000,
+      seedMassKg: seedTonnes.get() * 1000,
+      costPerKgUsd: costPerKg.get(),
     }),
   );
 
-  return { params, comparison, closurePct };
+  return { params, comparison, closurePct: closurePct.get };
 }

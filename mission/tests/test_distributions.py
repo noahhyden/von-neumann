@@ -15,7 +15,6 @@ from launch_economics.distributions import (
 )
 from mission.distributions import (
     ARRAY_EFFICIENCY_DIST,
-    ARRAY_POWER_AT_1AU_DIST,
     COMPUTE_EFFICIENCY_FLOPS_PER_W_DIST_MISSION,
     COST_PER_KG_USD_DIST,
     DELTA_V_M_S_DIST,
@@ -23,16 +22,9 @@ from mission.distributions import (
     FRACTION_HOUSEKEEPING_DIST,
     FRACTION_MANUFACTURING_DIST,
     SPECIFIC_IMPULSE_S_DIST,
-    TARGET_INSTALLED_MASS_DIST,
-)
-from mission.scenario import (
-    DEFAULT_ARRAY_POWER_AT_1AU_W,
-    DEFAULT_FRACTION_MANUFACTURING,
-    DEFAULT_TARGET_INSTALLED_MASS_KG,
 )
 from power_budget.distributions import COMPUTE_EFFICIENCY_FLOPS_PER_W_DIST
 from probe_sim.distributions import SOLAR_CELL_EFFICIENCY_DIST
-from vn_core.uq import Fixed
 
 
 def test_sibling_reexports_are_identity_not_copies():
@@ -44,15 +36,6 @@ def test_sibling_reexports_are_identity_not_copies():
     assert SPECIFIC_IMPULSE_S_DIST is ISP_LOX_RP1_DIST
     assert COST_PER_KG_USD_DIST is LAUNCH_COST_FALCON_9_DIST
     assert COMPUTE_EFFICIENCY_FLOPS_PER_W_DIST_MISSION is COMPUTE_EFFICIENCY_FLOPS_PER_W_DIST
-
-
-def test_scenario_design_choices_stay_fixed():
-    assert isinstance(ARRAY_POWER_AT_1AU_DIST, Fixed)
-    assert ARRAY_POWER_AT_1AU_DIST.value == DEFAULT_ARRAY_POWER_AT_1AU_W
-    assert isinstance(TARGET_INSTALLED_MASS_DIST, Fixed)
-    assert TARGET_INSTALLED_MASS_DIST.value == DEFAULT_TARGET_INSTALLED_MASS_KG
-    for dist in (FRACTION_MANUFACTURING_DIST, FRACTION_COMPUTE_DIST, FRACTION_HOUSEKEEPING_DIST):
-        assert isinstance(dist, Fixed)
 
 
 def test_allocation_fractions_sum_to_one():

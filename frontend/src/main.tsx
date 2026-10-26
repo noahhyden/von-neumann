@@ -76,10 +76,14 @@ function Cite(props: { ids: string | string[] }) {
 }
 
 const fmtNum = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
+const usdCompact = (d: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact", minimumFractionDigits: d, maximumFractionDigits: d });
+const USD_B = usdCompact(2);
+const USD_M = usdCompact(1);
 const fmtUsd = (n: number): string => {
   const abs = Math.abs(n);
-  if (abs >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
-  if (abs >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  const sign = n < 0 ? "$-" : "$"; // keep the legacy "$-3.3M" sign placement
+  if (abs >= 1e9) return USD_B.format(abs).replace("$", sign);
+  if (abs >= 1e6) return USD_M.format(abs).replace("$", sign);
   return `$${fmtNum(n)}`;
 };
 const fmtSci = (n: number, d = 2) => n.toExponential(d);

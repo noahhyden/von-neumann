@@ -15,10 +15,9 @@
 // ASCII only, no em-dash (CLAUDE.md 5).
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { join, extname } from "node:path";
 
-const root = fileURLToPath(new URL("..", import.meta.url)); // the papers/ module root
+const root = join(import.meta.dirname, ".."); // the papers/ module root
 
 const CHECK_EXT = new Set([".tex", ".json", ".md", ".mjs"]);
 const SKIP_DIR = new Set(["node_modules", "build"]);

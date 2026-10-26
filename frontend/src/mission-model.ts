@@ -13,7 +13,7 @@
  */
 import { createSignal, createMemo } from "pimas";
 import type { Accessor } from "pimas";
-import type { ParamSignal } from "./reactive-model.js";
+import { param, type ParamSignal } from "./reactive-model.js";
 import { defaultMissionScenario, runMission, DEFAULT_ARRAY_AREA_M2 } from "./mission.js";
 import type { MissionResult } from "./mission.js";
 import { LUNAR_REGOLITH_SEED } from "./scenarios.js";
@@ -27,30 +27,30 @@ export interface MissionModel {
 }
 
 export function createMissionModel(): MissionModel {
-  const [distanceAu, setDistanceAu] = createSignal(1.0);
-  const [computeSharePct, setComputeSharePct] = createSignal(20);
-  const [arrayAreaM2, setArrayAreaM2] = createSignal(DEFAULT_ARRAY_AREA_M2);
-  const [targetTonnes, setTargetTonnes] = createSignal(1000);
-  const [costPerKgUsd, setCostPerKgUsd] = createSignal(3000);
+  const distanceAu = param(1.0, { min: 0.3, max: 40, step: 0.1, label: "Heliocentric distance", unit: "AU" });
+  const computeSharePct = param(20, { min: 0, max: 90, step: 1, label: "Power to compute", unit: "%" });
+  const arrayAreaM2 = param(DEFAULT_ARRAY_AREA_M2, { min: 1000, max: 20000, step: 100, label: "Solar array area", unit: "m²" });
+  const targetTonnes = param(1000, { min: 100, max: 5000, step: 10, label: "Target installed mass", unit: "t" });
+  const costPerKgUsd = param(3000, { min: 100, max: 5000, step: 50, label: "Launch cost", unit: "$/kg" });
 
   const params: ParamSignal[] = [
-    { get: distanceAu, set: setDistanceAu, min: 0.3, max: 40, step: 0.1, label: "Heliocentric distance", unit: "AU" },
-    { get: computeSharePct, set: setComputeSharePct, min: 0, max: 90, step: 1, label: "Power to compute", unit: "%" },
-    { get: arrayAreaM2, set: setArrayAreaM2, min: 1000, max: 20000, step: 100, label: "Solar array area", unit: "m²" },
-    { get: targetTonnes, set: setTargetTonnes, min: 100, max: 5000, step: 10, label: "Target installed mass", unit: "t" },
-    { get: costPerKgUsd, set: setCostPerKgUsd, min: 100, max: 5000, step: 50, label: "Launch cost", unit: "$/kg" },
+    distanceAu,
+    computeSharePct,
+    arrayAreaM2,
+    targetTonnes,
+    costPerKgUsd,
   ];
 
   const outputs = createMemo<MissionResult>(() => {
-    const compute = computeSharePct();
+    const compute = computeSharePct.get();
     const scenario = defaultMissionScenario(LUNAR_REGOLITH_SEED, {
-      distanceAu: distanceAu(),
-      arrayAreaM2: arrayAreaM2(),
+      distanceAu: distanceAu.get(),
+      arrayAreaM2: arrayAreaM2.get(),
       fractionCompute: compute / 100,
       fractionManufacturing: (100 - HOUSEKEEPING_PCT - compute) / 100,
       fractionHousekeeping: HOUSEKEEPING_PCT / 100,
-      targetInstalledMassKg: targetTonnes() * 1000,
-      costPerKgUsd: costPerKgUsd(),
+      targetInstalledMassKg: targetTonnes.get() * 1000,
+      costPerKgUsd: costPerKgUsd.get(),
     });
     return runMission(scenario);
   });
