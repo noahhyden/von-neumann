@@ -29,29 +29,15 @@
 // ASCII only, no em-dash (CLAUDE.md 5).
 
 import { readFileSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { join } from "node:path";
+import { parseArgs } from "node:util";
 
 // Sourced from CITATION.cff (the whole-repo software citation the papers relate to).
 const REPO_CONCEPT_DOI = "10.5281/zenodo.21249296";
 const REPO_URL = "https://github.com/noahhyden/von-neumann";
 
-const papersRoot = fileURLToPath(new URL("..", import.meta.url));
+const papersRoot = join(import.meta.dirname, "..");
 
-/** Parse `--key value` / `--flag` args into an object. */
-function parseArgs(argv) {
-  const out = { _: [] };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a.startsWith("--")) {
-      const key = a.slice(2);
-      const next = argv[i + 1];
-      if (next === undefined || next.startsWith("--")) out[key] = true;
-      else { out[key] = next; i++; }
-    } else out._.push(a);
-  }
-  return out;
-}
 
 /** "Noah Hyden" -> "Hyden, Noah" (Zenodo prefers Family, Given). Single token as-is. */
 export function toFamilyGiven(name) {
@@ -208,8 +194,14 @@ async function finalize({ slug, statePath, pdfPath, zipPath }) {
 // --- main --------------------------------------------------------------------------
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
-  const cmd = args._[0];
+  const { values: args, positionals } = parseArgs({
+    allowPositionals: true,
+    options: {
+      slug: { type: "string" }, state: { type: "string" }, pdf: { type: "string" },
+      zip: { type: "string" }, "doi-tex": { type: "string" },
+    },
+  });
+  const cmd = positionals[0];
   const slug = args.slug;
   if (!slug) { console.error("zenodo-publish: --slug is required"); process.exit(2); }
   const statePath = args.state || join(papersRoot, slug, "zenodo-state.json");
@@ -224,6 +216,6 @@ async function main() {
 }
 
 // Only run when invoked directly, so buildMetadata/toFamilyGiven can be imported by tests.
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.main) {
   main().catch((e) => { console.error(e.message || e); process.exit(1); });
 }

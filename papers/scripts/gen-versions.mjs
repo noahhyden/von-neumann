@@ -23,14 +23,13 @@
 
 import { readdirSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 
 // papers/ (one up from scripts/) and the repo root (two up). All git commands run
 // with cwd = repoRoot and repo-relative pathspecs, so cwd at call time does not
 // matter.
-const papersRoot = fileURLToPath(new URL("..", import.meta.url));
-const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
+const papersRoot = join(import.meta.dirname, "..");
+const repoRoot = join(import.meta.dirname, "..", "..");
 
 // The candidate refs that may hold the archived PDFs, most-local first. In CI the
 // orphan branch is fetched as origin/paper-pdfs; locally it may be checked out as
@@ -159,6 +158,6 @@ export interface VersionMeta {
 export const PAPER_VERSIONS: Record<string, VersionMeta[]> = ${JSON.stringify(byslug, null, 2)};
 `;
 
-const outPath = fileURLToPath(new URL("../../frontend/src/papers-versions.ts", import.meta.url));
+const outPath = join(import.meta.dirname, "..", "..", "frontend", "src", "papers-versions.ts");
 writeFileSync(outPath, out);
 console.log(`gen-versions: wrote ${outPath} with ${total} version(s) across ${slugs.length} paper(s).`);
