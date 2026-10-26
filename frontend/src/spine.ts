@@ -1,19 +1,9 @@
-/**
- * The cross-scale spine: a faithful TS port of `spine/run.py`.
- *
- * Threads one closure-sim `Factory` through three scales - the single factory
- * (closure + replication, `model.ts`), the local fleet (`multi-probe.ts`), and the
- * galaxy (`swarm.ts`) - deriving the swarm's per-star manufacturing dwell
- * (`settleTimeYears`, once an ungrounded 0.0) from the same build physics the fleet
- * uses. Introduces no new numbers; every quantity traces to a module already ported and
- * parity-tested. Parity-guarded against the Python by `spine.test.ts` (Layer A).
- */
+/** The cross-scale spine: a faithful TS port of `spine/run.py`. */
 import { computeClosure, simulate, type Factory } from "./model.ts";
 import { paramsFromFactory, simulateFleet, timeToBuildOneCopyDays } from "./multi-probe.ts";
 import { simulateSwarm, SWARM_DEFAULTS, type Policy, type SwarmResult } from "./swarm.ts";
 
-// 1 Julian year = 365.25 d = 3.15576e7 s - the same year basis the swarm uses for
-// C_PC_PER_YEAR, so build-days -> years shares the swarm's clock. (3.15576e7 / 86400.)
+// 1 Julian year = 365.25 d = 3.15576e7 s - the same year basis the swarm uses for C_PC_PER_YEAR, so build-days -> years shares the swarm's clock.
 export const DAYS_PER_JULIAN_YEAR = 365.25;
 
 export interface SpineScenario {

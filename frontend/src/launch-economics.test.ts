@@ -1,8 +1,4 @@
-/**
- * Parity test: the TS port must reproduce the Python launch-economics exactly.
- * Ground-truth numbers mirror launch-economics/tests/*. Pure - no pimas (Layer A).
- * Run with `node --test` (Node strips the TS types natively).
- */
+/** Parity test: the TS port must reproduce the Python launch-economics exactly. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {

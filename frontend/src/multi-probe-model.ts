@@ -1,12 +1,4 @@
-/**
- * The multi-probe model as a pimas reactive graph - the sixth surface, a live fleet.
- *
- * Knob signals + a memo over the parity-tested TS port (`multi-probe.ts`) that reruns
- * the whole deterministic fold, plus a "day" scrubber signal that selects one snapshot
- * from the run's timeline - drag it to watch the fleet grow and disperse. The fold is
- * cheap (tens of probes, a few hundred steps), so re-running on every knob change is
- * fine; no store/speculate needed (same lightweight shape as the other surfaces).
- */
+/** The multi-probe model as a pimas reactive graph - the sixth surface, a live fleet. */
 import { createSignal, createMemo } from "pimas";
 import type { Accessor } from "pimas";
 import { param, type ParamSignal } from "./reactive-model.js";

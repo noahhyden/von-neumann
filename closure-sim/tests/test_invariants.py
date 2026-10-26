@@ -1,8 +1,4 @@
-"""Trace-level invariants for closure_sim.replication.simulate (issue #48, phase A).
-
-Every invariant has a positive test (a live run's trace does not trip) and a
-negative test (a hand-built SimStep list violating the invariant does trip).
-"""
+"""Trace-level invariants for closure_sim.replication.simulate (issue #48, phase A)."""
 
 import pytest
 

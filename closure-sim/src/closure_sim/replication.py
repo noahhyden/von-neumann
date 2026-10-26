@@ -1,36 +1,4 @@
-"""Self-replication simulator (whole-copy replication model).
-
-The factory mass obeys a continuous ODE, dF/dt = binding-rate(F), integrated by
-the shared adaptive solver `vn_core.ode` (issue #38) and sampled on a daily grid
-for reporting. It was previously stepped by hand with forward Euler at a guessed
-dt; that biased the exponential-growth regime and is what this module no longer
-does.
-
-Model
------
-State is installed factory mass ``F`` (kg), all of it productive. Productivity
-``alpha = K0 / seed_mass`` (kg local output per day per kg of factory) is fixed by
-the seed, so local production ``alpha * F`` scales with the factory - the source of
-exponential growth.
-
-Building new factory mass needs inputs in ratio ``C : (1 - C)`` (local : vitamin),
-where ``C`` is mass closure. That gives three ceilings on the growth rate dF/dt:
-
-    material path : (alpha * F) / C          -> scales with F  -> exponential
-    energy path   : energy_cap / C           -> constant       -> linear
-    resupply path : R / (1 - C)              -> constant       -> linear
-
-with ``energy_cap = available_power_per_day / e_local`` (e_local = energy per kg of
-*locally produced* material) and ``R`` the vitamin resupply rate. The binding
-(smallest) path sets dF/dt each step, which is exactly the regime.
-
-Key limiting behaviours, all emergent (not hardcoded):
-  * C -> 1: resupply path -> infinity, growth stays exponential forever.
-  * C -> 0: nothing is made locally; growth is pure linear resupply at rate R.
-  * R = 0 with C < 1: no vitamins, growth pins to zero - the factory is stuck.
-  * Making chips locally raises e_local sharply, which can move the bottleneck to
-    energy rather than removing it.
-"""
+"""Self-replication simulator (whole-copy replication model)."""
 
 from __future__ import annotations
 
@@ -140,12 +108,7 @@ def _interpolate_crossing(
 
 @dataclass(frozen=True)
 class _Setup:
-    """The derived quantities a replication run needs, shared by every entry point.
-
-    Extracted so ``simulate`` (full telemetry) and ``reaches_target`` (cheap
-    boolean) compute the closure, productivity, and ceilings exactly once and the
-    same way - no drift between the two paths.
-    """
+    """The derived quantities a replication run needs, shared by every entry point."""
 
     closure: float
     alpha: float
@@ -206,12 +169,7 @@ def _make_rhs(s: _Setup) -> Callable[[float, list[float]], list[float]]:
 def _verify_trace_invariants(
     steps: list["SimStep"], *, alpha: float, energy_cap: float, seed_mass_kg: float
 ) -> None:
-    """Assert the documented trace invariants on a completed run. See REFERENCES.md.
-
-    Called by `simulate` under `if __debug__:` and directly by negative tests.
-    Raises AssertionError with an [inv:...] tag on the first violation. `python -O`
-    strips both the call site and the assertions.
-    """
+    """Assert the documented trace invariants on a completed run."""
     for i, s in enumerate(steps):
         assert s.factory_mass_kg >= seed_mass_kg * (1.0 - 1e-8), (
             f"[inv:cs-mass-nonneg] step {i}: mass={s.factory_mass_kg} < seed={seed_mass_kg}"
@@ -264,18 +222,7 @@ def simulate(
     n_steps = int(math.ceil(rep.duration_days / rep.dt_days))
     days = [i * rep.dt_days for i in range(n_steps + 1)]
 
-    # Integrate dF/dt = binding-rate(F) with the shared adaptive solver instead of
-    # a hand-rolled forward-Euler step (issue #38). Euler at a guessed dt biased
-    # exponential growth low, so the *empirical* doubling time drifted from the
-    # analytic one purely as a step-size artefact; RK45 to a tolerance removes
-    # that. `dt_days` now sets only the reporting cadence (the sample grid the
-    # timeline and crossings are read off), not the integration accuracy. The
-    # rate has kinks where the binding regime switches; the adaptive stepper
-    # simply shortens its step across them.
-    #
-    # This full-telemetry path samples every day for the SimStep timeline; callers
-    # that only need "does it reach target?" should use reaches_target(), which
-    # skips the grid and is ~36x cheaper (issue #38 Phase 2).
+    # Integrate dF/dt = binding-rate(F) with the shared adaptive solver instead of a hand-rolled forward-Euler step (issue #38).
     if days[-1] > 0.0:
         traj = solve(_make_rhs(s), [F0], (0.0, days[-1]), t_eval=days, rtol=1e-8, atol=1e-9)
         if not traj.success:
@@ -347,20 +294,7 @@ def simulate(
 def reaches_target(
     factory: Factory, params: ReplicationParams | None = None
 ) -> bool:
-    """Does the factory's output ever reach its target? A cheap viability check.
-
-    Equivalent to ``simulate(factory, params).time_to_target_days is not None`` but
-    ~36x cheaper (issue #38 Phase 2): it skips the per-day SimStep timeline and
-    lets the solver take its natural adaptive steps instead of forcing a step per
-    reporting day.
-
-    Correct by monotonicity: dF/dt = binding-rate(F) >= 0, so factory mass F is
-    non-decreasing, so output = min(alpha*F, energy_cap) is non-decreasing. Output
-    therefore reaches the target iff it has reached it by the final time - the
-    whole trajectory reduces to one endpoint comparison, no timeline needed. Use
-    this in bisection / Monte Carlo hot paths (e.g. probe-sim's operational
-    range); use ``simulate`` when you actually need the timeline.
-    """
+    """Does the factory's output ever reach its target?"""
     rep = params or factory.replication
     if rep is None:
         raise ValueError(

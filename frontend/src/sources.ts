@@ -1,21 +1,4 @@
-/**
- * The project-wide bibliography, consolidated from every module's REFERENCES.md into
- * one sourced list. Pure data, zero pimas imports (Layer A testable, CLAUDE.md 7):
- * the reactive skin (a <Cite> marker and the Sources surface in main.tsx) reads this,
- * it never writes it.
- *
- * Two kinds of entry live here, both traced (CLAUDE.md 1), nothing invented: (1) the
- * load-bearing sources whose numbers are used in a module and recorded in that module's
- * REFERENCES.md, and (2) further-reading / cross-check sources that ground a module's
- * ideas without a number appearing in code - a bibliography is broader than the code that
- * cites it. Every entry is still attributed to the module(s) it is relevant to (`modules`)
- * and listed in that module's REFERENCES.md, so the invariant "a source here exists in a
- * REFERENCES.md" holds for both kinds. `url: null` means the repo cites the work by
- * journal / report reference without a link (a textbook, an IAU resolution, a paywalled
- * DOI), not that a link was dropped. `strength` records how a reviewer should weigh it, so
- * the public bibliography is honest about which claims rest on peer-reviewed work and which
- * on a vendor page or a wiki.
- */
+/** The project-wide bibliography, consolidated from every module's REFERENCES.md into one sourced list (`url: null` means cited by report without a link, `strength` records how to weigh it). */
 
 export type SourceCategory =
   | "Self-replicating machines"
@@ -51,11 +34,7 @@ export interface Source {
   grounds: string;
 }
 
-/**
- * Ordered by category so the citation numbers group logically in the bibliography. The
- * number a reader sees ([n]) is 1-based position in this array (see `sourceNumber`), so
- * do not reorder without accepting that the numbers shift.
- */
+/** Ordered by category so the citation numbers group logically in the bibliography. */
 export const SOURCES: Source[] = [
   // -- Self-replicating machines (the foundational idea) -----------------------------
   {

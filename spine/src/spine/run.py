@@ -1,35 +1,4 @@
-"""The cross-scale fold: one factory, three scales, cadences derived not assumed.
-
-`von-neumann` models self-replication at three scales, each its own pure fold:
-
-  * a **single factory** (closure-sim): mass closure + a replication sim - how long one
-    seed takes to reach a target output;
-  * a **local fleet** (multi-probe): tens of probes copying and dispersing across AU,
-    whose copy cadence is *already* derived from a closure-sim `Factory`
-    (`params_from_factory`); and
-  * a **galaxy** (swarm): a settlement front across parsecs, following Nicholson &
-    Forgan (2013).
-
-Until now those three told three disconnected stories: each scale that needed a
-"how long to build a copy" number chose its own. In particular the swarm's per-star
-**manufacturing dwell** (`settle_time_years` - the time a freshly settled probe spends
-building offspring before they depart) was an ungrounded `[ESTIMATE]` defaulted to 0.0:
-the front was assumed to replicate *instantaneously*.
-
-`spine` closes that seam. It threads **one** `Factory` through all three folds and
-*derives* the swarm's dwell from the very same closure-sim build physics the fleet uses
-(`time_to_build_one_copy_days` at 1 AU). It introduces **no new number** - it only
-routes a quantity the factory already fixes to the one scale that was guessing it.
-
-The payoff is a quantitative, cross-scale answer to *which constraint binds at which
-scale*: build time governs the local fleet (transit is days), but is dwarfed by
-interstellar transit at galactic scale - so the same manufacturing cadence that sets the
-fleet's doubling time is a negligible tax on galactic exploration. `measure_dwell_tax`
-demonstrates that tax directly (front fill with the derived dwell vs. with zero dwell).
-
-Pure, deterministic, plain data; zero pimas imports (CLAUDE.md §7). Every number traces
-to closure-sim / multi-probe / swarm; see REFERENCES.md.
-"""
+"""The cross-scale fold: one factory, three scales, cadences derived not assumed."""
 
 from __future__ import annotations
 
@@ -43,9 +12,7 @@ from swarm.sim import simulate_swarm
 
 from spine.scenario import SpineScenario
 
-# 1 Julian year = 365.25 days = 3.15576e7 s. This is the SAME year basis the swarm uses
-# for C_PC_PER_YEAR (swarm/models.py), so build-days -> years and the swarm's light-years
-# are on one clock. (3.15576e7 s / 86400 s-per-day = 365.25 days.)
+# 1 Julian year = 365.25 days = 3.15576e7 s, the same year basis swarm uses for C_PC_PER_YEAR (see REFERENCES.md).
 DAYS_PER_JULIAN_YEAR: float = 365.25
 
 
@@ -78,12 +45,7 @@ class SpineResult:
 
 @dataclass
 class DwellTax:
-    """A direct A/B of the manufacturing dwell's cost at galactic scale.
-
-    Both runs are identical except the dwell: `settle_time_years` = the derived value vs.
-    0.0 (the old ungrounded default). Run at a fine timestep on a small field so a dwell
-    of order a year is actually resolved (see `SpineScenario.tax_dt_years`).
-    """
+    """A direct A/B of the manufacturing dwell's cost at galactic scale."""
 
     policy: str
     n_stars: int
@@ -105,23 +67,14 @@ def _fleet_binding(binding) -> str:
 
 
 def derive_settle_time_years(scenario: SpineScenario) -> float:
-    """The swarm's per-star dwell, DERIVED from the factory's build physics at 1 AU.
-
-    A freshly settled probe orbits a Sun-like star (N&F's uniform field) and must build one
-    offspring's worth of *local* structure before it can launch children. That time is
-    exactly the fleet's 1-AU copy cadence - the same closure-sim `min(machinery, energy_cap)`
-    regime - converted to years. No new number enters here; it is factory physics, re-used.
-    """
+    """The swarm's per-star dwell, DERIVED from the factory's build physics at 1 AU."""
     fleet_params = params_from_factory(scenario.factory)
     copy_time_days = time_to_build_one_copy_days(fleet_params, 1.0)
     return copy_time_days / DAYS_PER_JULIAN_YEAR
 
 
 def _verify_spine_result(r: SpineResult) -> None:
-    """Assert composite invariants on a completed spine run. See REFERENCES.md.
-
-    Called under `if __debug__:` at the end of `run_spine`.
-    """
+    """Assert composite invariants on a completed spine run."""
     assert 0.0 <= r.closure_ratio <= 1.0, (
         f"[inv:sp-scale-order] closure_ratio={r.closure_ratio} outside [0, 1]"
     )
@@ -215,13 +168,7 @@ def run_spine(scenario: SpineScenario) -> SpineResult:
 
 
 def measure_dwell_tax(scenario: SpineScenario) -> DwellTax:
-    """Directly measure the manufacturing dwell's cost on galactic exploration.
-
-    An A/B on a small field at a fine timestep (so a ~year dwell is resolved): the swarm
-    fill time with the DERIVED dwell vs. with dwell = 0. The gap is the exploration time
-    the front spends building rather than travelling. `tax_fraction` is that gap relative
-    to the zero-dwell baseline - expected near zero when interstellar transit dominates.
-    """
+    """Directly measure the manufacturing dwell's cost on galactic exploration."""
     settle_time_years = derive_settle_time_years(scenario)
 
     def _t100(dwell: float) -> float | None:

@@ -1,10 +1,4 @@
-"""The electronics-wall analysis - the headline insight.
-
-Re-run a scenario with the electronics/compute subsystems toggled from vitamin to
-locally-producible, and report how closure, the resupply ceiling, doubling time,
-and time-to-target change. This isolates the single biggest closure bottleneck:
-the semiconductor supply chain.
-"""
+"""The electronics-wall analysis - the headline insight."""
 
 from __future__ import annotations
 

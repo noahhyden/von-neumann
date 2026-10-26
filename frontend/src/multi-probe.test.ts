@@ -1,9 +1,4 @@
-/**
- * Parity test: the TS multi-probe port must reproduce the Python `multi_probe.fleet`
- * exactly, including the seeded mulberry32 sequence (jitter case). Ground truth was
- * generated from the Python package. Pure - no pimas (Layer A). If the Python model
- * changes, regenerate these numbers.
- */
+/** Parity test: the TS multi-probe port must reproduce the Python `multi_probe.fleet` exactly, including the seeded mulberry32 sequence (jitter case). */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { nextFloat, seedState, paramsFromFactory, simulateFleet } from "./multi-probe.ts";

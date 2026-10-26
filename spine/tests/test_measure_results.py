@@ -1,18 +1,4 @@
-"""Drift guard: the committed JSON artifacts must still match the fold (SCRUTINY.md C8).
-
-The paper restates only numbers committed under `experiments/results/`. That is safe only if
-the JSON cannot silently drift from the code that made it. Each test re-runs a TINY slice of a
-measurement (one or two direct fills, never the break-even search) and asserts it reproduces the
-committed record exactly - the spine fold is a pure seeded function, so this is an exact check
-modulo JSON float round-trip. A refactor that changes the fold fails here until the JSON is
-regenerated (`python -m experiments.measure --force`).
-
-We deliberately guard the deterministic single fills (sweep points, per-seed A/B records, and
-per-policy nominal fractions), NOT the bisection-derived break-even, whose endpoint depends on
-the search path. The break-even is a convenience read off the same fills these guard.
-
-Each test skips if its JSON is absent, so a fresh checkout without a local run still passes.
-"""
+"""Drift guard: the committed JSON artifacts must still match the fold (SCRUTINY.md C8)."""
 
 from __future__ import annotations
 

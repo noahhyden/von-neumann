@@ -200,3 +200,7 @@ tests live in `tests/test_invariants.py`.
   installed - a definition worth pinning.
 - **[inv:cs-growth-nonneg]** `growth_rate_kg_per_day >= 0`. If any regime we later add
   introduces decay, this becomes conditional and is documented at that point.
+
+## Benchmark note (issue #38 Phase 2)
+
+- **`reaches_target` ~36x cheaper than `simulate`** - measured wall-clock ratio from the issue #38 Phase 2 benchmark (it skips the per-day SimStep timeline and lets the adaptive solver take natural steps). Verdict: machine- and scenario-dependent, order-of-magnitude only; it never enters a model output. Correctness rests on monotonicity (dF/dt >= 0, so output = min(alpha*F, energy_cap) is non-decreasing), not on this figure.

@@ -1,10 +1,4 @@
-"""End-to-end validation for the cross-scale spine (CLAUDE.md §2: assert on behavior).
-
-These check the *seam*, not just that code runs: that one factory drives every scale,
-that the swarm dwell is genuinely derived from the factory (not a re-guessed number), that
-the derived copy cadence really is the fleet's doubling clock, and that the same dwell is a
-negligible - but resolvable, and policy-ordered - tax on galactic exploration.
-"""
+"""End-to-end validation for the cross-scale spine (CLAUDE.md §2: assert on behavior)."""
 
 from __future__ import annotations
 
@@ -28,8 +22,7 @@ def scenario() -> SpineScenario:
 
 
 def test_one_factory_drives_every_scale(scenario: SpineScenario) -> None:
-    # The closure ratio the spine reports IS the shared factory's closure ratio, and the
-    # fleet params derived for scale 2 carry the exact same number. One source, three scales.
+    # The closure ratio the spine reports IS the shared factory's closure ratio, and the fleet params derived for scale 2 carry the exact same number.
     r = run_spine(scenario)
     factory_closure = compute_closure(scenario.factory).closure_ratio
     fleet_closure = params_from_factory(scenario.factory).closure_ratio
@@ -39,8 +32,7 @@ def test_one_factory_drives_every_scale(scenario: SpineScenario) -> None:
 
 
 def test_settle_time_is_derived_from_the_factory_not_guessed(scenario: SpineScenario) -> None:
-    # The swarm dwell (once an ungrounded [ESTIMATE] of 0.0) equals the fleet's 1-AU copy
-    # time in years, exactly - it is factory physics re-used, with no free parameter.
+    # The swarm dwell (once an ungrounded [ESTIMATE] of 0.0) equals the fleet's 1-AU copy time in years, exactly - it is factory physics re-used, with no free parameter.
     fp = params_from_factory(scenario.factory)
     copy_days = time_to_build_one_copy_days(fp, 1.0)
     expected_years = copy_days / DAYS_PER_JULIAN_YEAR
@@ -52,16 +44,14 @@ def test_settle_time_is_derived_from_the_factory_not_guessed(scenario: SpineScen
 
 
 def test_derived_dwell_depends_only_on_the_factory(scenario: SpineScenario) -> None:
-    # It is a property of the factory, so the galaxy knobs (policy, star count) must not
-    # change it. Same factory -> same dwell.
+    # It is a property of the factory, so the galaxy knobs (policy, star count) must not change it.
     powered = derive_settle_time_years(SpineScenario.default(policy="powered", n_stars=800))
     sling = derive_settle_time_years(SpineScenario.default(policy="slingshot_nearest", n_stars=1600))
     assert powered == pytest.approx(sling)
 
 
 def test_the_copy_cadence_is_the_fleets_doubling_clock(scenario: SpineScenario) -> None:
-    # The leg that makes the seam meaningful: at fleet scale (transit is days) the factory
-    # build time IS the clock - the first doubling lands within a timestep of the copy time.
+    # The leg that makes the seam meaningful: at fleet scale (transit is days) the factory build time IS the clock - the first doubling lands within a timestep of the copy time.
     r = run_spine(scenario)
     assert r.fleet_doubling_days is not None
     assert r.fleet_doubling_days == pytest.approx(r.copy_time_days, abs=2.0)
@@ -69,8 +59,7 @@ def test_the_copy_cadence_is_the_fleets_doubling_clock(scenario: SpineScenario) 
 
 
 def test_dwell_is_negligible_at_galactic_scale_for_powered(scenario: SpineScenario) -> None:
-    # The cross-scale punchline: the same ~1.6 yr dwell is a vanishing fraction of a
-    # multi-million-year powered fill - interstellar transit dominates by orders of magnitude.
+    # The cross-scale punchline: the same ~1.6 yr dwell is a vanishing fraction of a multi-million-year powered fill - interstellar transit dominates by orders of magnitude.
     r = run_spine(scenario)  # default policy = powered
     assert r.swarm_t100_years is not None and r.swarm_t100_years > 1e5
     assert r.final_settled == r.n_stars  # a connected field still fills to 100%
@@ -79,18 +68,14 @@ def test_dwell_is_negligible_at_galactic_scale_for_powered(scenario: SpineScenar
 
 
 def test_dwell_tax_is_small_positive_and_ordered_by_speed(scenario: SpineScenario) -> None:
-    # Measured A/B (fine dt, small field): turning the derived dwell on can only slow the
-    # fill, and for fast slingshot probes it costs a small - but real and resolvable -
-    # fraction of the exploration time.
+    # Measured A/B (fine dt, small field): turning the derived dwell on can only slow the fill, and for fast slingshot probes it costs a small - but real and resolvable - fraction of the exploration time.
     tx = measure_dwell_tax(SpineScenario.default(policy="slingshot_nearest"))
     assert tx.t100_with_dwell is not None and tx.t100_zero_dwell is not None
     assert tx.t100_with_dwell >= tx.t100_zero_dwell  # dwell never speeds exploration up
     assert tx.tax_fraction is not None
     assert 0.0 < tx.tax_fraction < 0.01  # real, positive, and tiny
 
-    # Ordered by speed: the powered dwell fraction (from the coarse full run) is far below
-    # the slingshot tax - faster transit shrinks the hop the dwell competes with, so the
-    # faster policy pays the larger (still negligible) tax.
+    # Ordered by speed: the powered dwell fraction (from the coarse full run) is far below the slingshot tax - faster transit shrinks the hop the dwell competes with, so the faster policy pays the larger (still negligible) tax.
     powered_frac = run_spine(SpineScenario.default(policy="powered")).dwell_fraction_of_t100
     assert powered_frac is not None
     assert powered_frac < tx.tax_fraction
@@ -105,8 +90,7 @@ def test_dwell_tax_is_deterministic() -> None:
 
 
 def test_no_offspring_settles_only_the_homeworld() -> None:
-    # Boundary: with zero offspring the front cannot spread - only the homeworld is settled
-    # and there is no 100% time (the field never fills).
+    # Boundary: with zero offspring the front cannot spread - only the homeworld is settled and there is no 100% time (the field never fills).
     r = run_spine(SpineScenario.default(offspring_per_settlement=0))
     assert r.final_settled == 1
     assert r.swarm_t100_years is None

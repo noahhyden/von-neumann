@@ -1,16 +1,4 @@
-/**
- * TS port of `probe-sim` (environment + autonomy) - pure math, no pimas.
- *
- * The factory-free part of the probe model: solar power vs heliocentric distance,
- * and the compute headroom that power buys (reusing the power-budget port). The
- * operational-range piece needs a real probe factory (an open [GAP] in probe-sim),
- * so it's deferred. Parity-tested against the Python in `probe-sim.test.ts` (Layer
- * A). Sources: ../../probe-sim/REFERENCES.md.
- *
- * Self-contained (like the other ports) so it runs under `node --test`: the two
- * compute helpers mirror the power-budget port - throughput = power × efficiency,
- * brain-equivalents against a ~1e18-FLOPS scale ([ESTIMATE], Sandberg & Bostrom 2008).
- */
+/** TS port of `probe-sim` (environment + autonomy) - pure math, no pimas; sources: ../../probe-sim/REFERENCES.md, with the ~1e18 FLOPS brain scale an [ESTIMATE] (Sandberg & Bostrom 2008). */
 
 // [ESTIMATE] brain-equivalent compute, FLOPS - mirrors the power-budget module.
 const BRAIN_COMPUTE_FLOPS_ESTIMATE = 1e18;
