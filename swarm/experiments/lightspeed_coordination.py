@@ -1,29 +1,4 @@
-"""Experiment: what does light-speed-limited coordination cost the swarm?
-
-FRONTIER #1. A paired A/B: for each configuration the SAME seeded galaxy is filled under
-`coordination="instant"` (the source model's perfect global info) and `"lightspeed"` (a
-probe knows a distant star is settled only after the news-light arrives). The two share the
-seed, so the per-seed difference is the coordination effect alone; we report the ensemble
-distribution (median, IQR, bootstrap CI, sign test), never a single run.
-
-ALL runs use `stepping="event"` - the dt-independent event-driven fold. This matters: with a
-coarse fixed timestep the tax is badly overstated, because dt >> hop time batches many
-launches into one step so they all decide from the same stale snapshot and collide. That is a
-discretization artifact (see experiments/dt_artifact.py); at the resolved limit it is gone.
-
-The finding, at resolved timestep:
-- The TIME tax (fill-100% slowdown) is ~0 - light-speed lag does not slow the fill. The
-  large time penalty of coarse-dt models is an artifact.
-- The real cost is REDUNDANT TRAVEL: stale views send probes to stars already claimed by
-  others. Probes-built is identical in both modes (= offspring x settlements = 2N), so the
-  cost is entirely wasted JOURNEYS - a fuel/energy tax a perfect-information model hides.
-- That fuel tax scales cleanly with Lambda = v/c (the probe speed in units of c): negligible
-  at the powered cruise, ~1% of journeys at slingshot speeds (Lambda ~ 0.01), rising to ~18%
-  at directed-energy speeds (Lambda ~ 0.2). Lambda is the governing parameter - for fuel, not
-  time.
-
-Run:  uv run python -O -m experiments.lightspeed_coordination  # ensemble; -O strips debug invariants
-"""
+"""Experiment: what does light-speed-limited coordination cost the swarm?"""
 
 from __future__ import annotations
 
@@ -41,9 +16,7 @@ from experiments.stats_util import bootstrap_median_ci, sign_test_positive
 SEEDS = [0x9E3779B9 + 2654435761 * k for k in range(32)]
 N_STARS = 400  # the Lambda sweep runs powered flight here (event mode is fast for powered)
 
-# The v/c grid for the headline scaling law. The powered cruise (3e-5 c) sits far to the left
-# (tax negligible); the slingshot policies self-limit near Lambda ~ 0.01; directed-energy /
-# light-sail concepts reach 0.1-0.2 c. probe_speed_c IS Lambda for powered flight.
+# The v/c grid for the headline scaling law: powered cruise (3e-5 c) is far left, slingshots self-limit near 0.01, directed-energy concepts reach 0.1-0.2 c (REFERENCES.md).
 LAMBDAS = (0.01, 0.03, 0.05, 0.1, 0.2)
 
 
@@ -70,11 +43,7 @@ def _worker_count() -> int:
 
 
 def _run_paired_worker(args: tuple[dict, int]) -> tuple[float | None, float | None, int, int, float]:
-    """One seed's instant+lightspeed run. Top-level so ProcessPoolExecutor can pickle it.
-
-    Returns the raw per-seed scalars; the caller applies the same conditional appends the serial
-    loop used, so the collected lists (and their order) are byte-identical for any worker count.
-    """
+    """One seed's instant+lightspeed run."""
     common, seed = args
     i = simulate_swarm(SwarmParams(**common, coordination="instant"), seed=seed)
     l = simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=seed)
@@ -84,13 +53,7 @@ def _run_paired_worker(args: tuple[dict, int]) -> tuple[float | None, float | No
 def run_paired(policy: str, *, n_stars: int = N_STARS, probe_speed_c: float = 3e-5,
                speed_cap_c: float | None = None, seeds: list[int] | None = None,
                max_retargets: int = 8) -> Paired:
-    """Fill each seeded galaxy under instant and lightspeed (event mode); collect paired metrics.
-
-    Parallel over seeds (see ``_worker_count``): each seed's run is independent. Per-seed results
-    are collected in seed order (executor.map preserves input order) and the conditional appends
-    are applied here, so the Paired lists are identical to the serial version for any worker count.
-    SWARM_WORKERS=1 takes the serial branch.
-    """
+    """Fill each seeded galaxy under instant and lightspeed (event mode); collect paired metrics."""
     seeds = seeds if seeds is not None else SEEDS
     cap = speed_cap_c if speed_cap_c is not None else max(0.05, 2.0 * probe_speed_c)
     common = dict(n_stars=n_stars, policy=policy, probe_speed_c=probe_speed_c,

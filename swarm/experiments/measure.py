@@ -1,63 +1,4 @@
-"""Heavy measurement driver: runs the full referee-revision ensemble and writes committed JSON.
-
-This is the "beefed-up simulation" the paper's second revision rests on. It is deliberately
-kept OUT of CI: a full event-mode ensemble over many seeds, sizes, branching factors and three
-coordination modes is minutes-to-hours of compute, which would overwhelm the GitHub runners.
-Instead it runs locally and commits its deterministic seeded output as JSON result artifacts
-under ``experiments/results/``; the figures (``paper_figures.py``) and the paper then restate
-only those committed numbers, and CI just renders the figures and typesets (no heavy sim). The
-fold is a pure seeded function of (params, seed), so every JSON is bit-reproducible run to run.
-
-Each measurement writes its own file and SKIPS if the file already exists (pass ``--force`` to
-recompute, or name specific measurements to run a subset), so a long run is resumable and can be
-committed incrementally - progress survives an interrupted session.
-
-Run:
-    uv run --extra dev python -O -m experiments.measure            # all measurements (skip existing)
-    uv run --extra dev python -O -m experiments.measure --force    # recompute all
-    uv run --extra dev python -O -m experiments.measure lambda_sweep floor_bracket   # a subset
-
-    # P2 companion (issue #38 p2 substrate; see experiments/SPEC_P2_LADDER.md).
-    # Runs a power-of-two-N sweep alongside every historical measurement and merges the result
-    # under the top-level ``p2`` key of the same file. Historical top-level keys are untouched.
-    uv run --extra dev python -O -m experiments.measure --p2       # p2 companion for every JSON
-    uv run --extra dev python -O -m experiments.measure --p2 --force   # recompute p2 blocks
-
-The ``-O`` strips ``if __debug__:`` invariant checks; ensemble runs get a ~2-3x
-wall-clock win at bit-identical results (see docs/HARDWARE.md "Assertion mode").
-Omit ``-O`` while iterating - you'll get a stderr warning on each run.
-
-Distributed across K boxes (issue #33, item 2 - only for measurements in SHARDABLE):
-
-    # On each box i in 0..K-1:
-    uv run --extra dev python -O -m experiments.measure --seed-slice $i/$K finite_size_periodic
-    # Then, with all shard files under experiments/results/:
-    uv run --extra dev python -O -m experiments.measure --merge finite_size_periodic
-
-The merge is bit-identical to a single-machine full run; see swarm/tests/test_seed_slice.py.
-
-Paired-free retarget-cap plateau locator (issue #73; see experiments/SPEC_PLATEAU_LOCATOR.md):
-
-    # Locate cap*(N) from instant-only bounce depth b = W_inst/N (no paired treatment run).
-    uv run --extra dev python -O -m experiments.measure --locate-plateau 200000
-    # Options: --plateau-caps 8,16,32  --plateau-seeds 8  --plateau-threshold 0.05
-    #          --plateau-paired  (run ONE paired measurement at cap* for the tax value)
-
-It prints the cap ladder (cap, b_median, delta_b) and cap* - the smallest cap past which the
-bounce depth stops moving - or reports no plateau in range. ~3x cheaper than the paired sweep for
-finding the plateau; the tax VALUE at cap* still needs the (optional) one paired run.
-
-Measurements (referee asks in brackets):
-    lambda_sweep   - fuel/time/energy tax vs Lambda = v/c, powered, event [headline]
-    branching      - tax vs offspring branching factor 2/3/4 [ask 1: the parameter that makes contention]
-    energy_tax     - energy-weighted tax per policy, count vs (1/2)v^2 weighting, 1x-2x bracket [ask 2]
-    finite_size    - fuel tax % vs N over a 16x span, with the extrapolation caveat [ask 3]
-    concurrency    - in-flight probe count vs coverage: why a loser is never on the critical path [ask 4]
-    floor_bracket  - instant / inflight / lightspeed: how much of the tax survives in-flight relay [ask 5]
-    retarget_cap   - fuel tax vs the max_retargets bookkeeping cap: show the insensitivity [smaller point]
-    dt_artifact    - fill-time tax collapsing to ~0 as the fixed timestep resolves [kept from round 1]
-    validation     - Nicholson & Forgan quantitative reproduction at event mode [kept from round 1]
-"""
+"""Heavy measurement driver: runs the full referee-revision ensemble and writes committed JSON."""
 
 from __future__ import annotations
 
@@ -77,35 +18,14 @@ from swarm.sim import _build_kdtree, initial_state
 from experiments.stats_util import bootstrap_median_ci, loglog_slope_ci, sign_test_positive
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
-# v3: per-run records carry ``total_arrivals`` (settlements + wasted trips). Added to record()
-# during the second revision; the version bump makes every committed artifact declare it.
+# v3: per-run records carry ``total_arrivals`` (settlements + wasted trips).
 SCHEMA_VERSION = 3
 
-# Deterministic seed ensemble (paired: every mode shares each seed). 512 available; each
-# measurement uses a prefix sized to its cost. The multiplier is odd (coprime to 2^32), so the
-# 32-bit-masked seeds are all distinct. The headline speed sweep (cheap at N=500, ~1.6 s/seed)
-# uses the full 512; the larger sweeps (finite_size, near-linear since #30) use short prefixes.
-# Extending the pool past the old 64 leaves every existing prefix (<= 48) byte-identical.
+# Deterministic seed ensemble (paired: every mode shares each seed): 512 available, each measurement uses a prefix sized to its cost (see REFERENCES.md, "Measurement design").
 SEEDS = [0x9E3779B9 + 2654435761 * k for k in range(512)]
 
 
-# Per-measurement canonical N for the p2 fixed-N base sweeps (issue #38 follow-up). Each value is
-# the largest power of two whose FULL ensemble regenerates in <= 1 min wall-clock at
-# SWARM_WORKERS=8 on k02 (see docs/HARDWARE.md); different measurements have different per-seed cost
-# (offspring count, in-flight relay, Thomas clustering, fixed-vs-event stepping), so each lands on
-# its own N rather than a shared anchor. The folds are deterministic (CLAUDE.md sec 7), so N is a
-# pure wall-clock choice and never changes a result. SWARM_P2_N_OVERRIDE forces a single N across
-# all of these (used only to probe the 1-min ceiling; unset in normal regeneration).
-#
-# At-scale batch: the six headline fixed-N sweeps now run at the TOP of the p2 ladder, N=262,144,
-# rather than each measurement's 1-min-ceiling N. Larger fields are affordable (the k-d tree is
-# near-linear and RAM fits: measured per-fold peak RSS at 262,144 is ~0.24 GB light / ~0.75 GB
-# for concurrency's step trace / ~0.5 GB for branching offspring=16, so 8 workers stay well under
-# 14 GB), and reading every claim at the same maximal field makes the size-decline story a clean
-# cross-measurement statement instead of a per-measurement footnote. energy_tax and clumpiness
-# stay on their 1-min N (energy_tax's slingshot policies and clumpiness's Thomas-cluster fields
-# are the costly outliers, and neither is part of the at-scale headline set). The 1-min-ceiling
-# values they moved off are kept in comments. Folds are deterministic (CLAUDE.md sec 7).
+# Per-measurement canonical N for the p2 fixed-N base sweeps (issue #38 follow-up): at-scale N=262,144 for the headline set, else the largest power of two regenerating in <= 1 min (REFERENCES.md, "Measurement design").
 P2_FIXED_N = {
     "lambda_sweep": 262144,  # at-scale (1-min N was 2048)
     "branching": 262144,     # at-scale (1-min N was 8192)
@@ -124,44 +44,18 @@ def _p2_fixed_n(name: str) -> int:
     return int(override) if override else P2_FIXED_N[name]
 
 
-# At-scale finite-size p2 ladder (measurements-at-scale batch). The full power-of-two ladder
-# 2^8..2^18 (256..262,144, 11 points) with a linear 32->8 seed ramp: dense in N for the
-# size-decline figure, seeds tapering as the per-seed tax spread narrows at large N so fewer hold
-# the median tight. All three finite-size p2 companions (base, interior-edge, periodic-control)
-# share this ladder so their lever arms are directly comparable. The historical (non-p2)
-# ladders (300..200,000) stay pinned as the original artifacts. The N=262,144 point is light
-# (~0.24 GB/fold), so 8 seeds x 2 modes fits comfortably.
+# At-scale finite-size p2 ladder: N = 2^8..2^18 (11 points) with a linear 32->8 seed ramp, shared by the base, interior-edge and periodic-control companions.
 _FS_P2_LADDER = [(256, 32), (512, 30), (1024, 27), (2048, 25), (4096, 22), (8192, 20),
                  (16384, 18), (32768, 15), (65536, 13), (131072, 10), (262144, 8)]
 
 
 # --------------------------------------------------------------------------------------------
-# seed slicing for distributed ensembles (item 2 of #33's alternative-levers list)
-# --------------------------------------------------------------------------------------------
-# The seed ensemble is map-only (each `(seed, mode)` run is independent), so it can be split
-# across machines with linear speedup. ``--seed-slice N/K`` runs only every K-th seed starting
-# at N (i.e., seeds at positions `i` where `i % K == N`), and writes to a shard file. The user
-# runs K shards on K boxes (any way that suits them: ssh, cloud batch, spot fleet) then runs
-# ``--merge <name> --slice-count K`` to reconstruct the full result from the shards.
-#
-# Bit-identical guarantee: ``merge(shard 0..K-1) == single-machine full run`` at the JSON
-# byte level. The fold is deterministic in (params, seed), so per-seed results are unchanged;
-# the merge step just re-interleaves them in the original seed order and re-runs aggregates
-# through the same summary functions. Verified by ``tests/test_seed_slice.py``.
-#
-# Scope: not every measurement is shardable yet. See ``SHARDABLE`` below; extending is
-# straightforward - each new measurement registers a merger function that concatenates its
-# shard-per-seed rows and calls its own aggregator.
 
 _SEED_SLICE: tuple[int, int] | None = None  # (index, count) - set by --seed-slice; else full run
 
 
 def _apply_slice(seeds: list[int]) -> list[int]:
-    """Filter ``seeds`` down to the active seed slice, or return unchanged when no slice.
-
-    ``--seed-slice N/K`` selects ``[seeds[i] for i in range(len(seeds)) if i % K == N]``.
-    Every shardable measurement wraps its ``SEEDS[:X]`` in a call to this helper.
-    """
+    """Filter ``seeds`` down to the active seed slice, or return unchanged when no slice."""
     if _SEED_SLICE is None:
         return seeds
     idx, count = _SEED_SLICE
@@ -175,21 +69,11 @@ def _shard_suffix() -> str:
     return f".shard{_SEED_SLICE[0]}_{_SEED_SLICE[1]}"
 
 
-# Measurements that support ``--seed-slice`` / ``--merge`` today. Each entry needs a matching
-# entry in ``MERGERS`` (see below). Adding a measurement: refactor it to gather per-seed rows
-# through ``_paired`` (already deterministic under slicing) and register the merger.
+# Measurements that support ``--seed-slice`` / ``--merge`` today.
 SHARDABLE = {"finite_size_periodic"}
 
 
 # --------------------------------------------------------------------------------------------
-# seed-ensemble parallelism (issue #27 item 3)
-# --------------------------------------------------------------------------------------------
-# The fold is a pure, seeded function of (params, seed), so every (seed, mode) run is independent
-# and embarrassingly parallel. We fan the seed loop out over CPU cores with the standard-library
-# ProcessPoolExecutor. This is a WALL-CLOCK aid only and must not change any number: results are
-# always collected back into seed order (executor.map preserves input order), so 1, 4, or N
-# workers produce byte-identical JSON. Set SWARM_WORKERS to override the core count; SWARM_WORKERS=1
-# forces a serial-equivalent loop (also the fallback when a positive count cannot be parsed).
 
 def _worker_count() -> int:
     """Number of worker processes: SWARM_WORKERS if set to a positive int, else os.cpu_count()."""
@@ -205,37 +89,23 @@ def _worker_count() -> int:
 
 
 def _paired_worker(args: tuple[str, str, dict, int]) -> tuple[dict, dict]:
-    """One paired (seed, base/treat) run. Top-level so ProcessPoolExecutor can pickle it.
-
-    Takes plain params + seed and returns the two records; SwarmParams is rebuilt inside the
-    worker so nothing framework-specific has to cross the process boundary.
-    """
+    """One paired (seed, base/treat) run."""
     mode_base, mode_treat, params, seed = args
-    # record_steps=False: this worker only reads scalar aggregates via record(), never the
-    # per-event trace. Dropping it is what keeps two paired N=200k event runs (e.g. the heavy
-    # branching_scale sweep) inside a worker's RAM instead of OOMing. Numbers are unchanged.
+    # record_steps=False: this worker only reads scalar aggregates via record(), never the per-event trace.
     b = simulate_swarm(SwarmParams(coordination=mode_base, **params), seed=seed, record_steps=False)
     t = simulate_swarm(SwarmParams(coordination=mode_treat, **params), seed=seed, record_steps=False)
     return (record(b), record(t))
 
 
 def _single_worker(args: tuple[str, dict, int]) -> dict:
-    """One single-mode run at a seed. Top-level for pickling. Used by the non-paired sweeps
-    (floor_bracket, dt_artifact_extra, ...) that need N modes for the SAME seed but do not fit
-    the strict base/treat shape of ``_paired_worker``.
-    """
+    """One single-mode run at a seed."""
     mode, params, seed = args
     r = simulate_swarm(SwarmParams(coordination=mode, **params), seed=seed, record_steps=False)
     return record(r)
 
 
 def _concurrency_worker(args: tuple[str, dict, int, tuple[float, ...]]) -> tuple[str, int, int, dict[float, int]]:
-    """One (mode, seed) concurrency run. Returns (mode, seed, peak_in_flight, {bin: in_flight}).
-
-    The `series` walk that used to happen in the main loop is done inside the worker so nothing
-    but small scalars crosses the process boundary (each SwarmResult holds one SwarmStep per event,
-    which at N=200k is ~2M records; keeping that in the worker keeps IPC cheap).
-    """
+    """One (mode, seed) concurrency run."""
     mode, params, seed, bins = args
     r = simulate_swarm(SwarmParams(coordination=mode, **params), seed=seed)
     peak = max(st.in_flight for st in r.steps)
@@ -250,15 +120,9 @@ def _concurrency_worker(args: tuple[str, dict, int, tuple[float, ...]]) -> tuple
 
 
 def _clumpy_paired_worker(args: tuple[dict, int]) -> tuple[dict, dict, list[int], list[int], list[int], list[int]]:
-    """Paired instant/lightspeed clumpy run. Returns (record_b, record_t, hop_hists).
-
-    Clumpiness needs the SwarmResult's ``settle_hop_hist``/``wasted_hop_hist`` arrays for the
-    stratified-by-hop-length cancellation test; ``record()`` does not carry them, so this worker
-    is a specialised paired variant that returns the histograms alongside the records.
-    """
+    """Paired instant/lightspeed clumpy run."""
     params, seed = args
-    # Hop histograms come from state counters (carried on the record/result), not from the
-    # per-event trace, so record_steps=False is safe here too.
+    # Hop histograms come from state counters (carried on the record/result), not from the per-event trace, so record_steps=False is safe here too.
     b = simulate_swarm(SwarmParams(coordination="instant", **params), seed=seed, record_steps=False)
     t = simulate_swarm(SwarmParams(coordination="lightspeed", **params), seed=seed, record_steps=False)
     return (record(b), record(t),
@@ -275,11 +139,7 @@ def _dt_paired_worker(args: tuple[dict, int]) -> tuple[float | None, float | Non
 
 
 def _parallel_map(worker, args_list: list, *, label: str = ""):
-    """ProcessPoolExecutor.map with the same determinism + progress conventions as ``_paired``.
-
-    Executor.map preserves input order, so 1, 4, or N workers produce byte-identical output. When
-    SWARM_WORKERS<=1 (or CPU=1) the loop runs serially and is thus a drop-in for the old for-loops.
-    """
+    """ProcessPoolExecutor.map with the same determinism + progress conventions as ``_paired``."""
     n = len(args_list)
     workers = _worker_count()
     results = []
@@ -299,8 +159,6 @@ def _parallel_map(worker, args_list: list, *, label: str = ""):
     return results
 
 
-# --------------------------------------------------------------------------------------------
-# metric extraction + summary
 # --------------------------------------------------------------------------------------------
 
 def record(r) -> dict:
@@ -349,12 +207,7 @@ def pct_delta(treat: float, base: float) -> float | None:
 
 
 def through_origin_slope(xs: list[float], ys: list[float]) -> float | None:
-    """Least-squares slope of ``y = a*x`` through the origin: a = sum(x*y)/sum(x^2).
-
-    The clumpy-field test fits the fuel tax against Lambda through the origin (the derivation
-    predicts tax = 1*Lambda, i.e. a = 1) - so a per-seed slope is the single number that says
-    whether clumpiness moved the LAW's coefficient.
-    """
+    """Least-squares slope of ``y = a*x`` through the origin: a = sum(x*y)/sum(x^2)."""
     pairs = [(x, y) for x, y in zip(xs, ys) if y is not None]
     denom = sum(x * x for x, _ in pairs)
     if denom == 0:
@@ -363,14 +216,7 @@ def through_origin_slope(xs: list[float], ys: list[float]) -> float | None:
 
 
 def _kd_nn_other_d2(kd: dict, xs: list[float], ys: list[float], zs: list[float], i: int) -> float:
-    """Squared distance from point ``i`` to its nearest OTHER point, via k-d branch-and-bound.
-
-    Standalone NN over the fixed positions (no unsettled/beacon state), so it is the diagnostic
-    analogue of ``swarm.sim._nearest_unsettled_at`` for Clark-Evans R. Tie-break is lowest index
-    (matches the naive O(N^2) scan): a same-d2 point displaces the best only when its index is
-    lower, so bit-identical to the pairwise-loop version on tied inputs (continuous coordinates
-    tie only with probability zero).
-    """
+    """Squared distance from point ``i`` to its nearest OTHER point, via k-d branch-and-bound."""
     px, py, pz = xs[i], ys[i], zs[i]
     axis = kd["axis"]
     split = kd["split"]
@@ -440,15 +286,7 @@ def _kd_nn_other_d2(kd: dict, xs: list[float], ys: list[float], zs: list[float],
 
 
 def clark_evans_R(xs: list[float], ys: list[float], zs: list[float], box_side_pc: float) -> float:
-    """Clark-Evans aggregation index R = observed mean NN distance / Poisson expectation (3D).
-
-    R = 1 Poisson (uniform), R < 1 clustered, R > 1 regular. The Poisson 3D nearest-neighbour
-    expectation is 0.55396 * rho^(-1/3) with rho = N / L^3 (Clark & Evans 1954, the 3D form).
-    Used comparatively across fields at the SAME N and box, so the (mild, constant) box edge bias
-    cancels. Near-O(N log N) via the same k-d tree the sim uses (a standalone NN branch-and-bound
-    over ``_build_kdtree``, no settle/beacon state), so the diagnostic no longer gates a large-N
-    clumpy-field sweep.
-    """
+    """Clark-Evans aggregation index R = observed mean NN distance / Poisson expectation (3D)."""
     n = len(xs)
     if n < 2 or box_side_pc <= 0:
         return 1.0
@@ -463,11 +301,7 @@ def clark_evans_R(xs: list[float], ys: list[float], zs: list[float], box_side_pc
 
 
 def write_result(name: str, config: dict, payload: dict) -> Path:
-    """Write ``<name>.json`` (or ``<name>.shardN_K.json`` when running a seed slice).
-
-    When a slice is active the output carries a top-level ``_shard`` block; ``--merge`` reads
-    that block to interleave shards back into full seed order before re-aggregating.
-    """
+    """Write ``<name>.json`` (or ``<name>.shardN_K.json`` when running a seed slice)."""
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     out = RESULTS_DIR / f"{name}{_shard_suffix()}.json"
     doc: dict = {"schema_version": SCHEMA_VERSION, "generator": "experiments.measure",
@@ -480,17 +314,7 @@ def write_result(name: str, config: dict, payload: dict) -> Path:
 
 
 def write_p2_companion(name: str, config: dict, payload: dict) -> Path:
-    """Merge a top-level ``p2`` block into the existing ``<name>.json``, preserving every other key.
-
-    Follow-up to PRs #79/#80/#81 (flat p2 kd-tree substrate + wired dispatch at p2 N). This is
-    the paper-side p2 ladder migration: alongside every historical measurement, an
-    ``n_stars = 2^k`` companion sweep lives under the ``p2`` key. The historical top-level keys
-    (``config``, ``data``, ``scale_regression``, ...) stay byte-for-byte untouched - the drift
-    guards on those keys remain load-bearing - and the p2 companion adds its own self-contained
-    ``{config, ...payload}`` under ``p2``.
-
-    See ``swarm/experiments/SPEC_P2_LADDER.md`` for the full schema and the sweep-size choices.
-    """
+    """Merge a top-level ``p2`` block into the existing ``<name>.json``, preserving every other key."""
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     out = RESULTS_DIR / f"{name}.json"
     if not out.exists():
@@ -515,12 +339,7 @@ def _p2_has_companion(name: str) -> bool:
 
 
 def _paired(mode_treat: str, *, seeds: list[int], mode_base: str = "instant", **params) -> list[tuple[dict, dict]]:
-    """Fill each seeded galaxy under ``mode_base`` and ``mode_treat`` (same seed); return records.
-
-    Parallel over seeds (see ``_worker_count``): each (seed, base/treat) run is independent. Results
-    are always collected in seed order, so the returned list is identical to the serial version for
-    any worker count. SWARM_WORKERS=1 takes the serial branch.
-    """
+    """Fill each seeded galaxy under ``mode_base`` and ``mode_treat`` (same seed); return records."""
     args = [(mode_base, mode_treat, params, s) for s in seeds]
     n = len(args)
     rows: list[tuple[dict, dict]] = []
@@ -531,7 +350,6 @@ def _paired(mode_treat: str, *, seeds: list[int], mode_base: str = "instant", **
             print(f"      seed {i + 1}/{n}", end="\r", flush=True)
     else:
         # executor.map preserves input order, so rows come back in seed order regardless of which
-        # worker finishes first; iterating it yields each result as it is ready, in that order.
         with ProcessPoolExecutor(max_workers=workers) as ex:
             for i, row in enumerate(ex.map(_paired_worker, args)):
                 rows.append(row)
@@ -547,7 +365,6 @@ def _tax_block(rows: list[tuple[dict, dict]]) -> dict:
     time_pct = [pct_delta(t["t100"], b["t100"]) for b, t in rows]
     travel_pct = [pct_delta(t["wasted_travel_pc"], b["wasted_travel_pc"]) for b, t in rows]
     # Energy tax: extra wasted-journey kinetic energy over the baseline's useful (winning) energy,
-    # at the flyby (1x) and rendezvous (2x) endpoints of the brake-and-reaccel bracket.
     e_extra = [t["wasted_energy_c2"] - b["wasted_energy_c2"] for b, t in rows]
     e_useful = [b["settle_energy_c2"] for b, t in rows]
     energy_pct_1x = [ex / eu * 100.0 if eu else None for ex, eu in zip(e_extra, e_useful)]
@@ -563,15 +380,6 @@ def _tax_block(rows: list[tuple[dict, dict]]) -> dict:
 
 
 # --------------------------------------------------------------------------------------------
-# paired-free retarget-cap plateau locator (issue #73; see SPEC_PLATEAU_LOCATOR.md)
-# --------------------------------------------------------------------------------------------
-# The retarget_cap sweep finds cap*(N) - the smallest max_retargets cap past which the fuel tax
-# stops moving - via the full PAIRED (instant + lightspeed) sweep. The shortcut: the plateau
-# LOCATION is fixed by the instant baseline's bounce depth b = W_inst / N alone. Across the cap
-# ladder, b and the paired tax move together, so Delta b -> 0 locates the same plateau as
-# Delta tau -> 0. This locates cap* from instant-only runs (~3x cheaper); the tax VALUE at cap*
-# still needs one paired run. None means "no plateau in the tested ladder" - the honest large-N
-# regime (issue #86), where cap is a lower bound, not a saturation point.
 
 def bounce_depth(wasted_arrivals: int, n_stars: int) -> float:
     """Instant-run bounce depth b = W_inst / N (wasted arrivals per star)."""
@@ -581,20 +389,12 @@ def bounce_depth(wasted_arrivals: int, n_stars: int) -> float:
 
 
 def median_bounce_depth(records: list[dict]) -> float:
-    """Median bounce depth over a list of per-seed instant records (each carrying
-    ``wasted_arrivals`` and ``n_stars``)."""
+    """Median bounce depth over a list of per-seed instant records (each carrying ``wasted_arrivals`` and ``n_stars``)."""
     return statistics.median(bounce_depth(r["wasted_arrivals"], r["n_stars"]) for r in records)
 
 
 def locate_plateau(b_by_cap: dict[int, float], threshold: float = 0.05) -> int | None:
-    """Smallest cap ``k`` whose doubling ``2*k`` no longer moves the bounce depth, or None.
-
-    For each cap ``k`` (ascending) whose double is also present, ``Delta b = b[2k] - b[k]``; the
-    plateau is reached at the smallest ``k`` with ``Delta b < threshold``. ``b`` is monotonically
-    non-decreasing in cap, so a small positive step is convergence and the strict ``<`` also treats
-    a noise-driven negative step as converged; ``Delta b == threshold`` is not. None => no doubling
-    pair converges (plateau above the ladder, or no plateau at all at this N).
-    """
+    """Smallest cap ``k`` whose doubling ``2*k`` no longer moves the bounce depth, or None."""
     for k in sorted(b_by_cap):
         two_k = 2 * k
         if two_k in b_by_cap and (b_by_cap[two_k] - b_by_cap[k]) < threshold:
@@ -603,12 +403,7 @@ def locate_plateau(b_by_cap: dict[int, float], threshold: float = 0.05) -> int |
 
 
 def _instant_bounce_sweep(seeds: list[int], n_stars: int, caps: list[int]) -> dict[int, list[float]]:
-    """Instant-only fold at each cap over the seed ensemble; returns ``{cap: [b per seed]}``.
-
-    Reuses the shared instant params of ``m_retarget_cap`` (powered, Lambda=0.2, event), so at
-    N=400 these runs are bit-identical to that sweep's ``base`` records. Parallel over (cap, seed)
-    via ``_single_worker``; results stay in input order, so any worker count is deterministic.
-    """
+    """Instant-only fold at each cap over the seed ensemble; returns ``{cap: [b per seed]}``."""
     args = [("instant",
              dict(n_stars=n_stars, policy="powered", probe_speed_c=0.2, speed_cap_c=0.4,
                   stepping="event", max_retargets=cap),
@@ -626,13 +421,7 @@ def _instant_bounce_sweep(seeds: list[int], n_stars: int, caps: list[int]) -> di
 def locate_plateau_report(n_stars: int, *, caps: list[int] | None = None,
                           seeds: list[int] | None = None, threshold: float = 0.05,
                           paired: bool = False) -> dict:
-    """Locate cap*(N) from instant-only bounce depth; optionally one paired run for the tax.
-
-    Returns a plain dict: the per-cap ladder (``cap``, ``b_median``, consecutive ``delta_b``),
-    the located ``cap_star`` (or None), and - when ``paired`` and a plateau was found - the paired
-    fuel tax at ``cap_star``. This is the body behind ``--locate-plateau``; kept as a returning
-    function so the whole flow is testable without the CLI.
-    """
+    """Locate cap*(N) from instant-only bounce depth; optionally one paired run for the tax."""
     caps = sorted(set(caps if caps is not None else [8, 16, 32]))
     seeds = seeds if seeds is not None else SEEDS[:8]
     sweep = _instant_bounce_sweep(seeds, n_stars, caps)
@@ -674,15 +463,9 @@ def _print_plateau_report(rep: dict) -> None:
 
 
 # --------------------------------------------------------------------------------------------
-# measurements
-# --------------------------------------------------------------------------------------------
 
 def m_lambda_sweep() -> None:
-    """Headline: fuel/time/travel/energy tax vs Lambda = v/c (powered, event, lightspeed vs instant).
-
-    512 seeds: this is the headline, and at N=500 a paired seed is ~1.6 s, so the ensemble is sized
-    to a precision target (a tight CI on the tax), not to compute - unlike the expensive sweeps.
-    """
+    """Headline: fuel/time/travel/energy tax vs Lambda = v/c (powered, event, lightspeed vs instant)."""
     seeds = SEEDS[:512]
     n_stars = 500
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
@@ -700,11 +483,7 @@ def m_lambda_sweep() -> None:
 
 
 def p2_lambda_sweep() -> None:
-    """P2 companion to ``m_lambda_sweep``: at-scale N=262,144, 128 seeds (see P2_FIXED_N).
-
-    The canonical Lambda sweep: bumped to 128 seeds (from the 32 the other at-scale sweeps use)
-    to tighten the headline fuel- and fill-time-tax intervals, which are the paper's lead numbers.
-    """
+    """P2 companion to ``m_lambda_sweep``: at-scale N=262,144, 128 seeds (see P2_FIXED_N)."""
     seeds = SEEDS[:128]
     n_stars = _p2_fixed_n("lambda_sweep")
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
@@ -722,15 +501,7 @@ def p2_lambda_sweep() -> None:
 
 
 def m_lambda_sweep_scale() -> None:
-    """N=200k companion to the headline speed sweep: does tax ~ v/c linearity hold at scale?
-
-    The base sweep runs at N=500 for a tight CI on the tax slope (a = 0.97 [0.89, 1.19]). At N=200k
-    the total tax is a fifth of the small-N value (the fuel-tax bulk decline), so the natural question
-    is not the magnitude but whether the SHAPE stays linear in Lambda - i.e. whether the collision
-    argument that gives tax ~ v/c is still the right first-order description at the finite-size arm's
-    tip. Same Lambda ladder as the base; seeds drop to 8 (the same precision target the ``finite_size``
-    sweep uses at N=200k).
-    """
+    """N=200k companion to the headline speed sweep: does tax ~ v/c linearity hold at scale?"""
     seeds = SEEDS[:8]
     n_stars = 200_000
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
@@ -748,11 +519,7 @@ def m_lambda_sweep_scale() -> None:
 
 
 def p2_lambda_sweep_scale() -> None:
-    """P2 companion to ``m_lambda_sweep_scale``: at-scale N=524_288.
-
-    Bumped from 262_144 to 2^19 in the at-scale batch: the fixed-N lambda_sweep p2 now runs at
-    262_144, so the scale companion moves one power of two above it to stay a genuine larger lever.
-    """
+    """P2 companion to ``m_lambda_sweep_scale``: at-scale N=524_288."""
     seeds = SEEDS[:8]
     n_stars = 524_288
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
@@ -774,9 +541,6 @@ def m_branching() -> None:
     seeds = SEEDS[:32]
     n_stars = 400
     # Swept high (to 16) so the saturation claim is tested, not asserted from a 3-point plateau:
-    # more offspring make more simultaneous races, but once enough probes already contend the
-    # marginal collision rate should level off. Event-mode cost grows with offspring (off=16 has
-    # ~6x the arrivals of off=4), so this measurement is the heavy end of the local run.
     offspring = [2, 3, 4, 8, 16]
     lambdas = [0.05, 0.2]
     data = {}
@@ -818,16 +582,7 @@ def p2_branching() -> None:
 
 
 def m_branching_scale() -> None:
-    """N=200k companion to the branching sweep: does the tax-grows-with-branching claim hold at scale?
-
-    The base sweep (N=400) shows tax rising monotonically up to offspring=16 without saturating. Since
-    the same-N fuel tax at N=200k is only ~1.5% (down from ~19% at N=300), the paper's ``does the
-    tax also grow with offspring at scale'' question is a real open one - a larger field breeds more
-    simultaneous races per settlement, but each race has a larger neighbourhood so the marginal
-    collision rate could saturate. Offspring ladder stops at 8 (offspring=16 at N=200k over-subscribes
-    RAM on k02 - roughly 6x the arrivals of offspring=4 means ~1.2 GB per worker peak, and even 4
-    concurrent workers push into swap); seeds drop to 6. See docs/HARDWARE.md.
-    """
+    """N=200k companion to the branching sweep: does the tax-grows-with-branching claim hold at scale?"""
     seeds = SEEDS[:6]
     n_stars = 200_000
     offspring = [2, 3, 4, 8]
@@ -849,11 +604,7 @@ def m_branching_scale() -> None:
 
 
 def p2_branching_scale() -> None:
-    """P2 companion to ``m_branching_scale``: N=200_000 -> N=262_144 (next p2 above 200k).
-
-    Offspring ladder stops at 8 for the same reason the historical version does (offspring=16 at
-    N>200k over-subscribes RAM per docs/HARDWARE.md); 6 seeds to match the base.
-    """
+    """P2 companion to ``m_branching_scale``: N=200_000 -> N=262_144 (next p2 above 200k)."""
     seeds = SEEDS[:6]
     n_stars = 524_288
     offspring = [2, 3, 4, 8]
@@ -875,12 +626,7 @@ def p2_branching_scale() -> None:
 
 
 def m_energy_tax() -> None:
-    """Energy-weighted tax per policy: count-tax vs (1/2)v^2-weighted tax (1x and 2x brackets).
-
-    The energy weighting bites hardest where journeys have DIFFERENT speeds - the slingshot
-    policies, whose wasted trips are faster/longer than the powered cruise. So we run all three
-    policies (lightspeed vs instant, event) and report the count tax alongside the energy tax.
-    """
+    """Energy-weighted tax per policy: count-tax vs (1/2)v^2-weighted tax (1x and 2x brackets)."""
     seeds = SEEDS[:32]
     n_stars = 400
     policies = ["powered", "slingshot_nearest", "slingshot_maxboost"]
@@ -923,22 +669,8 @@ def p2_energy_tax() -> None:
 
 
 def m_finite_size() -> None:
-    """Fuel tax % vs system size over a 16x span (300..4800), powered, Lambda=0.2, event.
-
-    Seeds are scaled down as N grows. This is the honest lever arm for the scale discussion: a 16x
-    span, NOT an extrapolation to 1e11 stars. Since issue #30 the run is near-linear (the k-d tree
-    over the unsettled set, REFERENCES.md), so this committed ladder is no longer compute-bound and
-    the sweep extends cleanly to N=200,000 - raise the ladder below when regenerating for a
-    higher-N figure (the numbers here are the pinned artifact the drift guard checks, so leave them
-    unless you are deliberately regenerating the result at a new scale).
-    """
-    # High-seed sweep to resolve whether the large-N tax decline is real or scatter. Since #30 the
-    # run is near-linear, so the ladder now reaches N=200,000 (a ~670x span, not the old 16x). The
-    # 300..4800 points and their seed counts are unchanged (they regenerate byte-identically); the
-    # higher-N points scale seeds DOWN to a precision target - the tax spread narrows with N (the
-    # per-seed 200k tax clusters within ~0.5 pp), so fewer seeds hold the median tight. The old
-    # O(N^2) cost that once capped this at 4800 is gone: the whole ladder to 200k is cheaper than
-    # the old sweep to 4800 (which was dominated by its 2400/4800 points).
+    """Fuel tax % vs system size over a 16x span (300..4800), powered, Lambda=0.2, event."""
+    # High-seed sweep reaching N=200,000 (near-linear since #30), with seeds scaled down as N grows to hold the median tight.
     n_seeds_by_n = [(300, 48), (600, 48), (1200, 48), (2400, 48), (4800, 32),
                     (9600, 32), (24000, 24), (48000, 16), (200000, 8)]
     data = {}
@@ -950,9 +682,6 @@ def m_finite_size() -> None:
         data[str(n)] = _tax_block(rows)
         per_n_fuel[n] = [pct_delta(t["wasted_arrivals"], b["wasted_arrivals"]) for b, t in rows]
     # Scale trend, computed here so it regenerates from source (not only stated in the paper prose):
-    # OLS slope of the median tax on log10(N), with a seeded-bootstrap 95% CI resampling seeds within
-    # each N. The decline is convex (accelerating), so this linear slope is a local summary; the
-    # paper reports the per-step drops for the shape.
     ns = [n for n, _ in n_seeds_by_n]
     slope, slope_lo, slope_hi = loglog_slope_ci([math.log10(n) for n in ns],
                                                 [per_n_fuel[n] for n in ns])
@@ -966,14 +695,7 @@ def m_finite_size() -> None:
 
 
 def p2_finite_size() -> None:
-    """P2 companion to ``m_finite_size``: the full power-of-two ladder 256..262,144.
-
-    Historical (non-p2, pinned): (300, 600, 1200, 2400, 4800, 9600, 24000, 48000, 200000).
-    P2 (at-scale batch): the 11-point ladder 2^8..2^18 with a linear 32->8 seed ramp
-    (``_FS_P2_LADDER``), denser in N than the old 9-point companion (adds 65536, 131072) so the
-    size-decline curve is well resolved to the maximal field. Bit-identity of the flat vs pointer
-    path at matching p2 N is proven by ``tests/test_flat_run_fill_oracle.py``.
-    """
+    """P2 companion to ``m_finite_size``: the full power-of-two ladder 256..262,144."""
     n_seeds_by_n = _FS_P2_LADDER
     data = {}
     per_n_fuel: dict[int, list[float]] = {}
@@ -998,19 +720,13 @@ def p2_finite_size() -> None:
 
 def _concurrency_ensemble(seeds: list[int], n_stars: int, lam: float,
                           bins: list[float]) -> dict:
-    """Run the paired instant/lightspeed concurrency ensemble in parallel over (seed, mode).
-
-    Shared between the N=500 headline sweep (``m_concurrency``) and the N=200k scale companion
-    (``m_concurrency_scale``); executor.map preserves input order so this is byte-identical to the
-    old serial version at any worker count.
-    """
+    """Run the paired instant/lightspeed concurrency ensemble in parallel over (seed, mode)."""
     modes = ("instant", "lightspeed")
     params = dict(n_stars=n_stars, policy="powered", probe_speed_c=lam,
                   speed_cap_c=max(0.05, 2 * lam), stepping="event")
     args = [(mode, params, s, tuple(bins)) for s in seeds for mode in modes]
     results = _parallel_map(_concurrency_worker, args, label="seed")
     # Bucket back per mode, preserving seed order (args are emitted seed-then-mode, so the mode
-    # sub-lists reflect the input seed order regardless of worker completion order).
     series = {m: {b: [] for b in bins} for m in modes}
     peak = {m: [] for m in modes}
     seen: dict[str, set[int]] = {m: set() for m in modes}
@@ -1038,17 +754,11 @@ def _concurrency_ensemble(seeds: list[int], n_stars: int, lam: float,
 
 
 def m_concurrency() -> None:
-    """In-flight probe count vs coverage fraction: the mechanism behind 'no fill-time tax'.
-
-    Exponential branching keeps many probes aloft throughout the fill, so a loser's wasted trip
-    is one of hundreds in flight and (almost) never sits on the critical path to the last star.
-    We record, per coverage bin, the mean number of probes in flight, for instant vs lightspeed.
-    """
+    """In-flight probe count vs coverage fraction: the mechanism behind 'no fill-time tax'."""
     seeds = SEEDS[:16]
     n_stars = 500
     lam = 0.2
     # coverage fractions to 0.90 in steps of 0.05, then fine tail bins into the final few percent
-    # (referee: the last-star metric lives at 99%+, where the in-flight population thins).
     bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
     data = _concurrency_ensemble(seeds, n_stars, lam, bins)
     write_result("concurrency",
@@ -1071,16 +781,7 @@ def p2_concurrency() -> None:
 
 
 def m_concurrency_scale() -> None:
-    """N=200k companion to the concurrency sweep: does the many-probes-in-flight mechanism hold
-    at the honest lever arm?
-
-    Same paired instant/lightspeed structure and coverage bins as ``m_concurrency`` at N=500, but at
-    the N=200,000 finite-size scale where the fuel tax is only ~1.5%. If the mechanism claim is
-    right, the median in-flight population should scale roughly with N (the field is exponentially
-    branching until stars run out); this is the at-scale figure for the paper's Section 5 argument
-    that a wasted trip is one of hundreds (thousands, at 200k) aloft and never sits on the critical
-    path. Seeds are scaled down to 8 (the same precision-target logic as ``m_finite_size`` at 200k).
-    """
+    """N=200k companion to the concurrency sweep: does the many-probes-in-flight mechanism hold at the honest lever arm?"""
     seeds = SEEDS[:8]
     n_stars = 200_000
     lam = 0.2
@@ -1106,11 +807,7 @@ def p2_concurrency_scale() -> None:
 
 
 def _floor_bracket_body(seeds: list[int], n_stars: int, lambdas: list[float]) -> dict:
-    """Shared floor-bracket ensemble body (used by ``m_floor_bracket`` and its p2 companion).
-
-    Runs the (mode, seed) paired ensemble and computes the standard aggregate + per-seed block.
-    Factored so the historical and p2 pass share code exactly - only ``n_stars`` differs.
-    """
+    """Shared floor-bracket ensemble body (used by ``m_floor_bracket`` and its p2 companion)."""
     data = {}
     modes = ("instant", "lightspeed", "inflight")
     for lam in lambdas:
@@ -1136,12 +833,7 @@ def _floor_bracket_body(seeds: list[int], n_stars: int, lambdas: list[float]) ->
 
 
 def m_floor_bracket() -> None:
-    """instant / inflight / lightspeed: how much of the decision-site tax survives in-flight relay.
-
-    inflight is the optimistic bound (a probe redirects the instant a beacon overtakes it). We
-    report, per Lambda, all three modes' wasted arrivals, redundant travel, and fill time, plus
-    the inflight-vs-lightspeed deltas - the referee's requested floor estimate.
-    """
+    """instant / inflight / lightspeed: how much of the decision-site tax survives in-flight relay."""
     seeds = SEEDS[:48]
     n_stars = 400
     lambdas = [0.05, 0.1, 0.2]
@@ -1166,14 +858,7 @@ def p2_floor_bracket() -> None:
 
 
 def m_floor_bracket_scale() -> None:
-    """N=200k companion to the floor bracket: how much of the (already tiny, ~1.5%) tax survives
-    in-flight relay at scale?
-
-    The base result (N=400) shows the inflight mode recovers essentially all of the decision-site
-    tax. At N=200k the wasted-arrival tax itself is only ~1.5%, so the interesting question is
-    whether the floor is still 0 at scale or whether some irreducible residue survives. Same 3 x 3
-    (lambdas x modes) shape; seeds drop to 8.
-    """
+    """N=200k companion to the floor bracket: how much of the (already tiny, ~1.5%) tax survives in-flight relay at scale?"""
     seeds = SEEDS[:8]
     n_stars = 200_000
     lambdas = [0.05, 0.1, 0.2]
@@ -1185,11 +870,7 @@ def m_floor_bracket_scale() -> None:
 
 
 def p2_floor_bracket_scale() -> None:
-    """P2 companion to ``m_floor_bracket_scale``: at-scale N=524_288.
-
-    Bumped from 262_144 to 2^19 in the at-scale batch (one power of two above the fixed-N
-    floor_bracket p2, which now runs at 262_144).
-    """
+    """P2 companion to ``m_floor_bracket_scale``: at-scale N=524_288."""
     seeds = SEEDS[:8]
     n_stars = 524_288
     lambdas = [0.05, 0.1, 0.2]
@@ -1236,13 +917,7 @@ def p2_retarget_cap() -> None:
 
 
 def m_retarget_cap_scale() -> None:
-    """N=200k companion to the re-target-cap sweep: does insensitivity to the bookkeeping cap
-    hold at scale?
-
-    The base (N=400) sweep pins the tax as invariant across caps=2..32. At N=200k there are ~10x
-    more retarget events per fill (a bigger core, more late-arriving beacons), so if the cap ever
-    bites it would bite hardest here. Same cap ladder; seeds drop to 8.
-    """
+    """N=200k companion to the re-target-cap sweep: does insensitivity to the bookkeeping cap hold at scale?"""
     seeds = SEEDS[:8]
     n_stars = 200_000
     caps = [2, 4, 8, 16, 32]
@@ -1299,13 +974,7 @@ def m_dt_artifact() -> None:
 
 
 def p2_dt_artifact() -> None:
-    """P2 companion to ``m_dt_artifact``: N=300 -> N=512 (70% larger, cleanly p2).
-
-    Note: this measurement uses stepping='fixed' and stepping='event'; only the event row
-    (dt=None) hits the flat p2 kd-tree fast path. The fixed-step rows run through the pointer
-    path even at p2 N, which is why its 1-min-ceiling N (P2_FIXED_N) is the lowest of the base
-    sweeps. Included per the "no exclusions" scope decision.
-    """
+    """P2 companion to ``m_dt_artifact``: N=300 -> N=512 (70% larger, cleanly p2)."""
     seeds = SEEDS[:32]
     n_stars = _p2_fixed_n("dt_artifact")
     dts = [5000.0, 2000.0, 1000.0, 500.0, 250.0]
@@ -1328,12 +997,7 @@ def p2_dt_artifact() -> None:
 
 def _clumpiness_run(seeds: list[int], n_stars: int, lambdas: list[float],
                     n_clumps: int, levels: list[tuple[str, dict]], r_seed_count: int = 16) -> dict:
-    """Shared clumpy-field sweep body, used by ``m_clumpiness`` (N=500) and its scale companion.
-
-    Runs the paired instant/lightspeed ensemble across (level, Lambda), computes the per-seed
-    through-origin slope for the tax=a*Lambda fit, and aggregates hop-length histograms. Clark-Evans
-    R is measured on the first ``r_seed_count`` seeds (near-O(N log N) since the k-d tree rewrite).
-    """
+    """Shared clumpy-field sweep body, used by ``m_clumpiness`` (N=500) and its scale companion."""
     data = {}
     for label, field_kw in levels:
         print(f"    level={label}", flush=True)
@@ -1355,7 +1019,6 @@ def _clumpiness_run(seeds: list[int], n_stars: int, lambdas: list[float],
             params = dict(n_stars=n_stars, policy="powered", probe_speed_c=lam,
                           speed_cap_c=max(0.05, 2 * lam), stepping="event", **field_kw)
             # Parallel over seeds: each worker runs the paired instant/lightspeed pair AND returns
-            # the hop histograms (which record() does not carry). executor.map preserves seed order.
             args = [(params, s) for s in seeds]
             results = _parallel_map(_clumpy_paired_worker, args, label=f"lam={lam}")
             rows: list[tuple[dict, dict]] = []
@@ -1374,7 +1037,6 @@ def _clumpiness_run(seeds: list[int], n_stars: int, lambdas: list[float],
             block["hop_hist"] = hist
             per_lambda[str(lam)] = block
         # Per-seed through-origin slope a of tax = a*Lambda (predicted 1), then bootstrap over seeds.
-        # Fit on FRACTIONAL tax (percent/100) so a ~ 1 means "tax = Lambda" cleanly.
         slopes = [through_origin_slope(
                     lambdas,
                     [(seed_tax[i][lam] / 100.0 if seed_tax[i][lam] is not None else None) for lam in lambdas])
@@ -1391,30 +1053,12 @@ def _clumpiness_run(seeds: list[int], n_stars: int, lambdas: list[float],
 
 
 def m_clumpiness() -> None:
-    """Does tax = Lambda survive a CLUMPY (non-uniform) field? [reviewer robustness ask]
-
-    The headline law's derivation assumes a locally uniform claim rate, so the hop length d
-    cancels. A reviewer's sharpest critique: in a clumpy field hop length and local claim rate
-    correlate, which could break the law's FORM (not just rescale it). We test it with a Thomas
-    cluster process at fixed N and mean density (only the spatial arrangement changes), sweeping
-    the clump scatter sigma from tight clumps to the uniform limit, crossed with Lambda.
-
-    Theory prediction (v and c are GLOBAL constants, so they factor out of both exposure sums and
-    the (d, rate) correlation cancels EXACTLY in the linear regime): clumpiness cannot break the
-    v/c FORM through that correlation; it can only SOFTEN the slope downward via saturation of the
-    per-hop waste probability in dense clumps (p = 1 - e^{-lambda*W} bending below linear). So we
-    expect the through-origin slope a to drop below ~0.96 with clumpiness while staying linear in
-    Lambda, UNLESS a temporal-non-stationarity term makes the tax hop-length-dependent. Three
-    reported tests: (1) slope a vs measured clumpiness (Clark-Evans R); (2) the wasted-trip ratio
-    p_lag/p_perfect stratified by hop length at the clumpiest level (flat in d => the mechanism
-    survives); (3) linearity across Lambda. The uniform level is the hard null (must return ~0.96).
-    """
+    """Does tax = Lambda survive a CLUMPY (non-uniform) field? [reviewer robustness ask]."""
     seeds = SEEDS[:48]
     n_stars = 500
     lambdas = [0.05, 0.1, 0.2]
     n_clumps = 25  # ~20 stars/clump at N=500: dense enough to over-subscribe under 2-offspring branching
     # Levels: the exact uniform cube (null), then Thomas clumps tightening from near-uniform to
-    # extreme. sigma is the scatter as a fraction of box side; small = tight clumps + voids.
     levels = [
         ("uniform", {}),
         ("sigma0.30", {"n_clumps": n_clumps, "clump_sigma_frac": 0.30}),
@@ -1452,15 +1096,7 @@ def p2_clumpiness() -> None:
 
 
 def m_clumpiness_scale() -> None:
-    """N=200k companion to the clumpy-field sweep: does tax = Lambda still hold on non-uniform
-    fields at scale?
-
-    Same Thomas-cluster levels and Lambda ladder as the base, at N=200k with 8 seeds. Because the
-    base measurement keeps ``n_clumps`` fixed at 25 to sweep sigma, at N=200k the clumps become
-    dense mega-clusters (~8k stars each at sigma=0.05); the clumpiness_R the measurement records
-    quantifies where each level actually lands in R-space, so the tax-vs-R curve is the comparable
-    quantity across scales. The uniform level is still the hard null (must return ~0.96).
-    """
+    """N=200k companion to the clumpy-field sweep: does tax = Lambda still hold on non-uniform fields at scale?"""
     seeds = SEEDS[:8]
     n_stars = 200_000
     lambdas = [0.05, 0.1, 0.2]
@@ -1481,12 +1117,7 @@ def m_clumpiness_scale() -> None:
 
 
 def p2_clumpiness_scale() -> None:
-    """P2 companion to ``m_clumpiness_scale``: N=200_000 -> N=262_144 (next p2 above 200k).
-
-    Same n_clumps=25 as the historical - so at N=262_144 the mega-cluster size scales up
-    proportionally (~10.5k stars/clump at the tightest sigma). See ``m_clumpiness_scale`` docs
-    for the tax-vs-R interpretation this comparison enables.
-    """
+    """P2 companion to ``m_clumpiness_scale``: N=200_000 -> N=262_144 (next p2 above 200k)."""
     seeds = SEEDS[:8]
     n_stars = 262_144
     lambdas = [0.05, 0.1, 0.2]
@@ -1522,11 +1153,7 @@ def m_validation() -> None:
 
 
 def p2_validation() -> None:
-    """P2 companion to ``m_validation``: N=400 -> N=512 (28% larger, cleanly p2).
-
-    Not a Nicholson & Forgan reproduction any more - N&F used N=400 for their canonical
-    numbers - just the same three-policy comparison at a p2 scale for shape.
-    """
+    """P2 companion to ``m_validation``: N=400 -> N=512 (28% larger, cleanly p2)."""
     seed = 0x9E3779B9
     n = 512
     out = {}
@@ -1550,21 +1177,7 @@ def _interior_settled(rec: dict, start_bin: int) -> int:
 
 
 def m_finite_size_interior() -> None:
-    """Finite-size EDGE test (referee finding M1): does the with-N tax decline survive when the
-    tax is measured on BULK stars only?
-
-    The hard-walled box means edge stars (fewer neighbours, less contention) dilute the tax, and the
-    edge fraction falls as N^(-1/3), so the fraction can shrink with N for a purely geometric reason.
-    Here each contested arrival is tagged by its target's distance to the nearest wall (the read-only
-    ``*_wall_hist`` accumulators), and we recompute the paired fuel tax restricted to interior stars
-    at two shells: >= 1 and >= 2 mean-NN distances from any wall. If the all-stars decline is an edge
-    artifact it flattens under the interior restriction; if it is genuine bulk saturation it persists.
-
-    Spans 300..200,000 (seeds scaled down with N), matching the committed ``finite_size`` all-stars
-    sweep's range so the interior and all-stars declines are compared over an identical ~670x lever
-    arm (near-linear since #30, the k-d tree over the unsettled set). The 300..4800 blocks regenerate
-    byte-identically; the higher-N points are the edge-vs-bulk test at scale.
-    """
+    """Finite-size EDGE test (referee finding M1): does the with-N tax decline survive when the tax is measured on BULK stars only?"""
     n_seeds_by_n = [(300, 32), (600, 32), (1200, 24), (2400, 16), (4800, 12),
                     (9600, 12), (24000, 10), (48000, 8), (200000, 6)]
     # Shell start-bins for WALL_BIN_EDGES_NN=(0.5,1,1.5,2): shell>=1.0 NN -> bins 2.., shell>=2.0 -> bin 4.
@@ -1603,13 +1216,7 @@ def m_finite_size_interior() -> None:
 
 
 def p2_finite_size_interior() -> None:
-    """P2 companion to ``m_finite_size_interior``: p2 ladder matched to the historical seed pattern.
-
-    Historical (non-p2, pinned): (300, 600, 1200, 2400, 4800, 9600, 24000, 48000, 200000) with
-                seeds (32, 32, 24, 16, 12, 12, 10, 8, 6).
-    P2 (at-scale batch): the shared 11-point ladder 2^8..2^18 with a linear 32->8 seed ramp
-    (``_FS_P2_LADDER``).
-    """
+    """P2 companion to ``m_finite_size_interior``: p2 ladder matched to the historical seed pattern."""
     n_seeds_by_n = _FS_P2_LADDER
     shells = {"all": 0, "interior_1nn": 2, "interior_2nn": 4}
     data = {}
@@ -1647,16 +1254,7 @@ def p2_finite_size_interior() -> None:
 
 
 def m_finite_size_periodic() -> None:
-    """Finite-size EDGE test, second control (referee finding M1): the periodic-box cross-check.
-
-    The interior-only test (``m_finite_size_interior``) removes edge stars by masking; this removes
-    them by geometry - a periodic (toroidal, minimum-image) box has no walls at all, so every star
-    sits in a full neighbourhood. Same Lambda and N range as the hard-walled ``finite_size`` (now
-    300..200,000 since #30), so the two slopes are directly comparable: if the hard-wall decline is
-    a boundary artifact, the periodic tax stays flat (and higher, since no edge dilutes it); if it is
-    genuine bulk saturation, the periodic tax declines too. The 300..4800 blocks regenerate
-    byte-identically; the higher-N points settle the question at scale.
-    """
+    """Finite-size EDGE test, second control (referee finding M1): the periodic-box cross-check."""
     n_seeds_by_n = [(300, 32), (600, 32), (1200, 24), (2400, 16), (4800, 12),
                     (9600, 12), (24000, 10), (48000, 8), (200000, 6)]
     data = {}
@@ -1664,8 +1262,7 @@ def m_finite_size_periodic() -> None:
     for n, k in n_seeds_by_n:
         seeds = _apply_slice(SEEDS[:k])
         if not seeds:
-            # Under an aggressive slice (K larger than k) some N's shard may be empty; the merge
-            # step tolerates this and reconstructs from other shards.
+            # Under an aggressive slice (K larger than k) some N's shard may be empty; the merge step tolerates this and reconstructs from other shards.
             data[str(n)] = _tax_block([])
             per_n[n] = []
             print(f"    N={n} (skipped: empty slice)", flush=True)
@@ -1679,9 +1276,7 @@ def m_finite_size_periodic() -> None:
         data[str(n)] = _tax_block(rows)
         per_n[n] = [pct_delta(t["wasted_arrivals"], b["wasted_arrivals"]) for b, t in rows]
     ns = [n for n, _ in n_seeds_by_n]
-    # Under a shard, scale_regression is a subset regression; the merge step recomputes it from
-    # the concatenated per-seed data. Write ``None``s here so an accidentally-used shard file
-    # never masquerades as a full result.
+    # Under a shard, scale_regression is a subset regression; the merge step recomputes it from the concatenated per-seed data.
     if _SEED_SLICE is None:
         slope, lo, hi = loglog_slope_ci([math.log10(n) for n in ns], [per_n[n] for n in ns])
     else:
@@ -1696,17 +1291,7 @@ def m_finite_size_periodic() -> None:
 
 
 def p2_finite_size_periodic() -> None:
-    """P2 companion to ``m_finite_size_periodic``: p2 ladder matched to the historical seed pattern.
-
-    Not shardable via ``--seed-slice`` for the p2 pass - the historical periodic sweep is the
-    sole shardable measurement today, and its shard/merge machinery is coupled to the historical
-    file name (``finite_size_periodic.json``). The p2 companion runs full seeds always. If a
-    p2 shard mode is ever wanted, ``SHARDABLE`` grows a ``finite_size_periodic_p2`` entry and
-    ``_do_merge`` learns the p2 key routing - but that's out of scope for the migration.
-
-    P2 (at-scale batch): the shared 11-point ladder 2^8..2^18 with a linear 32->8 seed ramp
-    (``_FS_P2_LADDER``).
-    """
+    """P2 companion to ``m_finite_size_periodic``: p2 ladder matched to the historical seed pattern."""
     n_seeds_by_n = _FS_P2_LADDER
     data = {}
     per_n: dict[int, list[float]] = {}
@@ -1750,10 +1335,7 @@ MEASUREMENTS = {
     "validation": m_validation,
 }
 
-# P2 companions: one per measurement above. Each merges its result under the ``p2`` key of the
-# corresponding historical file, so ``experiments.measure --p2`` runs the p2 sweeps on top of
-# already-computed historical JSONs (which stay byte-for-byte untouched). See
-# ``experiments/SPEC_P2_LADDER.md`` for the schema + sweep sizes.
+# P2 companions: one per measurement above, each merged under the p2 key of its historical JSON (schema in experiments/SPEC_P2_LADDER.md).
 P2_MEASUREMENTS = {
     "lambda_sweep": p2_lambda_sweep,
     "lambda_sweep_scale": p2_lambda_sweep_scale,
@@ -1784,13 +1366,7 @@ ORDER = ["validation", "dt_artifact", "retarget_cap", "energy_tax", "branching",
 
 
 def _merge_finite_size_periodic(shards: list[dict], config: dict) -> dict:
-    """Reconstruct the full ``finite_size_periodic`` JSON from its K shards.
-
-    For each N block, interleaves per-seed rows across shards in the original SEED order
-    (position ``i`` came from shard ``i % K`` at that shard's ``i // K`` row) and recomputes
-    the per-block ``_tax_block`` and the top-level ``scale_regression`` via the same
-    ``loglog_slope_ci`` the single-machine run used. Bit-identical by construction.
-    """
+    """Reconstruct the full ``finite_size_periodic`` JSON from its K shards."""
     k = len(shards)
     n_and_seeds = config["n_and_seeds"]  # JSON: [[N, k_seeds], ...]
     data: dict = {}
