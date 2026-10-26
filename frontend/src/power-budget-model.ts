@@ -7,7 +7,7 @@
  */
 import { createSignal, createMemo } from "pimas";
 import type { Accessor } from "pimas";
-import type { ParamSignal } from "./reactive-model.js";
+import { param, type ParamSignal } from "./reactive-model.js";
 import { brainEquivalents, computeCapacityFlops, landauerLimitJPerBit } from "./power-budget.js";
 
 export interface PowerBudgetOutputs {
@@ -25,24 +25,24 @@ export interface PowerBudgetModel {
 }
 
 export function createPowerBudgetModel(): PowerBudgetModel {
-  const [totalW, setTotalW] = createSignal(4000);
-  const [computePct, setComputePct] = createSignal(20);
-  const [gflopsPerW, setGflopsPerW] = createSignal(100); // 100 GFLOP/W = 1e11 FLOPS/W
-  const [temperatureK, setTemperatureK] = createSignal(300);
+  const totalW = param(4000, { min: 100, max: 20000, step: 100, label: "Total power", unit: "W" });
+  const computePct = param(20, { min: 0, max: 100, step: 1, label: "Compute share", unit: "%" });
+  const gflopsPerW = param(100, { min: 1, max: 1000, step: 1, label: "Compute efficiency", unit: "GFLOP/W" }); // 100 GFLOP/W = 1e11 FLOPS/W
+  const temperatureK = param(300, { min: 100, max: 500, step: 5, label: "Radiator temperature", unit: "K" });
 
   const params: ParamSignal[] = [
-    { get: totalW, set: setTotalW, min: 100, max: 20000, step: 100, label: "Total power", unit: "W" },
-    { get: computePct, set: setComputePct, min: 0, max: 100, step: 1, label: "Compute share", unit: "%" },
-    { get: gflopsPerW, set: setGflopsPerW, min: 1, max: 1000, step: 1, label: "Compute efficiency", unit: "GFLOP/W" },
-    { get: temperatureK, set: setTemperatureK, min: 100, max: 500, step: 5, label: "Radiator temperature", unit: "K" },
+    totalW,
+    computePct,
+    gflopsPerW,
+    temperatureK,
   ];
 
   const outputs = createMemo<PowerBudgetOutputs>(() => {
-    const computeW = totalW() * (computePct() / 100);
-    const efficiencyFlopsPerW = gflopsPerW() * 1e9;
+    const computeW = totalW.get() * (computePct.get() / 100);
+    const efficiencyFlopsPerW = gflopsPerW.get() * 1e9;
     const computeFlops = computeCapacityFlops(computeW, efficiencyFlopsPerW);
     const energyPerFlopJ = 1 / efficiencyFlopsPerW;
-    const landauerJPerBit = landauerLimitJPerBit(temperatureK());
+    const landauerJPerBit = landauerLimitJPerBit(temperatureK.get());
     return {
       computeW,
       computeFlops,

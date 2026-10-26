@@ -1,17 +1,4 @@
-"""Experiment: the coarse fixed-timestep coordination tax is a discretization artifact.
-
-A fixed timestep dt advances the fold in constant jumps and processes every probe that has
-arrived within the window together. When dt exceeds the hop time - which it does badly in the
-boosted/slingshot regime (hops ~1e2-1e3 yr against the slice-1 default dt=5000 yr) - many
-launches land in one window and all decide from the same stale snapshot, so they collide far
-more than they physically would. That inflates the measured light-speed coordination tax.
-
-This sweep shows the fill-100% time penalty for slingshot_nearest collapsing from ~30% at
-dt=5000 toward ~0 as dt shrinks, and matches the dt-independent event fold at the bottom. It
-is why the paper's headline metric is redundant travel at event resolution, not fill time.
-
-Run:  uv run python -O -m experiments.dt_artifact  # ensemble; -O strips debug invariants
-"""
+"""Experiment: the coarse fixed-timestep coordination tax is a discretization artifact."""
 
 from __future__ import annotations
 

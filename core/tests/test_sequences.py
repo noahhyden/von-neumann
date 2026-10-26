@@ -1,13 +1,4 @@
-"""Validation gate for vn_core.uq.sequences (Halton + Sobol').
-
-Layered like the rest of the suite:
-- Pure-property tests (no scipy): van der Corput values, unit-cube containment,
-  determinism, equidistribution, error branches, and QMC-beats-MC convergence.
-- Oracle test (scipy, a dev-only dependency): the Sobol' points are asserted
-  bit-identical to scipy.stats.qmc.Sobol, which carries the authoritative Joe-Kuo
-  direction numbers. This is what pins the embedded table (CLAUDE.md §1) - a drift in
-  either the table or the recurrence is a red test, not a silent bad sequence.
-"""
+"""Validation gate for vn_core.uq.sequences (Halton + Sobol')."""
 
 from __future__ import annotations
 
@@ -97,9 +88,7 @@ def test_sobol_first_point_is_origin():
 
 
 def test_sobol_first_dim_is_gray_code_radical_inverse():
-    # Dimension 1 of Sobol' is the base-2 radical inverse in *gray-code* order (the
-    # standard Sobol' construction), i.e. 0, 1/2, 3/4, 1/4, 3/8, ... - not the plain
-    # van der Corput order. These are the exact dyadic rationals scipy produces.
+    # Dimension 1 of Sobol' is the base-2 radical inverse in *gray-code* order, as the expected list below shows.
     pts = sobol_points(8, 1)
     expected = [0.0, 0.5, 0.75, 0.25, 0.375, 0.875, 0.625, 0.125]
     assert [p[0] for p in pts] == expected
@@ -133,8 +122,7 @@ def test_sobol_skip_is_a_tail_of_the_full_sequence():
 
 
 def test_sobol_equidistribution_balanced_1d_projections():
-    # A Sobol' (t,s)-sequence is balanced: the first 2^m points put exactly one point
-    # in each of the 2^m equal sub-intervals of every 1-D projection.
+    # A Sobol' (t,s)-sequence is balanced: the first 2^m points put exactly one point in each of the 2^m equal 1-D bins.
     m = 6
     n = 1 << m
     pts = sobol_points(n, 5)
@@ -146,9 +134,7 @@ def test_sobol_equidistribution_balanced_1d_projections():
 
 
 def test_sobol_beats_random_mc_on_smooth_integral():
-    # Integrate a smooth product over [0,1]^3; true value is (something)^3. Sobol' at
-    # N points should beat a crude pseudo-random Monte Carlo of the same N by a wide
-    # margin (the whole reason to prefer a low-discrepancy sequence).
+    # Integrate a smooth product over [0,1]^3, whose true value is (e-1)^3; Sobol' at the same N should beat crude random MC.
     def g(x):
         return math.prod(math.exp(xi) for xi in x)  # integral over [0,1]^d = (e-1)^d
 
@@ -214,9 +200,7 @@ def test_sobol_matches_scipy_oracle():
 
 
 def test_embedded_table_matches_scipy_direction_numbers():
-    # The stronger pin: the embedded direction integers equal scipy's computed matrix
-    # for every tabulated dimension - so the table itself (not just sampled points) is
-    # verified against the authoritative source.
+    # The stronger pin: the embedded direction integers equal scipy's computed direction matrix exactly.
     pytest.importorskip("scipy.stats.qmc", reason="scipy carries the Joe-Kuo numbers")
     import numpy as np
     from scipy.stats import qmc

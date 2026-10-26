@@ -1,13 +1,4 @@
-"""Live verification: flat-tree query wall-clock vs the pointer-tree Rust query.
-
-Runs both `swarm_rust.nearest_unsettled` (pointer tree) and
-`swarm_rust.nearest_unsettled_flat` (flat tree) on the same seeded galaxy across a
-set of p2 N, reporting queries/sec and the speedup. Not a test - pytest tests are
-green already; this is the "does the tree we just built actually go faster in
-wall-clock?" step of the discipline chain, so the PR body can quote real numbers.
-
-Run: `uv run --extra dev python -O experiments/bench_flat_kdtree.py`
-"""
+"""Live verification: flat-tree query wall-clock vs the pointer-tree Rust query."""
 
 from __future__ import annotations
 

@@ -1,0 +1,106 @@
+name: PR guard
+
+# The whole PR contract in ONE job, and the single required check on main: every guard step has an `id` and `continue-on-error: true`, and the last step aggregates `toJSON(steps)` and fails once, so one broken guard never hides the others.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  # Keep `merge_group`: a required check that only runs on `pull_request` stalls a merge queue if one is ever enabled.
+  merge_group:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Cancel superseded PR runs: a cancelled check is a terminal conclusion, not pending, so protection is never left waiting.
+  group: pr-guard-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  guard:
+    # Required check on main, so this name MUST stay `PR guard`. Cap is ~10x the measured typical run; a core/ change fans out to every module and is the slow case.
+    name: PR guard
+    timeout-minutes: 20
+    # Flip to the self-hosted pool by setting the CI_SELF_HOSTED repo variable, no edit to this file; matches the pivi and klarum-landing convention.
+    runs-on: ${{ vars.CI_SELF_HOSTED == 'true' && fromJSON('["self-hosted","vn"]') || 'ubuntu-latest' }}
+    steps:
+      # fetch-depth: 0 because the changed-file guards use a three-dot diff that needs a real merge base; a shallow clone silently scans the wrong range.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Fetch base branch
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags origin "${GITHUB_BASE_REF}"
+
+      - name: 'diff: collect the changed-file list'
+        id: diff
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            git diff --name-only --diff-filter=d "origin/${GITHUB_BASE_REF}...HEAD" > /tmp/changed.txt
+          else
+            git ls-files > /tmp/changed.txt
+          fi
+          echo "count=$(wc -l < /tmp/changed.txt)" >> "$GITHUB_OUTPUT"
+          echo "changed files: $(wc -l < /tmp/changed.txt)"
+          cat /tmp/changed.txt
+
+      # CLAUDE.md section 5: no em-dash (U+2014) and no emoji anywhere in the repo; math and astronomy symbols are explicitly fine, so only these two classes are scanned.
+      - name: 'typography: no em-dash, no emoji in changed files'
+        id: typography
+        continue-on-error: true
+        run: python3 .github/guards/check_typography.py /tmp/changed.txt
+
+      # The import DAG, result owners and paper edges are derived, not remembered; selftest asserts the correctness contract depgraph documents.
+      - name: 'depgraph: the import DAG still matches its correctness contract'
+        id: depgraph
+        continue-on-error: true
+        run: python3 scripts/depgraph.py --selftest
+
+      # A paper gaining a figure from a module nobody added to its paths-filter would silently stop rebuilding that paper.
+      - name: 'ci filter: ci.yml paths-filter matches the derived paper edges'
+        id: cifilter
+        continue-on-error: true
+        run: python3 scripts/depgraph.py --check-ci-filter
+
+      - name: 'depgraph: its own suite'
+        id: depgraph_tests
+        continue-on-error: true
+        working-directory: scripts
+        run: uv run --extra dev pytest -q
+
+      # Reuses `depgraph.py --changed ... --list`, the repo's own reverse-reachability over the import DAG: a change to core fans out to every module, a change to comms runs comms alone.
+      - name: 'tests: every module suite this change reaches'
+        id: affected
+        continue-on-error: true
+        run: python3 .github/guards/run_affected.py /tmp/changed.txt
+
+      - name: 'frontend: Layer A (pure model) and Layer B (pimas contract)'
+        id: frontend
+        continue-on-error: true
+        run: |
+          if ! grep -qE '^frontend/' /tmp/changed.txt; then echo "frontend untouched, skipping"; exit 0; fi
+          cd frontend && npm ci && npm test && npm run test:contract && npm run build
+
+      - name: Aggregate guard results
+        if: always()
+        env:
+          STEPS: ${{ toJSON(steps) }}
+          # Non-success means a step WITHOUT continue-on-error already failed (checkout, setup, the diff), which skips every guard below it.
+          JOB_STATUS: ${{ job.status }}
+        run: python3 .github/guards/aggregate.py
+        id: aggregate
+
+      # THIS MUST REMAIN THE LAST STEP: its nonzero exit is what turns the `PR guard` check red, which branch protection requires on main; add new guards above it.

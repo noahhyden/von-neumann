@@ -1,51 +1,4 @@
-"""Polynomial chaos expansion (PCE): the spectral surrogate for smooth findings.
-
-Where Monte Carlo (`sample`) and Saltelli Sobol (`sobol`) sample the model
-randomly, PCE fits the finding as a sum of orthogonal polynomials in the uncertain
-inputs, Y(xi) ~ sum_a c_a * Psi_a(xi), with the polynomial family chosen per input
-distribution (Wiener-Askey: Uniform -> Legendre, Normal -> Hermite). From the
-coefficients you read, in closed form and for free:
-
-- **UQ**: mean = c_0, variance = sum_{a != 0} c_a^2 (Parseval; the basis is
-  orthonormal), hence std / error scale.
-- **GSA**: Sobol indices are just grouped coefficient energy - first-order S_i
-  sums c_a^2 over multi-indices touching only input i; total-order S_Ti sums over
-  every multi-index where i appears. No extra sampling.
-- **A cheap surrogate**: `PCEResult.predict` evaluates the polynomial, so broad
-  input sweeps cost polynomial arithmetic, not model runs.
-
-Why this and not more Monte Carlo: for a **smooth, low-dimensional** finding PCE
-converges spectrally - on the Ishigami benchmark degree 8 (729 evals) matches the
-analytic variance and every Sobol index, where plain MC is still ~0.5% off on the
-variance alone at 100k evals. That is the regime this repo's findings mostly live
-in (2-5 sourced inputs).
-
-The catch, and the honesty guard: PCE assumes smoothness. On a kink (a `min()`
-regime switch, a threshold) the spectral convergence collapses to slow algebraic
-(Gibbs), and a naive PCE would hand back confident-but-wrong moments. So every fit
-carries a **`fit_residual`**: the relative RMS error of the surrogate against the
-true finding on an independent validation sample. Near 0 means trust the numbers;
-elevated (the kink case measured ~0.04-0.11) means this finding is not smooth
-enough for PCE - use `monte_carlo` / `uq_and_gsa` instead. PCE never silently
-lies; it reports how well it fit (CLAUDE.md §1).
-
-Coefficients are computed by tensor Gauss quadrature (Golub-Welsch nodes from the
-recurrence, a classical Jacobi eigensolver - pure Python, zero deps), so they are
-*derived* numbers, not fitted black-box weights. Deterministic (§7): fixed nodes,
-and the validation sample uses a threaded seed, no wall clock.
-
-Distributions: Uniform (Legendre) and Normal (Hermite) use the exact Askey
-families; any other distribution (LogNormal, LogUniform) uses *arbitrary* PCE - the
-orthonormal basis is built from the distribution's own moments via the Stieltjes
-recurrence. One caveat carries over and is worth stating: PCE still needs the
-finding to be well approximated by a low-degree polynomial in the (standardized)
-*physical* variable. A LogUniform finding whose natural smoothness is in log space
-(e.g. 1/x over several decades) is not low-degree in x, so the fit is poor - but
-the fit_residual catches it and is_trustworthy() reads False, never a silent wrong
-answer. Fitting: tensor quadrature (cost (degree+1)^d) or least-squares regression
-(method="regression", polynomial in dimension); sparse grids remain the follow-up
-for very high dimension.
-"""
+"""Polynomial chaos expansion (PCE): the spectral surrogate for smooth findings."""
 
 from __future__ import annotations
 
@@ -79,12 +32,7 @@ _STIELTJES_DISC = 4000
 
 
 def _recurrence_beta(family: str, k: int) -> float:
-    """Monic three-term recurrence coefficient b_k for the reference measure.
-
-    pi_{k+1} = (x - a_k) pi_k - b_k pi_{k-1}, with a_k = 0 for both (symmetric)
-    families. Legendre on [-1, 1] with the uniform probability weight; Hermite
-    with the standard-normal weight. b_0 = total mass = 1 (probability measures).
-    """
+    """Monic three-term recurrence coefficient b_k for the reference measure."""
     if k == 0:
         return 1.0
     if family == _LEGENDRE:
@@ -95,19 +43,14 @@ def _recurrence_beta(family: str, k: int) -> float:
 
 
 def _jacobi_eigen(a: list[list[float]]) -> tuple[list[float], list[list[float]]]:
-    """Eigenvalues + eigenvectors of a small dense symmetric matrix (Jacobi rotations).
-
-    Returns (eigenvalues, V) where V[i][j] is component i of eigenvector j. Robust
-    and simple - the matrices here are (degree+1) x (degree+1), tens at most.
-    """
+    """Eigenvalues + eigenvectors of a small dense symmetric matrix (Jacobi rotations)."""
     n = len(a)
     m = [row[:] for row in a]
     v = [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
     if n == 1:
         return [m[0][0]], v
     for _ in range(100):  # pragma: no cover - the 100-sweep cap is never exhausted:
-        # Jacobi converges quadratically on these small symmetric matrices and always
-        # breaks (off < 1e-300) first; the cap is a floor, not a normal exit.
+        # Jacobi converges quadratically on these small symmetric matrices and breaks on off < 1e-300 first, so the 100-sweep cap is a floor, not a normal exit.
         off = math.sqrt(sum(m[p][q] ** 2 for p in range(n) for q in range(p + 1, n)))
         if off < 1e-300:
             break
@@ -121,9 +64,7 @@ def _jacobi_eigen(a: list[list[float]]) -> tuple[list[float], list[list[float]]]
                 t = math.copysign(1.0, theta) / (abs(theta) + math.sqrt(theta * theta + 1.0))
                 c = 1.0 / math.sqrt(t * t + 1.0)
                 s = t * c
-                # Update the pivot 2x2 block explicitly (it is zeroed off-diagonal),
-                # then the off-pivot rows/cols only - updating all rows *and* all
-                # cols would touch the pivot block twice and corrupt the rotation.
+                # Update the pivot 2x2 block explicitly, then only the off-pivot rows and cols: updating all rows and all cols would touch the pivot block twice and corrupt the rotation.
                 m[p][p] = app - t * apq
                 m[q][q] = aqq + t * apq
                 m[p][q] = 0.0
@@ -143,12 +84,7 @@ def _jacobi_eigen(a: list[list[float]]) -> tuple[list[float], list[list[float]]]
 
 
 def _gauss_nodes_weights(family: str, m: int) -> tuple[list[float], list[float]]:
-    """m-point Gauss nodes and weights for the family's reference measure.
-
-    Golub-Welsch: nodes are the eigenvalues of the symmetric tridiagonal Jacobi
-    matrix (diagonal 0, off-diagonal sqrt(b_k)); weight_i = (first component of the
-    i-th normalized eigenvector)^2, since the total mass b_0 = 1.
-    """
+    """m-point Gauss nodes and weights for the family's reference measure."""
     jac = [[0.0] * m for _ in range(m)]
     for k in range(1, m):
         beta = math.sqrt(_recurrence_beta(family, k))
@@ -197,14 +133,7 @@ def _basis_values(family: str, max_degree: int, xi: float) -> list[float]:
 
 @dataclass(frozen=True)
 class _Adapter:
-    """How one input maps to its orthonormal-polynomial reference variable.
-
-    ``kind`` is the polynomial family: "legendre" (Uniform), "hermite" (Normal),
-    or "arbitrary" (any other distribution - basis built from its moments). The
-    standardization is affine: reference = (x - p0)/p1 for hermite/arbitrary, and
-    the [-1,1] map for legendre. For "arbitrary", ``alpha``/``beta`` carry the
-    three-term recurrence of the polynomials orthonormal to the distribution.
-    """
+    """How one input maps to its orthonormal-polynomial reference variable."""
 
     kind: str
     p0: float
@@ -216,16 +145,7 @@ class _Adapter:
 def _stieltjes(
     dist: Distribution, max_degree: int, n_disc: int = _STIELTJES_DISC
 ) -> tuple[float, float, tuple[float, ...], tuple[float, ...]]:
-    """Recurrence (alpha_k, beta_k) of the polynomials orthonormal to ``dist``.
-
-    Arbitrary polynomial chaos (Oladyshkin & Nowak 2012): build the basis from the
-    input's own moments instead of a fixed Askey family. Computed by the
-    *discretized Stieltjes* procedure (Gautschi) - a stable route via the
-    distribution's ``quantile``: approximate the measure by ``n_disc`` equal-weight
-    quantile points of the standardized variable z = (x - mu)/sigma, then generate
-    the recurrence by successive orthogonalization. Deterministic (fixed points, no
-    RNG). ``beta[0]`` is the total mass (1); ``beta[k]`` = <p_k,p_k>/<p_{k-1},p_{k-1}>.
-    """
+    """Recurrence (alpha_k, beta_k) of the polynomials orthonormal to ``dist``."""
     us = [(i + 0.5) / n_disc for i in range(n_disc)]
     xs = [dist.quantile(u) for u in us]
     mu = statistics.fmean(xs)
@@ -241,8 +161,7 @@ def _stieltjes(
     inner_prev = 1.0
     inner_cur = sum(w * p_cur[i] ** 2 for i in range(n_disc))  # = 1
     for k in range(max_degree + 1):  # pragma: no cover - the range never exhausts: the
-        # k == max_degree branch below always breaks on the final index, so the loop's
-        # natural-exit edge is unreachable (the recurrence needs one alpha per degree).
+        # The k == max_degree branch below always breaks on the final index, so the loop's natural-exit edge is unreachable (the recurrence needs one alpha per degree).
         num = sum(w * z[i] * p_cur[i] ** 2 for i in range(n_disc))
         alpha.append(num / inner_cur)
         if k == max_degree:
@@ -292,13 +211,7 @@ def _gauss_from_recurrence(
 
 
 def _adapt(dist: Distribution, max_degree: int) -> _Adapter:
-    """Build the reference-variable adapter for one input distribution.
-
-    Uniform -> Legendre, Normal -> Hermite (exact Askey families). Any other
-    distribution (LogNormal, LogUniform) -> an "arbitrary" basis built from its
-    moments via the Stieltjes recurrence, so PCE is no longer limited to the two
-    Askey cases. ``max_degree`` sets how many recurrence terms are computed.
-    """
+    """Build the reference-variable adapter for one input distribution."""
     if isinstance(dist, Uniform):
         return _Adapter(_LEGENDRE, dist.low, dist.high)
     if isinstance(dist, Normal):
@@ -363,21 +276,11 @@ class PCEResult:
     _fixed: tuple[tuple[str, float], ...]
 
     def is_trustworthy(self, tol: float = 1e-2) -> bool:
-        """True when the surrogate reproduces the finding well (fit_residual < tol).
-
-        A False here is the honest-null signal: the finding is not smooth enough
-        for PCE (a kink/threshold), so its moments and Sobol indices should not be
-        reported - fall back to monte_carlo / uq_and_gsa.
-        """
+        """True when the surrogate reproduces the finding well (fit_residual < tol)."""
         return self.fit_residual < tol
 
     def predict(self, sample: Mapping[str, float]) -> float:
-        """Evaluate the surrogate polynomial at a physical input sample.
-
-        Cheap (polynomial arithmetic, no model run) - this is the "sweep inputs
-        broadly" surface. Fixed inputs in ``sample`` are ignored (they carry no
-        variance); missing active inputs raise via the mapping lookup.
-        """
+        """Evaluate the surrogate polynomial at a physical input sample."""
         xis = [
             _to_reference(ad, sample[name])
             for name, ad in zip(self.input_names, self._adapters)
@@ -460,11 +363,7 @@ def _fit_quadrature(
     d: int,
     alphas: list[tuple[int, ...]],
 ) -> tuple[dict[tuple[int, ...], float], int]:
-    """Coefficients by tensor Gauss-quadrature pseudospectral projection.
-
-    Exact for a degree-``degree`` finding, but costs (degree+1)^d model calls -
-    exponential in dimension. For higher d use the "regression" method.
-    """
+    """Coefficients by tensor Gauss-quadrature pseudospectral projection."""
     m = degree + 1
     per_dim_nodes: list[list[float]] = []
     per_dim_weights: list[list[float]] = []
@@ -503,24 +402,14 @@ def _fit_quadrature(
 
 
 def _smolyak_combinations(d: int, level: int) -> list[tuple[tuple[int, ...], int]]:
-    """Smolyak combination multi-indices and coefficients (Gerstner-Griebel 1998).
-
-    The level-``level`` sparse rule in ``d`` dimensions is a signed sum of tensor rules
-    A = sum_{q-d+1 <= |l| <= q} (-1)^(q-|l|) C(d-1, q-|l|) (U^{l_1} (x) ... (x) U^{l_d}),
-    with q = d + level, each l_k >= 1 the per-dimension level, and U^{l_k} the l_k-point
-    Gauss rule. Returns the (l, coefficient) pairs with a nonzero coefficient. This rule
-    integrates total-degree polynomials up to 2*level+1 exactly (verified in the tests),
-    so choosing level = degree makes it exact for the degree-`degree` pseudospectral
-    projection (whose integrand Y*Psi has total degree <= 2*degree).
-    """
+    """Smolyak combination multi-indices and coefficients (Gerstner-Griebel 1998)."""
     q = d + level
     combos: list[tuple[tuple[int, ...], int]] = []
     for lvec in product(range(1, level + 2), repeat=d):
         s = sum(lvec)
         if s < q - d + 1 or s > q:
             continue
-        # q - s ranges over [0, d-1], so C(d-1, q-s) >= 1 and the coefficient is always
-        # nonzero - every retained multi-index contributes.
+        # q - s ranges over [0, d-1], so C(d-1, q-s) >= 1 and the coefficient is always nonzero: every retained multi-index contributes.
         coef = ((-1) ** (q - s)) * math.comb(d - 1, q - s)
         combos.append((lvec, coef))
     return combos
@@ -536,19 +425,8 @@ def _fit_sparse(
     d: int,
     alphas: list[tuple[int, ...]],
 ) -> tuple[dict[tuple[int, ...], float], int]:
-    """Coefficients by Smolyak sparse-grid pseudospectral projection.
-
-    Same projection as ``_fit_quadrature`` but over a Smolyak grid (level = degree)
-    instead of the full tensor grid. The node count grows polynomially rather than as
-    (degree+1)^d, so this is the scalable *quadrature* route for moderate dimension
-    (for d <= ~3 the tensor grid is comparable or cheaper; the win shows from ~d=4 up -
-    e.g. ~4x fewer nodes at d=5, ~100x at d=8). Coincident nodes across sub-rules (the
-    symmetric zero shared by odd-point rules) are merged so the finding is evaluated
-    once per unique node.
-    """
-    # Aggregate signed weights by reference-node coordinate. Round the key so the
-    # symmetric zero node shared across odd-point rules merges to one evaluation; keep
-    # the first-seen (unrounded) coordinates as the representative for evaluation.
+    """Coefficients by Smolyak sparse-grid pseudospectral projection."""
+    # Aggregate signed weights by reference-node coordinate, rounding the key so the symmetric zero node shared by odd-point rules merges to one evaluation (first-seen unrounded coordinates are kept).
     node_weight: dict[tuple[float, ...], float] = {}
     node_coords: dict[tuple[float, ...], tuple[float, ...]] = {}
     rule_cache: dict[tuple[int, int], tuple[list[float], list[float]]] = {}
@@ -605,16 +483,7 @@ def _fit_regression(
     n_samples: int | None,
     seed: int,
 ) -> tuple[dict[tuple[int, ...], float], int]:
-    """Coefficients by least-squares regression over N sampled points.
-
-    N = ``n_samples`` or ceil(``oversampling`` * n_terms), where n_terms grows
-    only *polynomially* in dimension (C(degree+d, d)) - so this scales where the
-    (degree+1)^d tensor quadrature explodes. On the orthonormal basis with samples
-    drawn from the input distribution the design is already well-conditioned (its
-    Gram matrix tends to N * identity); the fit is solved by Householder QR on the
-    design matrix (``vn_core.linalg.solve_lstsq``) rather than the normal equations,
-    which keeps full precision even when a particular draw makes the design less tame.
-    """
+    """Coefficients by least-squares regression over N sampled points."""
     p = len(alphas)
     n = n_samples if n_samples is not None else max(p + 1, math.ceil(oversampling * p))
     if n <= p:
@@ -638,17 +507,11 @@ def _fit_regression(
         _check_finite(y)
         rhs.append(y)
 
-    # Solve the least-squares problem M c ~= y directly by Householder QR. Going
-    # through the normal equations (M^T M) c = M^T y instead would square the
-    # condition number of the design, throwing away half the digits on a mildly
-    # ill-conditioned basis; QR on M keeps them.
+    # Solve M c ~= y directly by Householder QR: the normal equations (M^T M) c = M^T y would square the condition number of the design and throw away half the digits, QR keeps them.
     try:
         coeffs = dict(zip(alphas, solve_lstsq(design, rhs)))
     except ValueError as exc:  # pragma: no cover - unreachable via the public API:
-        # the n<=p "too few samples" case is guarded above, and with n>p samples drawn
-        # from continuous distributions the design is full-rank almost surely (the
-        # constant basis term is the all-ones column). Kept to rewrap any residual
-        # rank-deficiency into a PCE-context message rather than leak the linalg one.
+        # The n<=p too-few-samples case is guarded above and n>p continuous draws give a full-rank design almost surely; kept to rewrap rank-deficiency into a PCE-context message.
         raise ValueError(
             "regression design is rank-deficient (too few / degenerate samples)"
         ) from exc
@@ -666,29 +529,7 @@ def pce_fit(
     seed: int = 0,
     validation: int = 256,
 ) -> PCEResult:
-    """Fit a polynomial chaos expansion of ``finding`` over ``inputs``.
-
-    ``degree`` is the total-degree truncation. ``method`` chooses how the
-    coefficients are computed:
-
-    - ``"quadrature"`` (default): tensor Gauss quadrature, exact for a
-      degree-``degree`` finding but (degree+1)^d model calls - best in low
-      dimension.
-    - ``"sparse"``: Smolyak sparse-grid quadrature (level = degree). The same
-      pseudospectral projection as "quadrature" but on a sparse grid whose node
-      count grows polynomially, not as (degree+1)^d. Best for *moderate* dimension:
-      for d <= ~3 the tensor grid is comparable or cheaper, but the win grows fast
-      (~4x fewer model calls at d=5, ~100x at d=8), so it is what makes a degree>=2
-      PCE feasible past a handful of inputs.
-    - ``"regression"``: least-squares over ~``oversampling`` * n_terms sampled
-      points (n_terms = C(degree+d, d), polynomial in d) - the scalable choice in
-      higher dimension. Override the sample count with ``n_samples``.
-
-    ``validation`` extra evaluations estimate ``fit_residual`` on an independent
-    sample (set 0 to skip). Deterministic given ``seed``. Always check
-    ``result.is_trustworthy()`` before quoting the moments/indices: on a
-    non-smooth finding they are not reliable.
-    """
+    """Fit a polynomial chaos expansion of ``finding`` over ``inputs``."""
     if degree < 1:
         raise ValueError(f"degree must be >= 1, got {degree}")
     if method not in ("quadrature", "sparse", "regression"):
@@ -746,9 +587,7 @@ def pce_fit(
     if validation <= 0:
         return result
 
-    # Fit-quality: relative RMS of (surrogate - truth) on an independent sample.
-    # seed + 1 so the validation points are independent of the regression fit
-    # sample (which uses seed) - an in-sample residual would flatter the fit.
+    # Fit-quality: relative RMS of (surrogate - truth) on an independent sample (seed + 1, so an in-sample residual does not flatter the fit).
     rng = random.Random(seed + 1)
     truth: list[float] = []
     pred: list[float] = []
@@ -775,12 +614,7 @@ def pce_fit(
 
 @dataclass(frozen=True)
 class CVResult:
-    """A PCE control-variate estimate of a finding's mean.
-
-    Unbiased (it is Monte Carlo on the residual f - g plus the *exact* E[g] = the
-    PCE's constant coefficient), with an honest iid error bar, and a variance far
-    below plain MC when the PCE surrogate correlates with the finding.
-    """
+    """A PCE control-variate estimate of a finding's mean."""
 
     mean: float
     stderr: float
@@ -798,24 +632,10 @@ def pce_control_variate(
     n: int,
     seed: int,
 ) -> CVResult:
-    """Estimate the mean of ``finding`` with a PCE control variate.
-
-    Fits a PCE surrogate ``g`` (whose mean E[g] is known exactly from its constant
-    coefficient), then Monte-Carlos the residual ``f - g`` over ``n`` fresh iid
-    samples: ``E[f] = E[f - g] + E[g]``. Because g correlates with f, Var(f - g) is
-    much smaller than Var(f), so the estimate is far tighter than plain MC at the
-    same MC sample count - yet it stays **unbiased** and keeps a real iid error
-    bar, even on findings where the PCE alone is not trustworthy (a kink): the MC
-    on the residual carries the part PCE cannot fit. ``variance_reduction`` reports
-    how much the control variate actually bought (~1 means the finding did not
-    correlate with a low-degree polynomial - honest, and no worse than MC).
-
-    Deterministic (§7): the PCE quadrature is fixed; the residual MC uses ``seed``.
-    """
+    """Estimate the mean of ``finding`` with a PCE control variate."""
     if n < 1:
         raise ValueError(f"n must be >= 1, got {n}")
-    # validation=0: the CV does not need the fit-quality probe (the residual MC is
-    # itself the honest check), and it keeps the PCE fit purely deterministic.
+    # validation=0: the CV does not need the fit-quality probe (the residual MC is itself the honest check), and it keeps the PCE fit purely deterministic.
     pce = pce_fit(inputs, finding, degree=degree, seed=seed, validation=0)
 
     rng = random.Random(seed)

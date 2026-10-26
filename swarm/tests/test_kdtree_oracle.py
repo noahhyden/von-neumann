@@ -1,18 +1,4 @@
-"""Differential oracle: the k-d tree query must equal the brute-force linear scan, exactly.
-
-Issue #30 replaced the flat cell list with a k-d tree branch-and-bound over the unsettled set,
-including the subtle news-in-transit handling for the light-delayed regimes. The whole change is
-worthless unless the tree returns the SAME star as the O(N) linear scan for every query - that is
-what keeps the fold bit-identical (the pinned-baseline and JSON drift-guard tests then hold by
-construction). Here we hammer the two query functions directly against a naive reference across
-many randomized states, so a divergence shows up as an isolated query, not a whole-run digest.
-
-The reference IS the pre-#30 scan: nearest *believed*-unsettled star by (distance, lowest index),
-using the exact same ``_believes_settled_at`` gate the tree uses on the stars it examines. We vary:
-field size across the leaf-bucket boundary, settled fraction, ``state.year`` relative to the settle
-times (so beacon-in-transit stars are common under lightspeed), observer points, exclude sets, k,
-and coordination mode - the regimes where a wrong prune would surface.
-"""
+"""Differential oracle: the k-d tree query must equal the brute-force linear scan, exactly."""
 
 from __future__ import annotations
 
@@ -62,11 +48,7 @@ def _brute_k(s, px, py, pz, year, coord, k, exclude):
 
 
 def _settle_random(s, rng, frac, max_year):
-    """Settle a random ~frac of the stars at random years in [0, max_year], keeping the tree exact.
-
-    Uses the real ``_kd_mark_settled`` so the subtree aggregates (kd_nuns/kd_tsmax) stay consistent -
-    the same update the fold runs at each settlement. Origin is already settled by initial_state.
-    """
+    """Settle a random ~frac of the stars at random years in [0, max_year], keeping the tree exact."""
     for i in range(len(s.xs)):
         if s.settled_year[i] >= 0.0:
             continue
@@ -89,8 +71,7 @@ def test_nearest_matches_brute_force(n: int, frac: float) -> None:
         pytest.skip("a 1-star field is the origin only; nothing to query")
     s = initial_state(SwarmParams(n_stars=max(2, n)), seed=1234 + n)
     rng = seed_state(9876 + n + int(frac * 1000))
-    # A box scale to place observers and a year range spanning the settle times, so beacons are
-    # in various states of transit (the light-delayed correctness regime).
+    # A box scale to place observers and a year range spanning the settle times, so beacons are in various states of transit (the light-delayed correctness regime).
     L = s.box_side_pc
     rng = _settle_random(s, rng, frac, max_year=5.0)
     for trial in range(12):
@@ -148,9 +129,6 @@ def test_k_nearest_matches_brute_force(n: int, frac: float, k: int) -> None:
 
 def test_beacon_in_transit_star_is_returned_not_pruned() -> None:
     # The correctness crux (issue #30): under a light-delayed regime a recently-settled star whose
-    # beacon has NOT reached the observer is believed-unsettled and must be a valid target - the tree
-    # must NOT prune it away as "settled". Construct a case where the nearest star is exactly such a
-    # star and confirm the tree returns it (and the brute-force agrees).
     s = initial_state(SwarmParams(n_stars=300), seed=42)
     # Settle every star except the origin, all at year 0 (long-ago core) ...
     rng = seed_state(7)
@@ -158,8 +136,7 @@ def test_beacon_in_transit_star_is_returned_not_pruned() -> None:
         if s.settled_year[i] < 0.0:
             s.settled_year[i] = 0.0
             _kd_mark_settled(s, i)
-    # ... then pick an observer and its true nearest star, and re-settle that nearest star "just now"
-    # at a year whose beacon cannot yet have reached the observer. It is then believed-unsettled.
+    # Pick an observer and its true nearest star, then re-settle that star "just now" at a year whose beacon cannot yet have reached the observer.
     px, py, pz = s.box_side_pc / 2.0, s.box_side_pc / 2.0, s.box_side_pc / 2.0
     nearest = min(
         range(len(s.xs)),
@@ -178,8 +155,7 @@ def test_beacon_in_transit_star_is_returned_not_pruned() -> None:
 
 
 def test_all_settled_and_arrived_returns_none() -> None:
-    # Every star settled long ago: under instant nothing is believed-unsettled, and under lightspeed
-    # once every beacon has had time to arrive the answer is also None. The tree must prune to empty.
+    # Every star settled long ago: under instant nothing is believed-unsettled, and under lightspeed once every beacon has had time to arrive the answer is also None.
     s = initial_state(SwarmParams(n_stars=120), seed=3)
     for i in range(len(s.xs)):
         if s.settled_year[i] < 0.0:

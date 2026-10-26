@@ -1,12 +1,4 @@
-"""Repo-wide red-hat: every module with a REFERENCES.md must carry a
-distributions.py at src/<pkg>/distributions.py, and no module may reach for
-vn_core.uq via a private path.
-
-This is the invariant issue #35 leaves in place after the rollout: any new
-module that appears in this repo picks up UQ **by adding a distributions.py**,
-never by copy-pasting the primitives. If a future contributor forgets, this
-test tells them.
-"""
+"""Repo-wide red-hat: every module with a REFERENCES.md must carry a."""
 
 from __future__ import annotations
 
@@ -17,8 +9,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# Directories that (a) sit at repo root, (b) have a REFERENCES.md, (c) look
-# like a von-neumann module (src/<pkg>/ layout). Anything else is not scanned.
+# Module directories are those that (a) sit at repo root, (b) have a REFERENCES.md, and (c) have a src/ tree; the names below are skipped.
 _SKIP = {"core", "frontend", "papers", "scripts", ".git", ".github", "docs"}
 
 
@@ -56,9 +47,7 @@ def test_module_has_a_distributions_file(module_dir: Path) -> None:
 
 @pytest.mark.parametrize("module_dir", _module_dirs(), ids=lambda p: p.name)
 def test_module_reaches_uq_only_through_vn_core_public_api(module_dir: Path) -> None:
-    # A future regression: someone imports a private symbol like
-    # `from vn_core.uq.sample import _quantile_of_sorted`. Ban private-path
-    # imports so the package boundary stays clean.
+    # A future regression: someone imports a private (underscore) symbol from a vn_core submodule instead of the public API.
     pkg = _pkg_name(module_dir)
     src = module_dir / "src" / pkg
     bad = re.compile(r"from\s+vn_core\.[a-z_]+\.[a-z_]+\s+import\s+_")
@@ -72,10 +61,7 @@ def test_module_reaches_uq_only_through_vn_core_public_api(module_dir: Path) -> 
 
 @pytest.mark.parametrize("module_dir", _module_dirs(), ids=lambda p: p.name)
 def test_distributions_file_is_not_a_stub(module_dir: Path) -> None:
-    # Guard against the trivial case: an empty distributions.py that
-    # satisfies the file-exists test above but carries no actual bands.
-    # Every module's distributions.py must import at least one symbol from
-    # vn_core.uq (the primitive it needs to declare a distribution).
+    # Guard against the trivial case: an empty distributions.py that would satisfy the other checks vacuously.
     pkg = _pkg_name(module_dir)
     dist_py = module_dir / "src" / pkg / "distributions.py"
     text = dist_py.read_text()

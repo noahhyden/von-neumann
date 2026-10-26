@@ -1,14 +1,4 @@
-"""Monte Carlo propagation - seeded, deterministic, no wall clock.
-
-Draws N independent samples of the inputs from their [[distributions]] and
-evaluates a `finding` on each. The seeded RNG is threaded through the sample loop
-(CLAUDE.md §7: randomness is state, not a wall clock), so the same (inputs, N,
-seed) always returns bit-identical `values`.
-
-`finding` is a plain function `dict[str, float] -> float`. It is the pure fold's
-observable in disguise: whatever number would go into the paper as an "X" is what
-the caller wraps here so we can report "X, +-Y".
-"""
+"""Monte Carlo propagation - seeded, deterministic, no wall clock."""
 
 from __future__ import annotations
 
@@ -41,16 +31,7 @@ class MCResult:
 
     @property
     def stderr_of_mean(self) -> float:
-        """Standard error of the empirical mean = std / sqrt(N).
-
-        A convergence diagnostic separate from the error bar itself: the
-        90% CI reports the finding's own spread, while this reports how well
-        the *mean* is pinned down by the current sample size. If a caller
-        wants a Ndigit-of-mean claim they can trust, they should keep N large
-        enough that stderr_of_mean is well below whatever precision they
-        want to claim - the honest counterpart to "n=1000 is enough because
-        it feels round".
-        """
+        """Standard error of the empirical mean = std / sqrt(N)."""
         if self.n < 2:
             return 0.0
         return self.std / math.sqrt(self.n)
@@ -63,33 +44,21 @@ def monte_carlo(
     n: int,
     seed: int,
 ) -> MCResult:
-    """Run n seeded MC evaluations of ``finding`` over sampled ``inputs``.
-
-    Determinism: a fresh ``random.Random(seed)`` is used, and inputs are consumed
-    in insertion order (Python dicts preserve it since 3.7). Same seed, same
-    inputs, same finding -> byte-identical ``values``.
-    """
+    """Run n seeded MC evaluations of ``finding`` over sampled ``inputs``."""
     if n < 1:
         raise ValueError(f"n must be >= 1, got {n}")
     rng = random.Random(seed)
     names = tuple(inputs.keys())
     values: list[float] = []
     for _ in range(n):
-        # Draw a fresh uniform per input (in fixed name order), push through each
-        # distribution's inverse CDF. This is the one place the RNG is used.
+        # Draw a fresh uniform per input (in fixed name order) and push it through that input's inverse CDF; this is the one place the RNG is used.
         sample = {name: inputs[name].quantile(rng.random()) for name in names}
         values.append(finding(sample))
     return summarize(values, names)
 
 
 def summarize(values: list[float], input_names: tuple[str, ...]) -> MCResult:
-    """Build an MCResult (mean/std/quantiles) from a list of finding evaluations.
-
-    Shared by ``monte_carlo`` and by ``uq_and_gsa`` (which hands it the A+B
-    Saltelli samples), so the UQ readout is defined in exactly one place and the
-    two entry points can never drift. Rejects nonfinite values here rather than
-    downstream: a nan/inf sample is not honest UQ (CLAUDE.md §1).
-    """
+    """Build an MCResult (mean/std/quantiles) from a list of finding evaluations."""
     n = len(values)
     if any(math.isnan(v) or math.isinf(v) for v in values):
         raise ValueError("finding returned nan/inf - a nonfinite draw is not honest UQ")
@@ -112,12 +81,7 @@ def summarize(values: list[float], input_names: tuple[str, ...]) -> MCResult:
 
 
 def _quantile_of_sorted(sorted_v: list[float], q: float) -> float:
-    """Linearly interpolated quantile of a pre-sorted sequence.
-
-    Uses the "type 7" formula (default in numpy.quantile and R): h = q*(n-1),
-    result = v[floor(h)] + (h - floor(h)) * (v[floor(h)+1] - v[floor(h)]).
-    Correct on the endpoints and monotonic in q.
-    """
+    """Linearly interpolated quantile of a pre-sorted sequence."""
     if not sorted_v:
         raise ValueError("cannot take a quantile of an empty sequence")
     if not 0.0 <= q <= 1.0:

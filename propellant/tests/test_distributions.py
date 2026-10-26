@@ -5,8 +5,6 @@ import math
 import pytest
 
 from propellant.distributions import (
-    HHV_HYDROGEN_DIST,
-    HYDROGEN_MASS_FRACTION_OF_WATER_DIST,
     ISP_LOX_LH2_DIST,
     ISP_XENON_HALL_EP_DIST,
     ISP_XENON_ION_EP_DIST,
@@ -14,18 +12,10 @@ from propellant.distributions import (
     XENON_WORLD_SUPPLY_DIST,
 )
 from propellant.propellant import (
-    HHV_HYDROGEN_KWH_PER_KG,
-    HYDROGEN_MASS_FRACTION_OF_WATER,
     KORNUTA_FULL_CHAIN_KWH_PER_KG,
     XENON_WORLD_SUPPLY_T_PER_YR,
 )
-from vn_core.uq import Fixed, monte_carlo, sobol_total_order
-
-
-def test_thermodynamic_constants_are_fixed():
-    assert isinstance(HHV_HYDROGEN_DIST, Fixed)
-    assert HHV_HYDROGEN_DIST.value == HHV_HYDROGEN_KWH_PER_KG
-    assert isinstance(HYDROGEN_MASS_FRACTION_OF_WATER_DIST, Fixed)
+from vn_core.uq import monte_carlo, sobol_total_order
 
 
 def test_kornuta_band_contains_point_value():

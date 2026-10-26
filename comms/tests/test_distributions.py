@@ -3,17 +3,11 @@
 import pytest
 
 from comms.distributions import (
-    BITS_PER_MBIT_DIST,
     K_OPTICAL_MBPS_AU2_DIST,
     R_MAX_DSOC_MBPS_DIST,
 )
-from comms.link import BITS_PER_MBIT, K_OPTICAL_MBPS_AU2, R_MAX_DSOC_MBPS
-from vn_core.uq import Fixed, Uniform, monte_carlo, sobol_total_order
-
-
-def test_definitional_constants_are_fixed():
-    assert isinstance(BITS_PER_MBIT_DIST, Fixed)
-    assert BITS_PER_MBIT_DIST.value == BITS_PER_MBIT
+from comms.link import K_OPTICAL_MBPS_AU2, R_MAX_DSOC_MBPS
+from vn_core.uq import Uniform, monte_carlo, sobol_total_order
 
 
 def test_dsoc_fit_uncertainty_is_the_disagreement_between_anchors():

@@ -28,7 +28,7 @@ probe learns its target is settled and aborts *strictly before* arriving. So
 probe's redirect is scheduled strictly in the flight window, before arrival.
 
 **Empirical check.** `floor_bracket_scale.json` N=200,000: inflight
-`wasted_arrivals = 0` across all 8 seeds at every `Λ ∈ {0.05, 0.1, 0.2}` —
+`wasted_arrivals = 0` across all 8 seeds at every `Λ ∈ {0.05, 0.1, 0.2}` -
 `~1.79M` would-be wasted arrivals eliminated. Never observed non-zero.
 
 **Compute value.** Small. Can be short-circuited but the fold is already fast
@@ -88,7 +88,7 @@ cascade. So the empirical `a ≤ 1` is a *finding about the k=2 cascade
 coupling*, not a derived inequality.
 
 **Diagnostic use.** If a k=2 run produces `a > 1`, something is wrong with the
-fold. Do not use as a compute shortcut — the fold produces `a` directly.
+fold. Do not use as a compute shortcut - the fold produces `a` directly.
 
 ### D5. `−7 ± 1 pp/decade` finite-size decline (regression, robust across edge controls)
 
@@ -99,7 +99,7 @@ periodic).
 **Empirical.** Regression slopes: main `−7.0 [-7.8, −6.4]`, interior
 `−6.2 [-8.0, −5.3]`, periodic `−7.1 [-8.1, −6.3]` (from `scale_regression`
 blocks in each JSON). All three CIs overlap. The rate is stable; the *level* at
-any N is not (the decline is convex, not linear-in-log — see DON'T DN5 below).
+any N is not (the decline is convex, not linear-in-log - see DON'T DN5 below).
 
 **Compute value.** None (still needs the sweep). Value is diagnostic: the
 paper's bulk-vs-boundary claim holds because the three CIs agree, not because
@@ -131,7 +131,7 @@ as an analytical observation, if the moment shape is worth documenting.
 the wasted-arrival branch in `_process_arrivals`. Fold determinism preserved
 (observational only, no decision touches the histogram).
 
-## DON'Ts (verified failures — do not re-litigate)
+## DON'Ts (verified failures - do not re-litigate)
 
 ### DN1. The `h(p) = (1-p) ln(1/(1-p))` kernel as a scalar estimator of `a`
 
@@ -209,7 +209,7 @@ super-polynomially, not as a fixed power law.
 
 ### DN6. Saturating `τ_fuel(k)` in branching
 
-**Attempted form.** `τ_fuel(k) = τ_∞ (1 − e^{-c·k})` — a saturating shape.
+**Attempted form.** `τ_fuel(k) = τ_∞ (1 − e^{-c·k})` - a saturating shape.
 
 **Failure mode.** **No saturation observed to k=16.** `branching.json` at
 Λ=0.2 shows monotone rise `19.2 → 23.4 → 25.4 → 30.6 → 35.4%` at
@@ -229,7 +229,7 @@ point-process statistics.
 
 **Failure mode.** **Not separable in R and N.** At N=500, `a(R)` is monotone
 0.97 → 0.42 across the clumpiness ladder. At N=200,000, `a(R)` is **flat**
-(0.078, 0.076, 0.088, 0.072, 0.076 — noise-consistent with a single value).
+(0.078, 0.076, 0.088, 0.072, 0.076 - noise-consistent with a single value).
 The R-dependence itself vanishes with N.
 
 **What holds instead.** The clumpiness multiplier `m(R, N) = a(R,N)/a(uniform,
@@ -271,7 +271,7 @@ rescue `h(p)` (DN1).
 **Failure mode.** **Requires the lightspeed run to distinguish the two
 channels.** The instant fold has no tag on each wasted arrival marking which
 channel it came from. The only observable that separates them is
-`W_lag − W_inst` — which is the paired measurement the estimator was trying to
+`W_lag − W_inst` - which is the paired measurement the estimator was trying to
 replace.
 
 ## Method

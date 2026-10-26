@@ -5,14 +5,11 @@ import math
 import pytest
 
 from power_budget.distributions import (
-    BOLTZMANN_DIST,
     BRAIN_COMPUTE_FLOPS_DIST,
     COMPUTE_EFFICIENCY_FLOPS_PER_W_DIST,
     HUMAN_BRAIN_POWER_DIST,
-    REFERENCE_TEMPERATURE_K_DIST,
 )
 from power_budget.physics import (
-    BOLTZMANN_J_PER_K,
     HUMAN_BRAIN_POWER_W,
     brain_equivalents,
 )

@@ -28,3 +28,6 @@ htmlcov/
 # Rust build artifacts (issue #33, swarm/rust/ pyo3 extension). Cargo.lock is
 # committed for reproducible builds; target/ is derived and huge.
 target/
+
+# Generated agent navigation maps (source of truth is each AGENTS.d/; see CLAUDE.md).
+AGENTS.md

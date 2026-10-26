@@ -9,9 +9,7 @@ description = "Quantitative closure & self-replication analysis for in-situ spac
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.6",
-    "typer>=0.12",
     "pyyaml>=6.0",
-    "rich>=13.0",
     "vn-core",
 ]
 
@@ -19,7 +17,7 @@ dependencies = [
 dev = ["pytest>=8.0", "matplotlib>=3.8"]
 
 [project.scripts]
-closure-sim = "closure_sim.cli:app"
+closure-sim = "closure_sim.cli:main"
 
 # Sibling packages in this monorepo, consumed through their public APIs.
 [tool.uv.sources]

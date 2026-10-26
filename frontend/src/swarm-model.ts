@@ -10,7 +10,7 @@
  */
 import { createSignal, createMemo } from "pimas";
 import type { Accessor, Setter } from "pimas";
-import type { ParamSignal } from "./reactive-model.js";
+import { param, type ParamSignal } from "./reactive-model.js";
 import { simulateSwarm, SWARM_DEFAULTS } from "./swarm.js";
 import type { SwarmResult, Policy, Coordination } from "./swarm.js";
 import { lightTimeYears, roundTripYears, rho, classifyRung } from "./coordination.js";
@@ -57,10 +57,10 @@ export interface SwarmModel {
 }
 
 export function createSwarmModel(): SwarmModel {
-  const [nStars, setNStars] = createSignal(1200);
-  const [offspring, setOffspring] = createSignal(2);
-  const [probeSpeedKmS, setProbeSpeedKmS] = createSignal(9); // N&F powered cruise ≈ 9 km/s
-  const [seed, setSeed] = createSignal(1);
+  const nStars = param(1200, { min: 50, max: 5000, step: 50, label: "Stars in the field", unit: "", commitOnRelease: true });
+  const offspring = param(2, { min: 0, max: 6, step: 1, label: "Offspring per settlement", unit: "", commitOnRelease: true });
+  const probeSpeedKmS = param(9, { min: 1, max: 100, step: 1, label: "Powered speed", unit: "km/s", commitOnRelease: true }); // N&F powered cruise ≈ 9 km/s
+  const seed = param(1, { min: 1, max: 9999, step: 1, label: "Galaxy seed", unit: "", commitOnRelease: true });
   const [scrubYear, setScrubYear] = createSignal(0);
   const [playing, setPlaying] = createSignal(false);
   const [policy, setPolicy] = createSignal<Policy>("powered");
@@ -71,27 +71,27 @@ export function createSwarmModel(): SwarmModel {
   // All four feed the `result` memo → each `set` re-runs the whole simulateSwarm fold.
   // commitOnRelease: a drag then triggers one re-sim on release, not one per pixel.
   const params: ParamSignal[] = [
-    { get: nStars, set: setNStars, min: 50, max: 5000, step: 50, label: "Stars in the field", unit: "", commitOnRelease: true },
-    { get: offspring, set: setOffspring, min: 0, max: 6, step: 1, label: "Offspring per settlement", unit: "", commitOnRelease: true },
-    { get: probeSpeedKmS, set: setProbeSpeedKmS, min: 1, max: 100, step: 1, label: "Powered speed", unit: "km/s", commitOnRelease: true },
-    { get: seed, set: setSeed, min: 1, max: 9999, step: 1, label: "Galaxy seed", unit: "", commitOnRelease: true },
+    nStars,
+    offspring,
+    probeSpeedKmS,
+    seed,
   ];
 
   const KM_S_TO_C = 1 / 299792.458;
   const paramsFor = (coord: Coordination) => ({
     ...SWARM_DEFAULTS,
-    nStars: nStars(),
-    offspringPerSettlement: offspring(),
-    probeSpeedC: probeSpeedKmS() * KM_S_TO_C,
+    nStars: nStars.get(),
+    offspringPerSettlement: offspring.get(),
+    probeSpeedC: probeSpeedKmS.get() * KM_S_TO_C,
     policy: policy(),
     coordination: coord,
   });
-  const result = createMemo<SwarmResult>(() => simulateSwarm(paramsFor(coordination()), seed()));
+  const result = createMemo<SwarmResult>(() => simulateSwarm(paramsFor(coordination()), seed.get()));
 
   // The perfect-info run at the same knobs, so the surface can show lag as a delta. Only
   // computed in lightspeed mode (in instant it would just duplicate `result`).
   const instantBaseline = createMemo<SwarmResult | null>(() =>
-    coordination() === "lightspeed" ? simulateSwarm(paramsFor("instant"), seed()) : null,
+    coordination() === "lightspeed" ? simulateSwarm(paramsFor("instant"), seed.get()) : null,
   );
 
   const maxYear = createMemo<number>(() => {

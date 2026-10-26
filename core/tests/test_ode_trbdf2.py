@@ -1,13 +1,4 @@
-"""Validation for the TR-BDF2 stiff integrator (order 2, L-stable) - roadmap item 9.
-
-Claims under attack:
-- *higher order pays off on stiff systems*: TR-BDF2 reaches a given accuracy in far
-  fewer / larger steps than the order-1 backward Euler (bdf1);
-- *accurate*: matches scipy's stiff solvers and the analytic solution to tolerance;
-- *L-stable*: a very stiff decay is integrated to ~0 in a handful of large steps,
-  never blowing up;
-- deterministic, and reachable through solve(method="trbdf2").
-"""
+"""Validation for the TR-BDF2 stiff integrator (order 2, L-stable) - roadmap item 9."""
 
 from __future__ import annotations
 
@@ -48,8 +39,7 @@ def test_trbdf2_matches_scipy_on_stiff_problem():
 
 
 def test_trbdf2_far_fewer_steps_than_bdf1():
-    """The whole point of the higher order: on a stiff problem TR-BDF2 reaches at least
-    as good accuracy as backward Euler in a small fraction of the steps."""
+    """The whole point of the higher order: on a stiff problem TR-BDF2 reaches at least."""
     np = pytest.importorskip("numpy")
     from scipy.integrate import solve_ivp
 
@@ -65,8 +55,7 @@ def test_trbdf2_far_fewer_steps_than_bdf1():
 
 
 def test_trbdf2_is_l_stable_on_very_stiff_decay():
-    """y' = -1e6 y is extremely stiff. An L-stable method damps it to ~0 in a few large
-    steps without oscillating or blowing up."""
+    """y' = -1e6 y is extremely stiff. An L-stable method damps it to ~0 in a few large."""
     r = solve(lambda t, y: [-1.0e6 * y[0]], [1.0], (0.0, 1.0), method="trbdf2",
               rtol=1e-3, atol=1e-6)
     assert r.success
@@ -75,8 +64,7 @@ def test_trbdf2_is_l_stable_on_very_stiff_decay():
 
 
 def test_trbdf2_handles_nonlinear_stiff_van_der_pol():
-    # Stiff van der Pol (mu=200) - a genuinely nonlinear stiff test; exercises the
-    # per-stage Newton solves (including step shrink on non-convergence).
+    # Stiff van der Pol (mu=200) - a genuinely nonlinear stiff test that exercises the implicit Newton solve beyond linear problems.
     def vdp(t, y):
         mu = 200.0
         return [y[1], mu * (1.0 - y[0] ** 2) * y[1] - y[0]]
@@ -108,9 +96,7 @@ def test_trbdf2_golden_value_is_bit_reproducible():
 
 
 def test_trbdf2_newton_nonconvergence_shrinks_and_recovers():
-    """A strongly nonlinear, very stiff RHS with a deliberately huge first step makes
-    the per-stage Newton iteration fail to converge; the integrator must shrink the
-    step (the solver-convergence reject path) and still complete the integration."""
+    """A strongly nonlinear, very stiff RHS with a deliberately huge first step makes."""
     from vn_core.ode.implicit import integrate_trbdf2
 
     nasty = lambda t, y: [-1.0e8 * (y[0] ** 3)]  # noqa: E731
@@ -123,8 +109,7 @@ def test_trbdf2_newton_nonconvergence_shrinks_and_recovers():
 
 
 def test_trbdf2_zero_first_step_falls_back():
-    """A non-positive first_step falls back to a safe positive start rather than
-    stalling at h=0."""
+    """A non-positive first_step falls back to a safe positive start rather than."""
     from vn_core.ode.implicit import integrate_trbdf2
 
     ts, ys, *_ = integrate_trbdf2(

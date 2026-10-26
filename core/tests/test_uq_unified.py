@@ -1,19 +1,4 @@
-"""Red-hat (adversarial) + validation tests for the unified UQ+GSA surface.
-
-`uq_and_gsa` runs one Saltelli design and reads two answers off it: the output
-distribution (UQ) and the total-order Sobol indices (GSA). The whole claim is
-that the UQ is *free* - it reuses the evaluations Sobol already does, adding zero
-model calls and introducing no numeric drift in the GSA it used to compute alone.
-
-These tests attack that claim on the cases where a bug would look plausible:
-- the "free" claim is really a promise about **evaluation count** - pin it exactly;
-- the refactor must leave `sobol_total_order` **byte-identical** - pin it;
-- the free UQ must be a **real** MC estimate, not an approximation - tie it to a
-  closed form and to a standalone `monte_carlo`;
-- degenerate/dishonest inputs (constant finding, a phantom input, a nonfinite
-  return) must be handled the same honest way the separate surfaces handle them;
-- same seed -> byte-identical, no wall-clock leak (§7).
-"""
+"""Red-hat (adversarial) + validation tests for the unified UQ+GSA surface."""
 
 from __future__ import annotations
 
@@ -34,8 +19,7 @@ _INPUTS = {"a": Normal(mean=1.0, std=0.2), "b": Uniform(low=0.0, high=1.0)}
 
 
 def _linear(sample):
-    # Additive (no interaction): total-order == first-order, and both are exactly
-    # each input's variance share. Gives a closed form to test against.
+    # Additive (no interaction): total-order == first-order, and both are exactly the analytic variance shares.
     return 3.0 * sample["a"] + 0.5 * sample["b"]
 
 
@@ -43,9 +27,7 @@ def _linear(sample):
 
 
 def test_free_uq_costs_zero_extra_evaluations():
-    """uq_and_gsa must call the finding exactly N*(K+2) times - same as a Sobol
-    run alone. If it were secretly running a separate MC for the UQ, the count
-    would be higher. This is the entire point of the surface."""
+    """uq_and_gsa must call the finding exactly N*(K+2) times - same as a Sobol."""
     n, k = 500, len(_INPUTS)
     calls = {"n": 0}
 
@@ -58,8 +40,7 @@ def test_free_uq_costs_zero_extra_evaluations():
 
 
 def test_unified_is_cheaper_than_separate_mc_plus_sobol():
-    """The unified surface must cost strictly fewer evaluations than running a
-    standalone monte_carlo and a standalone sobol on the same design size."""
+    """The unified surface must cost strictly fewer evaluations than running a."""
     n, k, m = 400, len(_INPUTS), 400
     counts = {}
     for label, run in (
@@ -83,8 +64,7 @@ def test_unified_is_cheaper_than_separate_mc_plus_sobol():
 
 
 def test_gsa_is_byte_identical_to_standalone_sobol():
-    """Extracting the shared Saltelli evaluator must leave sobol_total_order's
-    output bit-for-bit unchanged - the free UQ is an addition, not a rewrite."""
+    """Extracting the shared Saltelli evaluator must leave sobol_total_order's."""
     sob = sobol_total_order(_INPUTS, _linear, n=600, seed=99)
     ana = uq_and_gsa(_INPUTS, _linear, n=600, seed=99)
     assert ana.gsa.total_order == sob.total_order
@@ -103,16 +83,13 @@ def test_free_uq_carries_2n_samples():
 
 
 def test_uq_mean_equals_gsa_mean_exactly():
-    """UQ and GSA are read off the same 2N A+B samples, so their means are the
-    same float, not just close."""
+    """UQ and GSA are read off the same 2N A+B samples, so their means are the."""
     ana = uq_and_gsa(_INPUTS, _linear, n=500, seed=11)
     assert ana.uq.mean == ana.gsa.mean
 
 
 def test_linear_finding_uq_and_gsa_both_match_closed_form():
-    """One run, two answers, both pinned to analytic ground truth:
-    Var(3a + 0.5b) = 9 Var(a) + 0.25 Var(b); additivity => S_T is the variance
-    share of each input."""
+    """One run, two answers, both pinned to analytic ground truth: Var(3a + 0.5b) = 9 Var(a) + 0.25 Var(b); additivity => S_T is the variance share of each input."""
     sa = 0.2
     var_f = 9 * sa**2 + 0.25 * (1.0 / 12.0)  # Var(Uniform(0,1)) = 1/12
     st_a = 9 * sa**2 / var_f
@@ -127,8 +104,7 @@ def test_linear_finding_uq_and_gsa_both_match_closed_form():
 
 
 def test_free_uq_matches_a_standalone_monte_carlo():
-    """The UQ from the Saltelli A+B samples must agree with an independent
-    monte_carlo of the same size - it is the same estimator on iid draws."""
+    """The UQ from the Saltelli A+B samples must agree with an independent."""
     ana = uq_and_gsa(_INPUTS, _linear, n=4000, seed=21)
     mc = monte_carlo(_INPUTS, _linear, n=8000, seed=777)  # 2N, different seed
     # Different seeds -> different draws, so agreement is statistical, not exact.
@@ -141,8 +117,7 @@ def test_free_uq_matches_a_standalone_monte_carlo():
 
 
 def test_phantom_input_gets_zero_sensitivity_without_corrupting_uq():
-    """An input the finding ignores must read S_T ~ 0, and its presence must not
-    change the output distribution (a spread with no path to the output)."""
+    """An input the finding ignores must read S_T ~ 0, and its presence must not."""
     with_phantom = dict(_INPUTS, phantom=Normal(mean=5.0, std=3.0))
     ana = uq_and_gsa(with_phantom, _linear, n=4000, seed=5)
     assert ana.gsa.total_order["phantom"] == pytest.approx(0.0, abs=0.01)
@@ -154,8 +129,7 @@ def test_phantom_input_gets_zero_sensitivity_without_corrupting_uq():
 
 
 def test_constant_finding_is_zero_variance_everywhere_no_crash():
-    """A finding with no output variance: GSA reports zeros (no divide-by-zero),
-    UQ reports a spike (all quantiles equal the mean, std 0)."""
+    """A finding with no output variance: GSA reports zeros (no divide-by-zero), UQ reports a spike (all quantiles equal the mean, std 0)."""
     ana = uq_and_gsa(_INPUTS, lambda s: 42.0, n=200, seed=1)
     assert ana.gsa.variance == 0.0
     assert all(v == 0.0 for v in ana.gsa.total_order.values())
@@ -165,8 +139,7 @@ def test_constant_finding_is_zero_variance_everywhere_no_crash():
 
 
 def test_nonfinite_finding_is_rejected():
-    """A nan/inf return is not honest UQ - uq_and_gsa must raise, like
-    monte_carlo does, rather than emit nan error bars and nan indices."""
+    """A nan/inf return is not honest UQ - uq_and_gsa must raise, like."""
     with pytest.raises(ValueError, match="nan/inf"):
         uq_and_gsa(_INPUTS, lambda s: float("nan"), n=50, seed=1)
 
@@ -177,8 +150,7 @@ def test_single_input_takes_all_the_sensitivity():
 
 
 def test_fixed_input_contributes_no_variance():
-    """A Fixed input (a [GAP] with no sourced spread) must read S_T ~ 0 - the
-    honest 'UQ does not know this input's spread' outcome."""
+    """A Fixed input (a [GAP] with no sourced spread) must read S_T ~ 0 - the."""
     inputs = {"a": Normal(mean=1.0, std=0.2), "gap": Fixed(3.0)}
     ana = uq_and_gsa(inputs, lambda s: s["a"] + s["gap"], n=3000, seed=8)
     assert ana.gsa.total_order["gap"] == pytest.approx(0.0, abs=1e-9)

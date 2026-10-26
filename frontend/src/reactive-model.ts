@@ -45,6 +45,11 @@ export interface ParamSignal {
   commitOnRelease?: boolean;
 }
 
+export function param(value: number, spec: Omit<ParamSignal, "get" | "set">): ParamSignal {
+  const [get, set] = createSignal(value);
+  return { get, set, ...spec };
+}
+
 export interface WallModel {
   factoryName: string;
   subsystems: Accessor<readonly Subsystem[]>;
@@ -84,30 +89,29 @@ export function createWallModel(initialFactory: Factory): WallModel {
   });
 
   // Replication assumptions as signals - the sliders.
-  const mk = (v: number): [Accessor<number>, Setter<number>] => createSignal(v);
-  const [power, setPower] = mk(rep0.available_power_kw);
-  const [buildRate, setBuildRate] = mk(rep0.local_build_rate_kg_per_day);
-  const [resupplyMass, setResupplyMass] = mk(rep0.vitamin_resupply_mass_kg);
-  const [cadence, setCadence] = mk(rep0.resupply_cadence_days);
-  const [target, setTarget] = mk(rep0.target_output_kg_per_day);
-  const [seedMass, setSeedMass] = mk(rep0.seed_mass_kg);
+  const power = param(rep0.available_power_kw, { min: 250, max: 12000, step: 250, label: "Available power", unit: "kW" });
+  const buildRate = param(rep0.local_build_rate_kg_per_day, { min: 2, max: 100, step: 1, label: "Seed build rate", unit: "kg/day" });
+  const resupplyMass = param(rep0.vitamin_resupply_mass_kg, { min: 0, max: 500, step: 10, label: "Vitamin resupply / delivery", unit: "kg" });
+  const cadence = param(rep0.resupply_cadence_days, { min: 7, max: 180, step: 1, label: "Resupply cadence", unit: "days" });
+  const target = param(rep0.target_output_kg_per_day, { min: 50, max: 3000, step: 50, label: "Output goal", unit: "kg/day" });
+  const seedMass = param(rep0.seed_mass_kg, { min: 2000, max: 40000, step: 500, label: "Seed mass (landed)", unit: "kg" });
 
   const params: Record<string, ParamSignal> = {
-    power: { get: power, set: setPower, min: 250, max: 12000, step: 250, label: "Available power", unit: "kW" },
-    resupplyMass: { get: resupplyMass, set: setResupplyMass, min: 0, max: 500, step: 10, label: "Vitamin resupply / delivery", unit: "kg" },
-    cadence: { get: cadence, set: setCadence, min: 7, max: 180, step: 1, label: "Resupply cadence", unit: "days" },
-    buildRate: { get: buildRate, set: setBuildRate, min: 2, max: 100, step: 1, label: "Seed build rate", unit: "kg/day" },
-    seedMass: { get: seedMass, set: setSeedMass, min: 2000, max: 40000, step: 500, label: "Seed mass (landed)", unit: "kg" },
-    target: { get: target, set: setTarget, min: 50, max: 3000, step: 50, label: "Output goal", unit: "kg/day" },
+        power,
+        resupplyMass,
+        cadence,
+        buildRate,
+        seedMass,
+        target,
   };
 
   const repParams = createMemo<ReplicationParams>(() => ({
-    seed_mass_kg: seedMass(),
-    local_build_rate_kg_per_day: buildRate(),
-    vitamin_resupply_mass_kg: resupplyMass(),
-    resupply_cadence_days: cadence(),
-    available_power_kw: power(),
-    target_output_kg_per_day: target(),
+    seed_mass_kg: seedMass.get(),
+    local_build_rate_kg_per_day: buildRate.get(),
+    vitamin_resupply_mass_kg: resupplyMass.get(),
+    resupply_cadence_days: cadence.get(),
+    available_power_kw: power.get(),
+    target_output_kg_per_day: target.get(),
     duration_days: rep0.duration_days,
     dt_days: rep0.dt_days,
   }));
@@ -158,12 +162,12 @@ export function createWallModel(initialFactory: Factory): WallModel {
   const restoreChips = () => elecIndices.forEach((i) => setStore("subsystems", i, "producible_locally", elecOriginal.get(i)!));
 
   const reset = () => {
-    setPower(rep0.available_power_kw);
-    setBuildRate(rep0.local_build_rate_kg_per_day);
-    setResupplyMass(rep0.vitamin_resupply_mass_kg);
-    setCadence(rep0.resupply_cadence_days);
-    setTarget(rep0.target_output_kg_per_day);
-    setSeedMass(rep0.seed_mass_kg);
+    power.set(rep0.available_power_kw);
+    buildRate.set(rep0.local_build_rate_kg_per_day);
+    resupplyMass.set(rep0.vitamin_resupply_mass_kg);
+    cadence.set(rep0.resupply_cadence_days);
+    target.set(rep0.target_output_kg_per_day);
+    seedMass.set(rep0.seed_mass_kg);
     restoreChips();
   };
 
@@ -195,7 +199,7 @@ export function createWallModel(initialFactory: Factory): WallModel {
       r.expose("chips_are_local", () => chipsAreLocal());
       r.action("makeChipsLocal", () => commitChipsLocal(), { params: [], readOnly: false, description: "Toggle every electronics subsystem to locally producible" });
       r.action("restoreChips", () => restoreChips(), { params: [], readOnly: false, description: "Revert electronics to imported vitamins" });
-      r.action("setPowerKw", (kw) => setPower(Number(kw)), { params: ["kw"], description: "Set available power in kW" });
+      r.action("setPowerKw", (kw) => power.set(Number(kw)), { params: ["kw"], description: "Set available power in kW" });
     },
     { writeTap: (record) => onStoreWrite((e) => record(e.path.join("."))) },
   );

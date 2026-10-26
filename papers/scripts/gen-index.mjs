@@ -11,7 +11,6 @@
 
 import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 
 /** Every citation id used in a compiled document. Handles both the numeric \cite (IEEEtran
  * papers, e.g. electronics-wall) and natbib's \citep / \citet (author-year papers, e.g.
@@ -51,7 +50,7 @@ function normAbstract(s) {
 const { sourceById } = await import(new URL("../../frontend/src/sources.ts", import.meta.url).href);
 
 // The papers module root (papers/), one level up from scripts/.
-const papersRoot = fileURLToPath(new URL("..", import.meta.url));
+const papersRoot = join(import.meta.dirname, "..");
 
 // Discover paper.json files: papers/<slug>/paper.json.
 const entries = readdirSync(papersRoot, { withFileTypes: true })
@@ -193,6 +192,6 @@ export interface PaperMeta {
 export const PAPERS: PaperMeta[] = ${JSON.stringify(papers, null, 2)};
 `;
 
-const outPath = fileURLToPath(new URL("../../frontend/src/papers-index.ts", import.meta.url));
+const outPath = join(import.meta.dirname, "..", "..", "frontend", "src", "papers-index.ts");
 writeFileSync(outPath, out);
 console.log(`gen-index: wrote ${outPath} with ${papers.length} paper(s).`);

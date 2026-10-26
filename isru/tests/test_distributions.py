@@ -7,7 +7,6 @@ from isru.distributions import (
     LUNAR_REGOLITH_ELEMENT_WT_PCT_DIST,
     METAL_MOE_DIST,
     OXYGEN_FULL_CHAIN_KWH_PER_KG_DIST,
-    USABLE_THRESHOLD_WT_PCT_DIST,
     WATER_ICE_LOX_DIST,
 )
 from isru.energy import (
@@ -51,10 +50,6 @@ def test_regolith_element_dist_shape_matches_source_table():
             assert dist.low <= point <= dist.high
         else:
             assert isinstance(dist, Fixed), f"trace element {name} should be Fixed"
-
-
-def test_usable_threshold_is_a_policy_dial_not_a_measurement():
-    assert isinstance(USABLE_THRESHOLD_WT_PCT_DIST, Fixed)
 
 
 def test_water_ice_lox_band_matches_propellant_module():

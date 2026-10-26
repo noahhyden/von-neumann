@@ -1,8 +1,4 @@
-"""Tests for the seeded, dependency-free ensemble statistics (experiments/stats_util.py).
-
-Assert real behaviour: the sign-test p-value matches the exact binomial tail, and the
-bootstrap CI is deterministic (seeded) and brackets the point median.
-"""
+"""Tests for the seeded, dependency-free ensemble statistics (experiments/stats_util.py)."""
 
 from __future__ import annotations
 
@@ -13,7 +9,6 @@ from experiments.stats_util import bootstrap_median_ci, loglog_slope_ci, sign_te
 
 def test_sign_test_all_positive_is_two_over_2n() -> None:
     # 32 seeds all positive: p = 2 * C(32,32) / 2^32 = 2 / 2^32 - the strongest possible
-    # paired statement, and the exact value the paper reports for both slingshot policies.
     k, n, p = sign_test_positive([1.0] * 32)
     assert (k, n) == (32, 32)
     assert p == pytest.approx(2.0 / 2**32, rel=1e-9)
@@ -51,7 +46,6 @@ def test_bootstrap_ci_narrows_with_more_data() -> None:
 
 def test_loglog_slope_recovers_a_known_line() -> None:
     # Groups whose medians fall exactly on y = 2 + 3x recover slope 3; the CI is deterministic
-    # (seeded) and, with zero within-group spread, collapses onto the point slope.
     x = [1.0, 2.0, 3.0, 4.0]
     groups = [[2.0 + 3.0 * xi] * 8 for xi in x]
     slope, lo, hi = loglog_slope_ci(x, groups)
@@ -62,8 +56,7 @@ def test_loglog_slope_recovers_a_known_line() -> None:
 
 
 def test_loglog_slope_is_negative_for_a_declining_trend() -> None:
-    # A trend that falls as x grows yields a negative slope with an interval clear of zero -
-    # the shape of the finite-size scale check.
+    # A trend that falls as x grows yields a negative slope with an interval clear of zero - the shape of the finite-size scale check.
     x = [2.0, 3.0, 4.0]
     groups = [[20.0, 21.0, 19.0], [17.0, 18.0, 16.0], [12.0, 13.0, 11.0]]
     slope, lo, hi = loglog_slope_ci(x, groups)

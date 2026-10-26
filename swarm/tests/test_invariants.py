@@ -1,9 +1,4 @@
-"""Step invariants for swarm.sim.step / step_event (issue #48, phase A).
-
-Swarm mutates state in place; the verifier compares a snapshot taken before the
-step to the post-step state. Positive + negative per invariant. Tags match
-REFERENCES.md.
-"""
+"""Step invariants for swarm.sim.step / step_event (issue #48, phase A)."""
 
 import pytest
 
@@ -129,8 +124,7 @@ def test_inv_sw_probe_ids_unique_negative():
     step(state, params)
     snap = _snapshot_invariant_state(state)
     state.year = snap.year + 1.0
-    # The dict key is unique by construction; the invariant checks the *Probe.id*
-    # values. Insert a probe under a fresh key but with a duplicated .id.
+    # The dict key is unique by construction; the invariant checks the *Probe.id* values.
     state.probes[999_999_001] = Probe(id=42, target=0, arrive_year=1.0, speed_pc_yr=0.01)
     state.probes[999_999_002] = Probe(id=42, target=1, arrive_year=1.0, speed_pc_yr=0.01)
     with pytest.raises(AssertionError, match=r"inv:sw-probe-ids-unique"):

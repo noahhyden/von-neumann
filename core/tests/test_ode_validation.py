@@ -1,18 +1,4 @@
-"""The 5-point validation gate for vn_core.ode (issue #38, Phase 1).
-
-A solver is not "done" because it runs (CLAUDE.md §2). It is done when it passes
-each of these, which check real numbers and the regimes that matter:
-
-1. Analytic accuracy   - matches closed-form solutions to a stated tolerance.
-2. Convergence order   - halving the step drops the error at ~the method's order.
-3. Stiff regime        - explicit struggles, implicit stays bounded and cheap.
-4. Oracle agreement    - matches scipy.integrate.solve_ivp on the repo's own ODEs.
-5. Determinism         - byte-identical output across runs (§7).
-
-scipy is a TEST-ONLY oracle (dev dependency); vn_core.ode ships pure Python with
-zero runtime deps. Where scipy is unavailable the oracle test skips, but the
-other four gates (which need no oracle) still run.
-"""
+"""The 5-point validation gate for vn_core.ode (issue #38, Phase 1)."""
 
 from __future__ import annotations
 
@@ -68,11 +54,7 @@ def test_implicit_method_also_hits_analytic_solution():
 
 
 def _fixed_step_error(h: float) -> float:
-    """Global error of a ~fixed-step rk45 run on y'=y over [0,1] (exact e).
-
-    Saturating the tolerances makes every step accept, and first_step = max_step
-    pins the step at h, so we can measure the method's own order rather than the
-    controller's."""
+    """Global error of a ~fixed-step rk45 run on y'=y over [0,1] (exact e)."""
     r = solve(lambda t, y: [y[0]], [1.0], (0.0, 1.0), rtol=1e30, atol=1e30, first_step=h, max_step=h)
     return abs(r.y_final[0] - math.e)
 
@@ -96,13 +78,7 @@ def _van_der_pol(mu: float):
 
 
 def test_stiff_implicit_stays_bounded_where_explicit_is_impractical():
-    """Van der Pol at mu=1000: bdf1 stays bounded and cheap; rk45 costs >100x more.
-
-    An adaptive explicit method does not literally overflow - it survives by
-    taking vanishingly small steps. The honest stiff statement is the cost gap:
-    bdf1 reaches the end in a handful of steps while rk45 needs orders of
-    magnitude more RHS evaluations for the same span.
-    """
+    """Van der Pol at mu=1000: bdf1 stays bounded and cheap; rk45 costs >100x more."""
     f = _van_der_pol(1000.0)
     span = (0.0, 100.0)
     imp = solve(f, [2.0, 0.0], span, method="bdf1", rtol=1e-3, atol=1e-6, max_step=10.0)
@@ -156,11 +132,7 @@ def test_matches_scipy_on_aurora_ode():
 
 @pytest.mark.skipif(not HAVE_SCIPY, reason="scipy oracle not installed")
 def test_matches_scipy_on_capped_growth_ode():
-    """A replication-style capped-growth ODE (closure-sim/replication.py) vs scipy.
-
-    Factory mass grows at alpha*F but output/growth saturates at an energy cap -
-    a smooth capped rate. We compare the trajectory endpoint to scipy.
-    """
+    """A replication-style capped-growth ODE (closure-sim/replication.py) vs scipy."""
     alpha, cap = 0.05, 40.0
 
     def f(t, y):
@@ -170,8 +142,7 @@ def test_matches_scipy_on_capped_growth_ode():
     ours = solve(f, [10.0], span, rtol=1e-8, atol=1e-11)
     ref = _scipy_solve_ivp(f, span, [10.0], method="RK45", rtol=1e-10, atol=1e-13)
     assert ours.success
-    # Relative comparison: the min() cap is a kink (discontinuous derivative), so
-    # both solvers lose order there. Relative agreement is the honest metric.
+    # Relative comparison: the min() cap is a kink (discontinuous derivative), so agreement is asserted only to the 1e-5 relative level below.
     assert math.isclose(ours.y_final[0], ref.y[0][-1], rel_tol=1e-5)
 
 

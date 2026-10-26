@@ -1,23 +1,4 @@
-"""Microbench: nearest_unsettled_flat query latency at large N.
-
-Isolates the query kernel (no build, no event loop overhead) at a single N.
-The whole-fill bench (`bench_flat_run_fill.py`) is the wall-clock number that
-matters for the paper; this file is here to record the query-only floor and
-to make it easy to A/B new codegen tweaks against a stable baseline.
-
-Historical numbers (single-thread on the k02 dev machine, min of 5 runs):
-
-    N=32768, 10000 queries, all-unsettled state:
-      main (pre p2 codegen tuning):    529k qps
-      after restructure + x86-64-v3:   557k qps   (~4% - noise floor)
-
-The 4% number is deliberately called out as small: the p2 substrate's payoff
-is at the WHOLE-FILL level, not the query kernel. See `swarm/rust/README.md`
-"The SIMD-leaf-scan finding" for why an explicit AVX2 leaf scan was rejected
-as a net loss at KD_LEAF = 8.
-
-Run: `uv run --extra dev python -O experiments/bench_flat_kdtree_leaf.py`
-"""
+"""Microbench: nearest_unsettled_flat query latency at large N."""
 
 from __future__ import annotations
 
