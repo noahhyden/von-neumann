@@ -17,22 +17,32 @@ root, spec_json = sys.argv[1], sys.argv[2]
 sys.path[:0] = [root + "/runner/src", "."]
 from pathlib import Path
 from vn_runner.progress import FileProgress
+from vn_runner.events import Emitter
 from vn_runner.spec import RunSpec
+import time
 spec = RunSpec.model_validate_json(spec_json)
 progress = FileProgress(spec, Path(root))
+events = Emitter(spec, Path(root))
+events.run_start()
+t0 = time.monotonic()
 try:
     mod, name = spec.entry.split(":")
     fn = getattr(importlib.import_module(mod), name)
     progress.update(step=0, label="start " + spec.name)
     kw = dict(spec.params)
-    if "progress" in inspect.signature(fn).parameters:
+    params = inspect.signature(fn).parameters
+    if "progress" in params:
         kw["progress"] = progress
+    if "events" in params:
+        kw["events"] = events
     fn(**kw)
 except BaseException as e:
     progress.finish("failed", f"{type(e).__name__}: {e}")
+    events.run_failed(e, time.monotonic() - t0)
     print(f"vn-run: spec {spec.name!r} failed: {type(e).__name__}: {e}", file=sys.stderr)
     raise
 progress.finish("done")
+events.run_end(time.monotonic() - t0)
 """
 
 

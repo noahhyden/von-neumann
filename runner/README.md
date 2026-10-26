@@ -80,6 +80,33 @@ whose process has died is reported as failed rather than sitting at `running`
 forever - a progress view that confidently shows a dead run as live would be
 worse than no view at all.
 
+## The event log
+
+Beside the snapshot, each run appends to `.vn-runs/<name>.events.jsonl` - one JSON
+object per line, never rewritten:
+
+```json
+{"ts":"2026-10-26T23:14:42.863Z","severity":"info","payload":{"type":"run_start","spec":"dwell-tax","module":"spine","optimize":true,"invariants_active":false,"workers":null,"backends":{"rust":true,"njit":true}}}
+{"ts":"2026-10-26T23:15:15.438Z","severity":"info","payload":{"type":"run_end","spec":"dwell-tax","state":"done","duration_s":32.575}}
+```
+
+The snapshot says where a run IS and is overwritten in place; the log says what
+HAPPENED and is append-only. A consumer classifies on `severity` plus
+`payload.type`, so `type` is a stable slug naming the kind of thing and the
+varying detail goes in sibling keys - `{"type": "invariant_violation", "check":
+"mass_closure", "value": 1.03}`, never the value baked into the type.
+
+`invariants_active` is worth reading before trusting an absence. It is `not
+optimize`: with `optimize: true` the fold'''s `__debug__` invariant checks are
+compiled out, so that run **could not** have reported one. A run with no
+invariant events and `invariants_active: false` is silent, not clean. Set
+`optimize: false` to make those checks live, at 2-3x the wall clock.
+
+An experiment opts in to emitting its own events by declaring an `events`
+parameter, the same way it opts in to `progress`. Nothing in the fold writes to
+the log: the fold stays pure (CLAUDE.md section 7), so a violation travels out as
+returned or raised data and the harness emits it.
+
 ## Commands
 
 | command | what |
