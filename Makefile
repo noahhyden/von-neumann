@@ -23,7 +23,7 @@ WORKERS ?=
 NAME ?=
 
 .DEFAULT_GOAL := help
-.PHONY: help test test-py test-frontend frontend sweep papers list affected
+.PHONY: help test test-py test-frontend frontend sweep papers list affected lint-rules agents
 
 help:
 	@echo "von-neumann dev-suite"
@@ -36,6 +36,8 @@ help:
 	@echo "  make frontend          live-rebuild the frontend (npm run serve)"
 	@echo "  make sweep NAME=<name> [WORKERS=N]   run one swarm experiment"
 	@echo "  make papers            generate + typography-check the papers"
+	@echo "  make lint-rules        one-line comments + AGENTS.d rule cap"
+	@echo "  make agents            regenerate every AGENTS.md from its AGENTS.d/"
 	@echo "  make list              list the discovered python modules"
 	@echo ""
 	@echo "python modules: $(PY_MODULES)"
@@ -94,3 +96,11 @@ sweep:
 
 papers:
 	@cd papers && npm run check
+
+# Guards ported from pivi: comments are one line, an AGENTS.d rule is one line of 255.
+lint-rules:
+	@python3 .github/scripts/check_one_line_comments.py
+	@python3 .github/scripts/check_agents_rule_length.py
+
+agents:
+	@python3 .github/scripts/gen_agents_md.py --write
