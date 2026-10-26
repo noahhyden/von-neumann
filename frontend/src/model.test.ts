@@ -1,9 +1,4 @@
-/**
- * Parity test: the TS port must reproduce the Python closure-sim exactly.
- * Ground-truth numbers were captured by running the real Python CLI on the
- * lunar_regolith_seed scenario (see git history / the closure-sim package).
- * Run with `node --test` (Node >=23 strips the TS types natively).
- */
+/** Parity test: the TS port must reproduce the Python closure-sim exactly. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computeClosure, simulate, electronicsWall } from "./model.ts";

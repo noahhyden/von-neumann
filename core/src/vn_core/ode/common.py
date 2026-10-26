@@ -1,9 +1,4 @@
-"""Shared pieces for the ODE integrators: result type, error norm, step sizing.
-
-These live apart from `solve` so both the explicit (rk45) and implicit integrators
-can use them without importing the dispatcher (which imports them) - a plain
-seam, no cycle.
-"""
+"""Shared pieces for the ODE integrators: result type, error norm, step sizing."""
 
 from __future__ import annotations
 
@@ -11,22 +6,13 @@ import math
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
-# The right-hand side of dy/dt = f(t, y). Same convention as scipy.solve_ivp:
-# f takes the scalar time and the state vector, returns dy/dt as a sequence.
-# Keeping the signature identical is deliberate - it makes scipy a drop-in
-# oracle in the tests and eases migration of existing call sites.
+# The right-hand side of dy/dt = f(t, y), with the same signature as scipy.solve_ivp so scipy is a drop-in oracle in the tests.
 RHS = Callable[[float, Sequence[float]], Sequence[float]]
 
 
 @dataclass(frozen=True)
 class ODEResult:
-    """The integrated trajectory plus honest work counters.
-
-    ``t[i]`` is the time of sample ``i`` and ``y[i]`` its state vector, so
-    ``y[i][k]`` is component ``k`` at ``t[i]``. The counters are not decoration:
-    they are the raw material for issue #38's Phase 2 (measure before Rust), so a
-    caller can report f-evals per solve without re-instrumenting.
-    """
+    """The integrated trajectory plus honest work counters."""
 
     t: tuple[float, ...]
     y: tuple[tuple[float, ...], ...]
@@ -47,13 +33,7 @@ class ODEResult:
 def rms_error_norm(
     err: Sequence[float], y0: Sequence[float], y1: Sequence[float], rtol: float, atol: float
 ) -> float:
-    """Scaled RMS norm of a local error estimate (the standard adaptive metric).
-
-    Each component is scaled by `atol + rtol * max(|y0|, |y1|)`, then combined as
-    a root-mean-square. A returned value <= 1 means the step met tolerance. This
-    is the norm used by Hairer/Wanner and by scipy, so our step acceptance tracks
-    a well-understood reference rather than an ad-hoc rule.
-    """
+    """Scaled RMS norm of a local error estimate (the standard adaptive metric)."""
     n = len(err)
     total = 0.0
     for i in range(n):
@@ -80,13 +60,7 @@ def select_initial_step(
     atol: float,
     max_step: float,
 ) -> tuple[float, int]:
-    """Automatic first-step size (Hairer/Wanner II.4), returns (h, extra_f_evals).
-
-    Picks h so the first step is neither wastefully tiny nor an instant reject:
-    it balances the scale of y against the scale of its derivative. Falls back to
-    a small fraction of the span if the derivative is ~0. Returns the number of
-    extra RHS evaluations it cost (one), so the caller keeps an honest count.
-    """
+    """Automatic first-step size (Hairer/Wanner II.4), returns (h, extra_f_evals)."""
     scale = [atol + abs(y0[i]) * rtol for i in range(len(y0))]
     d0 = _weighted_rms(y0, scale)
     d1 = _weighted_rms(f0, scale)
@@ -118,12 +92,7 @@ def _weighted_rms(v: Sequence[float], scale: Sequence[float]) -> float:
 def output_targets(
     t0: float, t1: float, t_eval: Sequence[float] | None
 ) -> list[float]:
-    """Validate and order requested output times inside (t0, t1]. Empty if None.
-
-    Shared by both integrators. rk45 serves these times from its dense-output
-    interpolant (no change to the step sequence); bdf1 still caps its steps to land on
-    them exactly (a dense output for the implicit method is a later follow-up).
-    """
+    """Validate and order requested output times inside (t0, t1]. Empty if None."""
     if t_eval is None:
         return []
     targets = sorted(t_eval)

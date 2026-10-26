@@ -1,21 +1,4 @@
-"""Experiment: does the model reproduce Nicholson & Forgan (2013)?
-
-The paired study rests on the "instant" (perfect global information) run being a faithful
-stand-in for Nicholson & Forgan's model. Two levels of validation:
-
-1. Reduction (exact, pinned by the test suite): "instant" is the c -> infinity limit of the
-   light-speed gate by construction, so it reproduces the plain perfect-information fold
-   bit-for-bit (test_instant_mode_is_the_perfect_info_baseline).
-
-2. QUANTITATIVE agreement with Nicholson & Forgan (2013), at the resolved event timestep:
-   (a) gravitational slingshots explore about two orders of magnitude faster than powered
-   flight - their headline; and (b) their surprising result that aiming for the NEAREST star
-   beats aiming for the LARGEST boost on total exploration time. Earlier a coarse fixed
-   dt=5000 yr quantized the boosted hops and undercut the speedup to ~20x; the event fold
-   removes that and recovers the full ~two-orders-of-magnitude figure.
-
-Run:  uv run python -O -m experiments.validation  # ensemble; -O strips debug invariants
-"""
+"""Experiment: does the model reproduce Nicholson & Forgan (2013)?"""
 
 from __future__ import annotations
 

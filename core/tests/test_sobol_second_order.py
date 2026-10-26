@@ -1,16 +1,4 @@
-"""Validation for second-order (pairwise interaction) Sobol indices.
-
-sobol_total_order / uq_and_gsa gain second_order=True, which estimates S_ij for each
-input pair from the extra "BA" matrices. Claims under attack:
-
-- *correct*: on Ishigami the only real interaction is x1-x3 (S_13 ~ 0.244, equal to
-  x3's total-order since x3 has no main effect); x1-x2 and x2-x3 are ~0;
-- *honest CIs*: the S_13 CI brackets the analytic value and the zero interactions'
-  CIs straddle 0;
-- *the right cost*: N*(2K+2) evaluations, and it does not perturb the first/total
-  point estimates (those use only A and AB);
-- *opt-in and deterministic*: None unless requested; byte-reproducible.
-"""
+"""Validation for second-order (pairwise interaction) Sobol indices."""
 
 from __future__ import annotations
 
@@ -67,8 +55,7 @@ def test_second_order_is_none_by_default():
 
 
 def test_second_order_does_not_perturb_first_and_total():
-    """Enabling second-order adds the BA matrices but must not change the first/total
-    point estimates - those depend only on A and AB, which are identical."""
+    """Enabling second-order adds the BA matrices but must not change the first/total."""
     base = sobol_total_order(_ISH, _ishigami, n=500, seed=2)
     withso = sobol_total_order(_ISH, _ishigami, n=500, seed=2, second_order=True)
     assert base.total_order == withso.total_order
@@ -88,8 +75,7 @@ def test_second_order_is_deterministic():
 
 
 def test_second_order_with_sobol_sampler_golden():
-    """Bit-reproducibility for the second-order estimator under the (seed-independent)
-    Sobol' sampler - pins exact values so a silent estimator change is a red test."""
+    """Bit-reproducibility for the second-order estimator under the (seed-independent)."""
     inp = {"a": Uniform(0.0, 1.0), "b": Uniform(0.0, 1.0), "c": Uniform(0.0, 1.0)}
     f = lambda s: s["a"] + 2 * s["b"] + 3 * s["a"] * s["b"]  # noqa: E731
     r = sobol_total_order(inp, f, n=128, seed=0, sampler="sobol", second_order=True)
@@ -99,8 +85,7 @@ def test_second_order_with_sobol_sampler_golden():
 
 
 def test_second_order_constant_finding_is_zero():
-    """A constant finding has zero variance: every interaction index is honestly 0
-    (the var==0 path), not a divide-by-zero."""
+    """A constant finding has zero variance: every interaction index is honestly 0."""
     inp = {"a": Uniform(0.0, 1.0), "b": Uniform(0.0, 1.0)}
     r = sobol_total_order(inp, lambda s: 3.0, n=32, seed=1, second_order=True)
     assert r.second_order == {("a", "b"): 0.0}

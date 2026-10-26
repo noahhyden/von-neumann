@@ -1,15 +1,4 @@
-"""Validation for the RK45 Dormand-Prince dense-output interpolant (issue #38 follow-up).
-
-t_eval is now served by interpolating each accepted step, not by capping steps to land
-on the requested times. Claims under attack:
-
-- *the step sequence is unchanged*: a run with t_eval takes exactly the same accepted
-  steps (and model evaluations) as t_eval=None - dense output is free;
-- *accurate*: interpolated values match the analytic solution to the tolerance and
-  match scipy's RK45 dense output to ~machine precision;
-- *the endpoints are exact*: theta=0 returns the step start, theta=1 the step end;
-- *deterministic / bit-reproducible*.
-"""
+"""Validation for the RK45 Dormand-Prince dense-output interpolant (issue #38 follow-up)."""
 
 from __future__ import annotations
 
@@ -30,8 +19,7 @@ def _oscillator(t, y):
 
 
 def test_teval_adds_no_steps_vs_none():
-    """Dense output must not change the adaptive stepping: same steps, accepted, and
-    model evaluations whether or not t_eval is requested."""
+    """Dense output must not change the adaptive stepping: same steps, accepted, and."""
     y0 = [1.0, 0.0]
     none = solve(_oscillator, y0, (0.0, 20.0))
     grid = [i * 0.1 for i in range(1, 201)]
@@ -53,10 +41,7 @@ def test_dense_output_matches_analytic():
 
 
 def test_dense_output_agrees_with_scipy_at_tolerance():
-    """Cross-check the dense output against scipy's RK45. The two no longer agree to
-    machine precision - vn_core uses a PI step controller, scipy an elementary one, so
-    their step sequences differ - but both are rtol-accurate, so their solutions (and
-    hence dense-output samples) agree at the tolerance level."""
+    """Cross-check the dense output against scipy's RK45. The two no longer agree to."""
     np = pytest.importorskip("numpy")
     from scipy.integrate import solve_ivp
 
@@ -106,8 +91,7 @@ def test_interpolant_endpoints():
 
 
 def test_zero_derivative_hits_zero_error_max_growth():
-    """dy/dt = 0 makes every stage exactly 0, so the embedded error estimate is exactly
-    0.0 - exercising the err==0 max-growth branch (grow the step maximally)."""
+    """dy/dt = 0 makes every stage exactly 0, so the embedded error estimate is exactly."""
     r = solve(lambda t, y: [0.0], [5.0], (0.0, 100.0))
     assert r.success
     assert r.y_final[0] == 5.0  # constant, exactly
@@ -127,10 +111,7 @@ def _van_der_pol(t, y):
 
 
 def test_pi_controller_keeps_rejection_rate_low():
-    """The PI controller damps the step-size oscillation a pure err**(-1/5) controller
-    shows on a demanding problem (van der Pol has sharp relaxation turns). Its rejection
-    ratio here (~0.09) is well below the elementary controller's (~0.14) - this pins the
-    PI behavior and exercises the reject branch. It also stays accurate."""
+    """The PI controller damps the step-size oscillation a pure err**(-1/5) controller."""
     r = solve(_van_der_pol, [2.0, 0.0], (0.0, 30.0), rtol=1e-6, atol=1e-9)
     assert r.success
     assert r.n_rejected > 0  # the problem does force some rejects (reject branch runs)

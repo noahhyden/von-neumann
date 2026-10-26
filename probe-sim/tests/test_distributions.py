@@ -1,10 +1,4 @@
-"""probe_sim.distributions: the honest distribution for every sourced number.
-
-These are three separable assertions, one per row of REFERENCES.md that has a
-distributional companion here: the sourced-spread inputs must carry non-zero
-spread, the [GAP] inputs must NOT (they are the honest-null slot, not an
-invented Gaussian), and the deterministic inputs must be exactly `Fixed`.
-"""
+"""probe_sim.distributions: the honest distribution for every sourced number."""
 
 import pytest
 
@@ -26,9 +20,6 @@ def test_sourced_spread_distributions_carry_real_variance():
 
 def test_gap_distributions_are_fixed():
     # The [GAP] entries must be Fixed - inventing a spread here would violate §1.
-    # When someone lands a source for a spread, they also flip this test's
-    # expectation in the same commit. A test failure here says "look at me on
-    # purpose".
     assert isinstance(REPLICATED_MASS_FRACTION_DIST, Fixed)
     assert REPLICATED_MASS_FRACTION_DIST.value == 0.70
 

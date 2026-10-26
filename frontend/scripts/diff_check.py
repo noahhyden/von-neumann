@@ -1,12 +1,4 @@
-"""Differential test, half 2 of 2: recompute gen-diff.mjs's random cases with the
-REAL closure-sim and assert the TS port agrees. Run from the closure-sim package
-so the import resolves:
-
-    node ../frontend/scripts/gen-diff.mjs
-    cd ../closure-sim && uv run python ../frontend/scripts/diff_check.py
-
-Handles the JS<->Python edge encodings: JS Infinity -> math.inf, JS null -> None.
-"""
+"""Differential test, half 2 of 2: recompute gen-diff.mjs's random cases with the REAL closure-sim and assert the TS port agrees."""
 import json
 import math
 import sys

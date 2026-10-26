@@ -1,10 +1,6 @@
 name: deploy-pages
 
-# Build and publish the frontend to GitHub Pages (vn.noahhyden.com). The site is a
-# build artifact: frontend/dist/ is gitignored and produced by esbuild. pimas is
-# consumed from npm as pimas-ui (aliased to the bare "pimas" specifier in
-# frontend/package.json), so `npm ci` alone resolves it - no sibling checkout or
-# source build needed. Mirrors the frontend job in ci.yml.
+# Build and publish the frontend to GitHub Pages (vn.noahhyden.com).
 
 on:
   push:
@@ -12,10 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  # contents: write so the archive step can push rendered PDFs to the paper-pdfs
-  # orphan branch (issue #7). That branch is the out-of-main-tree binary store; it is
-  # never merged and never triggers this workflow (push trigger is main only) nor the
-  # repo-level GitHub->Zenodo webhook (that fires on Releases, not branches).
+  # contents: write so the archive step can push rendered PDFs to the paper-pdfs orphan branch (issue #7).
   contents: write
   pages: write
   id-token: write
@@ -31,9 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Full history: gen-versions derives each paper's version list from every
-          # commit touching papers/<slug>/, and the archive step resolves each paper's
-          # latest commit sha. A shallow clone would truncate both.
+          # Full history: gen-versions derives each paper's version list from every commit touching papers/<slug>/, and the archive step resolves each paper's latest commit sha.
           fetch-depth: 0
 
       - uses: actions/setup-node@v4
@@ -44,32 +35,17 @@ jobs:
         with:
           enable-cache: true
 
-      # Install the frontend deps now, but BUILD it later (after the paper PDFs are
-      # archived). The build runs papers/scripts/gen-versions.mjs, which reads the
-      # paper-pdfs branch to decide which versions have a rendered PDF; archiving the
-      # current build's PDF to that branch first means the newest version is marked
-      # present in the same deploy that produces it.
+      # Install frontend deps now but build later, because the build marks versions present only after their PDFs are archived.
       - name: Install the frontend
         working-directory: frontend
         run: npm ci
 
-      # Papers: generate the .bib from sources.ts (the single bibliography source of
-      # truth), typeset each paper with the IEEE LaTeX template, and publish the PDFs
-      # beside the site at /papers/<slug>.pdf. The LaTeX step is best-effort: a broken
-      # paper must never block the site deploy (ci.yml gates paper correctness on PRs).
+      # Papers: generate the .bib from sources.ts (the single bibliography source of truth), typeset each paper with the IEEE LaTeX template, and publish the PDFs beside the site at /papers/<slug>.pdf; best-effort, since a broken paper must never block the site deploy.
       - name: Generate the paper bibliography from sources.ts
         working-directory: papers
         run: node scripts/gen-bib.mjs
 
-      # Figures are gitignored vector PDFs generated from the source modules. Best-effort,
-      # like the LaTeX step: if a figure build fails, the paper simply typesets without it
-      # (or is skipped below) and the site still deploys. ci.yml gates this on PRs.
-      #
-      # coordination-tax figures render from committed JSON (swarm/experiments/results/), not a
-      # live sim: its heavy ensemble (experiments/measure.py) runs LOCALLY and commits its
-      # deterministic output, and this step only plots it (a few seconds), so it needs no cache
-      # and measure.py never runs here. electronics-wall's figures still come from a closure-sim
-      # run that can take minutes, so that one is cached below, keyed on its source.
+      # Figures are gitignored PDFs from the source modules; best-effort, so a failed figure build drops that figure but never blocks the deploy.
       - name: Render coordination-tax figures from committed results (swarm)
         continue-on-error: true
         working-directory: swarm
@@ -87,9 +63,7 @@ jobs:
         working-directory: closure-sim
         run: uv run --extra dev python -m closure_sim.paper_figures
 
-      # spine figures render from committed JSON (spine/experiments/results/), like
-      # coordination-tax: the harness (spine/experiments/measure.py) runs LOCALLY and commits
-      # its deterministic output, and this step only plots it (a few seconds), so no cache.
+      # spine figures render from committed JSON (spine/experiments/results/), like coordination-tax: the harness (spine/experiments/measure.py) runs LOCALLY and commits its deterministic output, and this step only plots it (a few seconds), so no cache.
       - name: Render spine figures from committed results (spine)
         continue-on-error: true
         working-directory: spine
@@ -103,13 +77,7 @@ jobs:
           root_file: "*/main.tex"
           work_in_root_file_dir: true
 
-      # Archive each freshly built PDF to the paper-pdfs orphan branch at
-      # <slug>/<shortSha>.pdf, where shortSha is the latest commit touching that paper
-      # (its version id, matching gen-versions). Immutable: a version already archived
-      # is left untouched, so the branch only grows when a genuinely new version is
-      # built and never recompiles history (issue #7 uses release-archive, not
-      # historical rebuilds). Best-effort: a paper whose LaTeX failed has no main.pdf
-      # and is simply skipped. Runs BEFORE the frontend build so gen-versions sees it.
+      # Archive each freshly built PDF to the paper-pdfs orphan branch at <slug>/<shortSha>.pdf, where shortSha is the latest commit touching that paper (its version id, matching gen-versions); immutable and best-effort, so an existing version is never rewritten and a paper without a PDF is skipped.
       - name: Archive rendered PDFs to the paper-pdfs branch
         run: |
           git config user.name "github-actions[bot]"
@@ -151,16 +119,12 @@ jobs:
             echo "no new versions to archive"
           fi
 
-      # Now build the frontend. gen-versions (run by build.mjs) reads the local
-      # paper-pdfs branch created above, so every archived version - including the one
-      # just built - is marked present in papers-versions.ts.
+      # Build the frontend only after archiving, so gen-versions marks the newest PDF present in this same deploy.
       - name: Build the frontend
         working-directory: frontend
         run: npm run build
 
-      # Assemble PDFs into the site: every archived version at
-      # /papers/<slug>/<shortSha>.pdf, plus the latest-alias /papers/<slug>.pdf that
-      # the index links as "latest". The build recreates dist/, so this must run after.
+      # Assemble PDFs into the site: every archived version at /papers/<slug>/<shortSha>.pdf, plus the latest-alias /papers/<slug>.pdf that the index links as "latest".
       - name: Publish paper PDFs into the site
         run: |
           mkdir -p frontend/dist/papers

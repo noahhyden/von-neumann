@@ -1,18 +1,4 @@
-"""Red-hat + validation for the two variance-reduction mean estimators.
-
-`qmc_mean` (randomized quasi-Monte Carlo) and `pce_control_variate` both estimate
-a finding's mean more efficiently than plain Monte Carlo. The claims under attack:
-
-- **They actually converge better.** QMC must beat MC on the mean of a known-mean
-  smooth integrand; PCE-CV must report a real variance reduction.
-- **They stay honest.** QMC's error bar comes from replicate spread (not the
-  invalid iid stderr) and must bracket the truth; PCE-CV must be *unbiased* even on
-  a finding where the PCE alone is untrustworthy (a kink) - that is the whole point
-  of a control variate vs. using the surrogate directly.
-- **They are deterministic** (§7) and reject nonfinite returns.
-- **QMC refuses high dimension** rather than silently returning a bad Halton
-  estimate.
-"""
+"""Red-hat + validation for the two variance-reduction mean estimators."""
 
 from __future__ import annotations
 
@@ -44,8 +30,7 @@ _ISH_MEAN = _A / 2.0  # E[Ishigami] = 3.5 exactly
 
 
 def test_qmc_mean_beats_monte_carlo_on_a_known_mean():
-    """On a smooth integrand with known mean, RQMC's estimate must be at least as
-    accurate as plain MC at the same evaluation budget - usually much better."""
+    """On a smooth integrand with known mean, RQMC's estimate must be at least as."""
     q = qmc_mean(_ISH, _ishigami, n=512, seed=1, replicates=16)
     mc = monte_carlo(_ISH, _ishigami, n=512 * 16, seed=1)
     assert abs(q.mean - _ISH_MEAN) <= abs(mc.mean - _ISH_MEAN)
@@ -53,8 +38,7 @@ def test_qmc_mean_beats_monte_carlo_on_a_known_mean():
 
 
 def test_qmc_error_bar_brackets_the_truth():
-    """The replicate-spread CI is the honest error bar - it should contain the true
-    mean (a ~90% CI, checked on a comfortable case)."""
+    """The replicate-spread CI is the honest error bar - it should contain the true."""
     q = qmc_mean(_ISH, _ishigami, n=512, seed=1, replicates=24)
     lo, hi = q.ci
     assert lo <= _ISH_MEAN <= hi
@@ -110,8 +94,7 @@ def test_qmc_default_sequence_is_halton():
 
 
 def test_qmc_sobol_sequence_is_accurate():
-    """The Sobol' path is a genuine, accurate estimator on a smooth known-mean
-    integrand, and it records which sequence it used."""
+    """The Sobol' path is a genuine, accurate estimator on a smooth known-mean."""
     q = qmc_mean(_ISH, _ishigami, n=512, seed=1, replicates=16, sequence="sobol")
     assert q.sequence == "sobol"
     assert abs(q.mean - _ISH_MEAN) < 0.02
@@ -132,10 +115,7 @@ def test_qmc_sobol_beats_plain_mc():
 
 
 def test_qmc_golden_values_are_bit_reproducible():
-    """Pin exact replay (CLAUDE.md §7): a fixed setup must return byte-identical means
-    on any machine. This also kills any mutation that silently perturbs the points or
-    the shift arithmetic within tolerance - the estimate is not just 'close', it is
-    exactly this."""
+    """Pin exact replay (CLAUDE.md §7): a fixed setup must return byte-identical means."""
     inp = {"a": Uniform(0.0, 1.0), "b": Uniform(0.0, 10.0)}
     f = lambda s: s["a"] + s["b"]  # noqa: E731
     h = qmc_mean(inp, f, n=32, seed=7, replicates=4, sequence="halton")
@@ -185,8 +165,7 @@ def _big_mc_truth(finding, inputs, n=200000):
 
 
 def test_control_variate_is_unbiased_even_when_pce_is_untrustworthy():
-    """The finding has a kink, so PCE alone is not trustworthy - but the control
-    variate must still land on the true mean (it is MC on the residual)."""
+    """The finding has a kink, so PCE alone is not trustworthy - but the control."""
     from vn_core.uq import pce_fit
 
     assert not pce_fit(_BL_INPUTS, _borderline, degree=8, seed=1).is_trustworthy()
@@ -197,8 +176,7 @@ def test_control_variate_is_unbiased_even_when_pce_is_untrustworthy():
 
 
 def test_control_variate_reduces_variance():
-    """A real variance reduction vs plain MC at the same MC sample count - the CV's
-    standard error must be well below MC's, and variance_reduction well above 1."""
+    """A real variance reduction vs plain MC at the same MC sample count - the CV's."""
     n = 4000
     cv = pce_control_variate(_BL_INPUTS, _borderline, degree=8, n=n, seed=3)
     mc = monte_carlo(_BL_INPUTS, _borderline, n=n, seed=3)
@@ -207,8 +185,7 @@ def test_control_variate_reduces_variance():
 
 
 def test_control_variate_matches_mc_on_a_pure_polynomial():
-    """On a low-degree polynomial the PCE is exact, so f - g ~ 0: the estimate is
-    essentially the exact mean and the variance reduction is enormous."""
+    """On a low-degree polynomial the PCE is exact, so f - g ~ 0: the estimate is."""
     inputs = {"a": Uniform(-1, 1), "b": Uniform(-1, 1)}
     poly = lambda s: 2.0 + 3.0 * s["a"] + s["a"] * s["b"] - 0.5 * s["b"] ** 2  # noqa: E731
     cv = pce_control_variate(inputs, poly, degree=2, n=2000, seed=1)

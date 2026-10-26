@@ -1,15 +1,4 @@
-"""spine - the cross-scale integrator.
-
-Threads one closure-sim `Factory` through the single-factory, local-fleet, and galaxy
-folds so their replication cadences are *derived from one source* rather than assumed
-independently at each scale. Its headline contribution: the swarm's per-star
-manufacturing dwell (`settle_time_years`), previously an ungrounded `[ESTIMATE]` of 0.0,
-is now derived from the same closure-sim build physics the fleet uses - and shown to be a
-negligible tax on galactic exploration, because interstellar transit dominates.
-
-Adds no new physics; only routes numbers the existing modules already document (CLAUDE.md
-§4). See REFERENCES.md.
-"""
+"""spine - the cross-scale integrator."""
 
 from spine.run import (
     DAYS_PER_JULIAN_YEAR,

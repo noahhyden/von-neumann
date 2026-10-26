@@ -1,11 +1,4 @@
-"""Smoke tests: vn_core.uq is importable and its round-trip works end-to-end.
-
-The comprehensive UQ tests live in probe-sim/tests (they exercise the code on
-real probe-sim findings). This smoke test just proves the shared core is
-independently installable, importable, and passes a byte-level round trip on
-one tiny example - so a future consumer module knows the package is intact
-before it wires up its own findings.
-"""
+"""Smoke tests: vn_core.uq is importable and its round-trip works end-to-end."""
 
 import math
 
@@ -46,7 +39,6 @@ def test_mc_smoke_and_report():
 
 def test_all_public_symbols_reachable_from_package_root():
     # A regression trap: if someone deletes a symbol from vn_core.uq.__init__
-    # this test will refuse to import.
     from vn_core.uq import Distribution, MCResult, SobolResult
 
     for cls in (Distribution, MCResult, SobolResult, Fixed, Normal, Uniform, LogNormal):

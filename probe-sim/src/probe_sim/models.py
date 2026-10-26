@@ -1,13 +1,4 @@
-"""The probe as a set of modules with a self-replication fraction.
-
-Borgue & Hein (2020) describe a < 100 kg spacecraft of SIX modules that can
-replicate ~70% of its own mass; the remaining ~30% is microchips and complex
-electronics carried along and not replicated ("vitamins", closure-sim's framing).
-
-Only the sourced quantities live here (the module set, the replicated fraction).
-The per-module MASS breakdown is not published at the fidelity we need and is
-tracked as a [GAP] in REFERENCES.md - it is deliberately NOT invented.
-"""
+"""The probe as a set of modules with a self-replication fraction."""
 
 from __future__ import annotations
 
@@ -25,6 +16,5 @@ class ProbeModule(str, Enum):
     TELEMETRY = "telemetry"  # telemetry, tracking, command + instruments
 
 
-# Fraction of the probe's mass it can build for itself; the rest is imported
-# vitamins (electronics). Borgue & Hein (2020). See REFERENCES.md.
+# Fraction of the probe mass it can build itself (Borgue & Hein 2020, ~70%); the rest is imported vitamins (electronics), see REFERENCES.md.
 REPLICATED_MASS_FRACTION: float = 0.70

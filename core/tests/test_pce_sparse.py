@@ -1,15 +1,4 @@
-"""Validation for the Smolyak sparse-grid PCE quadrature (method="sparse").
-
-Claims under attack:
-- *exact on polynomials*: like tensor quadrature, the sparse rule integrates the
-  pseudospectral projection exactly for a finding that is a polynomial up to the
-  truncation degree (mean/variance/coefficients to machine precision);
-- *agrees with tensor* on a smooth non-polynomial finding (Ishigami indices);
-- *cheaper in moderate dimension*: at d=5 it uses far fewer model calls than the
-  (degree+1)^d tensor grid;
-- *works across adapters* (Legendre / Hermite / arbitrary), is deterministic, and its
-  predict() surrogate is exact on a polynomial.
-"""
+"""Validation for the Smolyak sparse-grid PCE quadrature (method="sparse")."""
 
 from __future__ import annotations
 

@@ -1,8 +1,4 @@
-/**
- * Layer A (pimas-free) tests for the light-speed coordination core. Asserts the real
- * light-times and that each real-world analog lands in the rung swarm/REFERENCES.md says
- * it should - behavior, not just execution.
- */
+/** Layer A (pimas-free) tests for the light-speed coordination core. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {

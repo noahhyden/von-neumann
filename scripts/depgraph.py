@@ -1,60 +1,5 @@
 #!/usr/bin/env python3
-"""Monorepo dependency graph: which modules, results, and papers a change reaches.
-
-This is the repo-scale analog of swarm's frozen-JSON oracle. It answers two
-questions that stop being answerable by memory once more than one module is
-swarm-sized:
-
-  1. TEST IMPACT   - if module X changes, whose tests can that break?
-  2. ARTIFACT DRIFT - if module X changes, which committed results/*.json are now
-                      stale, and which papers were built from them?
-
-Both fall out of ONE relation: reverse-reachability over the import DAG. If A
-imports B (directly or transitively) then a change to B affects A - so A's tests
-must re-run and A's results/papers may have drifted.
-
-=== SCOPE (what this covers) ===
-  - imports  module -> module : AST-parsed absolute `import`/`from` of an
-                                intra-repo package (src-layout: dir/src/<pkg>/).
-  - results  module -> *.json : committed `results/*.json` a module owns.
-  - figures  paper  -> module : a paper's \\includegraphics{X.pdf} matched to the
-                                module whose paper_figures.py emits the string
-                                "X.pdf". Derived from CONTENT, so it cannot drift
-                                from the code the way a hand-kept list would.
-  - frontend module -> port   : a module's TS re-implementation, by the convention
-                                frontend/src/<module>-model.ts. A fold change makes
-                                the parity-tested port stale (a forward edge).
-
-=== NON-GOALS (deliberately out of scope; do not assume these are covered) ===
-  - The frontend edge is CONVENTION-based (the -model.ts name), not import-based: it
-    flags the port for re-verification against the parity fixtures, it does not parse
-    the TS. A port that breaks the naming convention is invisible here.
-  - Dynamic/`importlib`/conditional imports are not seen (AST of literal imports only).
-  - Third-party and stdlib imports are ignored (only intra-repo packages are edges).
-  - Runtime/data dependencies that are not Python imports (e.g. a module reading
-    another's JSON at runtime) are not edges. Today none exist; revisit if they do.
-
-=== CORRECTNESS CONTRACT (how we know it is right; asserted by --selftest and tests) ===
-  - `core` (vn_core) is the shared substrate: imported by every other module.
-  - `spine` threads the cross-scale set {closure-sim, multi-probe, swarm, core}.
-  - A change to `swarm` reaches `spine` (the derived-dwell coupling).
-  - A change to `core` reaches every module.
-  - Result owners are exactly the modules with committed ensembles (swarm, spine).
-  - paper->module edges equal the CI paths-filter: coordination-tax->swarm,
-    electronics-wall->closure-sim, spine->spine.
-  - swarm's frontend port is frontend/src/swarm-model.ts.
-
-Pure stdlib, deterministic (everything sorted). Wall-clock only; it reads the tree,
-it never runs a fold - so it can never change a number (CLAUDE.md 7).
-
-Usage:
-    python scripts/depgraph.py                     # print the whole graph + stats
-    python scripts/depgraph.py --changed vn_core   # impact of a module change
-    python scripts/depgraph.py --changed swarm/src/swarm/sim.py   # ...or a path
-    python scripts/depgraph.py --changed core,closure-sim --json  # machine output
-    python scripts/depgraph.py --dot | dot -Tsvg -o deps.svg      # visualize
-    python scripts/depgraph.py --selftest          # assert the correctness contract
-"""
+"""Monorepo dependency graph: which modules, results, and papers a change reaches."""
 
 from __future__ import annotations
 
@@ -81,11 +26,7 @@ def repo_root() -> Path:
 
 
 def _skip(path: Path, repo: Path) -> bool:
-    """True if `path` sits under a pruned directory, judged RELATIVE to `repo`.
-
-    The relative check matters: an absolute check trips on ancestor dirs (a worktree
-    living under .claude/worktrees/ would skip the entire tree).
-    """
+    """True if `path` sits under a pruned directory, judged RELATIVE to `repo`."""
     try:
         rel = path.relative_to(repo)
     except ValueError:
@@ -190,13 +131,7 @@ def build_paper_edges(repo: Path, module_figures: dict[str, set[str]]) -> dict[s
 
 
 def build_frontend_ports(repo: Path, modules: list[str]) -> dict[str, str]:
-    """{module: frontend TS model-port path}. Convention: frontend/src/<module>-model.ts.
-
-    A convention-based edge, not an import edge: the TS port re-implements the module's
-    fold and must stay bit-identical to it (the parity fixtures), so a fold change makes
-    the port stale even though no Python import connects them. `reactive-model.ts` and
-    any other `*-model.ts` not named after a module are ignored.
-    """
+    """{module: frontend TS model-port path}."""
     out: dict[str, str] = {}
     src = repo / "frontend" / "src"
     if not src.is_dir():
@@ -211,20 +146,47 @@ def build_frontend_ports(repo: Path, modules: list[str]) -> dict[str, str]:
 
 
 def expected_ci_filter(g: "Graph") -> dict[str, set[str]]:
-    """{filter_key: source modules} the CI paths-filter should list, per depgraph.
-
-    The dorny/paths-filter keys in ci.yml use the paper slug with hyphens replaced by
-    underscores (`coordination-tax` -> `coordination_tax`), so we mirror that here.
-    """
+    """{filter_key: source modules} the CI paths-filter should list, per depgraph."""
     return {slug.replace("-", "_"): set(srcs) for slug, srcs in g.papers.items() if srcs}
 
 
-def check_ci_filter(repo: Path) -> int:
-    """Assert the committed ci.yml paths-filter matches depgraph's paper edges.
+def parse_ci_filter(repo: Path, modules: set[str]) -> dict[str, set[str]]:
+    """Parse the per-paper module globs from the dorny/paths-filter block in ci.yml."""
+    ci = repo / ".github" / "workflows" / "ci.yml"
+    out: dict[str, set[str]] = {}
+    if not ci.is_file():
+        return out
+    in_block = False
+    base_indent = 0
+    key: str | None = None
+    for line in ci.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not in_block:
+            if re.match(r"filters:\s*\|", stripped):
+                in_block = True
+                base_indent = len(line) - len(line.lstrip())
+            continue
+        if not stripped:
+            continue
+        indent = len(line) - len(line.lstrip())
+        if indent <= base_indent:  # dedent back out of the block scalar -> done
+            break
+        km = re.match(r"^(\w+):", stripped)
+        if km:
+            key = km.group(1)
+            if key != "shared":
+                out.setdefault(key, set())
+            continue
+        pm = re.match(r"^- '([^']+)'$", stripped)
+        if pm and key and key != "shared":
+            first = pm.group(1).split("/")[0]
+            if first in modules:
+                out[key].add(first)
+    return out
 
-    Catches the drift that hand-maintaining the filter invites: a paper gaining a
-    figure from a module nobody added to its filter (so CI would stop rebuilding it).
-    """
+
+def check_ci_filter(repo: Path) -> int:
+    """Assert the committed ci.yml paths-filter matches depgraph's paper edges."""
     g = Graph(repo)
     ci_path = repo / ".github" / "workflows" / "ci.yml"
     block = textwrap.indent(_fmt_ci_filter(g), " " * 12)
@@ -373,11 +335,7 @@ def _fmt_graph(g: Graph) -> str:
 
 
 def _fmt_ci_filter(g: Graph) -> str:
-    """The dorny/paths-filter paper groups, derived from depgraph - copy into ci.yml.
-
-    Emits each paper group with its `*shared` ref, its own dir, and one `<mod>/**` per
-    source module. The `shared: &shared` anchor definition is hand-kept in ci.yml.
-    """
+    """The dorny/paths-filter paper groups, derived from depgraph - copy into ci.yml."""
     lines: list[str] = []
     for key, mods in sorted(expected_ci_filter(g).items()):
         slug = key.replace("_", "-")

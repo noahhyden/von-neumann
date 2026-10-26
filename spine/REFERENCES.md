@@ -79,3 +79,23 @@ returning.
   dwell fraction of t100 is `>= 0` when not None. Dwell tax is a magnitude.
 
 Tests: `tests/test_invariants.py`.
+
+## Measurement-driver constants (`experiments/measure.py`)
+
+- **Nominal copy time = 582.5 d** - derived, not sourced: `copy_time_days` for the lunar-regolith
+  proxy factory (probe-sim's own bill of materials is an open `[GAP]`), committed in
+  `experiments/results/copy_time_robustness.json`. The paper rests on the robustness margin
+  (powered dwell stays under 1% of the fill until the copy time is ~15,000x nominal), not on this value.
+- **`NEGLIGIBLE_BAR = 0.01`** - a decision threshold ("dwell below 1% of the galactic fill is negligible"),
+  not a measured quantity. `[ESTIMATE]`: a convention, chosen because the finding is a margin of many orders
+  of magnitude; it only moves the break-even multiplier, not the finding.
+- **`SEEDS`** - `(0x9E3779B9 + 0x61C88647 * i) mod 2^32` for i in 0..23: the 32-bit golden-ratio odd
+  constant (`2^32 / phi`) stepped additively, the same constant the default scenario seed uses, giving
+  well-separated seeds without a PRNG. The only randomness in the driver, so every JSON is bit-reproducible.
+- **Array-efficiency sensitivity (C2)** - copy time scales as `1 / efficiency` (the energy-limited build
+  rate is proportional to array output). With the 30% `[ESTIMATE]` (probe-sim/REFERENCES.md), a 20-40% band
+  gives `30/40 = x0.75` to `30/20 = x1.5` on copy time, well inside the first decade of the sweep.
+  `[ESTIMATE]`: the 20-40% band endpoints are not sourced in this repo (the sourced Landis & Bailey band is
+  28-32%, i.e. x0.94 to x1.07); they are a deliberately wide stress band.
+- **Powered tax unresolved by simulation** - the ~1.6 yr dwell against a ~1e6 yr fill is read analytically
+  (see "The finding this grounds"), not brute-forced.

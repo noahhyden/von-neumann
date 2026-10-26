@@ -1,20 +1,4 @@
-"""Generate the three publication figures for papers/electronics-wall/.
-
-Every number plotted here is either produced by the validated closure-sim fold
-(CLAUDE.md 1) or a pure-math derivation stated inline - nothing is hardcoded or
-invented. closure-sim is a deterministic ODE fold (adaptive RK45 via vn_core.ode,
-no RNG), so all three PDFs are bit-reproducible run to run.
-
-Figures (vector PDF, IEEE single-column geometry, serif fonts):
-  (a) fig_leverage.pdf       - launch-mass leverage 1/(1-C) vs closure C (pure math).
-  (b) fig_embodied_energy.pdf - embodied energy (kWh/kg) per subsystem, read from the
-      loaded scenario factory (not hardcoded), log scale, sorted ascending.
-  (c) fig_chip_crossover.pdf - time-to-target (years) vs available power (kW), for
-      importing chips vs making them locally, from the electronics_wall analysis.
-
-Run (from the closure-sim/ package root):
-    uv run --extra dev python -m closure_sim.paper_figures
-"""
+"""Generate the three publication figures for papers/electronics-wall/."""
 
 from __future__ import annotations
 
@@ -48,8 +32,7 @@ mpl.rcParams.update(
 
 DAYS_PER_YEAR = 365.25  # Julian year, used for every day -> year conversion below.
 
-# Resolve paths from this file: .../closure-sim/src/closure_sim/paper_figures.py
-#   parents[0]=closure_sim, [1]=src, [2]=closure-sim, [3]=repo root.
+# Repo root is parents[3] of this file (parents[0]=closure_sim, [1]=src, [2]=closure-sim).
 _HERE = Path(__file__).resolve()
 REPO_ROOT = _HERE.parents[3]
 OUT_DIR = REPO_ROOT / "papers" / "electronics-wall"
@@ -57,12 +40,7 @@ SCENARIO = _HERE.parents[2] / "scenarios" / "lunar_regolith_seed.yaml"
 
 
 def fig_leverage() -> tuple[Path, float, float]:
-    """(a) Launch-mass leverage 1/(1-C) vs material closure C. Pure math derivation.
-
-    Installed factory mass per unit launched mass is 1/(1-C): a factory that makes
-    fraction C of its own mass locally amplifies each kilogram launched into
-    1/(1-C) kilograms installed. This is an exact identity, not a simulation output.
-    """
+    """(a) Launch-mass leverage 1/(1-C) vs material closure C."""
     n = 400
     cs = [i * 0.99 / (n - 1) for i in range(n)]  # C from 0 to 0.99
     ys = [1.0 / (1.0 - c) for c in cs]

@@ -54,9 +54,7 @@ def test_material_limited_doubling_matches_analytic():
     assert r.regime_timeline[0].regime == Regime.MATERIAL
     # analytic doubling = ln2 * C / alpha ; alpha = 10/1000 = 0.01
     assert r.analytic_doubling_time_days == pytest.approx(math.log(2) * C / 0.01)
-    # With the shared adaptive solver (issue #38) the empirical doubling time
-    # tracks the analytic one to well under 0.1% - the forward-Euler version was
-    # only good to a couple percent, a step-size artefact this removes.
+    # With the shared adaptive solver (issue #38) the empirical doubling time tracks the analytic one to well under 0.1% - the forward-Euler version was only good to a couple percent, a step-size artefact this removes.
     assert r.empirical_doubling_time_days == pytest.approx(
         r.analytic_doubling_time_days, rel=1e-3
     )
@@ -69,9 +67,7 @@ def test_growth_is_monotonic():
 
 
 def test_reaches_target_matches_simulate_across_configs():
-    """The cheap viability path (issue #38 Phase 2) must equal the full sim's
-    `time_to_target_days is not None` on every regime - it is only a shortcut, not
-    a different answer."""
+    """The cheap viability path (issue #38 Phase 2) must equal the full sim's `time_to_target_days is not None` on every regime - it is only a shortcut, not a different answer."""
     cases = [
         # (closure, param overrides) spanning reachable and unreachable regimes.
         (0.9, {}),                                           # material, reaches
@@ -151,8 +147,7 @@ def test_zero_closure_is_pure_linear_resupply():
 def test_energy_limited_caps_local_production():
     C = 1.0  # full closure so resupply never binds; isolate energy
     f = factory(C, local_energy=10.0)
-    # available power tiny: 1 kW * 24 h = 24 kWh/day ; e_local = 10 kWh/kg
-    # -> energy cap = 2.4 kg/day local output
+    # available power tiny: 1 kW * 24 h = 24 kWh/day ; e_local = 10 kWh/kg -> energy cap = 2.4 kg/day local output
     p = params(available_power_kw=1.0, vitamin_resupply_mass_kg=0.0,
                duration_days=100)
     r = simulate(f, p)

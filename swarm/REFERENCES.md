@@ -829,3 +829,99 @@ speedups vs. pre-#27 baseline, event mode, warm JIT:
 | 1000  | 0.088 s        | 0.043 s    | 2.0x    |
 | 2000  | 0.163 s        | 0.081 s    | 2.0x    |
 | 5000  | 0.542 s        | 0.259 s    | 2.1x    |
+
+## Rationale restored from the one-line-comment sweep
+
+The one-line-comment guard cut long code comments to one line. This section keeps the
+sourcing and design rationale those comments carried, as value -> basis -> verdict.
+
+**Measurement design (`experiments/measure.py`)**
+
+- **Seed pool = 512 seeds, `SEEDS[k] = 0x9E3779B9 + 2654435761*k`.** Both constants are the
+  standard 32-bit golden-ratio / Knuth multiplicative-hash constants (definitional, not
+  measured). The multiplier 2654435761 is odd, so it is coprime to 2^32 and the
+  32-bit-masked seeds are all distinct. Each measurement uses a prefix sized to its cost,
+  and growing the pool from 64 to 512 left every existing prefix (<= 48) byte-identical.
+  Verdict: a labelling choice, no physical content.
+- **Headline `lambda_sweep` base = 512 seeds at N=500 (~1.6 s per paired seed).** Sized to a
+  precision target (a tight CI on the tax slope, `a = 0.97 [0.89, 1.19]`), not to compute.
+  The `lambda_sweep` p2 companion uses 128 seeds (up from 32) to tighten the lead
+  fuel- and fill-time-tax intervals. Verdict: reasonable; the CI is measured, not assumed.
+- **Canonical p2 N per fixed-N sweep (`P2_FIXED_N`).** The 1-min N is the largest power of two
+  whose full ensemble regenerates in <= 1 min wall-clock at `SWARM_WORKERS=8` on k02
+  (`docs/HARDWARE.md`); per-seed cost differs by measurement (offspring count, in-flight
+  relay, Thomas clustering, fixed-vs-event stepping), so each lands on its own N. The six
+  headline sweeps (`lambda_sweep`, `branching`, `concurrency`, `floor_bracket`,
+  `retarget_cap`, `dt_artifact`) now run at the top of the p2 ladder, N=262,144, so every
+  claim is read at the same maximal field. `energy_tax` (N=2048, 57.3 s) and `clumpiness`
+  (N=4096, 26.4 s) stay on their 1-min N because slingshot policies and Thomas-cluster
+  fields are the costly outliers. The 1-min N the at-scale sweeps moved off: lambda_sweep
+  2048, branching 8192, concurrency 32768, floor_bracket 32768, dt_artifact 8192.
+  `SWARM_P2_N_OVERRIDE` forces one N for probing the ceiling only. N is a wall-clock
+  choice and never changes a result (CLAUDE.md 7). `dt_artifact` has the lowest 1-min N
+  because its fixed-step rows use the pointer path even at p2 N; only the event row hits
+  the flat kd-tree.
+- **At-scale RAM check (measured, k02, per-fold peak RSS at N=262,144).** ~0.24 GB for a light
+  fold, ~0.75 GB for `concurrency` (it keeps the per-event step trace), ~0.5 GB for
+  `branching` at offspring=16. Eight workers at the worst case are 8 x 0.75 = 6 GB, well
+  inside the 27 GiB on k02 (`docs/HARDWARE.md`). Verdict: measured once; re-measure if the
+  fold's memory layout changes. The original comment also quoted a "14 GB" ceiling with no
+  recorded source; that figure is NOT restored and the 27 GiB machine total is used instead.
+- **Branching at N=200k stops at offspring=8.** Offspring=16 has ~6x the arrivals of
+  offspring=4 and was observed at ~1.2 GB per worker peak on k02, which pushed four
+  concurrent workers into swap (measured once on that laptop; recorded here, not re-derived).
+  Seeds drop to 6 for that sweep.
+- **At-scale finite-size p2 ladder (`_FS_P2_LADDER`).** N = 2^8..2^18 (256..262,144, 11 points)
+  with seeds ramping linearly 32 -> 8, because the per-seed tax spread narrows with N so
+  fewer seeds hold the median tight (the per-seed 200k tax clusters within ~0.5 pp). The
+  same ladder is shared by the base, interior-edge and periodic-control companions so their
+  lever arms are directly comparable. The historical ladders (300..200,000) stay pinned as
+  the original artifacts.
+- **`record_steps=False` in the ensemble workers** drops only the per-event `SwarmStep`
+  trace. Every reported number is kept on incremental state counters, so results are
+  bit-identical, and it keeps two paired N=200k event runs inside a worker's RAM
+  (the branching_scale OOM fix). `concurrency` keeps the trace on purpose.
+- **Plateau-locator noise floor `_CO_MONOTONE_NOISE = 0.05`
+  (`tests/test_winst_locator.py`).** In the near-zero-tax regime at large N (cap 2 vs 4 at
+  N=262,144, tau ~ 0.27%) sub-hundredth-of-a-point jitter can flip the sign of a physically
+  flat step (the 32-seed `retarget_cap` p2 shows tau dipping 0.0002 pp). The genuine
+  climbing steps are +1..+6 pp in tau and +2..+6 arrivals-per-star in b, so 0.05 sits far
+  below any real reversal. Units: percentage points for tau, arrivals-per-star for b.
+  Verdict: an empirical tolerance read off the committed JSONs `[ESTIMATE]`.
+
+**Spatial-statistics bins (`models.py`)**
+
+- **`HOP_BIN_EDGES = 0.1 * 300^(k/12) pc, k = 0..12`** (0.1 to 30 pc, 12 log-spaced bins plus
+  under/overflow). Fixed so bins are comparable across fields. 0.1 pc is below the mean NN
+  distance (~0.55 pc at 1 star/pc^3) and 30 pc exceeds the box side (N/rho)^(1/3): 7.9 pc at
+  N=500 and 16.9 pc at N=4800.
+- **`WALL_BIN_EDGES_NN = (0.5, 1.0, 1.5, 2.0)`** in units of the mean NN distance
+  `E[NN] = 0.55396 rho^(-1/3)` (Clark & Evans 1954, 3D Poisson), a length fixed by density
+  so the bins are comparable across N. Post-processing restricts the tax to "interior" stars
+  at any shell to test whether the with-N decline is an edge artifact (referee finding M1).
+  The shell positions are a design choice `[ESTIMATE]`; E[NN] is sourced.
+- **Newtonian vs relativistic energy weight.** `(1/2)(v/c)^2` vs `gamma - 1`: at 0.2 c,
+  `gamma - 1 = 1/sqrt(1 - 0.04) - 1 = 0.02062` vs `0.02`, a ratio of 1.031, so Newtonian
+  is within 3.1% up to 0.2 c.
+
+**Compute-speed figures**
+
+- **Flat-tree query microbench (`experiments/bench_flat_kdtree_leaf.py`).** Single thread on
+  k02, min of 5 runs, N=32,768, 10,000 queries, all-unsettled state: 529k qps before the p2
+  codegen tuning, 557k qps after restructure plus `x86-64-v3` (~4%, the noise floor). The
+  small gain is deliberate: the p2 substrate pays off at whole-fill level, and an explicit
+  AVX2 leaf scan was a net loss at `KD_LEAF = 8` (`rust/README.md`, "The SIMD-leaf-scan
+  finding"). Dated measurement, not a guarantee.
+- **`-O` assertion stripping.** The `if __debug__:` step invariants cost roughly 60% of wall
+  time on a 20k-star run (profile in issue #33's PR body); stripping them is bit-identical
+  because they only read state. Policy in `docs/HARDWARE.md`, "Assertion mode".
+
+**Distributional companions (`distributions.py`, issue #35)**
+
+- **Powered cruise `LogUniform(1e-5, 1e-4) c` `[ESTIMATE]`.** The point value 3e-5 c is
+  Nicholson & Forgan's; the bracket is NOT sourced to a propulsion survey. It is a
+  one-order-of-magnitude log-uniform window whose log-midpoint, sqrt(1e-5 x 1e-4) = 3.2e-5 c,
+  matches the sourced point. The "depending on propulsion architecture" wording in the
+  original comment had no citation. Uncertainty: the bounds themselves are a [GAP].
+- **Stellar density `Uniform(0.1, 1.0)` stars/pc^3.** Upper end is N&F's 1 star/pc^3; the lower
+  end rounds the RECONS 10-pc census value 0.14 down to 0.1 `[ESTIMATE]`.
