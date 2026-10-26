@@ -41,6 +41,11 @@ jobs:
         with:
           enable-cache: true
 
+      # Node 24 for the frontend layers and the papers generators, which import frontend/src/sources.ts directly as native TS.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
       - name: Fetch base branch
         if: github.event_name == 'pull_request'
         run: git fetch --no-tags origin "${GITHUB_BASE_REF}"
@@ -75,11 +80,24 @@ jobs:
         continue-on-error: true
         run: python3 scripts/depgraph.py --check-ci-filter
 
-      - name: 'depgraph: its own suite'
+      # The repo tooling holds at the 100% line+branch gate in scripts/pyproject.toml, so the gate runs here rather than only post-merge.
+      - name: 'depgraph: its own suite, under the coverage gate'
         id: depgraph_tests
         continue-on-error: true
         working-directory: scripts
-        run: uv run --extra dev pytest -q
+        run: |
+          uv run --extra dev coverage run -m pytest -q
+          uv run --extra dev coverage report
+
+      # vn_core holds at 100% line+branch, and that can only regress when vn_core itself changes, so the 2-minute gate runs on a core/ diff rather than on every PR.
+      - name: 'core: vn_core coverage gate, when core/ changed'
+        id: core
+        continue-on-error: true
+        run: |
+          if ! grep -qE '^core/' /tmp/changed.txt; then echo "core untouched, gate not needed"; exit 0; fi
+          cd core
+          uv run --extra dev coverage run -m pytest -q
+          uv run --extra dev coverage report
 
       # Reuses `depgraph.py --changed ... --list`, the repo's own reverse-reachability over the import DAG: a change to core fans out to every module, a change to comms runs comms alone.
       - name: 'tests: every module suite this change reaches'
@@ -93,6 +111,20 @@ jobs:
         run: |
           if ! grep -qE '^frontend/' /tmp/changed.txt; then echo "frontend untouched, skipping"; exit 0; fi
           cd frontend && npm ci && npm test && npm run test:contract && npm run build
+
+      # The network-free half of the papers pipeline: bibliography/index drift, the version manifest, the Zenodo metadata builder and papers/RULES.md typography. Figure generation and LaTeX typesetting are minutes of compute and stay in ci.yml.
+      - name: 'papers: generators, index drift and the rules check'
+        id: papers
+        continue-on-error: true
+        run: |
+          cd papers
+          node scripts/gen-bib.mjs
+          node scripts/gen-index.mjs
+          cd .. && git diff --exit-code frontend/src/papers-index.ts
+          cd papers && node scripts/gen-versions.mjs
+          node -e "const {PAPER_VERSIONS}=await import('../frontend/src/papers-versions.ts'); const n=Object.values(PAPER_VERSIONS).reduce((a,v)=>a+v.length,0); if(!n){console.error('gen-versions produced no versions; is the checkout shallow?');process.exit(1);} console.log('gen-versions OK:',n,'versions');"
+          node --test scripts/zenodo-publish.test.mjs
+          node scripts/check-typography.mjs
 
       - name: Aggregate guard results
         if: always()

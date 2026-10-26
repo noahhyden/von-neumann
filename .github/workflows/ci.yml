@@ -1,6 +1,6 @@
 name: ci
 
-# The standard push/PR gate: is OUR code green? Runs closure-sim pytest and the frontend parity + contract tests + build, with pimas consumed from npm as pimas-ui (lockfile-pinned, no sibling checkout).
+# The DEEP suite, not the PR gate: `PR guard` is the only required check and already runs typography, depgraph, the coverage gates and the module suites a change reaches. This holds the two things the guard cannot do cheaply (the swarm Rust 3-backend oracle, paper figures + LaTeX) plus a full post-merge sweep that re-runs every module, so a wrong reachability edge surfaces on main rather than never.
 
 on:
   push:
@@ -9,7 +9,26 @@ on:
   workflow_dispatch:
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      swarm: ${{ steps.f.outputs.swarm }}
+      frontend: ${{ steps.f.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: f
+        with:
+          filters: |
+            swarm:
+              - 'swarm/**'
+              - 'core/**'
+            frontend:
+              - 'frontend/**'
+              - 'papers/**'
+
   core:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +43,7 @@ jobs:
           uv run --extra dev coverage report
 
   scripts:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +62,7 @@ jobs:
         run: uv run python depgraph.py --check-ci-filter
 
   modules:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -57,6 +78,8 @@ jobs:
         run: uv run --extra dev pytest -q
 
   swarm:
+    needs: changes
+    if: needs.changes.outputs.swarm == 'true' || github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -191,7 +214,9 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  frontend:
+  frontend-render:
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -210,14 +235,6 @@ jobs:
       # Generate the gitignored version manifest before the tests so papers.test.ts exercises real git-derived data (it no-ops gracefully if the file is absent, but here we want it present).
       - name: Generate the paper version manifest
         run: node papers/scripts/gen-versions.mjs
-
-      - name: Layer A - model parity vs the Python CLI (no pimas)
-        working-directory: frontend
-        run: npm test
-
-      - name: Layer B - pimas contract (against the pinned pimas-ui version)
-        working-directory: frontend
-        run: npm run test:contract
 
       - name: Build the page
         working-directory: frontend

@@ -8,7 +8,7 @@ import os
 import sys
 
 # Guards with no `if:` condition: these never skip legitimately, so a skip means something upstream took them down.
-MUST_RUN = {"typography", "depgraph", "cifilter", "depgraph_tests", "affected"}
+MUST_RUN = {"typography", "depgraph", "cifilter", "depgraph_tests", "core", "affected", "papers"}
 
 
 def evaluate(steps: dict, job_status: str) -> tuple[bool, list[str]]:
