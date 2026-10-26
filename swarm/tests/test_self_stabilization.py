@@ -1,13 +1,4 @@
-"""Self-stabilization scenarios for swarm (issue #49).
-
-Dijkstra's question, applied to the settlement front: given a legal running
-system, if we perturb it to an arbitrary state, does the survivor set
-converge to a legal replication regime? Perturbations mutate the state in
-place (matching swarm's fold discipline) and are seeded through the caller's
-RNG.
-
-Spec: issue #49#issuecomment-5015587903.
-"""
+"""Self-stabilization scenarios for swarm (issue #49)."""
 
 from __future__ import annotations
 
@@ -24,12 +15,7 @@ from swarm.sim import step_event
 # ---------- Legality predicate ----------
 
 def is_legal_swarm(history: list[tuple[float, int, int]], n_stars: int) -> bool:
-    """Legality on a small history of (year, settled_count, in_flight) tuples.
-
-    Legal when either:
-    - settled_count reached n_stars (terminal, everyone's home), OR
-    - settled_count grew in the recent window AND in-flight probes are present.
-    """
+    """Legality on a small history of (year, settled_count, in_flight) tuples."""
     if not history:
         return False
     year, settled, in_flight = history[-1]
@@ -59,10 +45,7 @@ def _shuffled_indices(items: list, rng: int) -> tuple[list, int]:
 
 
 def pert_sw_star_loss(state: SwarmState, rng: int, frac: float) -> SwarmState:
-    """[pert:sw-star-loss(frac)] Delete `frac` of in-flight probes at random.
-
-    Mutates state.probes in place. Survivors keep the same ids and trajectories.
-    """
+    """[pert:sw-star-loss(frac)] Delete `frac` of in-flight probes at random."""
     if not 0.0 <= frac <= 1.0:
         raise ValueError("frac must be in [0, 1]")
     ids = list(state.probes.keys())
@@ -76,11 +59,7 @@ def pert_sw_star_loss(state: SwarmState, rng: int, frac: float) -> SwarmState:
 
 
 def pert_sw_settle_loss(state: SwarmState, rng: int, frac: float) -> SwarmState:
-    """[pert:sw-settle-loss(frac)] Flip `frac` of settled stars back to unsettled.
-
-    Also decrements settled_count so it stays consistent with settled_year (an
-    invariant of the swarm fold code, not one of #48's asserted invariants).
-    """
+    """[pert:sw-settle-loss(frac)] Flip `frac` of settled stars back to unsettled."""
     if not 0.0 <= frac <= 1.0:
         raise ValueError("frac must be in [0, 1]")
     settled_idx = [i for i, y in enumerate(state.settled_year) if y >= 0.0]
@@ -95,11 +74,7 @@ def pert_sw_settle_loss(state: SwarmState, rng: int, frac: float) -> SwarmState:
 
 
 def pert_sw_retarget_cap_shock(state: SwarmState, rng: int, max_retargets: int) -> SwarmState:
-    """[pert:sw-retarget-cap-shock] Set every in-flight probe to `max_retargets - 1`.
-
-    One more re-target and each probe retires. Tests whether the swarm can
-    continue front expansion when its in-flight fleet is almost spent.
-    """
+    """[pert:sw-retarget-cap-shock] Set every in-flight probe to `max_retargets - 1`."""
     for p in state.probes.values():
         p.retargets = max(0, max_retargets - 1)
     return state
@@ -192,7 +167,6 @@ def test_settle_loss_convergence_time_monotone():
         times.append(result.convergence_year)
     for a, b, fa, fb in zip(times, times[1:], fracs, fracs[1:]):
         # Recovery should not be strictly faster with a worse perturbation.
-        # A small slack absorbs numerical shifts between adjacent frac values.
         assert b >= a - 1e5, (
             f"convergence-year should not decrease with worse perturbation; "
             f"frac {fa}->{fb} gave years {a}->{b}"
@@ -225,8 +199,7 @@ def test_retarget_cap_shock_bounded_behavior():
             step_event(state, params)
         pert_sw_retarget_cap_shock(state, rng, params.max_retargets)
     result = _run_stabilization(perturb, params, seed=5)
-    # Either the swarm continues (settled_count grew past the warmup), or it retires
-    # cleanly (no runaway retargeting past the cap). Either is a well-behaved outcome.
+    # Either the swarm continues (settled_count grew past the warmup), or it retires cleanly (no runaway retargeting past the cap).
     assert result.final_settled >= 1
 
 

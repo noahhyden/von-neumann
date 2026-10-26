@@ -1,27 +1,4 @@
-"""``--seed-slice`` / ``--merge`` bit-identity: shard + merge == single-machine full run.
-
-Item 2 from #33's alternative-levers list. The seed ensemble is embarrassingly parallel,
-so a heavy sweep can be split across K machines and merged back to one JSON. The bit-identity
-guarantee is what makes this useful: a paper's committed number is the same whether we ran
-the sweep on one box or K.
-
-Two tests:
-
-- **Unit** (``test_merge_interleaves_shards_deterministically``): construct synthetic per-seed
-  rows for a tiny finite_size_periodic-shaped config, slice them exactly the way the CLI
-  does, run the merger, and assert the resulting ``_tax_block`` output equals what a
-  single-machine ``_tax_block`` would produce over the un-sliced rows. Fast (no simulation).
-- **Interleave order** (``test_shard_positions_recover_original_seed_order``): verify the
-  merger's position math - shard ``i % K`` at row ``i // K`` reconstructs position ``i`` in
-  the pre-slice list - by threading a distinct "sentinel" per position through the shards
-  and checking the merged sequence is 0, 1, 2, ...
-
-The end-to-end CLI round-trip (``python -m experiments.measure --seed-slice 0/K ... && ...
---merge <name>`` produces a JSON byte-identical to a full-machine run) is verified by hand
-against every committed ``finite_size_periodic.json`` when the module is changed - it takes
-minutes at real N and is unsuitable for CI - but the fixture-check-out is unchanged in the
-merged file's git diff.
-"""
+"""``--seed-slice`` / ``--merge`` bit-identity: shard + merge == single-machine full run."""
 
 from __future__ import annotations
 
@@ -118,7 +95,6 @@ class TestSeedSlice:
             shard_rows_by_idx[shard_idx] = _fake_paired_rows(n_stars=300, seeds=sliced_seeds)
 
         # Rebuild what the merger sees in each shard's JSON: a _tax_block output with per_seed.
-        # We only need per_seed for the merger to reconstruct rows.
         shards_json = []
         for shard_idx in range(k):
             block = _tax_block(shard_rows_by_idx[shard_idx])
@@ -131,8 +107,7 @@ class TestSeedSlice:
         config = {"n_and_seeds": [[300, n_seeds]]}
         merged = _merge_finite_size_periodic(shards_json, config)
 
-        # The merged block MUST equal the single-machine block byte-for-byte after JSON
-        # round-trip (order-independent per key).
+        # The merged block MUST equal the single-machine block byte-for-byte after JSON round-trip (order-independent per key).
         assert json.dumps(merged["data"]["300"], sort_keys=True) == json.dumps(full_block, sort_keys=True)
 
     def test_shard_positions_recover_original_seed_order(self) -> None:
@@ -167,9 +142,7 @@ class TestSeedSlice:
             {"_shard": {"index": 1, "count": 3}, "data": {"300": {"per_seed": [{"base": _fake_record(seed=1, wasted=1, arrivals=1, t100=1.0),
                                                                                 "treat": _fake_record(seed=1, wasted=2, arrivals=1, t100=2.0)}]}}},
         ]
-        # (There is no top-level check in _merge_finite_size_periodic for shard completeness;
-        # that check lives in _do_merge. Here we prove the merger raises when it tries to read
-        # a row from a shard that doesn't exist.)
+        # _merge_finite_size_periodic has no shard-completeness check (that lives in _do_merge), so the merger must raise on a missing shard row.
         config = {"n_and_seeds": [[300, 3]]}  # asks for 3 seeds but only 2 shards
         with pytest.raises((KeyError, IndexError, ValueError)):
             _merge_finite_size_periodic(shards_json, config)

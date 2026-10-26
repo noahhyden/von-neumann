@@ -1,25 +1,4 @@
-"""A/B/C oracle: all compiled nearest-unsettled backends must agree with pure Python.
-
-Issue #33, Phase 1. The Rust drop-in (``swarm_rust``) and the numba kernel
-(``swarm.kd_njit``) are both bit-identical mirrors of
-``swarm.sim._nearest_unsettled_at_python``. If a change to any of the three
-diverges, this test surfaces the divergence as an isolated query mismatch
-rather than a downstream simulation drift someone has to reverse-engineer.
-
-Two tests:
-
-- **Backends agree with Python on random queries.** Builds a real k-d tree
-  from a Thomas-clustered galaxy, marks a random half of stars as settled,
-  and queries from 200 random points in both ``instant`` and ``lightspeed``
-  modes against every backend that is present. Skips a backend that is not
-  installed (kept out of the requirements so a checkout without Rust
-  toolchain / numba still runs).
-- **The drift-guard runs on every backend.** Reruns
-  ``test_measure_results.py``'s six committed result JSONs through each
-  compiled backend by toggling the ``SWARM_NO_RUST`` / ``SWARM_NO_NJIT``
-  env vars. This is the end-to-end acceptance criterion of #33: same
-  ``SwarmResult`` to the printed digit, whichever backend runs the query.
-"""
+"""A/B/C oracle: all compiled nearest-unsettled backends must agree with pure Python."""
 
 from __future__ import annotations
 
@@ -65,11 +44,7 @@ _NJIT = _try_import_numba()
 
 @pytest.fixture(scope="module")
 def universe():
-    """A real k-d tree over a Thomas-clustered galaxy with a half-settled state.
-
-    Small enough to be fast; large enough that the tree has multiple internal
-    levels and both prune paths (distance + belief) get exercised.
-    """
+    """A real k-d tree over a Thomas-clustered galaxy with a half-settled state."""
     params = models.SwarmParams(n_stars=3000, coordination="lightspeed")
     from swarm.rng import seed_state
 
@@ -77,9 +52,7 @@ def universe():
     kd = _build_kdtree(xs, ys, zs)
     n = len(xs)
     np_rng = np.random.default_rng(42)
-    # About half the stars carry a positive settled year, so the belief gate
-    # matters. Leave the rest unsettled (settled_year = -1) so at least one
-    # non-empty answer exists for most queries.
+    # About half the stars carry a positive settled year, so the belief gate matters.
     settled_year = np.full(n, -1.0, dtype=np.float64)
     settled_mask = np_rng.random(n) < 0.5
     settled_year[settled_mask] = np_rng.random(settled_mask.sum()) * 1e6
@@ -99,11 +72,7 @@ def universe():
 
 
 def _wrap_python(u):
-    """Wrap the pure-Python reference to a call signature matching the compiled backends.
-
-    The compiled backends take flat numpy arrays; the Python reference reads
-    from a SwarmState. We fake just enough of a state to drive it.
-    """
+    """Wrap the pure-Python reference to a call signature matching the compiled backends."""
     class _S:
         pass
 
@@ -182,10 +151,6 @@ def _run_drift_guard_with_env(env_extra: dict[str, str]) -> subprocess.Completed
     env = os.environ.copy()
     env.update(env_extra)
     # `-O` matches the ensemble discipline (see HARDWARE.md): invariant checks
-    # are stripped for wall-clock runs and drift-guard fixtures were sealed
-    # under that convention. We keep them on here because both branches
-    # exercise the same code paths and this is a correctness gate, not a
-    # timing measurement.
     return subprocess.run(
         [sys.executable, "-m", "pytest", DRIFT_GUARD, "-q"],
         cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),

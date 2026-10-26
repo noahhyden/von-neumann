@@ -1,30 +1,4 @@
-"""Render the publication figures for papers/coordination-tax/ from committed JSON results.
-
-This step is CHEAP and CI-safe: it reads the deterministic result artifacts written by the
-heavy local run (``experiments/measure.py`` -> ``experiments/results/*.json``) and draws the
-figures. It runs NO simulation. The heavy ensemble stays local (it would overwhelm the CI
-runners); the paper and these figures restate only the committed numbers, and a drift-guard
-test (``tests/test_measure_results.py``) re-runs a tiny slice to prove the JSON still matches
-the fold. Regenerating the numbers is ``python -m experiments.measure`` (see that module).
-
-Figures (vector PDF, IEEE single-column geometry, serif fonts):
-  fig_fuel_tax_vs_lambda.pdf - headline: fuel + fill-time tax vs Lambda=v/c, with the derived
-                               law tax=Lambda overlaid (the data sit on it)
-  fig_fuel_tax_by_seed.pdf   - per-seed fuel tax at slingshot vs directed-energy speed (spread)
-  fig_time_tax_vs_dt.pdf     - the fill-time tax collapsing to ~0 as the fixed timestep resolves
-  fig_branching.pdf          - fuel tax vs the replication branching factor (offspring 2/3/4)
-  fig_floor_bracket.pdf      - instant/inflight/lightspeed: how much survives in-flight relay
-  fig_concurrency.pdf        - probes in flight vs coverage: why a loser is off the critical path
-  fig_fuel_tax_vs_n.pdf      - fuel tax % over a 1024x size span (256..262,144); a bulk decline
-
-All figures but fig_fuel_tax_vs_clumpiness read the ``p2`` companion ladder (power-of-two N,
-computed by the ``run_fill_flat`` fast path and cited as canonical by the paper); the clumpiness
-figure stays on the historical N=500 ensemble (Issue #38 left ``clumpiness_scale`` without a p2
-rerun, and the paper keeps the clumpiness slope narrative on the historical ladder).
-
-Run (from the swarm/ package root):
-    uv run --extra dev python -m experiments.paper_figures
-"""
+"""Render the publication figures for papers/coordination-tax/ from committed JSON results."""
 
 from __future__ import annotations
 
@@ -54,17 +28,7 @@ mpl.rcParams.update({
 
 
 def load(name: str, p2: bool = False) -> dict:
-    """Load a committed result JSON.
-
-    ``p2=True`` overlays the ``p2`` companion (Issue #38: the cleanly power-of-two ladder
-    that ``run_fill_flat`` computes, bit-identical to the pointer path at matching N per
-    ``tests/test_flat_run_fill_oracle.py``). The companion carries the same self-contained
-    keys (``config``, ``data``/``rows``, ``scale_regression``, ...), so overlaying them makes
-    the drawing code identical to the historical path; only the swept N moves. The
-    coordination-tax paper cites the p2 ladder as canonical, so every figure but the
-    clumpiness one (kept on the historical N=500 ensemble; Issue #38 left ``clumpiness_scale``
-    without a p2 rerun) reads ``p2=True``.
-    """
+    """Load a committed result JSON."""
     path = RESULTS_DIR / f"{name}.json"
     if not path.exists():
         raise FileNotFoundError(
@@ -99,12 +63,7 @@ def _err(summ: list[dict]) -> list[list[float]]:
 
 
 def _clean_log_x(ax, xs) -> None:
-    """Label a log x-axis at exactly the data points and drop the minor ticks.
-
-    A log axis spanning only ~1 decade (our dt and size sweeps) otherwise auto-labels
-    dense minor ticks (2,3,..,9 x 10^n) that collide and overprint. We instead place major
-    ticks at the actual swept values with plain labels and remove the minor ticks entirely.
-    """
+    """Label a log x-axis at exactly the data points and drop the minor ticks."""
     ax.set_xticks(list(xs))
     ax.set_xticklabels([f"{x:g}" for x in xs])
     ax.xaxis.set_minor_locator(NullLocator())
@@ -120,9 +79,7 @@ def fig_fuel_tax_vs_lambda() -> Path:
     fmed = [s["median"] for s in fuel]
     tmed = [s["median"] for s in time]
     fig, ax = plt.subplots(figsize=(COLW, COLW * 0.8))
-    # Derived law: the wasted-journey fraction equals Lambda (see the theory subsection), i.e.
-    # tax% = 100*Lambda. Drawn on a fine log-spaced grid (NOT two points: a 2-point line renders
-    # straight in pixel space on a log axis and misrepresents the curve) so the data sit on it.
+    # Derived law: the wasted-journey fraction equals Lambda (see the theory subsection), i.e. tax% = 100*Lambda.
     lo, hi = min(lam) * 0.8, max(lam) * 1.15
     grid = [lo * (hi / lo) ** (i / 60.0) for i in range(61)]
     ax.plot(grid, [100 * g for g in grid], color="0.5", linestyle="-", linewidth=0.9,
@@ -293,14 +250,12 @@ def fig_fuel_tax_vs_clumpiness() -> Path:
     lo = [d["data"][lb]["slope_median"] - d["data"][lb]["slope_ci_lo"] for lb in levels]
     hi = [d["data"][lb]["slope_ci_hi"] - d["data"][lb]["slope_median"] for lb in levels]
     fig, ax = plt.subplots(figsize=(COLW, COLW * 0.8))
-    # Derived law: tax = Lambda, i.e. slope a = 1. The data soften BELOW it (never above), so the
-    # law is a conservative upper bound; only extreme substructure (low R) drops a resolvably.
+    # Derived law: tax = Lambda, i.e. slope a = 1.
     ax.axhline(1.0, color="0.5", linestyle="-", linewidth=0.9, zorder=1,
                label=r"derived: tax $=\Lambda$ ($a=1$)")
     ax.errorbar(R, a, yerr=[lo, hi], marker="o", markersize=3.5, color="0.0",
                 capsize=2, linewidth=0, elinewidth=1.0, zorder=3)
-    # Mark the uniform null (R ~ 1) - the generator's hard correctness check. Place it in the top
-    # headroom with a thin leader to the point, clear of the error-bar cap it used to overlap.
+    # Mark the uniform null (R ~ 1) - the generator's hard correctness check.
     ax.annotate("uniform", xy=(R[0], a[0] + hi[0]), xytext=(R[0], 1.32),
                 fontsize=7, ha="center", va="bottom",
                 arrowprops=dict(arrowstyle="-", color="0.55", lw=0.6))

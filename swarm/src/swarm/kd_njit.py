@@ -1,25 +1,4 @@
-"""The nearest-believed-unsettled k-d tree query, jitted with numba (#27 Part 4).
-
-A numba-compiled version of `sim._nearest_unsettled_at`, called into via a thin
-Python wrapper that unpacks `SwarmState` into flat numpy arguments. The jitted
-function must reproduce the pure-Python argmin **bit-identically**: same DFS
-traversal order, same `(distance^2, lowest-index)` tie-break, same
-`settled_year + d/c <= year` gate. Determinism-preserving flags:
-
-    @njit(cache=True, fastmath=False, parallel=False, nogil=False)
-
-fastmath=False forbids float re-association; the distance sum stays `dx*dx +
-dy*dy + dz*dz` in that exact order. The DFS stack is a preallocated int32
-numpy array with a counter (bit-identical push/pop to the list version).
-
-`_believes_settled_at` is inlined here; the algebra is short (four adds and one
-sqrt) and jit inlining costs zero in return performance for the branch it
-saves.
-
-Environment override: setting `SWARM_NO_NJIT=1` forces the pure-Python fallback
-(`sim._nearest_unsettled_at_python`), useful for debugging and for
-environments where numba is unavailable.
-"""
+"""The nearest-believed-unsettled k-d tree query, jitted with numba (#27 Part 4)."""
 
 from __future__ import annotations
 
@@ -67,19 +46,13 @@ def nearest_unsettled_njit(
     exclude: np.ndarray,
     n_excludes: int,
 ) -> int:
-    """Return the star index of the nearest believed-unsettled star, or -1 if none.
-
-    Bit-identical to the pure-Python `_nearest_unsettled_at`. `exclude` is a
-    small int32 array of length `n_excludes` (typical 0-2, capped by the fleet
-    growth cap upstream).
-    """
+    """Return the star index of the nearest believed-unsettled star, or -1 if none."""
     if kd_root < 0:
         return -1
     c = _C_PC_PER_YEAR
     best = -1
     best_d2 = np.inf
     # Preallocate a stack big enough for a balanced tree of up to ~2^30 nodes.
-    # Depth is 2 * log2(n_nodes); 128 is safe for any n we'll ever run.
     stack = np.empty(128, dtype=np.int32)
     stack[0] = kd_root
     sp = 1

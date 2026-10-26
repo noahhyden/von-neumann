@@ -10,25 +10,12 @@ name = "swarm_rust"
 crate-type = ["cdylib"]
 
 [dependencies]
-# pyo3 for Python bindings, numpy for zero-copy ndarray access. Pinned to a
-# specific minor so `maturin develop` builds identically on any developer's
-# machine and in CI. Extension-module feature keeps us out of the manylinux
-# libpython-link dance (we resolve Python symbols at runtime, like every other
-# native Python extension).
+# pyo3 for Python bindings and numpy for zero-copy ndarray access, pinned to a minor so maturin builds identically everywhere.
 pyo3 = { version = "0.22", features = ["extension-module"] }
 numpy = "0.22"
 
 [profile.release]
-# The point of Rust here is a bit-identical, deterministic accelerator (issue
-# #33 acceptance: SAME SwarmResult to the printed digit). Every profile choice
-# below is about killing sources of nondeterminism:
-#
-# - opt-level = 3: standard release optimization; no reassociation of floats.
-# - lto = "off": link-time optimization is fine for determinism but slows the
-#   build; nothing here justifies it yet.
-# - codegen-units = 1: single codegen unit removes an rng in the inliner's
-#   input, which in principle could pick different arithmetic. Belt+braces.
-# - panic = "abort": smaller binary, no unwinding. Deterministic panics.
+# Every profile choice below removes a source of nondeterminism, since the Rust path must return the same SwarmResult to the printed digit (issue #33): no float reassociation, one codegen unit, abort on panic.
 opt-level = 3
 lto = "off"
 codegen-units = 1

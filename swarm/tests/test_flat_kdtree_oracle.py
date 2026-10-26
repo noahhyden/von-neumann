@@ -1,17 +1,4 @@
-"""Oracle: the flat p2 kd-tree (Rust) is bit-identical to the pointer kd-tree (Python).
-
-The flat tree lives in ``swarm/rust/src/lib.rs`` and fires at ``n_stars = 2^k, k >= 3``.
-The pointer tree in ``swarm/src/swarm/sim.py::_build_kdtree`` is the reference: at matching
-p2 N, it partitions stars identically (same median-split, same ``(coord, index)`` tie-break),
-so the flat tree's ``nearest_unsettled_flat`` and ``mark_settled_flat`` must return the same
-star's ORIGINAL index and the same nuns/tsmax deltas along the leaf-to-root path.
-
-Skips cleanly if ``swarm_rust`` lacks the flat-tree functions (a checkout with an older
-crate build), so CI without the freshly-built extension stays green.
-
-Discipline (per issue #38 / p2 spec): spec -> tests-first -> live verification ->
-mutation red-teaming -> docs -> 100% coverage. This file is the tests-first half.
-"""
+"""Oracle: the flat p2 kd-tree (Rust) is bit-identical to the pointer kd-tree (Python)."""
 
 from __future__ import annotations
 
@@ -82,16 +69,7 @@ def _fake_state(params, xs, ys, zs, kd, settled_year: np.ndarray, year: float):
 
 
 def _assert_flat_aggregates_from_source(flat: dict, settled_year: np.ndarray, n_stars: int, step: int) -> None:
-    """Recompute nuns/tsmax at every flat-tree node from settled_year, assert flat matches.
-
-    This is the mutation-red-team check for parent-walk bugs. If ``mark_settled_flat`` skips
-    an intermediate level (e.g. `(i-1) >> 2` instead of `>> 1`), the root can still be right
-    while nodes at odd depths carry stale counters. Reconstructing the truth from the source
-    of truth (settled_year) and checking every node kills that mutant.
-
-    A leaf's stars are known (permuted contiguous 8-block); each internal node's aggregate
-    is the sum/max of its children (bottom-up BFS).
-    """
+    """Recompute nuns/tsmax at every flat-tree node from settled_year, assert flat matches."""
     m = int(flat["m"])
     total = int(flat["total_nodes"])
     star_perm = np.asarray(flat["star_perm"], dtype=np.int64)
@@ -135,11 +113,7 @@ def _assert_flat_aggregates_from_source(flat: dict, settled_year: np.ndarray, n_
 
 
 def _kd_mark_settled_pointer(kd: dict, settled_year: np.ndarray, star: int, year: float) -> None:
-    """Pointer-tree in-place settle update, mirror of ``swarm.sim._kd_mark_settled``.
-
-    Used as the oracle for ``mark_settled_flat`` in the interleaved test. Lives here to
-    avoid pulling in a SwarmState just to call the helper.
-    """
+    """Pointer-tree in-place settle update, mirror of ``swarm.sim._kd_mark_settled``."""
     settled_year[star] = year
     nuns = kd["nuns"]
     tsmax = kd["tsmax"]
@@ -152,8 +126,6 @@ def _kd_mark_settled_pointer(kd: dict, settled_year: np.ndarray, star: int, year
         node = int(parent[node])
 
 
-# --------------------------------------------------------------------------------------------
-# Build invariants
 # --------------------------------------------------------------------------------------------
 
 
@@ -193,14 +165,7 @@ def test_build_flat_rejects_non_p2(n_stars: int) -> None:
 
 
 def test_build_flat_child_parent_math() -> None:
-    """Mutation red-team target: internal-node children and parent indices land on the right nodes.
-
-    At N=32 we have M=4 leaves, 3 internal nodes, 7 total. The BFS layout gives:
-        internal 0 has children 1, 2; internal 1 has children 3, 4 (leaves); internal 2 has
-        children 5, 6 (leaves). Every leaf i in {3,4,5,6} has (i-1)>>1 pointing at its parent.
-    This is small enough to inspect. If a mutant changes ``2i+1`` to ``2i-1`` or
-    ``M-1`` to ``M``, this test fails.
-    """
+    """Mutation red-team target: internal-node children and parent indices land on the right nodes."""
     _, xs, ys, zs, _ = _make_galaxy(32, seed=1)
     flat = rust.build_flat_kdtree(xs, ys, zs)
     m = 32 // 8  # 4 leaves, 3 internal, 7 total
@@ -211,8 +176,6 @@ def test_build_flat_child_parent_math() -> None:
     assert (axis[m - 1:] == -1).all(), f"leaf axes should be -1: {axis[m-1:]}"
 
 
-# --------------------------------------------------------------------------------------------
-# Nearest-unsettled: flat vs pointer, at every p2 N
 # --------------------------------------------------------------------------------------------
 
 
@@ -232,11 +195,7 @@ def _query_flat(flat: dict, sy_p: np.ndarray, px: float, py: float, pz: float,
 @pytest.mark.parametrize("n_stars", P2_N)
 @pytest.mark.parametrize("is_instant", [True, False], ids=["instant", "lightspeed"])
 def test_flat_nn_matches_pointer_query(n_stars: int, is_instant: bool) -> None:
-    """Fresh unsettled tree: flat and pointer return the same star for every random query.
-
-    Exercises both the ``instant`` fast path (dhi/lightcone pruning collapsed) and the
-    ``lightspeed`` path (full gate). Covers the empty-exclude case.
-    """
+    """Fresh unsettled tree: flat and pointer return the same star for every random query."""
     params, xs, ys, zs, kd = _make_galaxy(n_stars, seed=7)
     settled_year = np.full(n_stars, -1.0, dtype=np.float64)
     year = 1e7
@@ -270,9 +229,7 @@ def test_flat_nn_matches_pointer_half_settled(n_stars: int) -> None:
     settled_year = np.full(n_stars, -1.0, dtype=np.float64)
     settled_year[settled_mask] = np_rng.random(settled_mask.sum()) * 1e6
 
-    # Sync the pointer tree's nuns/tsmax aggregates with the same settlements. The helper writes
-    # settled_year[i] = ys_val for every star it settles, which is exactly the value already
-    # there, so the array is unchanged.
+    # Sync the pointer tree's nuns/tsmax aggregates with the same settlements.
     pointer_sy = settled_year.copy()
     for i, ys_val in enumerate(settled_year):
         if ys_val >= 0.0:
@@ -341,19 +298,10 @@ def test_flat_nn_matches_pointer_with_exclude(n_stars: int) -> None:
 
 
 # --------------------------------------------------------------------------------------------
-# Interleaved settle + query: the real hot-path pattern
-# --------------------------------------------------------------------------------------------
 
 
 def test_flat_tiebreak_by_lowest_original_index() -> None:
-    """Two stars exactly equidistant from a probe: the lower ORIGINAL index must win.
-
-    Mutation red-team: `orig < best` flipped to `orig > best` would still handle every
-    randomly-drawn probe (uniform galaxy -> no f64 tie), so the tie-break rule needs a
-    hand-crafted galaxy where the tie is guaranteed. Place two stars symmetrically around
-    the origin and probe at the origin; both are exactly `d` away, and by the (d^2, lowest
-    original index) rule the lower-indexed star must be returned.
-    """
+    """Two stars exactly equidistant from a probe: the lower ORIGINAL index must win."""
     n = 8  # smallest legal p2 flat tree
     # Two symmetric stars at index 0 and 1, others far away so they never win.
     xs = np.array([1.0, -1.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0], dtype=np.float64)
@@ -374,11 +322,7 @@ def test_flat_tiebreak_by_lowest_original_index() -> None:
 
 @pytest.mark.parametrize("n_stars", [32, 128, 512, 4096])
 def test_flat_interleaved_settle_and_query_matches_pointer(n_stars: int) -> None:
-    """Alternate ``mark_settled`` and ``nearest_unsettled`` against a scripted schedule.
-
-    This is the real event-loop pattern: settle a star, walk the aggregates up, query again.
-    Any drift in the parent walk (nuns/tsmax) would show up as a divergent query.
-    """
+    """Alternate ``mark_settled`` and ``nearest_unsettled`` against a scripted schedule."""
     params, xs, ys, zs, kd = _make_galaxy(n_stars, seed=29)
     settled_year = np.full(n_stars, -1.0, dtype=np.float64)
     year = 1.0
@@ -399,20 +343,14 @@ def test_flat_interleaved_settle_and_query_matches_pointer(n_stars: int) -> None
             star, year,
             sy_p, flat["nuns"], flat["tsmax"], flat["star_perm_inv"],
         )
-        # Root check is necessary but not sufficient - a parent-walk bug that skips levels
-        # (e.g. `(i-1) >> 2` instead of `(i-1) >> 1`) can leave the root correct while
-        # corrupting intermediate nodes. Verify EVERY node's nuns and tsmax match: for each
-        # flat-tree node, walk to its subtree's original stars via star_perm and compute what
-        # nuns/tsmax should be from the truthful settled_year, then compare.
+        # Root check is necessary but not sufficient: a parent-walk bug that skips levels can leave the root correct while corrupting intermediate nodes.
         assert int(flat["nuns"][0]) == int(kd["nuns"][0]), (
             f"root nuns mismatch at step {step}: flat={flat['nuns'][0]} pointer={kd['nuns'][0]}"
         )
         assert float(flat["tsmax"][0]) == float(kd["tsmax"][0]), (
             f"root tsmax mismatch at step {step}"
         )
-        # Recompute expected aggregates for every flat-tree node from the source of truth
-        # (settled_year), and require the flat tree's nuns/tsmax to match. This is what
-        # kills a parent-walk mutant that misses intermediate nodes.
+        # Recompute expected aggregates for every flat-tree node from the source of truth (settled_year), and require the flat tree's nuns/tsmax to match.
         _assert_flat_aggregates_from_source(flat, settled_year, n_stars, step)
         # Query from a random point.
         px, py_c, pz = (q_rng.random(3) * box).tolist()

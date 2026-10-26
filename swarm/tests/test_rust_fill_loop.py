@@ -1,15 +1,4 @@
-"""Oracle: the Rust full-fill loop reproduces the Python reference bit-for-bit.
-
-Tier 2 of the 200k event-loop speedup (see docs/HARDWARE.md). The Rust crate gains a
-``run_fill`` that owns the whole event loop for the supported config
-(``policy="powered"``, ``coordination in {instant, lightspeed}``, ``stepping="event"``);
-everything else falls back to the pure-Python fold. Like the kd-tree backend oracle
-(``test_kdtree_backends.py``), this asserts the accelerated path is byte-identical to the
-reference, so it can never move a reported number - it only changes wall-clock.
-
-Skips cleanly when ``swarm_rust`` is not built (a checkout without the rust extra), so CI on
-the Python path stays green; when the extension is present the guard is live.
-"""
+"""Oracle: the Rust full-fill loop reproduces the Python reference bit-for-bit."""
 
 from __future__ import annotations
 
@@ -31,8 +20,7 @@ def _summary(r) -> dict:
     return {f.name: getattr(r, f.name) for f in fields(r) if f.name != "steps"}
 
 
-# Matrix over the supported fast-path config: both coordination modes, a periodic and a
-# non-periodic field, a range of N, offspring, and seeds. Each must match the Python fold exactly.
+# Matrix over the supported fast-path config: both coordination modes, a periodic and a non-periodic field, a range of N, offspring, and seeds.
 MATRIX = [
     dict(n_stars=400, coordination="instant", seed=1),
     dict(n_stars=400, coordination="lightspeed", seed=1),
@@ -61,12 +49,7 @@ def test_rust_fill_matches_python(cfg: dict) -> None:
 
 
 def test_rust_reproduces_committed_finite_size() -> None:
-    """The Rust fast path (record_steps=False) reproduces the committed finite_size artifact.
-
-    Ties the accelerator directly to the paper's numbers, not just to the Python fold. Skips if
-    the JSON is absent; on CI without the rust extra this falls back to Python (still a valid
-    Python-vs-artifact check). finite_size is powered/instant+lightspeed/event - fully fast-path.
-    """
+    """The Rust fast path (record_steps=False) reproduces the committed finite_size artifact."""
     import json
     from pathlib import Path
 

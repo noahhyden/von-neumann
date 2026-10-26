@@ -39,7 +39,6 @@ def test_scenario_convention_choices_are_fixed():
 
 def test_settlement_timescale_uq_spans_orders_of_magnitude():
     # Time to reach a 1 pc star at powered cruise: (1 pc) / (speed * c_pc/yr).
-    # Under LogUniform on speed, the timescale should also span orders.
     def hop_years(sample):
         return 1.0 / (sample["v_c"] * C_PC_PER_YEAR)
 

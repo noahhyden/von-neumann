@@ -1,12 +1,4 @@
-"""Plain-data types for the deterministic swarm fold (slice 1: the settlement front).
-
-The star field is held struct-of-arrays style (parallel lists of coordinates + a
-per-star settlement year), which is the shape the future TypeScript SoA/typed-array
-port will use at scale. Probes are ephemeral in-flight hops. A seeded RNG is carried in
-the state (CLAUDE.md §7), so a run is a pure function of (params, seed).
-
-Nothing here imports pimas, the DOM, or a clock.
-"""
+"""Plain-data types for the deterministic swarm fold (slice 1: the settlement front)."""
 
 from __future__ import annotations
 
@@ -18,30 +10,16 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-# Speed of light in parsecs per year (c = 299792.458 km/s). Exact given the SI second
-# and the parsec definition: 1 pc = 3.0856775814913673e13 km, 1 yr = 3.15576e7 s
-# (Julian year). c = 299792.458 * 3.15576e7 / 3.0856775814913673e13 pc/yr.
+# Speed of light in pc/yr: c = 299792.458 km/s (SI exact) x 3.15576e7 s/yr (Julian year) / 3.0856775814913673e13 km/pc (IAU parsec).
 C_PC_PER_YEAR: float = 299792.458 * 3.15576e7 / 3.0856775814913673e13
 # 1 km/s expressed in pc/yr (derived from the same constants).
 KM_S_TO_PC_YR: float = 3.15576e7 / 3.0856775814913673e13
 
-# Fixed log-spaced hop-length bin edges (pc), for the clumpy-field d-cancellation check. Per-bin
-# won/wasted arrival counts let us test whether the wasted-trip ratio p_lag/p_perfect stays flat
-# in hop length d even in a NON-uniform field - the mechanism the tax = Lambda law rests on (the
-# hop length cancels only if the local claim rate is d-independent). Fixed (not per-run) so the
-# bins are comparable across fields; 0.1-30 pc brackets sub-nearest-neighbour to cross-box hops at
-# the densities used (mean NN ~0.55 pc at 1 star/pc^3; box side ~8 pc at N=500, ~17 pc at N=4800).
+# Fixed log-spaced hop-length bin edges, 0.1 to 30 pc in 12 steps (sub-nearest-neighbour to cross-box at the densities used), for the clumpy-field d-cancellation check.
 HOP_BIN_EDGES: tuple[float, ...] = tuple(round(0.1 * (300.0 ** (k / 12.0)), 6) for k in range(13))
 N_HOP_BINS: int = len(HOP_BIN_EDGES) + 1  # + one underflow (< first edge) and one overflow slot
 
-# Wall-distance bin edges for the finite-size EDGE test (referee finding M1). The scale sweep uses a
-# hard-walled cube, so edge stars (fewer neighbours, less contention) could make the tax fraction
-# shrink with N purely because the edge fraction falls as N^(-1/3). To separate that boundary
-# artifact from genuine bulk saturation we bin each contested (won or wasted) arrival by its target
-# star's distance to the NEAREST wall, in units of the mean nearest-neighbour distance
-# E[NN] = 0.55396 * rho^(-1/3) (Clark & Evans 1954) - a length fixed by density, so the bins are
-# comparable across N. Post-processing then computes the tax restricted to "interior" stars (wall
-# distance >= a shell) at any bin edge, and asks whether the with-N decline survives.
+# Wall-distance bin edges for the finite-size EDGE test (referee finding M1), in units of the mean NN distance E[NN] = 0.55396 rho^(-1/3) (Clark and Evans 1954).
 WALL_BIN_EDGES_NN: tuple[float, ...] = (0.5, 1.0, 1.5, 2.0)  # in units of mean NN distance
 N_WALL_BINS: int = len(WALL_BIN_EDGES_NN) + 1  # bins: [0,.5) [.5,1) [1,1.5) [1.5,2) [2,inf)
 
@@ -49,19 +27,9 @@ N_WALL_BINS: int = len(WALL_BIN_EDGES_NN) + 1  # bins: [0,.5) [.5,1) [1,1.5) [1.
 Policy = Literal["powered", "slingshot_nearest", "slingshot_maxboost"]
 
 # Coordination regime (FRONTIER #1). "instant" = the paper's assumption of perfect global
-# knowledge (bit-identical to slices 1-3). "lightspeed" = a probe deciding at a star only
-# knows a distant star is settled once the news-light has arrived (settled_year + dist/c ≤
-# now), so probes race for the same star from stale views. "inflight" = the optimistic floor:
-# a probe also listens WHILE flying, so when a beacon from its now-claimed target overtakes it
-# mid-hop it redirects early (avoiding the wasted arrival and its brake), wasting only the
-# partial travel already flown. instant <= inflight <= lightspeed. See REFERENCES.md.
 Coordination = Literal["instant", "lightspeed", "inflight"]
 
 # Time-stepping scheme. "fixed" advances by a constant dt_years (the original slice-1
-# behaviour; keep dt <= mean hop time or it quantizes the timescale). "event" jumps to the
-# next probe arrival - exact and dt-independent, the continuum (dt -> 0) limit. "event" is
-# required whenever hops can be short relative to any fixed dt (the boosted/slingshot
-# regime), where "fixed" over-synchronizes launches and inflates the coordination tax.
 Stepping = Literal["fixed", "event"]
 
 
@@ -120,12 +88,7 @@ class SwarmParams(BaseModel):
         ge=0, default=8, description="[ESTIMATE] cap on re-target hops before a probe is retired as wasted (bounds stale-view bounce chains)"
     )
 
-    # --- clumpy (non-uniform) star field (FRONTIER #1 robustness: does tax = Lambda survive a
-    #     non-uniform field, where hop length and local claim rate correlate?). Default None keeps
-    #     the uniform cube - BIT-IDENTICAL to every prior run. When set, positions are drawn from a
-    #     Thomas cluster process: n_clumps parent centres scattered uniformly, then each star placed
-    #     at parent + Gaussian(sigma) and reflected into the box, so N and the mean density stay
-    #     EXACTLY fixed (a fair paired comparison changes only the spatial arrangement). REFERENCES.md.
+    # --- clumpy (non-uniform) star field (FRONTIER #1 robustness: does tax = Lambda survive a non-uniform field, where hop length and local claim rate correlate?).
     n_clumps: int | None = Field(
         default=None, description="clumpy field: number of Thomas cluster centres (None = uniform cube, the default and all prior behaviour)"
     )
@@ -145,17 +108,7 @@ class SwarmParams(BaseModel):
 
 @dataclass(slots=True)
 class Probe:
-    """One in-flight hop: heading to ``target`` star, arriving at ``arrive_year``.
-
-    ``speed_pc_yr`` is the probe's current galactic-frame speed - constant (= powered
-    cruise) under the powered policy, but accumulated across slingshots otherwise.
-
-    ``slots=True`` drops the per-instance ``__dict__``: a large fill allocates ~1M+ of
-    these, so cheaper construction and attribute access is a broad wall-clock win at
-    bit-identical results (storage layout only). The two id-reusing retarget sites in
-    ``sim`` mutate a popped Probe in place rather than allocating a fresh one, which relies
-    on this staying a plain (non-frozen) mutable dataclass.
-    """
+    """One in-flight hop: heading to ``target`` star, arriving at ``arrive_year``."""
 
     id: int
     target: int
@@ -163,9 +116,7 @@ class Probe:
     speed_pc_yr: float
     retargets: int = 0  # how many times this probe has lost a race and re-aimed (capped by max_retargets)
     hop_len_pc: float = 0.0  # length of the hop this probe is currently flying (its launch/re-aim distance)
-    # Launch position + year of the current hop. Used only by coordination="inflight" to
-    # interpolate the probe's mid-flight position when a beacon overtakes it; unread (and left
-    # at defaults) in "instant"/"lightspeed", so those folds stay bit-identical.
+    # Launch position and year of the current hop, read only by coordination="inflight" to interpolate the probe's mid-flight position.
     from_x: float = 0.0
     from_y: float = 0.0
     from_z: float = 0.0
@@ -174,28 +125,19 @@ class Probe:
 
 @dataclass(slots=True)
 class SwarmState:
-    """Full state carried by the fold. SoA star field + seeded RNG (pure data).
-
-    `slots=True` bypasses the per-instance `__dict__` so attribute access is measurably
-    faster on the ~40k per-run `state.kd_*` reads inside the njit wrapper (#27 Part 4).
-    """
+    """Full state carried by the fold."""
 
     rng: int
     year: float
-    # Fixed star field, stored as tuples of Python floats so per-element access in the
-    # per-arrival hot loop is native Python (~40% faster than numpy scalar boxing). The
-    # njit fold reads the parallel `_np` arrays below (same data, one-time copy at init).
+    # Fixed star field, stored as tuples of Python floats so per-element access in the per-arrival hot loop is native Python (~40% faster than numpy scalar boxing).
     xs: tuple[float, ...]
     ys: tuple[float, ...]
     zs: tuple[float, ...]
     star_speed_pc_yr: tuple[float, ...]
-    # settled_year is numpy (mutated per settle, and read by njit); Python reads convert
-    # to `float()` at hot access sites.
+    # settled_year is numpy (mutated per settle, and read by njit); Python reads convert to `float()` at hot access sites.
     settled_year: np.ndarray
     origin: int  # index of the homeworld star (front radius is measured from here)
-    # In-flight probes keyed by id, insertion-ordered (issue #27). A dict (not a list) so removing
-    # a processed probe and looking one up by id are O(1) instead of an O(P) list rebuild per event.
-    # Membership here is the ground truth of "in flight"; ev_heap entries are validated against it.
+    # In-flight probes keyed by id, insertion-ordered (issue #27).
     probes: dict[int, Probe]
     next_probe_id: int
     total_launched: int
@@ -203,31 +145,9 @@ class SwarmState:
     box_side_pc: float = 0.0  # side of the cube (for the periodic minimum-image metric)
     periodic: bool = False  # torus (minimum-image distances) instead of a hard wall
     # Running settled-count and front radius, maintained incrementally at the settle site so the
-    # per-event snapshot need not rescan the whole field (the scale slice, issue #27). The ONLY
-    # writes to settled_year are the origin at init and _process_arrivals, so a counter maintained
-    # there is exactly n_settled(), and a running max of _dist(settled, origin) is exactly the
-    # front radius (max is order-independent, so it is bit-identical to a fresh full rescan).
     settled_count: int = 0
     front_radius: float = 0.0
     # Balanced k-d tree over the (fixed) star positions, replacing the flat cell list (issue #30).
-    # A wasted probe re-targets from deep in the settled core, and the nearest *believed*-unsettled
-    # star from there sits out at the front - a genuinely non-local query the flat grid answered in
-    # O(core) (it had to expand rings out to the front). The tree carries two per-node aggregates,
-    # maintained as stars settle, so a query PRUNES whole subtrees that are provably fully
-    # believed-settled and reaches the front in O(log N + local):
-    #   - kd_nuns[node]  = count of still-unsettled stars in the subtree (a deletion counter).
-    #   - kd_tsmax[node] = the latest settled_year in the subtree (-1.0 if none settled yet).
-    # Built once from xs/ys/zs (stars never move); pure function of the positions, so it changes only
-    # HOW the nearest is found, never WHICH star - the branch-and-bound reproduces the linear scan's
-    # (distance, lowest-index) argmin bit-for-bit (see sim._nearest_unsettled_at). Flat arrays indexed
-    # by node id (SoA, the shape a future TypeScript port would use); leaves hold a small star bucket.
-    # Numpy arrays (issue #27 Part 4): a numba-jitted hot loop reads these directly and
-    # avoids Python interpreter overhead. Set once in `_build_kdtree`; `kd_nuns` and
-    # `kd_tsmax` mutate in-place at indices as stars settle. `kd_bucket_flat` holds star
-    # ids concatenated in node id order; `kd_bucket_offsets[node..node+1]` is the slice.
-    # Numpy mirrors of xs/ys/zs, for the numba-jitted nearest-unsettled kernel. Populated
-    # in `initial_state`; the tuples above are immutable, so these one-time copies stay
-    # valid for the whole run.
     xs_np: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
     ys_np: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
     zs_np: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
@@ -249,27 +169,15 @@ class SwarmState:
     kd_tsmax: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.float64))
     star_leaf: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.int32))
     # Prebuilt tuple of (xs_np, ys_np, zs_np, settled_year, kd_root, kd_axis, kd_split, kd_lo,
-    # kd_hi, kd_bxmin..bzmax, kd_nuns, kd_tsmax, kd_bucket_flat, kd_bucket_offsets) - the args
-    # the njit kernel expects. Built once in `sim.initial_state`; every element is a reference
-    # (settled_year, kd_nuns, kd_tsmax mutate in-place), so a single attribute lookup + tuple
-    # index-19 replaces 20 per-call attribute chains in the njit wrapper.
     _njit_args: tuple = field(default_factory=tuple)
     # Event queue (issue #27): a lazy min-heap of (actionable_year, probe_id), so the next event is
-    # found in O(log P) instead of an O(P) min-scan over every in-flight probe each event. Entries
-    # are validated on pop against `probes` and the probe's CURRENT actionable time; stale ones (a
-    # probe removed, or - under "inflight" - one whose target was claimed so its actionable dropped)
-    # are discarded. by_target maps a star to the ids of live probes heading to it; when that star is
-    # settled we push each such probe's now-earlier mid-flight learning time (the inflight
-    # decrease-key). by_target is maintained ONLY under "inflight" (no decrease-key otherwise).
     ev_heap: list[tuple[float, int]] = field(default_factory=list)
     by_target: dict[int, list[int]] = field(default_factory=dict)
     # --- coordination observability (the cost of no-coordination; 0 unless probes race) ---
     total_arrivals: int = 0  # every probe arrival processed
     wasted_arrivals: int = 0  # arrivals landing on an already-(truly-)settled star (redundant trips)
     retarget_count: int = 0  # total re-target events (a lost race that re-aimed)
-    # Redundant travel distance (pc): the common currency across coordination modes. A lost
-    # full arrival contributes its whole hop; an "inflight" mid-flight abort contributes only
-    # the partial distance flown before it redirected. midflight_aborts counts the latter.
+    # Redundant travel distance (pc): the common currency across coordination modes.
     wasted_travel_pc: float = 0.0
     midflight_aborts: int = 0
     # --- effective-speed + hop-length observability (read-only accumulators; touch no RNG) ---
@@ -280,28 +188,17 @@ class SwarmState:
     wasted_hop_sum_pc: float = 0.0  # sum of hop lengths of arrivals that LOST (wasted trips)
     wasted_hop_count: int = 0
     # --- energy-weighted-tax observability (read-only; Newtonian (1/2)v^2 per journey) -------
-    # Summed over completed journeys at arrival (when the win/waste is known), using the speed
-    # the probe actually flew. Lets the tax be weighted by the kinetic energy its launch speed
-    # cost, not counted flat. No RNG, no decision - cannot perturb the pinned fold.
     settle_v_sum_pc_yr: float = 0.0  # sum of flight speeds over winning journeys
     settle_v2_sum: float = 0.0  # sum of speed^2 [(pc/yr)^2] over winning journeys
     wasted_v_sum_pc_yr: float = 0.0  # sum of flight speeds over wasted journeys
     wasted_v2_sum: float = 0.0  # sum of speed^2 [(pc/yr)^2] over wasted journeys
     # --- hop-length-stratified arrival counts (read-only; the clumpy-field d-cancellation test) ---
-    # Won (settled) and wasted arrivals binned by hop length (HOP_BIN_EDGES). The per-bin wasted
-    # fraction under instant vs lightspeed is how we check p_lag/p_perfect stays flat in d even in
-    # a clumpy field. Pure counters - no RNG, no decision - so the fold stays bit-identical.
     settle_hop_hist: list[int] = field(default_factory=lambda: [0] * N_HOP_BINS)
     wasted_hop_hist: list[int] = field(default_factory=lambda: [0] * N_HOP_BINS)
     # --- wall-distance-stratified arrival counts (read-only; the finite-size EDGE test, M1) ---
-    # Won and wasted arrivals binned by the target star's distance to the nearest box wall
-    # (WALL_BIN_EDGES_NN, in mean-NN-distance units). Lets post-processing compute the tax on
-    # interior-only stars at any shell and separate a boundary artifact from bulk saturation.
     settle_wall_hist: list[int] = field(default_factory=lambda: [0] * N_WALL_BINS)
     wasted_wall_hist: list[int] = field(default_factory=lambda: [0] * N_WALL_BINS)
     # Scratchpad: normalized claim-margin histogram for wasted arrivals in the instant run.
-    # For each wasted arrival: s = (settled_year[target] - launch_year) / (arrive - launch),
-    # binned into 32 bins on [0, 1]. Diagnostic-only; does not affect the fold.
     wasted_s_hist: list[int] = field(default_factory=lambda: [0] * 32)
 
     def n_settled(self) -> int:
@@ -329,7 +226,6 @@ class SwarmResult:
     max_probe_speed_km_s: float  # peak accumulated probe speed (powered = the cruise speed)
     policy: str
     # Coverage-fraction timescales beyond the original 50/90/100 (t100 is a tail statistic
-    # dominated by the last few stars, so we also report earlier, more robust fractions).
     t25_years: float | None = None
     t75_years: float | None = None
     t99_years: float | None = None
@@ -337,32 +233,23 @@ class SwarmResult:
     total_arrivals: int = 0  # every probe arrival (settlements + wasted trips)
     wasted_arrivals: int = 0  # arrivals at an already-settled star - the cost of stale info
     retarget_count: int = 0  # total re-target events
-    # Redundant travel distance (pc) and, for "inflight", the count of mid-flight aborts. This
-    # is the mode-comparable fuel currency: full doomed hops (instant/lightspeed) plus partial
-    # aborted hops (inflight). The floor bracket (instant/inflight/lightspeed) is read from it.
+    # Redundant travel distance (pc) and, for "inflight", the count of mid-flight aborts.
     wasted_travel_pc: float = 0.0
     midflight_aborts: int = 0
     # Effective speed actually achieved (not just the powered-cruise input): the mean speed at
-    # which probes were launched, in km/s, so Lambda_eff = v/c can be checked per policy.
     mean_launch_speed_km_s: float = 0.0
     # Mean hop length of winning vs wasted trips (pc): the wasted-trip length is the direct
-    # measure of "how non-local a lost race is" - the quantity that actually governs the tax.
     mean_settle_hop_pc: float = 0.0
     mean_wasted_hop_pc: float = 0.0
-    # Energy-weighted-tax observables. Newtonian specific kinetic energy (1/2)(v/c)^2 summed
-    # over journeys (dimensionless, in units of c^2), split winning vs wasted, so the paper can
-    # weight redundant travel by the energy its launch speed cost. The relativistic form
-    # (gamma-1)c^2 exceeds this by < 3.1% up to 0.2c, so Newtonian is the safe primary metric.
+    # Energy-weighted-tax observables: Newtonian (1/2)(v/c)^2 per journey, within 3.1% of the relativistic (gamma-1) up to 0.2c.
     settle_energy_c2: float = 0.0  # sum over winning journeys of (1/2)(v/c)^2
     wasted_energy_c2: float = 0.0  # sum over wasted journeys of (1/2)(v/c)^2
     mean_settle_speed_km_s: float = 0.0  # mean flight speed of winning journeys
     mean_wasted_speed_km_s: float = 0.0  # mean flight speed of wasted journeys
     # Won/wasted arrivals binned by hop length (HOP_BIN_EDGES) - the clumpy-field d-cancellation
-    # test reads these to check the wasted-trip ratio is flat in d even in a non-uniform field.
     settle_hop_hist: list[int] = field(default_factory=list)
     wasted_hop_hist: list[int] = field(default_factory=list)
     # Won/wasted arrivals binned by target-star distance to nearest wall (WALL_BIN_EDGES_NN, in
-    # mean-NN-distance units) - the finite-size edge test (M1): interior-only tax vs N.
     settle_wall_hist: list[int] = field(default_factory=list)
     wasted_wall_hist: list[int] = field(default_factory=list)
     wasted_s_hist: list[int] = field(default_factory=list)
