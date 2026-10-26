@@ -1,0 +1,16 @@
+# The reference run spec. Everything this run needs is here; nothing is read from the environment.
+name: branching-scale
+module: swarm
+entry: experiments.measure:m_branching_scale
+description: >
+  Branching-factor sweep at the top of the N ladder. RAM-bound rather than
+  CPU-bound at 200k stars, which is why workers is capped below core count.
+
+runtime:
+  # Was SWARM_WORKERS=2. A blank value means every core, which OOMs this sweep.
+  workers: 2
+  # Was `python -O`. Strips the fold's __debug__ invariants; bit-identical, ~2-3x faster.
+  optimize: true
+  backends:
+    rust: true
+    njit: true
