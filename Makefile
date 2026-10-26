@@ -11,7 +11,7 @@
 #   make test-py    # just the python modules
 #   make test M=swarm   # one module
 #   make frontend   # live-rebuild the frontend (npm run serve)
-#   make sweep NAME=branching_scale WORKERS=2   # one swarm experiment, worker-capped
+#   make run SPEC=swarm/runs/branching-scale.yaml   # one simulation, config in the yaml
 #   make papers     # generate + typography-check the papers
 
 # Python modules = top-level dirs with a pyproject.toml but no package.json (those are JS).
@@ -23,7 +23,7 @@ WORKERS ?=
 NAME ?=
 
 .DEFAULT_GOAL := help
-.PHONY: help test test-py test-frontend frontend sweep papers list affected lint-rules agents
+.PHONY: help test test-py test-frontend frontend run runs ps papers list affected lint-rules agents
 
 help:
 	@echo "von-neumann dev-suite"
@@ -34,7 +34,9 @@ help:
 	@echo "  make affected M=<module>   run tests for every module a change to M reaches"
 	@echo "  make test-frontend     run frontend Layer A + Layer B (pimas contract)"
 	@echo "  make frontend          live-rebuild the frontend (npm run serve)"
-	@echo "  make sweep NAME=<name> [WORKERS=N]   run one swarm experiment"
+	@echo "  make run SPEC=<path/to/run.yaml>     run one simulation from its spec"
+	@echo "  make runs              list every committed run spec"
+	@echo "  make ps                show live runs and their progress"
 	@echo "  make papers            generate + typography-check the papers"
 	@echo "  make lint-rules        one-line comments + AGENTS.d rule cap"
 	@echo "  make agents            regenerate every AGENTS.md from its AGENTS.d/"
@@ -84,15 +86,17 @@ test-frontend:
 frontend:
 	@cd frontend && npm run serve
 
-# Worker cap keeps big-N sweeps (e.g. branching_scale at 200k) inside RAM. Blank WORKERS
-# uses all cores. Determinism is unaffected: executor.map preserves order at any count.
-# `-O` strips debug invariants (~2-3x wall-clock win at bit-identical results, see
-# docs/HARDWARE.md "Assertion mode" and swarm/experiments/_run.py). Sweep is by
-# definition an ensemble run; invariants are on for tests + dev iteration only.
-sweep:
-	@test -n "$(NAME)" || { echo "usage: make sweep NAME=<experiment> [WORKERS=N]"; exit 2; }
-	@echo ">> sweep: $(NAME)$(if $(WORKERS), (SWARM_WORKERS=$(WORKERS)))"
-	@cd swarm/experiments && $(if $(WORKERS),SWARM_WORKERS=$(WORKERS) )uv run python -O measure.py $(NAME)
+# One simulation run, one committed spec. Everything the run needs (worker cap, -O,
+# backend selection) lives in the yaml, so there is nothing to remember and nothing to export.
+run:
+	@test -n "$(SPEC)" || { echo "usage: make run SPEC=<path/to/run.yaml>   (see: make runs)"; exit 2; }
+	@cd runner && uv run vn-run ../$(SPEC)
+
+runs:
+	@cd runner && uv run vn-run ls
+
+ps:
+	@cd runner && uv run vn-run ps
 
 papers:
 	@cd papers && npm run check

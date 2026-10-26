@@ -31,3 +31,6 @@ target/
 
 # Generated agent navigation maps (source of truth is each AGENTS.d/; see CLAUDE.md).
 AGENTS.md
+
+# Live run status written by vn-run (local only, never committed).
+.vn-runs/
