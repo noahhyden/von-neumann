@@ -63,6 +63,7 @@ import ast
 import json
 import re
 import sys
+import textwrap
 from collections import defaultdict
 from pathlib import Path
 
@@ -218,49 +219,6 @@ def expected_ci_filter(g: "Graph") -> dict[str, set[str]]:
     return {slug.replace("-", "_"): set(srcs) for slug, srcs in g.papers.items() if srcs}
 
 
-def parse_ci_filter(repo: Path, modules: set[str]) -> dict[str, set[str]]:
-    """Parse the per-paper module globs from the dorny/paths-filter block in ci.yml.
-
-    Returns {filter_key: set of module dirs it lists as '<mod>/**'}. Hand-parses the
-    YAML literal block (stdlib only, no pyyaml): finds `filters: |`, then reads its
-    more-indented body, treating `word:` lines as filter groups and `- '<glob>'` lines
-    as patterns. The `shared` anchor group and non-module globs (papers/**, frontend/**,
-    .github/**) are ignored - only globs whose first path component is a known module
-    count. Returns {} if ci.yml is absent.
-    """
-    ci = repo / ".github" / "workflows" / "ci.yml"
-    out: dict[str, set[str]] = {}
-    if not ci.is_file():
-        return out
-    in_block = False
-    base_indent = 0
-    key: str | None = None
-    for line in ci.read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if not in_block:
-            if re.match(r"filters:\s*\|", stripped):
-                in_block = True
-                base_indent = len(line) - len(line.lstrip())
-            continue
-        if not stripped:
-            continue
-        indent = len(line) - len(line.lstrip())
-        if indent <= base_indent:  # dedent back out of the block scalar -> done
-            break
-        km = re.match(r"^(\w+):", stripped)
-        if km:
-            key = km.group(1)
-            if key != "shared":
-                out.setdefault(key, set())
-            continue
-        pm = re.match(r"^- '([^']+)'$", stripped)
-        if pm and key and key != "shared":
-            first = pm.group(1).split("/")[0]
-            if first in modules:
-                out[key].add(first)
-    return out
-
-
 def check_ci_filter(repo: Path) -> int:
     """Assert the committed ci.yml paths-filter matches depgraph's paper edges.
 
@@ -268,21 +226,14 @@ def check_ci_filter(repo: Path) -> int:
     figure from a module nobody added to its filter (so CI would stop rebuilding it).
     """
     g = Graph(repo)
-    want = expected_ci_filter(g)
-    got = parse_ci_filter(repo, set(g.modules))
-    failures = [
-        f"filter '{key}': ci.yml lists {sorted(got.get(key, set()))}, depgraph expects {sorted(mods)}"
-        for key, mods in sorted(want.items())
-        if got.get(key) != mods
-    ]
-    if failures:
-        print("CI FILTER DRIFT:")
-        for f in failures:
-            print(f"  - {f}")
-        print("\nregenerate the paper groups with: python scripts/depgraph.py --ci-filter")
-        return 1
-    print(f"ci filter OK: {len(want)} paper filters match depgraph")
-    return 0
+    ci_path = repo / ".github" / "workflows" / "ci.yml"
+    block = textwrap.indent(_fmt_ci_filter(g), " " * 12)
+    if ci_path.is_file() and block in ci_path.read_text(encoding="utf-8"):
+        print(f"ci filter OK: {len(expected_ci_filter(g))} paper filters match depgraph")
+        return 0
+    print("CI FILTER DRIFT: ci.yml's paths-filter block differs from depgraph's")
+    print("\nregenerate the paper groups with: python scripts/depgraph.py --ci-filter")
+    return 1
 
 
 def reverse_reachable(edges: dict[str, set[str]], changed: set[str]) -> set[str]:

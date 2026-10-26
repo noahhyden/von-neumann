@@ -10,6 +10,7 @@ Two layers:
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -178,29 +179,6 @@ def test_frontend_ports_no_frontend_dir(tmp_path: Path):
 # --------------------------------------------------------------------------- #
 # CI paths-filter: parse, expected, check (pass + drift)
 # --------------------------------------------------------------------------- #
-def test_parse_ci_filter(mini: Path):
-    mods = set(dg.discover_modules(mini).values())
-    # 'shared' skipped; papers/** non-module glob skipped; *shared ref skipped; aa kept.
-    assert dg.parse_ci_filter(mini, mods) == {"p1": {"aa"}}
-
-
-def test_parse_ci_filter_no_ci(tmp_path: Path):
-    assert dg.parse_ci_filter(tmp_path, {"aa"}) == {}             # ci.yml absent
-
-
-def test_parse_ci_filter_block_at_eof(tmp_path: Path):
-    # The filter block runs to end-of-file (no trailing dedent) -> loop ends naturally.
-    wf = tmp_path / ".github" / "workflows"
-    wf.mkdir(parents=True)
-    (wf / "ci.yml").write_text(
-        "        with:\n"
-        "          filters: |\n"
-        "            g1:\n"
-        "              - 'aa/**'\n"
-    )
-    assert dg.parse_ci_filter(tmp_path, {"aa"}) == {"g1": {"aa"}}
-
-
 def test_expected_ci_filter(mini: Path):
     assert dg.expected_ci_filter(dg.Graph(mini)) == {"p1": {"aa"}}
 
@@ -216,7 +194,19 @@ def test_check_ci_filter_drift(mini: Path, capsys):
     ci.write_text(ci.read_text().replace("- 'aa/**'", "- 'bb/**'"))
     assert dg.check_ci_filter(mini) == 1
     out = capsys.readouterr().out
-    assert "CI FILTER DRIFT" in out and "p1" in out
+    assert "CI FILTER DRIFT" in out
+
+
+def test_check_ci_filter_no_ci(tmp_path: Path):
+    assert dg.check_ci_filter(tmp_path) == 1
+
+
+def test_every_module_is_tested_in_ci():
+    ci = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    matrix = re.search(r"module: \[([^\]]+)\]", ci).group(1).replace(" ", "").split(",")
+    missing = [m for m in sorted(set(dg.discover_modules(REPO).values()))
+               if m not in matrix and f"\n  {m}:\n" not in ci]
+    assert not missing, f"modules with no CI job: {missing}"
 
 
 def test_fmt_ci_filter(mini: Path):
