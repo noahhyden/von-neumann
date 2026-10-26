@@ -109,7 +109,7 @@ test("hand-verified provenance is locked (author + title token match the cited s
 
 test("no em-dash or emoji leaks into the public bibliography text", () => {
   // The repo-wide typography rule (CLAUDE.md 5) applies to this user-facing data too.
-  const emdash = /—/;
+  const emdash = /—/; // typography-allow: the rule's own fixture
   const emoji = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{26FF}\u{2705}\u{2714}\u{2717}\u{274C}]/u;
   for (const s of SOURCES) {
     const blob = `${s.short} ${s.authors} ${s.title} ${s.venue} ${s.grounds}`;
