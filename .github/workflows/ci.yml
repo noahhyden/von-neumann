@@ -41,70 +41,19 @@ jobs:
         working-directory: scripts
         run: uv run python depgraph.py --check-ci-filter
 
-  closure-sim:
+  modules:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [closure-sim, probe-sim, power-budget, launch-economics, mission, multi-probe, spine, transfer, comms, assembly, isru, propellant, thermal, power-source, autonomy, shielding, reliability]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      - name: pytest (real-number assertions)
-        working-directory: closure-sim
-        run: uv run --extra dev pytest -q
-
-  probe-sim:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-      - name: pytest (real-number assertions)
-        working-directory: probe-sim
-        run: uv run --extra dev pytest -q
-
-  power-budget:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-      - name: pytest (real-number assertions)
-        working-directory: power-budget
-        run: uv run --extra dev pytest -q
-
-  launch-economics:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-      - name: pytest (real-number assertions)
-        working-directory: launch-economics
-        run: uv run --extra dev pytest -q
-
-  mission:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-      - name: pytest (end-to-end behavior assertions)
-        working-directory: mission
-        run: uv run --extra dev pytest -q
-
-  multi-probe:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-      - name: pytest (deterministic fleet behavior assertions)
-        working-directory: multi-probe
+      - name: pytest ${{ matrix.module }}
+        working-directory: ${{ matrix.module }}
         run: uv run --extra dev pytest -q
 
   swarm:
@@ -123,17 +72,6 @@ jobs:
           uv run --extra rust maturin develop --release --manifest-path rust/Cargo.toml
       - name: pytest (deterministic settlement-front assertions, all 3 backends)
         working-directory: swarm
-        run: uv run --extra dev pytest -q
-
-  spine:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-      - name: pytest (cross-scale integration assertions)
-        working-directory: spine
         run: uv run --extra dev pytest -q
 
   papers:

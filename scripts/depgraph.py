@@ -8,6 +8,7 @@ import ast
 import json
 import re
 import sys
+import textwrap
 from collections import defaultdict
 from pathlib import Path
 
@@ -187,21 +188,14 @@ def parse_ci_filter(repo: Path, modules: set[str]) -> dict[str, set[str]]:
 def check_ci_filter(repo: Path) -> int:
     """Assert the committed ci.yml paths-filter matches depgraph's paper edges."""
     g = Graph(repo)
-    want = expected_ci_filter(g)
-    got = parse_ci_filter(repo, set(g.modules))
-    failures = [
-        f"filter '{key}': ci.yml lists {sorted(got.get(key, set()))}, depgraph expects {sorted(mods)}"
-        for key, mods in sorted(want.items())
-        if got.get(key) != mods
-    ]
-    if failures:
-        print("CI FILTER DRIFT:")
-        for f in failures:
-            print(f"  - {f}")
-        print("\nregenerate the paper groups with: python scripts/depgraph.py --ci-filter")
-        return 1
-    print(f"ci filter OK: {len(want)} paper filters match depgraph")
-    return 0
+    ci_path = repo / ".github" / "workflows" / "ci.yml"
+    block = textwrap.indent(_fmt_ci_filter(g), " " * 12)
+    if ci_path.is_file() and block in ci_path.read_text(encoding="utf-8"):
+        print(f"ci filter OK: {len(expected_ci_filter(g))} paper filters match depgraph")
+        return 0
+    print("CI FILTER DRIFT: ci.yml's paths-filter block differs from depgraph's")
+    print("\nregenerate the paper groups with: python scripts/depgraph.py --ci-filter")
+    return 1
 
 
 def reverse_reachable(edges: dict[str, set[str]], changed: set[str]) -> set[str]:
