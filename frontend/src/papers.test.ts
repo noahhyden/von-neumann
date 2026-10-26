@@ -88,7 +88,7 @@ test("dates are ISO YYYY-MM-DD and slugs are unique", () => {
 });
 
 test("no em-dash or emoji in paper metadata (typography rule)", () => {
-  const emdash = /—/;
+  const emdash = /—/; // typography-allow: the rule's own fixture
   const emoji = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{26FF}\u{2705}\u{2714}\u{2717}\u{274C}]/u;
   for (const p of PAPERS_INDEX) {
     const blob = `${p.title} ${p.abstract} ${p.keywords.join(" ")} ${p.authors.map((a) => a.name + " " + a.affiliation).join(" ")}`;
