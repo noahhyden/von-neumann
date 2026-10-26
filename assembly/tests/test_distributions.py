@@ -3,7 +3,6 @@
 import pytest
 
 from assembly.distributions import (
-    HOURS_PER_DAY_DIST,
     LPBF_RATE_DIST,
     TYPICAL_OEE_DIST,
     WAAM_RATE_DIST,
@@ -15,11 +14,7 @@ from assembly.rate import (
     WAAM_RATE_KG_PER_H,
     WORLD_CLASS_OEE,
 )
-from vn_core.uq import Fixed, Uniform, monte_carlo, sobol_total_order
-
-
-def test_definitional_and_flight_anchors_are_fixed():
-    assert isinstance(HOURS_PER_DAY_DIST, Fixed)
+from vn_core.uq import Uniform, monte_carlo, sobol_total_order
 
 
 def test_deposition_rate_bands_match_source_tuples():

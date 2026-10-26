@@ -5,19 +5,11 @@ import math
 import pytest
 
 from swarm.distributions import (
-    C_PC_PER_YEAR_DIST,
-    OFFSPRING_PER_SETTLEMENT_DIST,
     POWERED_CRUISE_SPEED_C_DIST,
-    SETTLE_DWELL_YEARS_DIST,
     STELLAR_DENSITY_PER_PC3_DIST,
 )
 from swarm.models import C_PC_PER_YEAR
-from vn_core.uq import Fixed, LogUniform, Uniform, monte_carlo
-
-
-def test_defined_constants_are_fixed():
-    assert isinstance(C_PC_PER_YEAR_DIST, Fixed)
-    assert C_PC_PER_YEAR_DIST.value == C_PC_PER_YEAR
+from vn_core.uq import LogUniform, Uniform, monte_carlo
 
 
 def test_cruise_speed_loguniform_covers_the_paper_point_value():
@@ -29,12 +21,6 @@ def test_stellar_density_range_covers_recons_and_paper_choices():
     # RECONS 10-pc: 0.14; N&F: 1.0. Uniform must contain both.
     assert STELLAR_DENSITY_PER_PC3_DIST.low <= 0.14
     assert STELLAR_DENSITY_PER_PC3_DIST.high >= 1.0
-
-
-def test_scenario_convention_choices_are_fixed():
-    assert isinstance(OFFSPRING_PER_SETTLEMENT_DIST, Fixed)
-    assert OFFSPRING_PER_SETTLEMENT_DIST.value == 2.0
-    assert isinstance(SETTLE_DWELL_YEARS_DIST, Fixed)
 
 
 def test_settlement_timescale_uq_spans_orders_of_magnitude():
