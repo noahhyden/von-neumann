@@ -1,17 +1,4 @@
-"""Validation for the low-discrepancy (Sobol') base sample in the Saltelli design.
-
-sobol_total_order / uq_and_gsa gain sampler="sobol": A and B come from one Sobol'
-sequence in 2K dimensions instead of independent pseudo-random draws. Claims under
-attack:
-
-- it is *correct* (matches the Ishigami analytic indices);
-- it *converges faster* than the random sampler at the same N (the whole point);
-- it is fully deterministic and seed-independent for the base sample (only bootstrap
-  uses the seed);
-- back-compat: sampler="random" is the default and unchanged;
-- it refuses dimensions it cannot honestly sample (2K > tabulated Sobol' dims), and
-  rejects an unknown sampler name.
-"""
+"""Validation for the low-discrepancy (Sobol') base sample in the Saltelli design."""
 
 from __future__ import annotations
 
@@ -44,8 +31,7 @@ def test_sobol_sampler_matches_analytic():
 
 
 def test_sobol_sampler_converges_faster_than_random():
-    """At the same N, the low-discrepancy sampler's total-order error must be well
-    below the pseudo-random sampler's - the reason to offer it at all."""
+    """At the same N, the low-discrepancy sampler's total-order error must be well."""
     n = 256
 
     def total_err(sampler):
@@ -60,9 +46,7 @@ def test_sobol_sampler_converges_faster_than_random():
 
 
 def test_sobol_sampler_golden_values_are_bit_reproducible():
-    """Pin exact replay (CLAUDE.md §7) for the Sobol' sampler: a fixed setup returns
-    byte-identical indices. Also nails the skip/point convention so a silent change to
-    the base points (e.g. including the origin) is a red test, not a quiet drift."""
+    """Pin exact replay (CLAUDE.md §7) for the Sobol' sampler: a fixed setup returns."""
     inp = {"a": Uniform(0.0, 1.0), "b": Uniform(0.0, 1.0)}
     f = lambda s: s["a"] * s["a"] + s["a"] * s["b"]  # noqa: E731
     r = sobol_total_order(inp, f, n=64, seed=0, sampler="sobol")
@@ -73,8 +57,7 @@ def test_sobol_sampler_golden_values_are_bit_reproducible():
 
 
 def test_sobol_sampler_is_seed_independent():
-    """The Sobol' base sample is deterministic: with bootstrap off, the seed does not
-    enter, so different seeds give identical indices."""
+    """The Sobol' base sample is deterministic: with bootstrap off, the seed does not."""
     a = sobol_total_order(_ISH, _ishigami, n=256, seed=1, sampler="sobol")
     b = sobol_total_order(_ISH, _ishigami, n=256, seed=12345, sampler="sobol")
     assert a.total_order == b.total_order
@@ -82,8 +65,7 @@ def test_sobol_sampler_is_seed_independent():
 
 
 def test_sobol_sampler_default_is_random_and_unchanged():
-    """The default sampler is 'random' and matches an explicit random call bit-for-bit
-    (no accidental behavior change for existing callers)."""
+    """The default sampler is 'random' and matches an explicit random call bit-for-bit."""
     default = sobol_total_order(_ISH, _ishigami, n=200, seed=7)
     explicit = sobol_total_order(_ISH, _ishigami, n=200, seed=7, sampler="random")
     assert default.total_order == explicit.total_order

@@ -1,14 +1,4 @@
-"""Uncertainty quantification, shared across every von-neumann module.
-
-Introduced by issue #35 (Depth track Tier 1): give every REFERENCES.md number
-a citable spread, propagate it through the fold, rank the drivers. Lives here
-(not in a single module) because that generalization is exactly the scope of
-the issue - every module reuses these primitives, no duplication.
-
-Pure Python today. The [`core/`](../..) layout leaves room for a future rust
-+ pyo3 speed drop-in without moving imports (CLAUDE.md §7 says the fold stays
-deterministic; whatever we swap under it must too).
-"""
+"""Uncertainty quantification, shared across every von-neumann module."""
 
 from vn_core.uq.distributions import (
     Distribution,

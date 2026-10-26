@@ -71,6 +71,36 @@ whatever else at least two modules end up wanting - each behind its own
 `vn_core.uq` re-exports, so callers do not move imports when the fast path
 lands. (Rust is not present yet - the marker is the layout, not a promise.)
 
+## How the UQ estimators work
+
+Two ideas carry `vn_core.uq`; the code's one-line docstrings assume them.
+
+**Polynomial chaos (`pce_fit`).** Write the finding as a sum of polynomials that are
+orthonormal under the input distributions, `Y(xi) ~ sum_a c_a Psi_a(xi)`: Legendre for
+Uniform inputs, Hermite for Normal, and for anything else a basis built from the
+distribution's own moments (arbitrary PCE, via a discretized Stieltjes recurrence).
+Because the basis is orthonormal, the mean is `c_0` and the variance is the sum of
+`c_a^2` over `a != 0` (Parseval). Sobol' indices then cost nothing extra: the
+first-order index of input i is the coefficient energy over multi-indices touching only
+i, and the total-order index is the energy over every multi-index where i appears. The
+coefficients come from Gauss quadrature (nodes from the recurrence's Jacobi matrix, so
+they are derived, not fitted), a Smolyak sparse grid, or least squares by Householder QR.
+The price is smoothness: across a kink (a `min()` regime switch, a threshold) the fit
+converges only slowly and would return confident wrong moments, so every fit reports
+`fit_residual`, the relative RMS error on an independent sample, and `is_trustworthy()`
+reads False when it is large. Quote PCE moments only when it is True.
+
+**Saltelli sensitivity (`sobol_total_order`, `uq_and_gsa`).** Draw two independent
+N x K matrices A and B of uniforms, and form AB^(i), A with column i taken from B. The
+finding is evaluated on A, B and each AB^(i), so N*(K+2) runs in all. The total-order
+index is the Jansen estimator `(1/2N) sum (f(A) - f(AB^i))^2 / Var`, and the first-order
+index is the Saltelli-2010 estimator with the output mean subtracted (without that
+centering, a finding whose mean dwarfs its spread loses the answer to cancellation).
+Pairwise interactions are opt-in and need the mirror BA matrices, N*(2K+2) runs. The
+plain Monte Carlo readout comes from the same 2N A and B rows, which is why `uq_and_gsa`
+returns uncertainty and attribution for the price of one. Citations for each estimator
+are in [`REFERENCES.md`](REFERENCES.md).
+
 ## Discipline (still binding)
 
 Everything here is a **pure fold with a seeded RNG threaded through** (CLAUDE.md

@@ -1,19 +1,4 @@
-"""Red-hat + validation for regression PCE (the higher-dimension fit method).
-
-`pce_fit(..., method="regression")` fits the same orthonormal PCE by least squares
-over sampled points instead of tensor Gauss quadrature, so it scales polynomially
-(not exponentially) in the number of inputs. The claims under attack:
-
-- it **recovers the same answer** as quadrature where both are feasible, and a
-  polynomial finding exactly (to machine precision - proving the orthonormal-basis
-  normal equations are well-conditioned);
-- it **scales**: on a high-dimensional finding it fits from ~oversampling*n_terms
-  runs where quadrature would need (degree+1)^d;
-- it stays **honest** - the fit_residual (measured on an *independent* sample, not
-  the fit sample) still flags a non-smooth finding;
-- eval count is exactly as advertised, it is deterministic (§7), and degenerate
-  requests (too few samples) raise rather than silently return garbage.
-"""
+"""Red-hat + validation for regression PCE (the higher-dimension fit method)."""
 
 from __future__ import annotations
 
@@ -49,8 +34,7 @@ def _analytic_poly8():
 
 
 def test_regression_recovers_a_polynomial_to_machine_precision():
-    """A degree-2 polynomial in 8 inputs, fit by regression at degree 2, must be
-    recovered essentially exactly - moments and Sobol - from ~2*n_terms samples."""
+    """A degree-2 polynomial in 8 inputs, fit by regression at degree 2, must be."""
     var_an, st_an = _analytic_poly8()
     r = pce_fit(_POLY_INPUTS, _poly8, degree=2, method="regression", seed=1)
     assert r.fit_residual < 1e-10
@@ -60,8 +44,7 @@ def test_regression_recovers_a_polynomial_to_machine_precision():
 
 
 def test_regression_scales_where_quadrature_cannot():
-    """The whole point: fit a d=8 finding from far fewer runs than quadrature's
-    (degree+1)^d."""
+    """The whole point: fit a d=8 finding from far fewer runs than quadrature's."""
     r = pce_fit(_POLY_INPUTS, _poly8, degree=2, method="regression", seed=1)
     quadrature_cost = (2 + 1) ** 8  # 6561
     assert r.n_evaluations < quadrature_cost // 10
@@ -69,8 +52,7 @@ def test_regression_scales_where_quadrature_cannot():
 
 
 def test_regression_agrees_with_quadrature_on_low_dimension():
-    """Where both are feasible (d=3 Ishigami), the two methods must give the same
-    variance and Sobol indices to within regression sampling noise."""
+    """Where both are feasible (d=3 Ishigami), the two methods must give the same."""
     ish_inputs = {n: Uniform(-PI, PI) for n in ("x1", "x2", "x3")}
 
     def ishigami(s):
@@ -130,8 +112,7 @@ def test_regression_is_deterministic():
 
 
 def test_regression_different_seed_changes_the_sample_but_not_the_answer():
-    """Different sampling seed -> different design points -> essentially the same
-    recovered polynomial (it is overdetermined and the finding is exact)."""
+    """Different sampling seed -> different design points -> essentially the same."""
     a = pce_fit(_POLY_INPUTS, _poly8, degree=2, method="regression", seed=1, validation=0)
     b = pce_fit(_POLY_INPUTS, _poly8, degree=2, method="regression", seed=2, validation=0)
     assert a.coefficients != b.coefficients  # different design points
@@ -142,8 +123,7 @@ def test_regression_different_seed_changes_the_sample_but_not_the_answer():
 
 
 def test_regression_fit_residual_flags_a_kink():
-    """The fit_residual is measured on an independent sample (seed+1), so a kink
-    still trips it even though regression is overdetermined."""
+    """The fit_residual is measured on an independent sample (seed+1), so a kink."""
 
     def kink(s):
         return max(0.0, s["a"] - 0.5) + 0.3 * s["b"]

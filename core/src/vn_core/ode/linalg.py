@@ -1,14 +1,4 @@
-"""ODE-specific linear-algebra helper: the finite-difference Jacobian of the RHS.
-
-The dense square solver the implicit integrator needs (`J x = b` per Newton step)
-now lives in the shared ``vn_core.linalg`` (alongside the least-squares solver PCE
-uses), so there is one source of truth for dense elimination. What stays here is the
-one piece that is genuinely about an ODE right-hand side: forming ``J`` by finite
-differences of ``f(t, y)``.
-
-Pure Python, zero deps, deterministic (§7): a fixed-order forward difference is
-trivially reproducible across machines.
-"""
+"""ODE-specific linear-algebra helper: the finite-difference Jacobian of the RHS."""
 
 from __future__ import annotations
 
@@ -21,12 +11,7 @@ def numerical_jacobian(
     y: Sequence[float],
     f0: Sequence[float],
 ) -> list[list[float]]:
-    """Forward-difference Jacobian ``df_i/dy_j`` of the RHS at ``(t, y)``.
-
-    ``f0 = f(t, y)`` is passed in so it is not recomputed. The perturbation is
-    scaled per component, `h = sqrt(eps) * max(|y_j|, 1)`, the standard choice
-    that balances truncation against round-off for a forward difference.
-    """
+    """Forward-difference Jacobian ``df_i/dy_j`` of the RHS at ``(t, y)``."""
     n = len(y)
     eps = 1.4901161193847656e-08  # sqrt(2.22e-16), the usual forward-diff step
     jac = [[0.0] * n for _ in range(n)]

@@ -1,10 +1,4 @@
-"""Unit tests for the implicit solver's robustness guards.
-
-These paths turn a Newton iterate that diverges into an overflow, or a singular
-iteration matrix, into a graceful "did not converge" (so the outer loop shrinks h)
-rather than a crash or a NaN trajectory. They are hard to hit reliably through a full
-integration, so they are exercised directly here.
-"""
+"""Unit tests for the implicit solver's robustness guards."""
 
 from __future__ import annotations
 
@@ -44,8 +38,7 @@ def test_newton_rejects_singular_iteration_matrix():
 
 
 def test_newton_rejects_divergent_iterate_overflow():
-    # Finite at the predictor, but the first Newton correction jumps to a huge value
-    # where the RHS overflows -> caught mid-iteration, not converged.
+    # Finite at the predictor, but the first Newton correction jumps to a huge value that overflows the RHS, which must read as a non-converged step.
     _y, _e, ok = _newton_solve(
         lambda t, y: [math.e ** y[0]], 0.0, [1e300], 0.1, [0.0], 1, 1e-6, 1e-9
     )
@@ -59,8 +52,7 @@ def test_trbdf2_step_rejects_nonfinite_start():
 
 
 def test_be_step_still_solves_a_simple_stiff_step():
-    # Sanity: the refactored _be_step (now delegating to _newton_solve) still solves
-    # Y = y_n + h f(t+h, Y) for a linear decay - exact for a linear RHS.
+    # Sanity: the refactored _be_step (now delegating to _newton_solve) still solves a simple stiff step.
     from vn_core.ode.implicit import _be_step
 
     # y' = -y, one backward-Euler step of h=0.5 from y=1: Y = 1/(1+0.5) = 2/3.

@@ -1,10 +1,4 @@
-"""Paper-ready one-liner: the "X, +/- Y, driven by Z" line the issue asks for.
-
-Issue #35 frames each UQ finding as "X, +/- Y, and Y is 80% driven by this one
-input." This module composes an [[sample.MCResult]] and an [[sobol.SobolResult]]
-into that sentence, so a caller does not re-format the same string in every
-script or paper. Pure formatting, zero pimas.
-"""
+"""Paper-ready one-liner: the "X, +/- Y, driven by Z" line the issue asks for."""
 
 from __future__ import annotations
 
@@ -20,13 +14,7 @@ def one_line_finding(
     *,
     ci_pct: int = 90,
 ) -> str:
-    """Format one finding as "X = m +/- s <unit> (<ci_pct>% CI [lo, hi]), driven by <input> (S_T=v)".
-
-    The dominant driver is the top-ranked total-order input. If two inputs share
-    the top S_T within a small slack, both are named - the "one input driver"
-    framing softens to "shared between" when the honest answer is that no single
-    input dominates.
-    """
+    """Format one finding as "X = m +/- s <unit> (<ci_pct>% CI [lo, hi]), driven by <input> (S_T=v)"."""
     ranked = sobol.ranked()
     top_name, top_val = ranked[0]
     driver_clause: str

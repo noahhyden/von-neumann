@@ -1,26 +1,4 @@
-"""Implicit (L-stable) integrators for stiff systems: backward Euler and TR-BDF2.
-
-An explicit method (rk45) must take vanishingly small steps on a stiff problem or
-it blows up - the fast transient forces the step size everywhere, even long after
-the transient has died. An L-stable implicit method stays bounded at any step size,
-so it integrates stiff systems in sensible steps. The price is that each step is an
-implicit equation, solved here by a simplified Newton iteration (``_newton_solve``)
-with a finite-difference Jacobian.
-
-Two methods, both L-stable, sharing the Newton solve and the step-doubling error
-control (one step of h vs. two of h/2; the difference is the local-error estimate and
-the two-half-step result is accepted):
-
-- **``bdf1``** - backward Euler, order 1. Robust and simple; its accuracy limit means
-  many small steps on a demanding tolerance.
-- **``trbdf2``** - TR-BDF2 (Bank et al. 1985): a trapezoidal sub-step to t + gamma*h
-  followed by a BDF2 sub-step to t + h, with gamma = 2 - sqrt(2). Order 2 and
-  L-stable, so it reaches a given accuracy in far fewer / larger steps than backward
-  Euler (measured ~14x fewer steps on y' = -1000(y - cos t)). gamma = 2 - sqrt(2) is
-  the choice that makes the two stages' Newton iteration matrices share a coefficient.
-
-Pure deterministic fold (§7): no RNG, fixed operation order.
-"""
+"""Implicit (L-stable) integrators for stiff systems: backward Euler and TR-BDF2."""
 
 from __future__ import annotations
 
@@ -45,10 +23,7 @@ _TRBDF2_ERROR_EXPONENT = -1.0 / 3.0  # -1/(order+1), TR-BDF2 order 2
 _NEWTON_MAX_ITER = 30
 _NEWTON_TOL = 1e-3  # scaled correction norm below the step's own error budget
 
-# TR-BDF2 split point. With gamma = 2 - sqrt(2) the trapezoidal sub-step and the BDF2
-# sub-step share the same Newton iteration matrix coefficient (gamma/2 == (1-gamma)/
-# (2-gamma)), the property that makes TR-BDF2 efficient; it is also what makes the
-# method L-stable and second order (Bank et al. 1985; Hosea & Wanner). See REFERENCES.
+# TR-BDF2 split point: with gamma = 2 - sqrt(2) the trapezoidal and BDF2 sub-steps share one Newton iteration-matrix coefficient (gamma/2 == (1-gamma)/(2-gamma)), see REFERENCES.md (Bank et al. 1985).
 _GAMMA = 2.0 - math.sqrt(2.0)
 
 
@@ -66,15 +41,7 @@ def _integrate_doubling(
     first_step: float | None,
     t_eval: Sequence[float] | None,
 ) -> tuple[list[float], list[tuple[float, ...]], int, int, int, int]:
-    """Adaptive implicit integration by step doubling, shared by both stiff methods.
-
-    ``step_fn`` takes one implicit step (backward Euler or TR-BDF2); ``error_exponent``
-    is -1/(order+1) for that method. Each outer step is done once at h and twice at
-    h/2; the difference is the local-error estimate and the two-half-step result (more
-    accurate) is accepted. Returns (ts, ys, accepted, rejected, f_evals, steps). Output
-    times are served by capping steps to land on them (the implicit methods have no
-    dense output yet).
-    """
+    """Adaptive implicit integration by step doubling, shared by both stiff methods."""
     n = len(y0)
     y = list(y0)
     t = t0
@@ -89,9 +56,7 @@ def _integrate_doubling(
 
     span = abs(t1 - t0)
     min_step = 10 * span * 2.220446049250313e-16
-    # No embedded first-step heuristic here; a modest fraction of the span is a
-    # safe start because L-stability tolerates an over-large first step (it gets
-    # rejected and shrunk, never diverges).
+    # No embedded first-step heuristic here, so start at a modest fraction of the span; L-stability tolerates an over-large first step (it is rejected and shrunk, never diverges).
     h = min(first_step if first_step is not None else 0.01 * span, max_step)
     if h <= 0:
         h = max(min_step, 1e-6)
@@ -104,7 +69,7 @@ def _integrate_doubling(
     while t < t1:
         steps += 1
         if steps > max_steps:  # pragma: no cover - a 10M-step cap only a pathological
-            # RHS reaches; a real one converges or collapses to min_step first.
+            # A 10M-step cap is only reachable by a pathological RHS; a real one converges or collapses to min_step first.
             return ts, ys, accepted, rejected, f_evals, steps
         remaining = t1 - t
         cap = remaining
@@ -118,13 +83,11 @@ def _integrate_doubling(
         f_evals += e1 + e2 + e3
 
         if not (conv1 and conv2 and conv3):
-            # Newton did not converge: the step is too large for the current
-            # nonlinearity. Shrink hard and retry (do not count as a tolerance
-            # rejection - it is a solver-convergence rejection).
+            # Newton did not converge: the step is too large for the current nonlinearity, so shrink hard and retry (a solver-convergence rejection, not a tolerance one).
             rejected += 1
             h = 0.25 * h
             if h <= min_step:  # pragma: no cover - give up only if Newton fails even at
-                # the min step; the test problems recover before h collapses that far.
+                # Give up only if Newton fails even at the min step; the test problems recover before h collapses that far.
                 return ts, ys, accepted, rejected, f_evals, steps
             continue
 
@@ -150,9 +113,7 @@ def _integrate_doubling(
             rejected += 1
             h = h * max(_MIN_FACTOR, _SAFETY * err**error_exponent)
 
-    # Safety net: the last accepted step lands within a min_step of t1 (h is capped to
-    # the remaining span), so this >min_step guard is not taken - a defensive floor,
-    # mirroring rk45's.
+    # Safety net: h is capped to the remaining span, so the last accepted step lands within a min_step of t1 and this guard is a defensive floor mirroring rk45's.
     if record_all and abs(ts[-1] - t1) > min_step:  # pragma: no cover
         ts.append(t1)
         ys.append(tuple(y))
@@ -171,12 +132,7 @@ def integrate_bdf1(
     first_step: float | None,
     t_eval: Sequence[float] | None,
 ) -> tuple[list[float], list[tuple[float, ...]], int, int, int, int]:
-    """Integrate f from t0 to t1 with adaptive backward Euler (order 1, L-stable).
-
-    The order-1 workhorse: robust and simple, but its accuracy limit means many small
-    steps on a demanding tolerance - prefer ``trbdf2`` when accuracy (not just
-    boundedness) matters.
-    """
+    """Integrate f from t0 to t1 with adaptive backward Euler (order 1, L-stable)."""
     return _integrate_doubling(
         _be_step, _ERROR_EXPONENT, f, t0, t1, y0,
         rtol=rtol, atol=atol, max_step=max_step, first_step=first_step, t_eval=t_eval,
@@ -195,13 +151,7 @@ def integrate_trbdf2(
     first_step: float | None,
     t_eval: Sequence[float] | None,
 ) -> tuple[list[float], list[tuple[float, ...]], int, int, int, int]:
-    """Integrate f from t0 to t1 with adaptive TR-BDF2 (order 2, L-stable).
-
-    A one-step composite: a trapezoidal sub-step to t + gamma*h followed by a BDF2
-    sub-step to t + h, with gamma = 2 - sqrt(2). Second order and L-stable, so on a
-    stiff system it reaches a given accuracy in far fewer/larger steps than backward
-    Euler while staying bounded. Error control is the same step doubling as bdf1.
-    """
+    """Integrate f from t0 to t1 with adaptive TR-BDF2 (order 2, L-stable)."""
     return _integrate_doubling(
         _trbdf2_step, _TRBDF2_ERROR_EXPONENT, f, t0, t1, y0,
         rtol=rtol, atol=atol, max_step=max_step, first_step=first_step, t_eval=t_eval,
@@ -218,14 +168,7 @@ def _newton_solve(
     rtol: float,
     atol: float,
 ) -> tuple[list[float], int, bool]:
-    """Solve an implicit stage ``Y = const + coeff * f(t_new, Y)`` by simplified Newton.
-
-    The shared nonlinear solve behind every implicit step. The iteration matrix
-    M = I - coeff*J is factored once per call (J frozen at the predictor ``y_pred``),
-    the standard stiff-solver economy. Returns (Y, f_evals, converged); ``converged``
-    is False if it did not reach _NEWTON_TOL in _NEWTON_MAX_ITER or the RHS went
-    non-finite, so the caller shrinks h.
-    """
+    """Solve an implicit stage ``Y = const + coeff * f(t_new, Y)`` by simplified Newton."""
     evals = 0
     y = list(y_pred)
     fy = _safe_eval(f, t_new, y)
@@ -256,27 +199,14 @@ def _newton_solve(
 def _be_step(
     f: RHS, t: float, y_n: Sequence[float], h: float, n: int, rtol: float, atol: float
 ) -> tuple[list[float], int, bool]:
-    """One backward-Euler step: solve Y = y_n + h f(t+h, Y). Returns (Y, evals, ok).
-
-    Predictor is y_n itself: the explicit-Euler predictor (y_n + h f) is unstable for
-    stiff systems at the large steps L-stability is meant to permit - it can overshoot
-    into an overflow before Newton corrects it - so the safe start is the state itself.
-    """
+    """One backward-Euler step: solve Y = y_n + h f(t+h, Y). Returns (Y, evals, ok)."""
     return _newton_solve(f, t + h, list(y_n), h, list(y_n), n, rtol, atol)
 
 
 def _trbdf2_step(
     f: RHS, t: float, y_n: Sequence[float], h: float, n: int, rtol: float, atol: float
 ) -> tuple[list[float], int, bool]:
-    """One TR-BDF2 step: trapezoid to t + gamma*h, then BDF2 to t + h. (Y, evals, ok).
-
-    Stage 1 (trapezoidal rule): Y_g = y_n + (gamma*h/2)(f_n + f(t+gamma*h, Y_g)).
-    Stage 2 (BDF2 on y_n, Y_g):  Y   = a*Y_g - b*y_n + c*h*f(t+h, Y), with
-    a = 1/(gamma(2-gamma)), b = (1-gamma)^2/(gamma(2-gamma)), c = (1-gamma)/(2-gamma).
-    a - b = 1 (exact for constants). gamma = 2 - sqrt(2) makes the two stages' Newton
-    coefficients equal (gamma/2 == c). Each stage is a ``_newton_solve``; if either
-    fails to converge the whole step is reported not-converged so the caller shrinks h.
-    """
+    """One TR-BDF2 step: trapezoid to t + gamma*h, then BDF2 to t + h. (Y, evals, ok)."""
     gamma = _GAMMA
     gh = gamma * h
     f_n = _safe_eval(f, t, y_n)
@@ -303,12 +233,7 @@ def _trbdf2_step(
 
 
 def _safe_eval(f: RHS, t: float, y: Sequence[float]) -> list[float] | None:
-    """Evaluate the RHS, returning None if it overflows or is non-finite.
-
-    A diverging Newton iterate can push the state into a regime where the RHS
-    overflows; that is a signal the step is too large, not a crash to propagate.
-    The caller reads None as "did not converge" and shrinks h.
-    """
+    """Evaluate the RHS, returning None if it overflows or is non-finite."""
     try:
         out = [float(v) for v in f(t, y)]
     except (OverflowError, ValueError, ZeroDivisionError):

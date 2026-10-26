@@ -1,11 +1,4 @@
-"""Edge, validation, and error-path coverage for the pre-existing vn_core modules.
-
-The roadmap's new modules ship at 100% coverage with their own suites; this file closes
-the validation-branch and edge-case gaps in the older modules (distributions, sample,
-report, solve, common, and the PCE helpers) so the whole package holds at 100% and the
-coverage gate is a real regression guard. These are behavior assertions (a bad input
-raises, an edge value is right), not execution checks.
-"""
+"""Edge, validation, and error-path coverage for the pre-existing vn_core modules."""
 
 from __future__ import annotations
 
@@ -145,8 +138,7 @@ def test_solve_rejects_bad_inputs():
 
 
 def test_solve_reraises_integrator_valueerror():
-    # An out-of-span t_eval makes the integrator raise ValueError; solve re-raises it
-    # rather than swallowing it (the try/except ValueError: raise path).
+    # An out-of-span t_eval makes the integrator raise ValueError; solve re-raises it unchanged.
     with pytest.raises(ValueError, match="outside the span"):
         solve(lambda t, y: [y[0]], [1.0], (0.0, 1.0), t_eval=[0.5, 2.0])
 
@@ -198,8 +190,7 @@ def test_pce_recurrence_and_basis_reject_unknown_family():
 def test_pce_constant_finding_has_zero_variance():
     from vn_core.uq import pce_fit
 
-    # A constant finding: degree-1 Legendre quadrature gives an exactly-zero c_1 (the
-    # symmetric 2-point rule cancels), so variance is exactly 0 and the indices are 0.
+    # A constant finding: degree-1 Legendre quadrature gives an exactly-zero c_1, so the variance is exactly 0 and the indices read 0.
     r = pce_fit({"a": Uniform(-1.0, 1.0)}, lambda s: 5.0, degree=1, validation=0)
     assert r.variance == 0.0
     assert r.first_order == {"a": 0.0}
@@ -218,7 +209,6 @@ def test_pce_control_variate_rejects_nonfinite_in_residual_mc():
     from vn_core.uq import pce_control_variate
 
     # Finite on the (interior) quadrature nodes, but +inf on the tail an MC sample hits:
-    # the residual-MC loop catches the nonfinite draw.
     f = lambda s: (float("inf") if s["a"] > 0.99 else s["a"])  # noqa: E731
     with pytest.raises(ValueError, match="nan/inf"):
         pce_control_variate({"a": Uniform(0.0, 1.0)}, f, degree=2, n=200, seed=3)
@@ -227,9 +217,7 @@ def test_pce_control_variate_rejects_nonfinite_in_residual_mc():
 def test_sobol_bootstrap_skips_degenerate_resamples():
     from vn_core.uq import sobol_total_order
 
-    # A binary finding with a tiny design and many bootstrap resamples: some resamples
-    # draw an all-identical set (zero variance) which the bootstrap skips. Overall the
-    # finding still varies, so the estimate is well defined.
+    # A binary finding with a tiny design and many bootstrap resamples: some resamples have zero variance, exercising the empty-vals fallback.
     r = sobol_total_order(
         {"x": Uniform(0.0, 1.0)}, lambda s: 1.0 if s["x"] > 0.5 else 0.0,
         n=3, seed=1, bootstrap=300,
