@@ -6,7 +6,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-EM_DASH = "—"
+EM_DASH = "\u2014"
 
 # Emoji only. Greek letters, arrows and the math symbols CLAUDE.md allows sit below U+2600 and are deliberately absent.
 _EMOJI_RANGES = (
@@ -87,7 +87,7 @@ def selftest() -> int:
 
         # A real emoji in the same block must still be caught.
         tick = Path(d) / "tick.md"
-        tick.write_text("done ✅\n")
+        tick.write_text("done \u2705\n")
         assert len(scan(tick)) == 1, scan(tick)
 
         allowed = Path(d) / "fixture.ts"
@@ -95,7 +95,7 @@ def selftest() -> int:
         assert scan(allowed) == [], scan(allowed)
 
         dashed = Path(d) / "dashed.md"
-        dashed.write_text("this — that\n")
+        dashed.write_text("this \u2014 that\n")
         assert len(scan(dashed)) == 1, scan(dashed)
 
         emo = Path(d) / "emo.ts"
@@ -103,7 +103,7 @@ def selftest() -> int:
         assert len(scan(emo)) == 1, scan(emo)
 
         lock = Path(d) / "uv.lock"
-        lock.write_text("this — that\n")
+        lock.write_text("this \u2014 that\n")
         assert scan(lock) == [], "lock files are exempt"
     print("check_typography selftest OK")
     return 0
