@@ -1,19 +1,4 @@
-"""Operational range: how far from the Sun the probe can still self-replicate.
-
-This ties the solar environment (`SolarArray`) to `closure-sim`'s replication model.
-As the probe moves outward, delivered power falls as 1/d^2, which lowers the energy
-ceiling on local production; past some heliocentric distance the probe can no longer
-reach its target output and replication is no longer viable. That crossover distance
-is the operational range.
-
-Because delivered power decreases monotonically with distance, viability is
-monotonic too - viable close in, not viable far out - so a single bisection finds
-the crossover exactly.
-
-closure-sim is consumed through its public API (`Factory`, `ReplicationParams`,
-`simulate`) - no reaching into internals (CLAUDE.md §4). This module stays a pure,
-deterministic fold with zero pimas imports (§7).
-"""
+"""Operational range: how far from the Sun the probe can still self-replicate."""
 
 from __future__ import annotations
 
@@ -29,12 +14,7 @@ def available_power_kw(
     distance_au: float,
     solar_constant: float = SOLAR_CONSTANT_1AU_W_M2,
 ) -> float:
-    """Electrical power (kW) the array delivers at a heliocentric distance (AU).
-
-    ``solar_constant`` is exposed so UQ (issue #35) can push a sampled S0 through
-    the fold - otherwise range.py would silently pin to the module default and
-    any sampled S0 would be dropped en route to the finding.
-    """
+    """Electrical power (kW) the array delivers at a heliocentric distance (AU)."""
     return array.power_w(distance_au, solar_constant) / 1000.0
 
 
@@ -46,18 +26,12 @@ def is_viable_at(
     *,
     solar_constant: float = SOLAR_CONSTANT_1AU_W_M2,
 ) -> bool:
-    """True if the probe reaches its target output at this heliocentric distance.
-
-    Runs closure-sim's replication with the array's delivered power substituted in
-    for ``available_power_kw``; viability is "does output ever reach the target".
-    """
+    """True if the probe reaches its target output at this heliocentric distance."""
     power_kw = available_power_kw(array, distance_au, solar_constant)
     if power_kw <= 0:
         return False
     params = rep.model_copy(update={"available_power_kw": power_kw})
-    # reaches_target is the cheap, timeline-free equivalent of
-    # `simulate(...).time_to_target_days is not None` (issue #38 Phase 2): this is
-    # a bisection hot path, so skipping the per-day SimStep grid is ~36x faster.
+    # reaches_target is the cheap, timeline-free equivalent of `simulate(...).time_to_target_days is not None` (issue #38 Phase 2): this is a bisection hot path, so skipping the per-day SimStep grid is ~36x faster.
     return reaches_target(factory, params)
 
 
@@ -80,12 +54,7 @@ def operational_range(
     tol_au: float = 1e-3,
     solar_constant: float = SOLAR_CONSTANT_1AU_W_M2,
 ) -> RangeResult:
-    """Max heliocentric distance (AU) at which the probe still reaches its target.
-
-    Bisects between ``lo_au`` and ``hi_au``. Returns ``operational_range_au=None`` if
-    the probe is underpowered even at ``lo_au``, and ``saturated=True`` if it is still
-    viable at ``hi_au`` (the true range lies beyond the search ceiling).
-    """
+    """Max heliocentric distance (AU) at which the probe still reaches its target."""
     if not is_viable_at(array, factory, rep, lo_au, solar_constant=solar_constant):
         return RangeResult(
             operational_range_au=None, saturated=False, lo_au=lo_au, hi_au=hi_au

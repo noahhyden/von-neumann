@@ -1,22 +1,4 @@
-/**
- * Light-speed coordination limits - the pure, testable core (Layer A, no pimas).
- *
- * A swarm coordinates by sharing state, and state travels no faster than light. What
- * matters is the ratio ρ = (round-trip latency) / (decision timescale), where the
- * latency is fixed by geometry: round-trip = 2·d/c. As ρ climbs, a swarm walks down a
- * *staircase* of coordination modes - real-time closed-loop → move-and-wait →
- * supervisory → delay-tolerant → fully independent colonies - and it does so in jumps,
- * not smoothly (the consensus-stability wall, Olfati-Saber & Murray 2004).
- *
- * This module turns an inter-node distance in parsecs into that classification. Every
- * number is sourced in swarm/REFERENCES.md ("Coordination-horizon visualization"). It is
- * framework-agnostic and imports no pimas - the reactive model (`swarm-model.ts`) and the
- * canvas (`main.tsx`) are the skin over it.
- *
- * The rung *transitions* are sourced from the teleoperation/networking literature; the
- * round-number bucket edges (1 s / 1 min / 1 hr / 1 yr of round-trip latency) are a
- * presentation choice, tagged [ESTIMATE] in REFERENCES.md.
- */
+/** Light-speed coordination limits (round-trip = 2d/c) as a pure, pimas-free core (Layer A); sourced in swarm/REFERENCES.md, whose 1 s / 1 min / 1 hr / 1 yr bucket edges are an [ESTIMATE] presentation choice. */
 import { C_PC_PER_YEAR } from "./swarm.ts";
 
 /** Julian year in seconds - matches the value C_PC_PER_YEAR is derived from (swarm.ts). */
@@ -32,11 +14,7 @@ export function roundTripYears(distPc: number): number {
   return (2 * distPc) / C_PC_PER_YEAR;
 }
 
-/**
- * The coordination ratio ρ = round-trip latency / decision timescale (both in years).
- * ρ ≪ 1: news arrives while still current (tight coordination possible). ρ ≳ 1: the world
- * changes faster than word of it arrives (tight coordination physically impossible).
- */
+/** The coordination ratio ρ = round-trip latency / decision timescale (both in years). */
 export function rho(distPc: number, decisionTimescaleYears: number): number {
   return roundTripYears(distPc) / decisionTimescaleYears;
 }
@@ -58,11 +36,7 @@ export interface Rung {
   maxRoundTripSec: number;
 }
 
-/**
- * The staircase, ordered fastest→slowest. Bounds are round-trip latency in seconds; a
- * distance falls in the first rung whose bound it does not exceed. Sourced in
- * swarm/REFERENCES.md.
- */
+/** The staircase, ordered fastest→slowest, with round-trip latency bounds in seconds sourced in swarm/REFERENCES.md. */
 export const RUNGS: Rung[] = [
   { key: "realtime",    index: 0, label: "Real-time closed-loop", analog: "LEO",           who: "central controller, in the loop", color: "#8cb395", maxRoundTripSec: 1 },
   { key: "movewait",    index: 1, label: "Move-and-wait",         analog: "Earth–Moon",    who: "central, but degraded",           color: "#7fa9b5", maxRoundTripSec: 60 },

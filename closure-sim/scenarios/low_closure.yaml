@@ -1,11 +1,4 @@
-# Deliberately low-closure factory (~43% of its own mass made locally). It's
-# electronics-heavy and leans on imported precision parts, so it stays starved for
-# Earth resupply. Use it to see the electronics wall bite from BOTH sides: as
-# vitamins the chips throttle growth; made locally their enormous energy cost
-# (thousands of kWh/kg) starves the factory of power instead.
-#
-# energy_to_produce_kwh_per_kg = electricity the factory spends per kg on-site.
-# See REFERENCES.md for sources.
+# Deliberately low-closure factory (~43% of its own mass made locally): electronics-heavy, so it stays starved for Earth resupply; energy_to_produce_kwh_per_kg is on-site electricity per kg (sources: REFERENCES.md).
 name: Low-Closure Outpost Factory
 
 subsystems:

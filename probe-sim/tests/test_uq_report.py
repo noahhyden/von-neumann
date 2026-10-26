@@ -1,10 +1,4 @@
-"""one_line_finding: assert the formatting contract, not execution.
-
-The reporter is pure formatting glue - a caller uses it to write "X, +/- Y,
-driven by Z" once and get consistent output everywhere. Tests pin the two
-regimes: a clear single driver, and a "shared between two" case where no one
-input dominates.
-"""
+"""one_line_finding: assert the formatting contract, not execution."""
 
 import math
 
@@ -40,8 +34,7 @@ def test_one_line_names_the_dominant_driver():
     assert "90% CI" in line
     assert "driven by efficiency" in line
     assert "S_T=" in line
-    # Values should read cleanly, not as scientific-notation gibberish for
-    # this scenario (mean ~0.63, std ~0.012, so both fit 4-sig-fig format).
+    # Values should read cleanly, not as scientific-notation gibberish for this scenario (mean ~0.63, std ~0.012, so both fit 4-sig-fig format).
     assert "0.6" in line
 
 

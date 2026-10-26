@@ -1,28 +1,17 @@
-"""Core domain model: subsystems, replication parameters, and the factory itself.
-
-A factory is a bill of materials (a list of :class:`Subsystem`) plus, optionally,
-a :class:`ReplicationParams` block describing how a landed seed grows. Closure and
-replication math live in sibling modules; this file only holds data + a few cheap
-mass/energy aggregates so the model stays the single source of truth.
-"""
+"""Core domain model: subsystems, replication parameters, and the factory itself."""
 
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-# Categories treated as "electronics" for the electronics-wall analysis. Kept here
-# (not buried in analysis.py) because scenario authors reason in these terms.
+# Categories treated as "electronics" for the electronics-wall analysis.
 ELECTRONICS_CATEGORIES: frozenset[str] = frozenset(
     {"compute", "electronics", "semiconductor"}
 )
 
 
 class Subsystem(BaseModel):
-    """One line item in a factory's bill of materials.
-
-    A subsystem is a *vitamin* when it cannot be produced locally
-    (``producible_locally is False``) - it must be shipped from Earth.
-    """
+    """One line item in a factory's bill of materials."""
 
     name: str
     mass_kg: float = Field(gt=0)
@@ -42,13 +31,7 @@ class Subsystem(BaseModel):
 
 
 class ReplicationParams(BaseModel):
-    """Inputs to the replication simulator.
-
-    ``seed_mass_kg`` is the factory mass landed from Earth and ``local_build_rate_kg_per_day``
-    is that seed's initial local-material output. Their ratio defines productivity
-    (output per day per kg of installed factory), which is what makes capacity grow
-    with the factory - i.e. makes replication exponential rather than linear.
-    """
+    """Inputs to the replication simulator."""
 
     seed_mass_kg: float = Field(gt=0)
     local_build_rate_kg_per_day: float = Field(gt=0)
@@ -57,9 +40,7 @@ class ReplicationParams(BaseModel):
     available_power_kw: float = Field(gt=0)
     target_output_kg_per_day: float = Field(gt=0, default=1000.0)
     duration_days: int = Field(gt=0, default=3650)
-    # Reporting cadence, not an integration step: the mass ODE is integrated
-    # adaptively by vn_core.ode (issue #38); dt_days only sets the spacing of the
-    # SimStep timeline the result is sampled onto.
+    # Reporting cadence, not an integration step: the mass ODE is integrated adaptively by vn_core.ode (issue #38); dt_days only sets the spacing of the SimStep timeline the result is sampled onto.
     dt_days: float = Field(gt=0, default=1.0)
 
     @property

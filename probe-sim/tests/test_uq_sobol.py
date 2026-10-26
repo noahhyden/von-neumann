@@ -1,15 +1,4 @@
-"""Sobol total-order indices: assert attribution, not execution.
-
-The tests below pin the four properties from issue #35's validation list applied
-to sensitivity analysis: (1) indices sum close to 1, (2) a genuinely dominant
-input dominates, (3) a Fixed / non-contributing input reads as ~0, and (4) the
-estimator is deterministic under seeding.
-
-Analytic reference: for an additive model f = sum_i g_i(X_i) with independent
-X_i, first-order and total-order Sobol indices coincide and sum exactly to 1.
-For an interactive model f = X_1 * X_2 the sum exceeds 1 because interactions
-are counted in each participating input's total-order index.
-"""
+"""Sobol total-order indices: assert attribution, not execution."""
 
 import math
 
@@ -28,10 +17,7 @@ def multiplicative(sample):
 
 
 def test_additive_indices_sum_to_one():
-    # Three independent Uniform(0, 1)s, each contributing Var = 1/12. Total-order
-    # indices should each be ~1/3 and sum to ~1 (this is a *closed* case where
-    # sum-to-1 is exact in the population; sampling error at n=2000 keeps this
-    # a soft assertion).
+    # Three independent Uniform(0, 1)s, each contributing Var = 1/12, so total-order indices are each ~1/3 and sum to ~1.
     inputs = {
         "a": Uniform(0.0, 1.0),
         "b": Uniform(0.0, 1.0),
@@ -45,8 +31,7 @@ def test_additive_indices_sum_to_one():
 
 
 def test_dominant_input_actually_dominates():
-    # Same additive model but "a" has 100x the variance. Its S_T should approach 1
-    # and the others should be near 0. Big gap, so ranking is stable.
+    # Same additive model but "a" has 100x the variance, so its S_T should approach 1 and the others ~0.
     inputs = {
         "a": Uniform(low=-5.0, high=5.0),  # var = 100/12 ~= 8.33
         "b": Uniform(low=-0.5, high=0.5),  # var = 1/12 ~= 0.083
@@ -61,9 +46,7 @@ def test_dominant_input_actually_dominates():
 
 
 def test_fixed_input_registers_as_zero_contribution():
-    # If an input is a Fixed (spread = 0), it cannot drive variance; the
-    # estimator should read its S_T at ~0. This is the "honest [GAP]" property:
-    # we do not conjure sensitivity where there is no spread.
+    # If an input is a Fixed (spread = 0), it cannot drive variance; the estimator should read its S_T at ~0.
     inputs = {
         "a": Uniform(low=-1.0, high=1.0),
         "b": Uniform(low=-1.0, high=1.0),
@@ -78,10 +61,7 @@ def test_fixed_input_registers_as_zero_contribution():
 
 
 def test_multiplicative_model_indices_can_exceed_one():
-    # f = a * b with a, b ~ Uniform(1, 3). Total-order for each is E[a^2]*Var(b)/Var(f)
-    # + Var(a)*Var(b)/Var(f) etc.; the sum exceeds 1 because the interaction is
-    # attributed to both inputs. This test doesn't pin an exact value - it pins
-    # the *shape* (both nonzero, sum > 1 within sampling slack).
+    # f = a * b with a, b ~ Uniform(1, 3): the interaction is credited to both inputs, so both S_T are nonzero and their sum exceeds 1.
     inputs = {
         "a": Uniform(low=1.0, high=3.0),
         "b": Uniform(low=1.0, high=3.0),
@@ -104,8 +84,7 @@ def test_deterministic_same_seed():
 
 
 def test_evaluation_count_matches_the_advertised_cost():
-    # Documented cost is n * (K + 2). If this stops holding a caller planning
-    # around evaluation budget will be silently misled.
+    # Documented cost is n * (K + 2) evaluations; a caller budgeting around it would be silently misled if this stopped holding.
     inputs = {"a": Uniform(0, 1), "b": Uniform(0, 1), "c": Uniform(0, 1)}
     evals = 0
 
@@ -120,11 +99,7 @@ def test_evaluation_count_matches_the_advertised_cost():
 
 
 def test_probe_range_sobol_ranks_efficiency_as_dominant():
-    # The realistic probe-sim finding from test_uq_sample: max heliocentric
-    # distance for a solar-electric probe. Efficiency has a factor-of-1.14 range
-    # (0.28-0.32); TSI has +/- 0.5 on 1360.8, a factor-of-1.0004 range. So
-    # efficiency should dominate S_T by orders of magnitude - this is the
-    # concrete "which input drives the finding" claim UQ has to make honestly.
+    # The realistic probe-sim finding from test_uq_sample: max heliocentric distance for a solar-electric probe.
     def finding(sample):
         return math.sqrt(
             sample["S0"] * sample["area_m2"] * sample["efficiency"]
@@ -147,8 +122,7 @@ def test_probe_range_sobol_ranks_efficiency_as_dominant():
 
 
 def test_degenerate_constant_finding_returns_zero_indices():
-    # A finding that ignores its inputs has no variance; every S_T must be 0
-    # (and the estimator must not divide by zero).
+    # A finding that ignores its inputs has no variance; every S_T must be 0 (and the estimator must not divide by zero).
     inputs = {"a": Uniform(0, 1), "b": Uniform(0, 1)}
     r = sobol_total_order(inputs, lambda s: 3.14, n=100, seed=41)
     assert r.variance == 0.0
@@ -156,11 +130,7 @@ def test_degenerate_constant_finding_returns_zero_indices():
 
 
 def test_sobol_ranking_stable_across_seeds():
-    # If the ranking flipped between two seeds at n=1500, it would mean the
-    # sample size is too small to trust *any* ordering the module reports. On
-    # a case with a clear ~10x variance gap between the two inputs the ranking
-    # must be stable across independent seeds. Value-level agreement within a
-    # noticeable slack is the more useful "converged enough" property.
+    # If the ranking flipped between two seeds at n=1500, it would mean the sample size is too small to trust *any* ordering the module reports.
     inputs = {
         "big": Uniform(low=-3.0, high=3.0),   # var 3.0
         "small": Uniform(low=-0.3, high=0.3),  # var 0.03

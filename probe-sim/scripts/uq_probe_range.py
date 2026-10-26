@@ -1,22 +1,4 @@
-"""End-to-end UQ validation on a probe-sim headline finding.
-
-CLAUDE.md §2 asks for a small script that runs the full flow and asserts on
-behavior, not on execution. Issue #35 asks specifically for four things:
-
-  (a) error bars shrink when an input's spread shrinks,
-  (b) Sobol total-order indices sum to ~1 for an additive model,
-  (c) a dominant input actually dominates the Sobol ranking,
-  (d) the whole pipeline is deterministic under seeding.
-
-We validate all four against a real probe-sim finding: the maximum heliocentric
-distance a solar-electric probe can hold a required power demand (Borgue & Hein
-shape). Inputs are sourced Kopp & Lean TSI (1360.8 +/- 0.5) and the Landis &
-Bailey space multi-junction efficiency range (0.28-0.32); area and demand are
-Fixed here (they are per-scenario knobs, not per-source uncertainties, at this
-step of the depth track).
-
-Run: `uv run --extra dev python scripts/uq_probe_range.py`
-"""
+"""End-to-end UQ validation on a probe-sim headline finding."""
 
 from __future__ import annotations
 

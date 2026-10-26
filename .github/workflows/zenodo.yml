@@ -1,16 +1,6 @@
 name: zenodo
 
-# Mint a per-paper Zenodo DOI (issue #8). MANUAL and GATED: it runs only on a
-# workflow_dispatch you trigger, and only when the ZENODO_SANDBOX_TOKEN secret is set;
-# with no token it exits cleanly as a no-op (it never mints without an explicit token +
-# manual run). It targets sandbox.zenodo.org - identical API, no real DOIs burned - so
-# the flow can be iterated safely. Graduating to production is additive: add ZENODO_
-# TOKEN and point ZENODO_BASE at https://zenodo.org/api.
-#
-# One deposition PER PAPER (concept DOI), a new version per run (version DOI), driven
-# straight from Zenodo's REST API - deliberately bypassing the repo-scoped GitHub->
-# Zenodo auto-integration, which archives the whole monorepo and cannot scope to a
-# paper. The repo-level concept DOI in CITATION.cff stays as the software citation.
+# Mint a per-paper Zenodo DOI (issue #8): manual dispatch only, a no-op without ZENODO_SANDBOX_TOKEN, and sandbox.zenodo.org only (no real DOIs).
 
 on:
   workflow_dispatch:
@@ -49,8 +39,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Gate: secrets are not usable in step-level `if:`, so map to env and test here.
-      # No token -> clean no-op with instructions, so a curious run never errors.
+      # Gate: secrets are not usable in step-level `if:`, so map to env and test here; no token is a clean no-op so a curious run never errors.
       - name: Gate on the sandbox token
         id: gate
         run: |
@@ -75,8 +64,7 @@ jobs:
         with:
           enable-cache: true
 
-      # Reserve the DOI FIRST and write papers/<slug>/doi.tex, so the typeset PDF below
-      # carries its own DOI. Create-vs-newversion is decided from paper.json state.
+      # Reserve the DOI FIRST and write papers/<slug>/doi.tex, so the typeset PDF below carries its own DOI.
       - name: Reserve the DOI (create or new version) and write doi.tex
         if: steps.gate.outputs.gated == 'false'
         run: node papers/scripts/zenodo-publish.mjs reserve --slug "$SLUG" --state "$RUNNER_TEMP/zenodo-state.json"
@@ -102,9 +90,7 @@ jobs:
           working_directory: papers/${{ github.event.inputs.slug }}
           root_file: main.tex
 
-      # Reproducibility artifact: the paper source plus everything needed to regenerate
-      # its figures (its sim module + the shared bibliography source). Offsets having no
-      # institutional affiliation with a self-contained, rebuildable record.
+      # Reproducibility artifact: the paper source plus everything needed to regenerate its figures (its sim module + the shared bibliography source).
       - name: Bundle the reproducibility zip
         if: steps.gate.outputs.gated == 'false'
         run: |
