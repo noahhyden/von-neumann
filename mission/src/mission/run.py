@@ -1,25 +1,4 @@
-"""The end-to-end mission fold: one deterministic run over the four sibling modules.
-
-Given a `MissionScenario`, this chains the whole story of launching a self-replicating
-probe operation, in six stages, each a call into an existing module's public API
-(CLAUDE.md §4) - no new physics, no new numbers:
-
-  0. LAUNCH      launch-economics - seed + vitamins launched at $/kg; the rocket
-                 equation's propellant fraction shows *why* that $/kg is what it is.
-  1. CLOSURE     closure-sim      - the factory's mass closure ratio.
-  2. ARRIVE      probe-sim        - solar power delivered at heliocentric distance d
-                                    (inverse-square).
-  3. SPLIT       power-budget     - divide that power into build / think / housekeeping.
-  4. REPLICATE   closure-sim      - feed the *manufacturing* share into the replication
-                                    sim; does output ever reach target?
-  5. THINK       power-budget     - the compute the *compute* share buys (FLOPS,
-                                    brain-equivalents).
-  6. PAYOFF      launch-economics - launch-mass leverage and $ saved vs. launching the
-                                    finished installation, with vitamins set by closure.
-
-Pure, deterministic, plain data; zero pimas imports (CLAUDE.md §7). This is the ground
-truth the frontend's TS port is parity-tested against.
-"""
+"""The end-to-end mission fold: one deterministic run over the four sibling modules."""
 
 from __future__ import annotations
 
@@ -83,11 +62,7 @@ class MissionResult:
 
 
 def _verify_mission_result(r: MissionResult) -> None:
-    """Assert composite invariants on a completed mission. See REFERENCES.md.
-
-    Called under `if __debug__:` at the end of `run_mission`. Raises AssertionError
-    with an [inv:...] tag on the first violation.
-    """
+    """Assert composite invariants on a completed mission. See REFERENCES.md."""
     assert 0.0 <= r.closure_ratio <= 1.0, (
         f"[inv:ms-composite-closure] closure_ratio={r.closure_ratio} outside [0, 1]"
     )
@@ -138,9 +113,7 @@ def run_mission(scenario: MissionScenario) -> MissionResult:
     delivered_w = array.power_w(scenario.distance_au)
     irradiance = solar_irradiance_w_m2(scenario.distance_au)
 
-    # 3. SPLIT - one power split, routed to the two consumers below (reconciles the
-    # modules: probe-sim's range.py gives the factory 100% of power; here the factory
-    # gets only its manufacturing share, and compute gets its own).
+    # 3. SPLIT - one power split routed to the two consumers below; unlike probe-sim range.py (100% to the factory) the factory gets only its manufacturing share.
     budget = PowerBudget(
         total_w=delivered_w,
         fraction_manufacturing=scenario.fraction_manufacturing,
@@ -153,9 +126,7 @@ def run_mission(scenario: MissionScenario) -> MissionResult:
         budget.compute_w, scenario.compute_efficiency_flops_per_w
     )
 
-    # 4. REPLICATE - feed the manufacturing share (kW) into the replication sim. If the
-    # split leaves no manufacturing power, the factory cannot build: report a stall
-    # rather than asking the sim to run at zero power (ReplicationParams requires > 0).
+    # 4. REPLICATE - feed the manufacturing share (kW) to the replication sim, reporting a stall if it is zero since ReplicationParams requires > 0.
     manufacturing_kw = budget.manufacturing_w / 1000.0
     if manufacturing_kw > 0.0:
         rep = factory.replication.model_copy(

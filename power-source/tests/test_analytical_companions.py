@@ -1,37 +1,4 @@
-"""Analytical companion for power-source (issue #50, Phase 2).
-
-Formalizes the non-obvious #24 finding: the solar/nuclear crossover distance
-is `d = sqrt(sp_solar_1AU / sp_nuclear)`, and the total power required
-**cancels** (both source masses scale linearly with P, so setting the masses
-equal removes P). Deriving it:
-
-## Derivation
-
-At a heliocentric distance d, an array's specific power falls as `1/d^2`:
-
-    sp_solar(d) = sp_solar_1AU / d^2                        (1)
-
-A nuclear source has distance-independent specific power `sp_nuclear`. To
-deliver power P, the two source masses are
-
-    m_solar(P, d)   = P / sp_solar(d) = P * d^2 / sp_solar_1AU
-    m_nuclear(P)    = P / sp_nuclear
-
-Setting m_solar = m_nuclear:
-
-    P * d^2 / sp_solar_1AU = P / sp_nuclear
-    d^2 = sp_solar_1AU / sp_nuclear                          (2)
-    d_cross = sqrt(sp_solar_1AU / sp_nuclear)               (3)
-
-P cancels. The crossover is a property of the two technologies, not of
-the mission's power budget.
-
-## Test coverage
-- `crossover_distance_au` matches (3) analytically.
-- Doubling / halving P leaves the crossover distance unchanged.
-- Inside the crossover, solar is lighter (m_solar < m_nuclear); outside, nuclear.
-- The choose_source result is consistent with the sign of `d - d_cross`.
-"""
+"""Analytical companion for power-source (issue #50, Phase 2)."""
 
 import math
 
@@ -96,6 +63,5 @@ def test_choose_source_consistent_with_crossover():
 
 def test_default_crossover_in_the_sourced_band():
     d_cross = crossover_distance_au()
-    # Sourced anchors from REFERENCES.md: ~3.9 AU (fission), ~4.4 AU (RTG). Default
-    # is fission; must be near 3.9.
+    # Sourced anchors from REFERENCES.md: ~3.9 AU (fission), ~4.4 AU (RTG); the default is fission and must be near 3.9.
     assert 3.5 < d_cross < 4.5

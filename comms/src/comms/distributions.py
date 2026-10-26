@@ -1,15 +1,4 @@
-"""Distributional companions to comms' sourced numbers.
-
-Issue #35 (UQ). comms' constants have small documented spreads:
-
-- **K_OPTICAL_MBPS_AU2**: fit to two verified DSOC anchors, k=56.7 and
-  k=55.3 - the +/- ~1% agreement between them IS the honest error bar.
-  Uniform(55.3, 56.7).
-- **R_MAX_DSOC_MBPS**: the modem/protocol ceiling as published; DSOC has
-  demonstrated up to ~267 Mbps but the near-Earth plateau in practice
-  runs 200-267 Mbps depending on link margin. Uniform(200, 267).
-- **BITS_PER_MBIT**: definitional (unit conversion). Fixed.
-"""
+"""Distributional companions to comms' sourced numbers."""
 
 from __future__ import annotations
 

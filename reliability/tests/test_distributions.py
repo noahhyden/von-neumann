@@ -29,9 +29,7 @@ def test_satellite_hazard_is_loguniform_due_to_orders_of_magnitude_spread():
 
 
 def test_array_power_fraction_uq_shows_ten_year_spread():
-    # Under UQ over the 0.002-0.010 band, what is the array power left after
-    # 10 years? Point value at 0.003 gives ~97% left; the wider band pulls
-    # this down to ~90% at the high end.
+    # Under UQ over the 0.002-0.010 band, array power left after 10 years: the point value 0.003 gives ~97%, the high end of the band ~90%.
     def frac_at_10yr(sample):
         return array_power_fraction(years=10.0, degradation_per_yr=sample["deg"])
 

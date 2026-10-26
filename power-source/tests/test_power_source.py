@@ -1,8 +1,4 @@
-"""power-source validation: the two crossovers, the Pu-238 wall, reactor radiator.
-
-Anchors: solar ~100 W/kg (ROSA flight), fission ~6.7 W/kg (Kilopower 10 kWe), GPHS-RTG
-5.2 W/kg / 8.1 kg Pu-238; Pu-238 production 0.5-1.5 kg/yr. See REFERENCES.md.
-"""
+"""power-source validation: the two crossovers, the Pu-238 wall, reactor radiator."""
 
 import math
 

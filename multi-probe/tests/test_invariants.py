@@ -1,7 +1,4 @@
-"""Fold-level invariants for multi_probe.fleet.step (issue #48, phase A).
-
-Positive + negative test per invariant. Invariant tags match REFERENCES.md.
-"""
+"""Fold-level invariants for multi_probe.fleet.step (issue #48, phase A)."""
 
 import copy
 

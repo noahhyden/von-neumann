@@ -1,8 +1,4 @@
-"""isru closure-ceiling validation: you cannot build from an absent element.
-
-The lunar feedstock has O/Si/Fe/Ca/Al/Mg/Ti but only ppm C/H/N, so any part needing
-bulk carbon/hydrogen/nitrogen falls above the closure ceiling. See REFERENCES.md.
-"""
+"""isru closure-ceiling validation: you cannot build from an absent element."""
 
 import pytest
 

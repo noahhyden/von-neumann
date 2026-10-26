@@ -1,9 +1,4 @@
-"""isru energy validation: the sourced LOX and metal specific energies.
-
-Anchors: PNAS 2025 full-chain LOX (24.3 +/- 5.8 kWh/kg; H2-reduction ~55% +
-electrolysis ~38% + liquefaction ~4.8%), and molten-oxide-electrolysis iron
-(2.6 theoretical / 3.7 practical kWh/kg). See REFERENCES.md.
-"""
+"""isru energy validation: the sourced LOX and metal specific energies."""
 
 import pytest
 
@@ -24,8 +19,7 @@ def test_oxygen_full_chain_central_and_band():
 
 
 def test_oxygen_band_within_taylor_carrier_range():
-    # Taylor & Carrier (1993) put LOX production across technologies at 18-35 kWh/kg;
-    # the PNAS central+band must sit inside that independent envelope.
+    # Taylor & Carrier (1993) put LOX production across technologies at 18-35 kWh/kg; the PNAS central+band must sit inside that independent envelope.
     b = oxygen_energy_kwh_per_kg()
     assert 18.0 <= b.low_kwh_per_kg
     assert b.high_kwh_per_kg <= 35.0
@@ -66,8 +60,7 @@ def test_oxygen_far_costlier_than_metal():
 
 
 def test_water_ice_route_is_a_distinct_cheaper_lox_basis():
-    # Kornuta's water-ice LOX (~11.3 kWh/kg) is a different feedstock, cheaper than the
-    # regolith route - the seam to the propellant module. Must not be conflated.
+    # Kornuta water-ice LOX (~11.3 kWh/kg) is a different feedstock, cheaper than the regolith route - the seam to the propellant module, and must not be conflated.
     assert WATER_ICE_LOX_KWH_PER_KG == pytest.approx(11.3)
     assert WATER_ICE_LOX_KWH_PER_KG < oxygen_energy_kwh_per_kg().central_kwh_per_kg
 

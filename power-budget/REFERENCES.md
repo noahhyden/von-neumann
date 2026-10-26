@@ -87,3 +87,11 @@ properties, callable from tests and from downstream callers under `if __debug__:
   drift where a derived-property formula silently breaks the partition.
 
 Tests: `tests/test_invariants.py`.
+
+## UQ band notes (distributions.py)
+
+- **Koomey trend, ~2x every 1.6 years** - the historical doubling of computations per kWh,
+  Koomey et al. (2011), listed in the bibliography above. It motivates the width of
+  `COMPUTE_EFFICIENCY_FLOPS_PER_W_DIST = LogUniform(1e10, 1e12)` (two orders of magnitude
+  around the H100-class ~1e11 FLOPS/W). `[ESTIMATE]`: the +/- one-decade window is a stated
+  choice, not a sourced figure.

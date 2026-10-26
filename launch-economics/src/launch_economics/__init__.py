@@ -1,11 +1,4 @@
-"""launch-economics - the economics of not launching mass.
-
-Launch cost, the rocket-equation Δv penalty on delivering mass across the solar
-system, and the launch-mass leverage of shipping a self-replicating seed instead of
-the finished installation.
-
-Every number traces to a source; see REFERENCES.md.
-"""
+"""launch-economics - the economics of not launching mass."""
 
 from launch_economics.economics import ReplicationLaunchComparison
 from launch_economics.from_closure import (

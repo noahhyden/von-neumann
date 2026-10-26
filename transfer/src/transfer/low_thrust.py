@@ -1,27 +1,4 @@
-"""Low-thrust solar-electric (SEP) transfers: propellant, thrust, and trip time.
-
-A solar-electric probe does not burn impulsively; it thrusts continuously at low
-acceleration and spirals between orbits. Three physical facts set the leg:
-
-1. **Available power falls as 1/d^2** with heliocentric distance - the same law
-   `probe-sim` already models for a solar array. We reuse it (single source of truth
-   for the solar constant), not redefine it.
-2. **Thrust is power divided by exhaust speed:** `F = 2 eta P / (g0 Isp)`. The
-   factor 2 is the jet-power-to-thrust relation for a beam of effective exhaust
-   velocity `v_e = g0 Isp` at efficiency `eta` (`P_jet = F v_e / 2`).
-3. **Trip time is Δv over acceleration** via Edelbaum's closed form for a
-   circle-to-circle transfer. For a coplanar hop this reduces to `Δv = |V1 - V2|`.
-
-Propellant comes from the Tsiolkovsky rocket equation, which we reuse from
-`launch-economics` rather than re-deriving. Deterministic, plain data, zero pimas
-imports (CLAUDE.md §7).
-
-Modelling assumption (documented, not simulated): constant thrust *acceleration*
-over the leg. Real thrusters shed mass, so acceleration rises during the burn and the
-true trip is a little shorter; using the initial wet mass makes the trip-time estimate
-conservative (an upper bound). We do not integrate the mass loss - that would be a
-trajectory simulator this module deliberately avoids (CLAUDE.md §3).
-"""
+"""Low-thrust solar-electric (SEP) transfers: propellant, thrust, and trip time."""
 
 from __future__ import annotations
 
@@ -36,14 +13,7 @@ from transfer.orbits import SECONDS_PER_DAY, circular_orbital_speed_m_s
 
 @dataclass(frozen=True)
 class SepResult:
-    """A low-thrust solar-electric transfer leg.
-
-    propellant_mass_kg is the reaction mass for the given Δv (Tsiolkovsky).
-    power_at_distance_w is the SEP array output at the leg's heliocentric distance.
-    thrust_n and accel_m_s2 use that (distance-reduced) power. trip_time_days is the
-    Edelbaum estimate at constant acceleration; hohmann_time_lower_bound_days is the
-    impulsive half-ellipse time, the physical floor a continuous spiral cannot beat.
-    """
+    """A low-thrust solar-electric transfer leg."""
 
     propellant_mass_kg: float
     power_at_distance_w: float
@@ -53,12 +23,7 @@ class SepResult:
 
 
 def available_power_w(power_w_at_1au: float, distance_au: float) -> float:
-    """SEP array power (W) at a heliocentric distance, by probe-sim's 1/d^2 law.
-
-    P(d) = P0 * S(d)/S(1 AU). Reusing `probe_sim.solar_irradiance_w_m2` keeps the
-    solar constant defined in exactly one place (CLAUDE.md §1 single source of truth);
-    the ratio is the pure inverse-square factor 1/d^2.
-    """
+    """SEP array power (W) at a heliocentric distance, by probe-sim's 1/d^2 law."""
     if power_w_at_1au <= 0:
         raise ValueError("power_w_at_1au must be positive")
     if distance_au <= 0:
@@ -80,13 +45,7 @@ def sep_thrust_n(power_w: float, isp_s: float, efficiency: float) -> float:
 def edelbaum_delta_v_m_s(
     r1_au: float, r2_au: float, plane_change_deg: float = 0.0
 ) -> float:
-    """Edelbaum circle-to-circle Δv (m/s) for a low-thrust spiral.
-
-    Δv = sqrt(V1^2 - 2 V1 V2 cos((pi/2) * dtheta) + V2^2), with dtheta the plane
-    change in *fraction of a right angle* (Edelbaum's angle enters as (pi/2)*dtheta).
-    Here plane_change_deg is the physical inclination change in degrees; dtheta =
-    plane_change_deg / 90. Coplanar (0 deg) reduces exactly to |V1 - V2|.
-    """
+    """Edelbaum circle-to-circle Δv (m/s) for a low-thrust spiral."""
     v1 = circular_orbital_speed_m_s(r1_au)
     v2 = circular_orbital_speed_m_s(r2_au)
     dtheta = plane_change_deg / 90.0
@@ -103,13 +62,7 @@ def sep_transfer(
     distance_au: float,
     efficiency: float,
 ) -> SepResult:
-    """Propellant, thrust, acceleration, and Edelbaum trip time for an SEP leg.
-
-    Propellant is Tsiolkovsky over the dry (final) mass: m_p = m_dry * (m0/mf - 1).
-    Acceleration uses the initial wet mass (dry + propellant), making the trip-time
-    estimate a conservative upper bound (see module docstring). The impulsive Hohmann
-    half-ellipse time is reported alongside as the physical lower bound.
-    """
+    """Propellant, thrust, acceleration, and Edelbaum trip time for an SEP leg."""
     if dv_m_s < 0:
         raise ValueError("dv_m_s must be non-negative")
     if dry_mass_kg <= 0:

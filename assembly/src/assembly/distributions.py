@@ -1,13 +1,4 @@
-"""Distributional companions to assembly's sourced numbers.
-
-Issue #35 (UQ). assembly's constants:
-
-- HOURS_PER_DAY: definitional -> Fixed.
-- WAAM / LPBF rates: source explicitly gives (low, high) tuples -> Uniform.
-- OEE anchors: WORLD_CLASS (0.85) and TYPICAL (0.60) point values sit inside
-  a documented industrial spread; expose bands around each.
-- AASM seed mass and self-copy days: NASA CP-2255 design-point anchors, Fixed.
-"""
+"""Distributional companions to assembly's sourced numbers."""
 
 from __future__ import annotations
 
@@ -30,8 +21,7 @@ HOURS_PER_DAY_DIST: Distribution = Fixed(HOURS_PER_DAY)
 WAAM_RATE_DIST: Distribution = Uniform(low=WAAM_RATE_KG_PER_H[0], high=WAAM_RATE_KG_PER_H[1])
 LPBF_RATE_DIST: Distribution = Uniform(low=LPBF_RATE_KG_PER_H[0], high=LPBF_RATE_KG_PER_H[1])
 
-# OEE bands: Nakajima's world-class is a *floor*, so above 0.85 possible;
-# typical discrete manufacturing spreads roughly 0.50-0.70.
+# OEE bands: Nakajima world-class 0.85 is a floor so values above it are possible, while typical discrete manufacturing spreads roughly 0.50-0.70 (REFERENCES.md).
 WORLD_CLASS_OEE_DIST: Distribution = Uniform(low=0.80, high=0.90)
 TYPICAL_OEE_DIST: Distribution = Uniform(low=0.50, high=0.70)
 WORLD_CLASS_QUALITY_DIST: Distribution = Uniform(low=0.995, high=0.9999)

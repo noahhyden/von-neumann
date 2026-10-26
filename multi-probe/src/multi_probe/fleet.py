@@ -1,22 +1,4 @@
-"""The deterministic multi-probe fold: a small fleet that copies and disperses.
-
-`step(state, params, dt)` is a pure function - active probes build local structure at a
-rate their local sunlight allows (reusing probe-sim's inverse-square power), and when
-one has built a copy's worth of structure *and* the fleet still has imported vitamins,
-it spawns a child that travels outward and later becomes active. `simulate_fleet` folds
-`step` over time from a seed.
-
-Two ceilings emerge, both physical, neither hard-coded:
-  * the **electronics wall**, re-instantiated at fleet scale - children need imported,
-    non-replicable vitamins, so a finite vitamin pool caps the fleet (closure-sim's
-    lesson, now spatial); and
-  * a **spatial power wall** - children disperse outward, sunlight falls as 1/d², so
-    far-flung probes build too slowly to ever copy.
-
-Randomness (optional transit-time jitter) is a seeded generator threaded through the
-state (CLAUDE.md §7): fix the seed → bit-exact replay → exact `speculate`. With jitter
-= 0 the run is fully deterministic and independent of the seed. Zero pimas imports.
-"""
+"""The deterministic multi-probe fold: a small fleet that copies and disperses."""
 
 from __future__ import annotations
 
@@ -37,12 +19,7 @@ from multi_probe.rng import next_float, seed_state
 
 
 def params_from_factory(factory: Factory, **overrides: float | int) -> FleetParams:
-    """Derive the sourced fields (seed mass, closure, local build energy) from a real BOM.
-
-    ``e_local`` is the mass-weighted energy to build a kilogram of *local* structure,
-    exactly closure-sim's ``e_local`` (local build energy ÷ local mass). Array size,
-    power split, and fleet knobs take documented defaults; override any by keyword.
-    """
+    """Derive the sourced fields (seed mass, closure, local build energy) from a real BOM."""
     if factory.replication is None:
         raise ValueError("factory needs replication params (for seed_mass_kg)")
     report = compute_closure(factory)
@@ -54,8 +31,7 @@ def params_from_factory(factory: Factory, **overrides: float | int) -> FleetPara
         "closure_ratio": report.closure_ratio,
         "e_local_kwh_per_kg": e_local,
         "local_build_rate_kg_per_day": factory.replication.local_build_rate_kg_per_day,
-        # array sized to deliver ~4 MW at 1 AU with 30% cells (same basis as mission):
-        # 4e6 / (1360.8 * 0.30) ≈ 9798 m^2. [ESTIMATE] efficiency; see REFERENCES.md.
+        # Array sized to deliver ~4 MW at 1 AU with 30% cells (same basis as mission): 4e6 / (1360.8 * 0.30) ~ 9798 m^2, [ESTIMATE] efficiency (REFERENCES.md).
         "array_area_m2": 9798.0,
         "array_efficiency": 0.30,
         "manufacturing_fraction": 0.70,
@@ -65,15 +41,7 @@ def params_from_factory(factory: Factory, **overrides: float | int) -> FleetPara
 
 
 def build_rate_kg_per_day(params: FleetParams, distance_au: float) -> float:
-    """Local build rate at a distance = min(machinery throughput, energy cap).
-
-    Exactly closure-sim's ``min(alpha*F, energy_cap)`` for a *fixed-size* probe: the
-    machinery can build at most ``local_build_rate_kg_per_day`` (alpha*F for F ≈ seed
-    mass, which does not grow - a probe makes copies, it doesn't expand itself), and
-    the solar power sets a second ceiling. Near the Sun the machinery binds (a probe
-    can't use all its power); far out, 1/d² power falls below the machinery rate and
-    the energy cap binds - the spatial power wall.
-    """
+    """Local build rate at a distance = min(machinery throughput, energy cap)."""
     array = SolarArray(area_m2=params.array_area_m2, efficiency=params.array_efficiency)
     manufacturing_w = array.power_w(distance_au) * params.manufacturing_fraction
     manufacturing_kwh_per_day = manufacturing_w / 1000.0 * 24.0
@@ -82,17 +50,7 @@ def build_rate_kg_per_day(params: FleetParams, distance_au: float) -> float:
 
 
 def time_to_build_one_copy_days(params: FleetParams, distance_au: float) -> float:
-    """Days for one probe to build one copy's worth of *local* structure at a distance.
-
-    ``= local_per_child / build_rate``, where ``local_per_child = closure_ratio *
-    seed_mass_kg`` (the locally-produced mass in one copy) and ``build_rate`` is the
-    regime-limited rate above. This is the fleet's fundamental replication cadence - the
-    time between a probe's copies - and, evaluated at 1 AU, it is the swarm's per-star
-    *manufacturing dwell* (``settle_time_years``): the time a freshly settled probe spends
-    building offspring before they depart. It is the same closure-sim physics, re-used at a
-    third scale; it introduces no new number. Returns ``inf`` if the local build rate is
-    zero (the probe can never copy - the spatial power wall at that distance).
-    """
+    """Days for one probe to build one copy's worth of *local* structure at a distance."""
     local_per_child = params.closure_ratio * params.seed_mass_kg
     rate = build_rate_kg_per_day(params, distance_au)
     return local_per_child / rate if rate > 0.0 else float("inf")
@@ -121,11 +79,7 @@ def initial_state(params: FleetParams, *, seed: int) -> FleetState:
 def _verify_step_invariants(
     before: FleetState, after: FleetState, *, params: FleetParams, dt: float
 ) -> None:
-    """Assert the documented step invariants on (before -> after). See REFERENCES.md.
-
-    Called by `step` under `if __debug__:` and directly by negative tests.
-    Raises AssertionError with an [inv:...] tag on the first violation.
-    """
+    """Assert the documented step invariants on (before -> after). See REFERENCES.md."""
     # Structural / bound checks first: conservation below depends on them being intact.
     assert abs(after.day - (before.day + dt)) <= 1e-9 * max(1.0, abs(before.day + dt)), (
         f"[inv:mp-day] day_new={after.day} != day_old+dt={before.day + dt}"
@@ -163,11 +117,7 @@ def _verify_step_invariants(
 
 
 def step(state: FleetState, params: FleetParams, dt: float) -> FleetState:
-    """Advance the whole fleet by ``dt`` days. Pure: returns a new state.
-
-    Iterates probes in id order so RNG draws (and therefore the whole run) are
-    deterministic given the seed.
-    """
+    """Advance the whole fleet by ``dt`` days. Pure: returns a new state."""
     local_per_child = params.closure_ratio * params.seed_mass_kg
     vitamins_per_child = (1.0 - params.closure_ratio) * params.seed_mass_kg
     new_day = state.day + dt

@@ -108,3 +108,27 @@ with an oversized array).
 Tests in `tests/test_analytical_companions.py` assert (i) the closed form
 matches the code, (ii) crossover is invariant under P-rescaling (verifying
 the cancellation), (iii) the mass-order flips at exactly `d_cross`.
+
+## Distribution bands (distributions.py)
+
+Companion bands for the point values above; each is a UQ spread, not a new measurement.
+
+- **`SOLAR_SPECIFIC_POWER_1AU_DIST = Uniform(100, 400)` W/kg** - spans the ~4x basis span
+  above, flight system-level (100) to wing-level. Verdict: derived from the sourced 4x
+  span; a scenario that pins the basis should narrow it. Note the ROSA wing-level range
+  quoted above is 200-500 W/kg, so the 400 upper edge is the 4x span applied to 100.
+- **`FISSION_SPECIFIC_POWER_DIST = Uniform(2, 7)` W/kg** - Kilopower design points (800 We
+  ~2 W/kg to 10 kWe ~6.7 W/kg), sourced above.
+- **`RTG_SPECIFIC_POWER_DIST = Uniform(2.4, 5.2)` W/kg** - MMRTG 2.4 to GPHS-RTG 5.2, both sourced above.
+- **`PU238_ANNUAL_PRODUCTION_DIST = Uniform(0.5, 1.5)` kg/yr** - the DOE (low, high) sourced above.
+- **`RTG_FISSION_CROSSOVER_DIST = LogUniform(300, 3000)` We** - a factor-of-~3 either side of
+  the ~1 kWe order-of-magnitude threshold. `[ESTIMATE]`: the factor 3 is a stated choice
+  expressing "order of magnitude", not a sourced figure.
+- **`FISSION_CONVERSION_EFFICIENCY_DIST = Uniform(0.25, 0.35)`** - ~30% Kilopower Stirling
+  with a +/- 5% (absolute) design range. `[ESTIMATE]`: the +/- 5% range has no citation
+  recoverable from this repo.
+- **`FISSION_RADIATOR_TEMP_DIST = Uniform(450, 550)` K** - 500 K representative with a
+  +/- 50 K design range. `[ESTIMATE]`: no citation recoverable from this repo.
+- **`PU238_PER_GPHS_RTG_DIST = Uniform(8.0, 8.2)` kg** - 8.1 kg +/- 0.1 kg for a
+  manufactured spec. `[ESTIMATE]`: the +/- 0.1 kg tightness has no citation recoverable
+  from this repo.

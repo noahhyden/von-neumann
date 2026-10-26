@@ -106,3 +106,15 @@ Tests in `tests/test_analytical_companions.py` verify (i) the closed form
 matches, (ii) supply exactly equals demand at `d = d_wall`, (iii) the
 absolute-magnitude cancellation via a joint-rescaling sweep, and (iv) the
 `sqrt(2)` elasticity to doubling supply or demand.
+
+## Distribution bands (distributions.py)
+
+UQ spreads that reuse the ranges sourced above; no new numbers.
+
+- **`HONEYBEE_BRAIN_FLOPS_DIST = LogUniform(1e10, 1e16)`** - the spike-model floor to
+  full-physiology span (six orders of magnitude), with 1e13 its representative middle.
+- **`MOUSE_BRAIN_FLOPS_DIST = LogUniform(1e13, 1e17)`** - the brain-compute range quoted above,
+  with 1e15 its middle.
+- **`SELF_DRIVING_OPS_PER_S_DIST = Uniform(5e13, 3.2e14)`** - vision-only 50 TOPS up to full
+  L4 ~320 TOPS (the lower edge is the 50 TOPS vision-workload floor quoted above), with 140
+  TOPS inside it. TOPS, not FLOPS: see the basis warning.

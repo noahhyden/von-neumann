@@ -1,8 +1,4 @@
-"""assembly validation: the derivation, the sourced band, and the doubling clock.
-
-Anchors: WAAM/LPBF deposition rates, world-class OEE 0.85, and NASA AASM's 100 t/yr
-self-copy (=> 274 kg/day). See REFERENCES.md and ROADMAP-PROPOSAL.md.
-"""
+"""assembly validation: the derivation, the sourced band, and the doubling clock."""
 
 import pytest
 
@@ -27,8 +23,7 @@ def test_derivation_is_the_product():
 
 
 def test_anchor_reproduces_closure_sim_20_kg_per_day():
-    # One slow WAAM head (1 kg/h) at world-class OEE (0.85) and quality (0.999)
-    # lands on closure-sim's hand-set ~20 kg/day - the number this module retires.
+    # One slow WAAM head (1 kg/h) at world-class OEE (0.85) and quality (0.999) lands on closure-sim's hand-set ~20 kg/day - the number this module retires.
     anchor = machinery_build_rate_kg_per_day(
         manipulators=1,
         deposition_rate_kg_per_h=1.0,
@@ -58,8 +53,7 @@ def test_band_brackets_the_anchor_and_is_over_10x_wide():
 
 
 def test_reproduces_the_582_day_lunar_doubling_clock():
-    # Lunar seed: seed_mass 12000 kg, closure ~0.97, build_rate 20 kg/day
-    # (closure-sim's lunar_regolith_seed scenario). copy_time = C*seed/rate.
+    # Lunar seed: seed_mass 12000 kg, closure ~0.97, build_rate 20 kg/day (closure-sim lunar_regolith_seed scenario), copy_time = C*seed/rate.
     t = copy_time_days(build_rate_kg_per_day=20.0, seed_mass_kg=12_000.0, closure_ratio=0.97)
     assert t == pytest.approx(582.0, rel=1e-3)
 

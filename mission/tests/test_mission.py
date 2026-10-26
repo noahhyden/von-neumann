@@ -1,10 +1,4 @@
-"""End-to-end behavior tests for the mission fold.
-
-These assert on real numbers and the regimes that matter (CLAUDE.md §2): the chain
-reaches target near Earth, is power-starved far out, stalls when no power goes to
-manufacturing, obeys the inverse-square law, and prices the launch payoff from closure.
-Not "it ran" - what it computed.
-"""
+"""End-to-end behavior tests for the mission fold."""
 
 from __future__ import annotations
 
@@ -42,8 +36,7 @@ def test_power_split_sums_to_delivered(baseline: MissionResult) -> None:
 
 
 def test_baseline_reaches_target_near_earth(baseline: MissionResult) -> None:
-    # With ~2.8 MW to manufacturing, the factory reaches target output; the known
-    # figure for this scenario is ~10512 days, and it ends resupply-limited.
+    # With ~2.8 MW to manufacturing, the factory reaches target output; the known figure for this scenario is ~10512 days, ending resupply-limited.
     assert baseline.reaches_target is True
     assert baseline.time_to_target_days == pytest.approx(10512.289, abs=1.0)
     assert baseline.binding_regime == "resupply-limited"
@@ -66,8 +59,7 @@ def test_inverse_square_power_falloff() -> None:
 
 
 def test_power_starved_far_from_sun_fails_to_replicate() -> None:
-    # At Jupiter's distance the array delivers ~150 kW; the manufacturing share is too
-    # little for the factory to ever reach target - a real edge, not a crash.
+    # At Jupiter's distance the array delivers ~150 kW and the manufacturing share is too little for the factory to ever reach target - a real edge, not a crash.
     r = run_mission(default_mission_scenario(distance_au=5.203))
     assert r.delivered_power_w < 200_000.0
     assert r.reaches_target is False
@@ -75,8 +67,7 @@ def test_power_starved_far_from_sun_fails_to_replicate() -> None:
 
 
 def test_all_power_to_compute_stalls_manufacturing() -> None:
-    # Route 100% of power to thinking: the factory gets nothing and cannot build,
-    # while compute throughput is maxed. The stall is reported, not simulated at 0 W.
+    # Route 100% of power to thinking: the factory gets nothing and cannot build while compute throughput is maxed; the stall is reported, not simulated at 0 W.
     r = run_mission(
         default_mission_scenario(
             fraction_manufacturing=0.0,
@@ -107,8 +98,7 @@ def test_launch_payoff_from_closure(baseline: MissionResult) -> None:
 
 
 def test_seed_mass_comes_from_the_factory() -> None:
-    # The seam fix: the launch comparison's seed is the factory's own seed, not a
-    # second unlinked number.
+    # The seam fix: the launch comparison seed is the factory's own seed, not a second unlinked number.
     s = default_mission_scenario()
     r = run_mission(s)
     assert r.seed_mass_kg == s.factory.replication.seed_mass_kg == 12000.0

@@ -1,5 +1,4 @@
-"""transfer.distributions: every constant here is a measured or definitional
-quantity, so `Fixed` is correct (not a `[GAP]`)."""
+"""transfer.distributions: every constant here is a measured or definitional quantity, so `Fixed` is correct (not a `[GAP]`)."""
 
 import pytest
 

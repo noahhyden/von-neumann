@@ -80,3 +80,21 @@ produce confident nonsense - the exact failure CLAUDE.md warns about.
   equivalent minimum and the secondary-particle build-up beyond it.
 - **Juno Radiation Vault / Europa Clipper** - the flight vault masses and attenuation
   anchors.
+
+## Distribution bands (distributions.py)
+
+UQ spreads around the point values above, not new measurements.
+
+- **`GCR_DEEP_SPACE_DOSE_DIST = Uniform(1.5, 2.1)` mSv/day** - `[ESTIMATE]`: spread around the
+  1.8 mSv/day MSL RAD value for cruise-condition variation; the 1.5-2.1 band was carried
+  over from the earlier code comment with no citation recoverable from this repo.
+- **`GCR_DOSE_MIN_AREAL_DENSITY_DIST = Uniform(15, 25)` g/cm^2** - `[ESTIMATE]`: window around the
+  ~20 g/cm^2 HZETRN design-point minimum; the width has no citation recoverable from this repo.
+- **`JUNO_VAULT_ATTENUATION_DIST = Uniform(500, 1000)`** - `[ESTIMATE]`: ~800x is the design
+  target and real attenuation depends on interior geometry; the 500-1000x band was carried
+  over from the earlier code comment with no citation recoverable from this repo.
+- **`LUNAR_REGOLITH_DENSITY_DIST = Uniform(1.5, 1.8)` g/cm^3** - regolith bulk density varies
+  with compaction; the Lunar Sourcebook range quoted above is ~1.5-1.9, so this is a
+  sub-band of it.
+- **Titanium, aluminium densities, Juno anticipated TID, and the Juno / Europa Clipper vault
+  masses** - Fixed (tightly known or flight-measured, as above).

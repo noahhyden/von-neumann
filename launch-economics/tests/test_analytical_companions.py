@@ -1,39 +1,4 @@
-"""Analytical companions for launch-economics (issue #50, Phase 2 pilot).
-
-The pilot Phase-2 derivation from `docs/FINDINGS_CLASSIFICATION.md` #21:
-mass leverage tends to `1 / (1 - C)` in the small-seed limit.
-
-## Derivation
-
-Given a target installed mass M, a seed of mass s, and closure C, the mass
-that must be built locally is `M - s`. Its vitamin requirement is
-`(1 - C) * (M - s)` (each locally-built kilogram needs `1 - C` kg of imports).
-Launched mass under the replication approach:
-
-    L = s + (1 - C) * (M - s)
-      = s * C + (1 - C) * M
-
-Leverage:
-
-    G(s, C) = M / L
-           = 1 / (s*C/M + (1 - C))
-
-The dimensionless small parameter is `eps := s / M`. Expanding around
-`eps = 0` at fixed C < 1:
-
-    G(0, C) = 1 / (1 - C)                      # the asymptote
-    G(eps, C) = G(0, C) - eps * C / (1 - C)^2 + O(eps^2)
-
-Two boundary cases:
-- **C = 1:** G(s, 1) = M / s, unbounded as s / M -> 0.
-- **C = 0:** G(s, 0) = 1 for all s <= M (launch everything).
-
-## Test coverage
-- Point value at multiple (s, C) pairs matches the closed form to `1e-9`
-  relative (this checks the sim's arithmetic).
-- The `1 / (1 - C)` limit is approached as `s / M -> 0`, monotonically.
-- The C=0 and C=1 boundaries are handled correctly.
-"""
+"""Analytical companions for launch-economics (issue #50, Phase 2 pilot)."""
 
 from __future__ import annotations
 
@@ -119,8 +84,7 @@ def test_leading_order_correction():
         _factory_at_closure(closure),
         target_installed_mass_kg=target, seed_mass_kg=seed, cost_per_kg_usd=COST_PER_KG,
     )
-    # Leading + linear correction agrees with sim to O(eps^2 / (1-C)). For eps=1e-3
-    # and C=0.9 this is ~8e-4, so we allow 1e-3.
+    # Leading + linear correction agrees with sim to O(eps^2 / (1-C)); for eps=1e-3 and C=0.9 this is ~8e-4, so allow 1e-3.
     assert comparison.mass_leverage == pytest.approx(predicted, abs=1e-3)
 
 

@@ -1,11 +1,4 @@
-"""power-budget - how an autonomous factory splits a watt between making and thinking.
-
-A pure, one-shot power accounting: divide a (solar-limited) power budget among
-manufacturing, computation, and housekeeping, and convert compute-watts into
-throughput - floored by the Landauer limit and anchored to the ~20 W human brain.
-
-Every number traces to a source; see REFERENCES.md.
-"""
+"""power-budget - how an autonomous factory splits a watt between making and thinking."""
 
 from power_budget.budget import PowerBudget, compute_capacity_flops
 from power_budget.physics import (

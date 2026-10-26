@@ -1,13 +1,4 @@
-"""Distributional companions for multi-probe.
-
-multi-probe introduces no new physical constants - the physics it uses is
-sourced in the sibling modules it composes. Its "distributions" are, like
-mission's, re-exports of the honest bands owned upstream.
-
-Scenario choices (manufacturing fraction 0.70, array size derived from the
-mission's 4 MW / 30% efficiency line) stay Fixed at the point of the
-scenario choice.
-"""
+"""Distributional companions for multi-probe."""
 
 from __future__ import annotations
 

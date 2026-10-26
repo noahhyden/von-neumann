@@ -1,8 +1,4 @@
-"""thermal validation: Stefan-Boltzmann sizing, the ISS anchor, T^4 leverage, distance.
-
-The ISS External Active Thermal Control System (70 kW total, 35 kW/loop, ~275 K coolant,
-70.3 m^2 radiator assembly) is the flight anchor. See REFERENCES.md.
-"""
+"""thermal validation: Stefan-Boltzmann sizing, the ISS anchor, T^4 leverage, distance."""
 
 import pytest
 
@@ -40,8 +36,7 @@ def test_flux_scales_as_t_fourth():
 def test_iss_assembly_area_reproduces_per_loop_capacity():
     # One ISS radiator assembly (8 panels of 3.33 x 2.64 m) = 70.3 m^2.
     assert ISS_RADIATOR_ASSEMBLY_AREA_M2 == pytest.approx(70.33, rel=1e-3)
-    # Stefan-Boltzmann sizing for 35 kW at 275 K needs ~67.5 m^2 - within ~4% of the
-    # real assembly, which rejects ~35 kW per loop. A genuine flight anchor.
+    # Stefan-Boltzmann sizing for 35 kW at 275 K needs ~67.5 m^2, within ~4% of the real assembly that rejects ~35 kW per loop - a genuine flight anchor.
     area = radiator_area_m2(
         ISS_HEAT_REJECTION_PER_LOOP_KW * 1000.0, ISS_RADIATOR_TEMP_K, emissivity=0.8
     )
@@ -50,8 +45,7 @@ def test_iss_assembly_area_reproduces_per_loop_capacity():
 
 
 def test_hot_radiator_is_about_10x_lighter_per_kw():
-    # (533/300)^4 = 9.96: a ~530 K smelting radiator is ~10x lighter per kW than a
-    # ~300 K electronics radiator - why one radiator temperature for all is wrong.
+    # (533/300)^4 = 9.96: a ~530 K smelting radiator is ~10x lighter per kW than a ~300 K electronics radiator, which is why one radiator temperature for all is wrong.
     cold = mass_per_kw_kg(300.0)
     hot = mass_per_kw_kg(533.0)
     assert hot < cold

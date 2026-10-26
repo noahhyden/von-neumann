@@ -1,16 +1,4 @@
-"""Distributional companions to autonomy's sourced numbers.
-
-Issue #35 (UQ) applied to autonomy. Every constant is an order-of-magnitude
-estimate on a biological or engineering compute budget - the honest read is
-LogUniform over the range REFERENCES.md names.
-
-- HONEYBEE_BRAIN_FLOPS: 1e13 is the "representative middle" of a documented
-  1e10-1e16 span (spike-model floor to full-physiology). LogUniform preserves
-  that six-order-of-magnitude honesty.
-- MOUSE_BRAIN_FLOPS: 1e15 is the middle of a documented 1e13-1e17 range.
-- SELF_DRIVING_OPS_PER_S: 1.4e14 sits inside a documented 5e13-3.2e14 band
-  (vision at 50 TOPS to full L4 at 320 TOPS).
-"""
+"""Distributional companions to autonomy's sourced numbers."""
 
 from __future__ import annotations
 
@@ -22,8 +10,7 @@ from autonomy.autonomy import (
     SELF_DRIVING_OPS_PER_S,
 )
 
-# Honeybee brain: 6 orders of magnitude between spike-model floor and full-
-# physiology ceiling. LogUniform is honest to that spread.
+# Honeybee brain: 6 orders of magnitude between the spike-model floor and the full-physiology ceiling, so LogUniform is honest to that spread (REFERENCES.md).
 HONEYBEE_BRAIN_FLOPS_DIST: Distribution = LogUniform(low=1e10, high=1e16)
 
 # Mouse brain: 4 orders of magnitude across the estimate range.

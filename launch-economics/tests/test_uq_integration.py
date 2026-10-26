@@ -1,20 +1,4 @@
-"""End-to-end integration test: the whole vn_core.uq toolkit on a REAL finding.
-
-Every other UQ test exercises one surface on a synthetic function. This one drives
-*all* of them - monte_carlo, uq_and_gsa, sobol (first+total+CI), pce_fit
-(quadrature / regression / arbitrary-PCE), qmc_mean, pce_control_variate - on a
-real launch-economics finding and checks the independent methods agree with each
-other and with the closed-form mean.
-
-Finding: cost_savings_usd, the launch cost saved by replicating a factory in place
-instead of launching the finished mass, over two real-shaped inputs:
-  - launch cost per kg ~ LogUniform (LAUNCH_COST_STARSHIP_DIST) -> arbitrary PCE
-  - mass closure ratio ~ Uniform                                -> Legendre PCE
-
-It is the guard that unit tests miss: this workload (a large mean with a modest
-spread) is exactly what exposed the un-centered first-order Sobol bug that every
-synthetic-function test passed straight through.
-"""
+"""End-to-end integration test: the whole vn_core.uq toolkit on a REAL finding."""
 
 from __future__ import annotations
 
@@ -69,8 +53,7 @@ def test_uq_and_gsa_shares_samples_and_agrees():
 
 
 def test_sobol_indices_are_sane_and_rank_the_driver():
-    """Regression guard for the first-order centering fix, on a REAL low-CoV
-    finding: cost dominates, both indices stay in range, first <= total, CI brackets."""
+    """Regression guard for the first-order centering fix, on a REAL low-CoV finding: cost dominates, both indices stay in range, first <= total, CI brackets."""
     s = sobol_total_order(_INPUTS, _finding, n=4000, seed=3, bootstrap=150)
     assert s.total_order["cost_per_kg"] > s.total_order["closure"] > 0.0
     for nm in _INPUTS:
@@ -80,8 +63,7 @@ def test_sobol_indices_are_sane_and_rank_the_driver():
 
 
 def test_pce_handles_the_loguniform_via_apce():
-    """cost_per_kg is LogUniform -> the arbitrary-PCE path; closure is Uniform ->
-    Legendre. Both fit methods must be trustworthy and hit the closed form."""
+    """cost_per_kg is LogUniform -> the arbitrary-PCE path; closure is Uniform -> Legendre. Both fit methods must be trustworthy and hit the closed form."""
     pq = pce_fit(_INPUTS, _finding, degree=4, method="quadrature")
     pr = pce_fit(_INPUTS, _finding, degree=4, method="regression", seed=4)
     assert pq.is_trustworthy() and pr.is_trustworthy()
@@ -93,8 +75,7 @@ def test_pce_handles_the_loguniform_via_apce():
 def test_qmc_and_control_variate_are_tight_and_correct():
     q = qmc_mean(_INPUTS, _finding, n=256, seed=5, replicates=24)
     cv = pce_control_variate(_INPUTS, _finding, degree=4, n=2000, seed=6)
-    # RQMC agrees with the truth within a few of its own standard errors (a 90% CI
-    # would legitimately miss ~10% of the time, so assert the wider band instead).
+    # RQMC agrees with the truth within a few of its own standard errors (a 90% CI would legitimately miss ~10% of the time, so assert the wider band).
     assert abs(q.mean - _MEAN) < 5 * q.stderr
     assert q.stderr < 0.01 * _MEAN  # and it is tight
     assert cv.mean == pytest.approx(_MEAN, rel=1e-3)
@@ -113,8 +94,7 @@ def test_all_six_methods_agree_on_the_mean():
     qm = qmc_mean(_INPUTS, _finding, n=256, seed=5, replicates=16).mean
     cv = pce_control_variate(_INPUTS, _finding, degree=4, n=2000, seed=6).mean
     vals = [mc, uq, pq, pr, qm, cv]
-    # Deterministic surfaces (PCE, CV) are exact for this bilinear finding; the
-    # MC-based ones carry ~1% sampling noise at these N. All within 2% of truth.
+    # Deterministic surfaces (PCE, CV) are exact for this bilinear finding; MC-based ones carry ~1% sampling noise at these N, all within 2% of truth.
     for v in vals:
         assert abs(v - _MEAN) / _MEAN < 0.02
     assert (max(vals) - min(vals)) / _MEAN < 0.03

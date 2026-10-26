@@ -1,14 +1,4 @@
-"""Distributional companions to transfer's sourced numbers.
-
-Issue #35 (UQ). transfer's constants split cleanly:
-
-- **Definitional / measured to high precision**: heliocentric gravitational
-  parameter (JPL DE441 header), the AU definition (IAU 2012), seconds per
-  day (SI). All Fixed - no meaningful spread.
-- **Sourced orbital elements**: `BODY_SEMI_MAJOR_AXIS_AU` and
-  `BODY_SIDEREAL_PERIOD_DAYS` are the NASA fact-sheet mean values. Also
-  Fixed at the fidelity transfer uses (Hohmann approximations).
-"""
+"""Distributional companions to transfer's sourced numbers."""
 
 from __future__ import annotations
 

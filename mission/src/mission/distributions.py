@@ -1,17 +1,4 @@
-"""Distributional companions for mission's scenario knobs.
-
-Issue #35 (UQ). mission introduces no new physical quantities - it composes
-four sibling modules, and every physical number it uses is sourced there.
-So mission's UQ story is: reach into each sibling's `distributions` module
-for the distributional companion of the number it consumed, and expose that
-here as a re-export. Design-choice knobs (target installed mass, allocation
-fractions) stay Fixed at the point of the scenario choice.
-
-Doing this here (not in every downstream caller) means a mission-wide UQ
-scan pulls in the honest bands *automatically* the moment sibling modules
-tighten or widen a distribution. That is what having a shared `core/` UQ
-package earns us at scale.
-"""
+"""Distributional companions for mission's scenario knobs."""
 
 from __future__ import annotations
 
@@ -32,8 +19,7 @@ from mission.scenario import (
     DEFAULT_TARGET_INSTALLED_MASS_KG,
 )
 
-# Sibling-sourced distributions, re-exported so a mission-wide UQ scan
-# reaches for the honest band automatically.
+# Sibling-sourced distributions, re-exported so a mission-wide UQ scan reaches for the honest band automatically.
 ARRAY_EFFICIENCY_DIST: Distribution = SOLAR_CELL_EFFICIENCY_DIST
 DELTA_V_M_S_DIST: Distribution = DELTA_V_SURFACE_TO_LEO_DIST
 SPECIFIC_IMPULSE_S_DIST: Distribution = ISP_LOX_RP1_DIST
@@ -42,8 +28,7 @@ COMPUTE_EFFICIENCY_FLOPS_PER_W_DIST_MISSION: Distribution = (
     COMPUTE_EFFICIENCY_FLOPS_PER_W_DIST
 )
 
-# Mission-level design choices: Fixed at the point of the scenario choice.
-# When the scenario changes them, they change here in the same commit.
+# Mission-level design choices: Fixed at the point of the scenario choice, changed here in the same commit when the scenario changes them.
 ARRAY_POWER_AT_1AU_DIST: Distribution = Fixed(DEFAULT_ARRAY_POWER_AT_1AU_W)
 TARGET_INSTALLED_MASS_DIST: Distribution = Fixed(DEFAULT_TARGET_INSTALLED_MASS_KG)
 FRACTION_MANUFACTURING_DIST: Distribution = Fixed(DEFAULT_FRACTION_MANUFACTURING)

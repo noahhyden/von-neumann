@@ -1,12 +1,4 @@
-"""Fold-level invariants for reliability.mortality.step (issue #48, phase A).
-
-Every invariant listed in the issue #48 spec (posted as an issue comment) has a
-positive test (a normal run does not trip the assertion) and a negative test (a
-hand-built state that violates the invariant does trip). The invariant tags
-match the entries added to REFERENCES.md.
-
-These tests are the contract; the assertions live in mortality._verify_step_invariants.
-"""
+"""Fold-level invariants for reliability.mortality.step (issue #48, phase A)."""
 
 import pytest
 

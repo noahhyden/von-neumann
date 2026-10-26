@@ -34,6 +34,11 @@ https://prng.di.unimi.it/splitmix64.c . This is what keeps replay and `speculate
   borrows a satellite-class on-orbit failure rate as a defensible analog (~0.4 %/yr).
   Verdict: `[ESTIMATE]` - a documented proxy, tagged at the use site, not a measured
   factory rate. Source: satellite on-orbit reliability statistics (order-of-magnitude).
+- **`SATELLITE_HAZARD_PER_DAY_DIST` band 5e-6 to 2e-5 per day** `[ESTIMATE]` - the
+  LogUniform range around the 1.1e-5 proxy, spanning satellite bus classes (about 0.2-0.7
+  %/yr at 365 days per year). Verdict: `[ESTIMATE]` - the band was carried over from
+  the earlier code comment with no citation recoverable from this repo; the 1.1e-5 centre
+  inside it is the only anchored value. Needs a primary satellite-reliability source.
 - **Self-replication mutation rate** - a genuine `[GAP]`. Copies that build flawed copies
   have no measured rate; not modelled, only flagged. Do not invent one.
 - **`expected_survival_fraction = (1 - hazard)^days`** - the analytic expectation the

@@ -28,11 +28,7 @@ def test_xenon_supply_matches_source_tuple():
 
 
 def test_reaction_mass_uq_shows_isp_dominates_over_dv():
-    # Tsiolkovsky: m_prop = m_dry * (exp(dv/(Isp*g0)) - 1). Under UQ over both
-    # Isp (Uniform(440, 460), ~4% relative) and dv (fixed at 9500 m/s here),
-    # a real spread on Isp reshapes the reaction-mass distribution
-    # exponentially. Test: 90% CI on reaction mass should span at least 5%
-    # of the mean at LOX/LH2's tight Isp band.
+    # Tsiolkovsky m_prop = m_dry * (exp(dv/(Isp*g0)) - 1): with Isp Uniform(440, 460) (~4% relative) and dv fixed at 9500 m/s, the 90% CI on reaction mass must span at least 5% of the mean.
     def rxn_mass(sample):
         return 1000.0 * (math.exp(9500.0 / (sample["isp"] * 9.80665)) - 1.0)
 
@@ -42,6 +38,5 @@ def test_reaction_mass_uq_shows_isp_dominates_over_dv():
 
 
 def test_xenon_ion_isp_is_higher_band_than_hall():
-    # Sanity check that ion EP's band lives above Hall EP's - if this ever
-    # flipped, the reaction-mass rankings would silently invert.
+    # Sanity check that ion EP band lives above Hall EP band; if this flipped, the reaction-mass rankings would silently invert.
     assert ISP_XENON_ION_EP_DIST.low > ISP_XENON_HALL_EP_DIST.high

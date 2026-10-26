@@ -1,11 +1,4 @@
-"""power_budget.distributions: sourced spreads for every REFERENCES.md number.
-
-Three regimes tested: definitional (Fixed), sourced spread (Uniform / Normal),
-and explicitly-order-of-magnitude (LogUniform). The Landauer floor is a real
-UQ finding here - even at LogUniform(1e15, 1e20) brain-FLOPS, the floor
-itself does not move; the *variance* in brain-equivalents does. That is the
-"which input actually drives the variance" property.
-"""
+"""power_budget.distributions: sourced spreads for every REFERENCES.md number."""
 
 import math
 
@@ -40,12 +33,7 @@ def test_brain_flops_loguniform_spans_the_five_orders_of_magnitude():
 
 
 def test_brain_equivalents_variance_dominated_by_brain_flops_uncertainty():
-    # A canonical UQ finding: how many brain-equivalents is 1e18 FLOPS?
-    # Point-value answer is 1.0. But under the LogUniform(1e15, 1e20) prior
-    # on brain FLOPS, the ratio spans FIVE orders of magnitude - the finding
-    # "compute_flops matches a brain" is meaningless without saying which
-    # brain FLOPS estimate you picked. Sobol should confirm brain_flops as
-    # the dominant driver over any spread on the compute side.
+    # A canonical UQ finding, how many brain-equivalents is 1e18 FLOPS: the point answer is 1.0, but under LogUniform(1e15, 1e20) on brain FLOPS the ratio spans five orders of magnitude, so Sobol should confirm brain_flops as the dominant driver.
     inputs = {
         "compute_flops": LogUniform(low=1e17, high=1e19),
         "brain_flops": BRAIN_COMPUTE_FLOPS_DIST,
@@ -56,13 +44,11 @@ def test_brain_equivalents_variance_dominated_by_brain_flops_uncertainty():
 
     mc = monte_carlo(inputs, be, n=2000, seed=71)
     lo, hi = mc.error_bar_95
-    # The 90% CI must span at least 3 orders of magnitude - the brain-FLOPS
-    # spread of 5 OoM dominates.
+    # The 90% CI must span at least 3 orders of magnitude, since the 5 OoM brain-FLOPS spread dominates.
     assert hi / lo > 1000
 
     sobol = sobol_total_order(inputs, be, n=800, seed=71)
-    # brain_flops has 5 OoM range, compute_flops has 2 OoM: brain_flops
-    # dominates the ratio's log-space variance.
+    # brain_flops has a 5 OoM range and compute_flops 2 OoM, so brain_flops dominates the ratio log-space variance.
     assert sobol.ranked()[0][0] == "brain_flops"
 
 

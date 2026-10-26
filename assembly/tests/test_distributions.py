@@ -25,9 +25,7 @@ def test_deposition_rate_bands_match_source_tuples():
 
 
 def test_waam_dominates_over_lpbf_in_throughput():
-    # A sanity finding: WAAM's low is above LPBF's high (roughly). If a
-    # regression flipped these, downstream doubling-clock predictions would
-    # swing 10x.
+    # A sanity finding: WAAM low is above LPBF high (roughly), and a regression flipping these would swing downstream doubling-clock predictions 10x.
     assert WAAM_RATE_DIST.low >= LPBF_RATE_DIST.high * 0.7
 
 
@@ -37,9 +35,7 @@ def test_oee_bands_bracket_point_values():
 
 
 def test_build_rate_uq_dominated_by_deposition_rate_not_oee():
-    # Build rate = deposition_rate * OEE * hours_per_day. Under UQ over both,
-    # deposition rate has a 10x band (WAAM 1-10) while OEE has ~10% relative
-    # spread. Sobol should flag deposition rate as dominant driver.
+    # Build rate = deposition_rate * OEE * hours_per_day; deposition rate has a 10x band (WAAM 1-10) and OEE ~10% relative spread, so Sobol should flag deposition rate as dominant.
     inputs = {
         "rate": WAAM_RATE_DIST,
         "oee": WORLD_CLASS_OEE_DIST,

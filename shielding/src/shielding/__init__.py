@@ -1,17 +1,4 @@
-"""shielding - radiation shielding mass, and the GCR trap.
-
-Turns a radiation dose budget into shield mass from published areal-density attenuation
-(no particle transport). Two opposite regimes: TID electronics shielding is monotonic
-(shield until the dose budget is met), but GCR dose-equivalent has a MINIMUM near
-~20 g/cm^2 aluminium and gets worse beyond it (secondaries) - so the module refuses to
-over-shield. Shielding is local-regolith mass that RAISES closure (opposite of imported
-vitamins), which reframes the trade as cheap COTS parts behind thick regolith vs imported
-rad-hardness. It exposes `radenv`, the shared radiation-environment primitive that
-`reliability` also consumes.
-
-Pure, deterministic, no pimas, no RNG (CLAUDE.md 7). Every number traces to a source; see
-REFERENCES.md.
-"""
+"""shielding - radiation shielding mass, and the GCR trap."""
 
 from shielding.radenv import (
     ALUMINIUM_DENSITY_G_CM3,

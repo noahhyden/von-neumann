@@ -1,10 +1,4 @@
-"""End-to-end behavior tests for the deterministic multi-probe fold.
-
-These assert on real numbers and the regimes that matter (CLAUDE.md §2): sourced
-params, seeded determinism, geometric growth near the Sun, the two emergent ceilings
-(vitamin pool = electronics wall; 1/d² power = spatial wall), mass balance, dispersal,
-and the fleet cap. Not "it ran" - what it computed.
-"""
+"""End-to-end behavior tests for the deterministic multi-probe fold."""
 
 from __future__ import annotations
 
@@ -44,8 +38,7 @@ def local_per_child(p: FleetParams) -> float:
 
 
 def test_params_are_sourced_from_the_factory(params: FleetParams) -> None:
-    # seed mass and machinery rate come straight from the scenario; closure/e_local
-    # are closure-sim's own derived numbers.
+    # Seed mass and machinery rate come straight from the scenario, while closure and e_local are closure-sim's own derived numbers.
     assert params.seed_mass_kg == 12000.0
     assert params.local_build_rate_kg_per_day == 20.0
     assert params.closure_ratio == pytest.approx(0.970833, abs=1e-5)
@@ -53,8 +46,7 @@ def test_params_are_sourced_from_the_factory(params: FleetParams) -> None:
 
 
 def test_build_rate_is_machinery_limited_near_sun_energy_limited_far(params: FleetParams) -> None:
-    # Near the Sun the machinery binds (can't use all the power); far out 1/d² power
-    # binds. The crossover for this scenario is ~13.6 AU.
+    # Near the Sun the machinery binds (cannot use all the power) and far out 1/d² power binds; the crossover for this scenario is ~13.6 AU.
     assert build_rate_kg_per_day(params, 1.0) == pytest.approx(params.local_build_rate_kg_per_day)
     assert build_rate_kg_per_day(params, 5.203) == pytest.approx(params.local_build_rate_kg_per_day)
     far = build_rate_kg_per_day(params, 30.0)
@@ -64,8 +56,7 @@ def test_build_rate_is_machinery_limited_near_sun_energy_limited_far(params: Fle
 
 
 def test_time_to_build_one_copy_is_local_over_rate(params: FleetParams) -> None:
-    # The fleet's fundamental cadence (and, at 1 AU, the swarm's per-star dwell): the
-    # local mass in one copy divided by the regime-limited build rate.
+    # The fleet's fundamental cadence (and, at 1 AU, the swarm per-star dwell) is the local mass in one copy divided by the regime-limited build rate.
     t = time_to_build_one_copy_days(params, 1.0)
     assert t == pytest.approx(local_per_child(params) / build_rate_kg_per_day(params, 1.0))
     # Far out, 1/d² power slows the build, so one copy takes strictly longer.
@@ -91,8 +82,7 @@ def test_no_jitter_run_is_independent_of_seed(factory) -> None:
 
 
 def test_geometric_growth_near_sun(params: FleetParams) -> None:
-    # One probe at 1 AU builds a child in ~local/rate = 11650/20 ≈ 582 days, then the
-    # fleet doubles on roughly that cadence until a ceiling.
+    # One probe at 1 AU builds a child in ~local/rate = 11650/20 ≈ 582 days, then the fleet doubles on roughly that cadence until a ceiling.
     r = simulate_fleet(params, duration_days=14600, dt_days=1.0)
     expected_first_child_day = local_per_child(params) / params.local_build_rate_kg_per_day
     assert r.doubling_time_days == pytest.approx(expected_first_child_day, abs=2.0)
@@ -110,8 +100,7 @@ def test_fleet_cap_is_respected(factory) -> None:
 
 
 def test_spatial_power_wall_far_from_sun(factory) -> None:
-    # Start the fleet at 30 AU: sunlight is ~1/900 of Earth's, build rate collapses, so
-    # a probe barely (or never) copies within the run - far fewer than near the Sun.
+    # Start the fleet at 30 AU: sunlight is ~1/900 of Earth's and build rate collapses, so a probe barely (or never) copies within the run, far fewer than near the Sun.
     near = simulate_fleet(params_from_factory(factory, max_probes=256), duration_days=3650)
     far = simulate_fleet(params_from_factory(factory, start_distance_au=30.0, max_probes=256), duration_days=3650)
     assert far.final_population < near.final_population
@@ -120,8 +109,7 @@ def test_spatial_power_wall_far_from_sun(factory) -> None:
 
 
 def test_electronics_wall_caps_the_fleet_via_vitamin_pool(params: FleetParams, factory) -> None:
-    # A finite vitamin pool is the electronics wall re-instantiated at fleet scale:
-    # exactly floor(pool / vitamins_per_child) children can ever be built.
+    # A finite vitamin pool is the electronics wall re-instantiated at fleet scale: exactly floor(pool / vitamins_per_child) children can ever be built.
     vpc = vitamins_per_child(params)
     k = 5
     pool = k * vpc + 0.5  # room for exactly k children

@@ -1,73 +1,4 @@
-"""Analytical companions for thermal (issue #50, Phase 2; #14/#15).
-
-`docs/FINDINGS_CLASSIFICATION.md` classes both thermal headlines as A:
-
-- **#14 T^4 leverage** - a hot radiator is ~10x lighter per kW than a cold one.
-- **#15 ISS anchor** - Stefan-Boltzmann sizing reproduces flight hardware.
-
-These are not just point values (`test_thermal.py` already checks those); the
-companion states the *closed forms* and proves the structural fact the point
-tests do not: in the leverage RATIO, the emissivity, the Stefan-Boltzmann
-constant, the areal density, the side count, and the heat load all CANCEL. The
-leverage is set by the temperature ratio alone (with a sink correction) - the
-same "the obvious inputs cancel" shape as #24 (power cancels) and #30.
-
-## Derivation
-
-A two-faced radiator at temperature `T` with emissivity `eps`, radiating to a
-sink at `T_s`, rejects (Stefan-Boltzmann, `sides` emitting faces):
-
-    q(T) = sides * eps * sigma * (T^4 - T_s^4)          [W/m^2]           (1)
-
-To reject a heat load `P`, the area is `A = P / q(T)`; at areal density `mu`
-(kg/m^2) the mass is `m = mu * A`. Mass per kilowatt is therefore
-
-    mass_per_kw(T) = 1000 * mu / q(T)
-                   = 1000 * mu / (sides * eps * sigma * (T^4 - T_s^4))     (2)
-
-which falls as `1/T^4` for `T >> T_s`: the T^4 leverage.
-
-**The leverage ratio (the closed form worth naming).** Compare a cold radiator
-at `T_c` to a hot one at `T_h > T_c`, same `eps`, `mu`, `sides`, `sigma`, sink:
-
-    L(T_h, T_c) = mass_per_kw(T_c) / mass_per_kw(T_h)
-                = q(T_h) / q(T_c)
-                = (T_h^4 - T_s^4) / (T_c^4 - T_s^4)                        (3)
-
-Every common factor - `sides`, `eps`, `sigma`, `mu`, and the heat load `P` -
-divides out. The advantage of running hot depends *only* on the two
-temperatures and the sink. In the deep-space limit `T_s -> 0`:
-
-    L(T_h, T_c) -> (T_h / T_c)^4                                          (4)
-
-so `L(533, 300) = (533/300)^4 = 9.96` - the "~10x lighter hot radiator".
-
-**Sink correction (sign is derivable).** For `0 < T_s < T_c < T_h`, subtracting
-the same `T_s^4` from a larger numerator and smaller denominator *raises* the
-ratio: `(a - x)/(b - x) > a/b` when `a > b > x > 0`. So a warm sink makes the
-hot radiator's advantage *larger*, not smaller:
-
-    L_sink(T_h, T_c) > (T_h / T_c)^4   for T_s > 0                        (5)
-
-and `L -> infinity` as `T_c -> T_s+` (a radiator barely above its sink rejects
-almost nothing per kg, so its mass/kW diverges).
-
-**ISS anchor (#15).** Inverting (1) at the flight point (`P = 35 kW`,
-`T = 275 K`, `eps = 0.8`, two-sided, deep-space sink):
-
-    A = P / q(275) = 35000 / (2 * 0.8 * sigma * 275^4)
-      = 35000 / 518.9  ~= 67.5 m^2
-
-within ~4% of the real 70.3 m^2 assembly that rejects ~35 kW per loop.
-
-## Test coverage
-- `mass_per_kw_kg` matches (2) to 1e-12 relative across a (T, eps, mu, sides) grid.
-- The leverage ratio (3)/(4) matches the sim, and is invariant to eps, mu, sides,
-  and heat load (the cancellation) - the structural result.
-- The sink correction (5) has the derived sign, and L diverges as T_c -> T_s.
-- The ISS closed form reproduces the sim AND the real 70.3 m^2 assembly to <5%.
-- Limit checks: T_s -> 0 recovers (T_h/T_c)^4; equal temperatures give L = 1.
-"""
+"""Analytical companions for thermal (issue #50, Phase 2; #14/#15)."""
 
 from __future__ import annotations
 
@@ -128,11 +59,7 @@ def test_headline_530_over_300_is_about_ten():
 # ---------- (3) the cancellation: leverage is invariant to eps, mu, sides, load ----------
 
 def test_leverage_ratio_independent_of_emissivity_areal_mass_sides():
-    """The structural result: only the temperatures set the leverage.
-
-    Vary emissivity, areal density, and side count together (as long as both
-    radiators share them) and the cold/hot ratio must not move.
-    """
+    """The structural result: only the temperatures set the leverage."""
     t_cold, t_hot = 300.0, 533.0
     baseline = None
     for eps in (0.4, 0.8, 1.0):
@@ -153,11 +80,7 @@ def test_leverage_ratio_independent_of_emissivity_areal_mass_sides():
 
 
 def test_leverage_ratio_independent_of_heat_load():
-    """mass_per_kw is per-kW, so the leverage cancels the heat load exactly.
-
-    Size both radiators for the same arbitrary load via area; the area ratio is
-    the same closed form, load-free.
-    """
+    """mass_per_kw is per-kW, so the leverage cancels the heat load exactly."""
     t_cold, t_hot = 300.0, 533.0
     for load_w in (1_000.0, 50_000.0, 2_000_000.0):
         a_cold = radiator_area_m2(load_w, t_cold, sink_temp_k=0.0)

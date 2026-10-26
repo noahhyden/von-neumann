@@ -1,15 +1,4 @@
-"""assembly - the robotic build rate that sets the doubling clock.
-
-Derives `closure-sim`/`multi-probe`'s hand-set `local_build_rate_kg_per_day` from
-published metal-AM deposition rates (WAAM, LPBF) and Overall Equipment Effectiveness,
-instead of assuming it. The result is an honest `[ESTIMATE]` band (a single slow head
-at world-class OEE ~ closure-sim's 20 kg/day; NASA's 1980 lunar factory ~ 274 kg/day),
-and that >10x spread propagates straight into the fleet copy time
-`closure_ratio * seed_mass / build_rate` (FINDINGS #9's ~582-day clock).
-
-Pure algebra over sourced numbers - no discrete-event assembly simulator (CLAUDE.md §3),
-no pimas, no RNG (§7). Every number traces to a source; see REFERENCES.md.
-"""
+"""assembly - the robotic build rate that sets the doubling clock."""
 
 from assembly.rate import (
     AASM_SEED_MASS_KG,

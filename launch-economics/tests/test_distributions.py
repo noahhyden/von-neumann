@@ -20,8 +20,7 @@ from vn_core.uq import LogUniform, Uniform, monte_carlo, sobol_total_order
 
 
 def test_launch_cost_bands_ordered_by_generation():
-    # F9 > FH > Starship at the low ends: the module's own numbers tell the
-    # cost-reduction story.
+    # F9 > FH > Starship at the low ends: the module's own numbers tell the cost-reduction story.
     assert LAUNCH_COST_FALCON_9_DIST.low > LAUNCH_COST_FALCON_HEAVY_DIST.low
     assert LAUNCH_COST_FALCON_HEAVY_DIST.low > LAUNCH_COST_STARSHIP_DIST.high
     # Starship carried as LogUniform because the range spans an order of magnitude.
@@ -29,8 +28,7 @@ def test_launch_cost_bands_ordered_by_generation():
 
 
 def test_delta_v_bands_are_all_within_50_percent_of_their_centre():
-    # A sanity check that the delta-V bands are honest ranges, not stub
-    # zero-spread Fixed values passed through Uniform.
+    # A sanity check that the delta-V bands are honest ranges, not stub zero-spread Fixed values passed through Uniform.
     for name, dist in [
         ("surf->LEO", DELTA_V_SURFACE_TO_LEO_DIST),
         ("LEO->TLI", DELTA_V_LEO_TO_TLI_DIST),
@@ -49,9 +47,7 @@ def test_electric_isp_covers_the_1500_to_4000_band():
 
 
 def test_launch_cost_uq_leverage_finding():
-    # Load-bearing UQ finding for launch-economics: what does 1 tonne of local
-    # mass save in launch cost under Starship pricing? Point value at the
-    # $500/kg midpoint gives $5e5; but LogUniform(100, 1000) blows the CI up.
+    # Load-bearing UQ finding: 1 tonne of local mass saves $5e5 at the $500/kg Starship midpoint, but LogUniform(100, 1000) blows the CI up.
     def savings_per_tonne(sample):
         return 1000.0 * sample["cost_per_kg"]
 
@@ -67,10 +63,7 @@ def test_launch_cost_uq_leverage_finding():
 
 
 def test_rocket_equation_uq_finds_isp_dominant():
-    # Tsiolkovsky rocket equation: m0/mf = exp(dv / (Isp * g0)). Under UQ
-    # over both, Isp should dominate because it enters the exponent's
-    # denominator - a proportional change there hits harder than the same
-    # proportional change in the numerator dv.
+    # Tsiolkovsky m0/mf = exp(dv / (Isp * g0)); under UQ over both, Isp should dominate since it sits in the exponent denominator.
     inputs = {
         "dv": DELTA_V_SURFACE_TO_LEO_DIST,
         "isp": ISP_LOX_RP1_DIST,
@@ -80,6 +73,5 @@ def test_rocket_equation_uq_finds_isp_dominant():
         return math.exp(sample["dv"] / (sample["isp"] * 9.80665))
 
     s = sobol_total_order(inputs, mass_ratio, n=1500, seed=103)
-    # Isp has ~20% relative spread, dv has ~7%; Isp in the exponent's
-    # denominator + a wider relative band = dominant driver.
+    # Isp has ~20% relative spread and dv ~7%; Isp in the exponent denominator plus a wider relative band makes it the dominant driver.
     assert s.ranked()[0][0] == "isp"

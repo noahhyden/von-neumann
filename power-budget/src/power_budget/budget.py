@@ -1,15 +1,4 @@
-"""Splitting a fixed power budget between making things and thinking.
-
-An autonomous self-replicating factory has to divide its (solar-limited) electrical
-power between manufacturing/ISRU, onboard computation (the autonomy it needs when
-Earth is light-minutes away), and housekeeping (thermal, comms, attitude). This
-module is the pure, one-shot accounting of that split, plus the conversion from
-compute-watts to compute throughput given a hardware efficiency.
-
-The efficiency (FLOPS per watt) is a per-scenario input, not a constant - a scenario
-that fixes one must cite the specific hardware (see REFERENCES.md). Deterministic,
-plain data, zero pimas imports (CLAUDE.md §7).
-"""
+"""Splitting a fixed power budget between making things and thinking."""
 
 from __future__ import annotations
 
@@ -17,11 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class PowerBudget(BaseModel):
-    """A fixed electrical power budget (W) divided into fractional allocations.
-
-    Fractions are of the total; they must not sum to more than 1. Any remainder is
-    reported as ``unallocated_w`` (spare / margin).
-    """
+    """A fixed electrical power budget (W) divided into fractional allocations."""
 
     total_w: float = Field(gt=0, description="total available electrical power, W")
     fraction_manufacturing: float = Field(ge=0, le=1, default=0.0)
@@ -64,12 +49,7 @@ class PowerBudget(BaseModel):
 
 
 def _verify_power_split(pb: PowerBudget) -> None:
-    """Assert the derived W properties partition total_w. See REFERENCES.md.
-
-    [inv:pb-split]: manufacturing_w + compute_w + housekeeping_w + unallocated_w == total_w
-    within float tolerance. Documents the property-level accounting so a future change to
-    any derived formula cannot silently break the partition.
-    """
+    """Assert the derived W properties partition total_w. See REFERENCES.md."""
     total = pb.manufacturing_w + pb.compute_w + pb.housekeeping_w + pb.unallocated_w
     tol = 1e-9 * max(1.0, abs(pb.total_w))
     assert abs(total - pb.total_w) <= tol, (
