@@ -1,21 +1,4 @@
-"""Render the spine paper's figures from committed JSON (papers/spine/).
-
-CHEAP and CI-safe: reads the deterministic artifacts written by `experiments/measure.py`
-(`results/*.json`) and draws the figures. Runs NO simulation. The drift-guard test
-(`tests/test_measure_results.py`) proves the JSON still matches the fold; regenerate the
-numbers with `python -m experiments.measure --force`.
-
-Figures (vector PDF, IEEE single-column geometry, serif fonts):
-  fig_margin.pdf    - the decisive one: powered dwell fraction of the galactic fill vs a
-                      x0.1..x1e5 copy-time sweep, with the 1% bar, the nominal copy time, and
-                      the break-even. The whole robustness margin in one plot.
-  fig_dwell_tax.pdf - the measured A/B dwell tax per seed for the two slingshot policies, with
-                      the ensemble median and IQR. Shows nearest is small-and-resolved and
-                      maxboost is within seed noise (the spread a single seed would have hidden).
-
-Run (from the spine/ package root):
-    uv run --extra dev python -m experiments.paper_figures
-"""
+"""Render the spine paper's figures from committed JSON (papers/spine/)."""
 
 from __future__ import annotations
 

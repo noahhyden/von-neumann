@@ -1,11 +1,4 @@
-/**
- * TS port of the `launch-economics` module - pure math, no pimas.
- *
- * This is the model a frontend surface will render (drag closure -> watch launch-mass
- * leverage and mission cost). It is a faithful port of the Python package and is
- * parity-tested against it in `launch-economics.test.ts` (Layer A - no pimas). SI
- * units: m/s, kg, seconds, USD. Sources live in ../../launch-economics/REFERENCES.md.
- */
+/** TS port of the `launch-economics` module - pure math, no pimas, SI units (m/s, kg, s, USD); sources: ../../launch-economics/REFERENCES.md. */
 
 // Standard gravity, m/s^2 - defined constant (BIPM/SI).
 export const G0_M_S2 = 9.80665;

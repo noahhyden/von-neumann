@@ -1,36 +1,4 @@
-"""Measurement driver for the spine paper (FINDINGS #9): writes committed JSON.
-
-Mirrors the swarm reproducibility backbone: each measurement writes its own JSON under
-``results/``; the paper and figures (``paper_figures.py``) restate only those committed
-numbers; and ``tests/test_measure_results.py`` re-runs a tiny slice and asserts it matches,
-so the JSON cannot silently drift from the fold. The spine fold is a pure seeded function
-of ``(params, seed)``, so every JSON here is bit-reproducible run to run.
-
-Unlike swarm's driver this is fast (a copy time is instant; the tax A/B is a few hundred
-stars in event mode - seconds, not hours), so it can run anywhere. We still commit the JSON
-and the paper restates only it.
-
-The finding reduces to one inequality (see ``SCRUTINY.md``):
-
-    manufacturing dwell  <<  galactic fill time
-
-with the dwell = the fleet's 1-AU copy cadence in years. The numerator is a lunar-regolith
-*proxy* (probe-sim's own bill of materials is an open [GAP]), so the whole case rests on a
-robustness *margin*, not on the exact copy time. These measurements establish that margin.
-
-Measurements (SCRUTINY.md claim in brackets):
-  copy_time_robustness - dwell fraction vs a x0.1..x1e5 copy-time sweep + the break-even
-                         copy time where the powered dwell reaches 1% of the fill [C1, decisive]
-  dwell_tax            - derived-vs-zero-dwell A/B over a seed ensemble (median + IQR), a
-                         fixed-dt -> event convergence check, and a field-size check [C6]
-  policy_sweep         - dwell fraction across the three policies and the crossover copy
-                         time at which the dwell stops being negligible for each [C7]
-
-Run:
-    uv run --extra dev python -m experiments.measure            # all (skip existing)
-    uv run --extra dev python -m experiments.measure --force    # recompute all
-    uv run --extra dev python -m experiments.measure copy_time_robustness   # a subset
-"""
+"""Measurement driver for the spine paper (FINDINGS #9): writes committed JSON."""
 
 from __future__ import annotations
 
@@ -47,14 +15,10 @@ from spine.scenario import SpineScenario
 
 RESULTS = Path(__file__).resolve().parent / "results"
 
-# A fixed seed ensemble - the ONLY source of randomness in this driver, so every JSON is
-# bit-reproducible. Sequential offsets by the golden-ratio odd constant (the same constant
-# the default scenario seed uses) give well-separated 32-bit seeds without a PRNG here.
+# A fixed golden-ratio-stepped seed ensemble (see REFERENCES.md) - the ONLY source of randomness in this driver, so every JSON is bit-reproducible.
 SEEDS: tuple[int, ...] = tuple((0x9E3779B9 + 0x61C88647 * i) & 0xFFFFFFFF for i in range(24))
 
-# The dwell-fraction threshold that defines "no longer negligible". One percent of the whole
-# galactic fill is a deliberately generous bar: even at 1% the manufacturing dwell is a minor
-# correction to a multi-million-year process. Break-even and crossover are quoted against it.
+# The dwell-fraction threshold (1% of the galactic fill, a convention marked [ESTIMATE] in REFERENCES.md) that defines "no longer negligible".
 NEGLIGIBLE_BAR: float = 0.01
 
 
@@ -92,17 +56,10 @@ def _dwell_fraction(
 def _break_even_multiplier(
     policy: str, nominal_settle: float, *, n_stars: int, seed: int, bar: float = NEGLIGIBLE_BAR
 ) -> dict:
-    """The copy-time multiplier at which the dwell fraction first reaches ``bar``.
-
-    The fraction rises with the copy time (a longer dwell is a larger share of the fill), but
-    SUB-linearly - a longer dwell also lengthens the fill - so we solve for the crossover by
-    bisection on the multiplier rather than assuming linearity (SCRUTINY.md C1). Returns the
-    multiplier, the copy time it corresponds to, and the fraction there.
-    """
+    """The copy-time multiplier at which the dwell fraction first reaches ``bar``."""
     def frac(mult: float) -> float:
         f = _dwell_fraction(policy, nominal_settle * mult, n_stars=n_stars, seed=seed)
-        # If the fill never completes (dwell so large the front stalls under max_years), the
-        # dwell is by then a large share of exploration - treat as above the bar.
+        # If the fill never completes (dwell so large the front stalls under max_years), the dwell is by then a large share of exploration - treat as above the bar.
         return f if f is not None else 1.0
 
     lo, hi = 1.0, 1.0
@@ -111,8 +68,7 @@ def _break_even_multiplier(
         lo, hi = hi, hi * 10.0
     if frac(hi) < bar:
         return {"reached": False, "multiplier": None, "copy_time_days": None, "fraction_at": frac(hi)}
-    # Bisect in log space for the crossing. 20 steps resolve the crossing decade to ~5 sig
-    # figs - far finer than the order-of-magnitude margin this feeds.
+    # Bisect in log space for the crossing.
     for _ in range(20):
         mid = (lo * hi) ** 0.5
         if frac(mid) < bar:
@@ -128,19 +84,9 @@ def _break_even_multiplier(
     }
 
 
-# --------------------------------------------------------------------------------------
 # C1 (decisive): the robustness margin.
-# --------------------------------------------------------------------------------------
 def m_copy_time_robustness(sc: SpineScenario) -> dict:
-    """Sweep the derived copy time and record whether the finding survives (SCRUTINY.md C1).
-
-    The numerator (copy time) is a lunar-regolith proxy for a probe with no sourced BOM, so
-    the paper cannot rest on the exact 582 days. It rests on this: the powered dwell fraction
-    stays orders below 1% across a x0.1..x1e5 copy-time sweep, and the break-even copy time
-    (where it would reach 1%) is thousands of times the nominal. Powered is the tightest case
-    for the margin because it has the longest fill; a bigger fill makes the fraction smaller,
-    so if powered survives, every faster policy survives by more.
-    """
+    """Sweep the derived copy time and record whether the finding survives (SCRUTINY.md C1)."""
     nominal = derive_settle_time_years(sc)
     nominal_copy_days = nominal * DAYS_PER_JULIAN_YEAR
     policy = "powered"
@@ -166,11 +112,7 @@ def m_copy_time_robustness(sc: SpineScenario) -> dict:
     if be["reached"]:
         be["copy_time_days"] = nominal_copy_days * be["multiplier"]
 
-    # C2 folded in: the binding build-rate regime and the [ESTIMATE] array-input sensitivity.
-    # A change in array efficiency (30% [ESTIMATE]) scales the build rate, hence the copy time,
-    # inversely - so the documented 20-40% efficiency band is a x0.75..x1.5 copy-time move,
-    # which lands well inside the first decade of this sweep. No separate run is needed; it is
-    # a sub-interval of the margin measured here.
+    # C2 folded in: the binding build-rate regime and the [ESTIMATE] array-efficiency sensitivity (copy time scales as 1/efficiency, so 20-40% vs 30% is x0.75..x1.5; see REFERENCES.md).
     return {
         "measurement": "copy_time_robustness",
         "config": {
@@ -190,9 +132,7 @@ def m_copy_time_robustness(sc: SpineScenario) -> dict:
     }
 
 
-# --------------------------------------------------------------------------------------
 # C6: the A/B dwell tax over an ensemble, with dt-convergence and field-size sub-checks.
-# --------------------------------------------------------------------------------------
 def _quartiles(xs: list[float]) -> dict:
     ys = sorted(xs)
     n = len(ys)
@@ -209,16 +149,7 @@ def _quartiles(xs: list[float]) -> dict:
 
 
 def m_dwell_tax(sc: SpineScenario) -> dict:
-    """The manufacturing dwell's galactic cost, measured A/B over a seed ensemble (C6).
-
-    For each fast (slingshot) policy and each seed we run the front twice - once with the
-    derived dwell, once with dwell = 0 (the old ungrounded default) - on the same field, and
-    take the fractional slowdown. We report the ensemble median and IQR, NOT a single seed
-    (the sibling coordination-tax paper's single-seed numbers were a scrutiny finding). Event
-    mode makes each run dt-independent; a separate fixed-dt sub-check shows the fixed scheme
-    converges to it. Powered is not brute-forced here (its ~1e6-yr fill makes the ~1.6-yr tax
-    unresolvable by simulation - itself the point); it is read analytically in policy_sweep.
-    """
+    """The manufacturing dwell's galactic cost, measured A/B over a seed ensemble (C6)."""
     nominal = derive_settle_time_years(sc)
     n_stars = sc.tax_n_stars
     policies = ["slingshot_nearest", "slingshot_maxboost"]
@@ -240,8 +171,7 @@ def m_dwell_tax(sc: SpineScenario) -> dict:
         taxes = [r["tax_fraction"] for r in per_seed if r["tax_fraction"] is not None]
         ensemble[policy] = {"per_seed": per_seed, "stats": _quartiles(taxes) if taxes else None}
 
-    # Sub-check 1: dt convergence. Fixed stepping at shrinking dt should approach the event
-    # (dt-independent) value for the default seed and the nearest-slingshot policy.
+    # Sub-check 1: dt convergence - fixed stepping at shrinking dt should approach the dt-independent event-mode tax for the default seed and nearest-slingshot.
     dt_seed = sc.seed
     dt_policy = "slingshot_nearest"
     event_tax = None
@@ -256,8 +186,7 @@ def m_dwell_tax(sc: SpineScenario) -> dict:
         ft = (fw - fz) / fz if (fw is not None and fz not in (None, 0.0)) else None
         dt_convergence["fixed"].append({"dt_years": dt, "tax_fraction": ft})
 
-    # Sub-check 2: finite size. Median tax over the ensemble at a few field sizes; a flat
-    # trend means the small-field tax is representative (SCRUTINY.md C6.3).
+    # Sub-check 2: finite size - the median tax over the ensemble at a few field sizes; a flat trend means the small-field tax is representative (SCRUTINY.md C6.3).
     size_check = {"policy": dt_policy, "sizes": []}
     for n in [200, 400, 800]:
         taxes = []
@@ -285,25 +214,12 @@ def m_dwell_tax(sc: SpineScenario) -> dict:
     }
 
 
-# --------------------------------------------------------------------------------------
 # C7: the generalization - dwell fraction across policies and the crossover.
-# --------------------------------------------------------------------------------------
 def m_policy_sweep(sc: SpineScenario) -> dict:
-    """Dwell fraction and break-even copy time for every policy (SCRUTINY.md C7).
-
-    "The constraint that rules one scale is a rounding error at the next" is claimed generally
-    but computed at one point; this sweeps the three named policies, reports the analytic dwell
-    fraction of each fill, and gives the crossover - the copy-time multiplier at which each
-    policy's dwell would stop being negligible. The faster the policy (shorter fill) the larger
-    the fraction and the nearer the crossover, so this also states where the finding breaks.
-    """
+    """Dwell fraction and break-even copy time for every policy (SCRUTINY.md C7)."""
     nominal = derive_settle_time_years(sc)
     nominal_copy_days = nominal * DAYS_PER_JULIAN_YEAR
-    # Cross-policy comparison and crossover run on the smaller (tax) field, so all three
-    # policies - including the ~50 break-even fills powered needs - are cheap and on one
-    # footing. The tax is scale-flat (see dwell_tax finite_size), so the crossover ORDERING
-    # is field-size independent; the headline powered fraction and break-even at the full
-    # 1200-star field live in copy_time_robustness.
+    # Cross-policy comparison and crossover run on the smaller (tax) field, so all three policies - including the ~50 break-even fills powered needs - are cheap and on one footing.
     n_stars = sc.tax_n_stars
     seed = sc.seed
 

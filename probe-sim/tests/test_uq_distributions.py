@@ -1,10 +1,4 @@
-"""Distributions: assert on the inverse-CDF math and edge cases, not execution.
-
-Each Distribution's `quantile(u)` is the entire sampling surface - if the math is
-right and the RNG stream is deterministic, MC and Sobol both inherit correctness.
-So these tests pin the analytic properties on a few sourced-shape distributions,
-plus the domain-guard edges.
-"""
+"""Distributions: assert on the inverse-CDF math and edge cases, not execution."""
 
 import math
 

@@ -1,9 +1,4 @@
-/**
- * Headless integration smoke: the reactive model + `speculate` must (a) reproduce
- * the electronics-wall numbers through the pimas graph, and (b) leave the real
- * model UNTOUCHED after a preview (free rollback). Bundled with esbuild and run in
- * Node - no DOM. Also exercises the agent bridge's speculate + explain.
- */
+/** Headless integration smoke: the reactive model + `speculate` must (a) reproduce the electronics-wall numbers through the pimas graph, and (b) leave the real model UNTOUCHED after a preview (free rollback). */
 import { createWallModel } from "./reactive-model.js";
 import { LUNAR_REGOLITH_SEED } from "./scenarios.js";
 import { createLaunchEconomicsModel } from "./launch-economics-model.js";
@@ -82,8 +77,7 @@ const p1 = pr.outputs().deliveredPowerW;
 pr.params[0].set(2.0); // distance 1 AU -> 2 AU
 near(pr.outputs().deliveredPowerW, p1 / 4, 1e-6 * p1, "at 2x distance, delivered power is quartered (reactive)");
 
-// Mission surface: the end-to-end fold reacts to the knobs, and starves when the
-// probe is moved far from the Sun (the whole point of the follow-along).
+// Mission surface: the end-to-end fold reacts to the knobs, and starves when the probe is moved far from the Sun (the whole point of the follow-along).
 const mi = createMissionModel();
 near(mi.outputs().closureRatio, 0.970833, 1e-4, "mission closure = 0.9708 (through the graph)");
 ok(mi.outputs().reachesTarget === true, "mission reaches target near Earth (1 AU baseline)");
@@ -96,8 +90,7 @@ mi.params[0].set(1.0);
 mi.params[1].set(90); // all remaining power to compute -> manufacturing starved
 ok(mi.outputs().manufacturingW === 0 && mi.outputs().reachesTarget === false, "all power to compute stalls the factory (reactive)");
 
-// Fleet surface: the reactive fold grows a fleet near the Sun, the scrubber selects a
-// snapshot, and pushing the start distance out trips the spatial power wall.
+// Fleet surface: the reactive fold grows a fleet near the Sun, the scrubber selects a snapshot, and pushing the start distance out trips the spatial power wall.
 const fl = createMultiProbeModel();
 ok(fl.result().finalPopulation > 1, "fleet grows past one probe near the Sun (reactive)");
 ok(fl.snap().day === fl.durationDays, "scrubber starts at the final day");
@@ -110,8 +103,7 @@ ok(fl.result().finalPopulation > farPop, "starting far from the Sun yields a sma
 fl.params[1].set(0); // vitamin pool -> 0 t
 ok(fl.result().finalPopulation === 1 && fl.result().binding.vitaminLimited === true, "zero vitamins → no children (electronics wall)");
 
-// Swarm surface: the reactive fold fills the field, and the scrubber selects a moment
-// (settled count is monotonic in the scrubbed year).
+// Swarm surface: the reactive fold fills the field, and the scrubber selects a moment (settled count is monotonic in the scrubbed year).
 const sw = createSwarmModel();
 ok(sw.result().finalSettled === sw.result().nStars, "swarm fills the reachable field (reactive)");
 sw.setScrubYear(0);
@@ -131,8 +123,7 @@ ok(sw.result().t100Years! < poweredT100, "slingshot_nearest fills faster than po
 ok(sw.result().maxProbeSpeedKmS > 10 * poweredSpeed, "slingshot accumulates speed far above the powered cruise");
 sw.setPolicy("powered");
 
-// Coordination horizon: the hover→ρ path through the reactive graph. Homeworld has zero
-// lag; any settled star is light-years away → the top rung; τ scales ρ but never the rung.
+// Coordination horizon: the hover→ρ path through the reactive graph.
 ok(sw.hoverInfo() === null, "no hover → no coordination readout");
 sw.setHoverStar(sw.result().origin);
 ok(sw.hoverInfo()!.isOrigin && sw.hoverInfo()!.rho === 0, "hovering the homeworld reads zero lag");
@@ -148,8 +139,7 @@ ok(sw.hoverInfo()!.rung.key === "independent", "τ changes ρ but not the (laten
 sw.setHoverStar(null);
 sw.setDecisionTimescale(1);
 
-// Coordination regime (FRONTIER #1): light-speed lag slows the slingshot fill vs the
-// perfect-info baseline, and surfaces wasted trips. (Small field to keep the smoke quick.)
+// Coordination regime (FRONTIER #1): light-speed lag slows the slingshot fill vs the perfect-info baseline, and surfaces wasted trips.
 sw.params[0].set(400); // nStars 1200 -> 400
 sw.setPolicy("slingshot_nearest");
 sw.setCoordination("instant");
@@ -168,9 +158,7 @@ sw.params[0].set(1200);
 sw.params[1].set(0); // offspring 2 -> 0
 ok(sw.result().finalSettled === 1 && sw.result().t100Years === null, "zero offspring settles only the homeworld (reactive)");
 
-// Spine surface: one factory drives all three scales; the galactic dwell is derived
-// (nonzero) and a vanishing fraction of the powered fill; a fast policy pays a small,
-// measurable, still-tiny tax.
+// Spine surface: one factory drives all three scales; the galactic dwell is derived (nonzero) and a vanishing fraction of the powered fill; a fast policy pays a small, measurable, still-tiny tax.
 const sp = runSpine(scenarioFrom(LUNAR_REGOLITH_SEED));
 near(sp.closureRatio, 0.970833, 1e-4, "spine closure = 0.9708 (shared factory)");
 near(sp.copyTimeDays, 582.5, 1e-1, "spine derived copy time = 582.5 d");

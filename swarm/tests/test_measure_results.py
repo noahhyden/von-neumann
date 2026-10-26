@@ -1,15 +1,4 @@
-"""Drift guard: the committed JSON result artifacts must still match the fold.
-
-The heavy ensemble (``experiments/measure.py``) runs locally and its output is committed under
-``experiments/results/``; the paper and figures restate only those numbers. That is only safe
-if the committed JSON cannot silently drift from the code. These tests re-run a TINY slice of
-each measurement (a couple of seeds) and assert it reproduces the corresponding committed
-records exactly. A refactor that changes the fold therefore fails here until the JSON is
-regenerated - the same discipline as the pinned-baseline tests, extended to the artifacts.
-
-Each test skips if its JSON is absent (so a fresh checkout without a local run still passes);
-in CI the artifacts are committed, so the guard is live.
-"""
+"""Drift guard: the committed JSON result artifacts must still match the fold."""
 
 from __future__ import annotations
 
@@ -24,12 +13,7 @@ from experiments.measure import SEEDS, record
 
 RESULTS = Path(__file__).resolve().parents[1] / "experiments" / "results"
 
-# The at-scale p2 guards (lambda_sweep, floor_bracket) re-run folds at N=262,144. Only the Rust
-# fill loop makes that tractable in a test; the numba / pure-Python paths share the same slow
-# event-loop fill, so a single fold there is minutes. The fold is backend-independent by
-# construction (nearest-kernel bit-identity across backends is proven in test_kdtree_backends),
-# so re-verifying these large-N measurements on the slow backends is redundant - skip them there.
-# This keeps the backend-drift-guard subprocesses (test_kdtree_backends) inside their timeout.
+# The at-scale p2 guards (lambda_sweep, floor_bracket) re-run folds at N=262,144, tractable only on the Rust fill loop, so they skip on the slower backends.
 _AT_SCALE_N = 100_000
 
 
@@ -46,8 +30,7 @@ def _load(name: str) -> dict:
 
 
 def _assert_record_matches(got: dict, want: dict, ctx: str) -> None:
-    # Integer counts must match exactly; floats to a tight relative tolerance (deterministic
-    # fold, so this is really an exact check modulo JSON float round-trip).
+    # Integer counts must match exactly; floats to a tight relative tolerance (deterministic fold, so this is really an exact check modulo JSON float round-trip).
     for k in ("wasted_arrivals", "midflight_aborts", "total_launched", "final_settled", "n_stars"):
         assert got[k] == want[k], f"{ctx}: {k} {got[k]} != {want[k]}"
     for k in ("t100", "wasted_travel_pc", "settle_energy_c2", "wasted_energy_c2"):
@@ -82,9 +65,7 @@ def test_lambda_sweep_json_matches_fold() -> None:
 
 
 def test_clumpiness_json_matches_fold() -> None:
-    # Guard the clumpy-field robustness numbers. Re-run two seeds of the uniform null level at the
-    # first Lambda and assert they reproduce the committed per-seed records (same discipline as the
-    # other measurements). The uniform level uses the default (n_clumps=None) field.
+    # Guard the clumpy-field robustness numbers.
     d = _load("clumpiness")
     cfg = d["config"]
     lam = cfg["lambdas"][0]
@@ -113,8 +94,7 @@ def test_floor_bracket_json_matches_fold() -> None:
 
 
 def test_finite_size_json_matches_fold() -> None:
-    # Guard the referee-critical scale numbers at the SMALLEST N only (N=4800 is ~200 s/seed;
-    # too slow for a test). The small point exercises the same pipeline the whole sweep uses.
+    # Guard the referee-critical scale numbers at the SMALLEST N only (N=4800 is ~200 s/seed; too slow for a test).
     d = _load("finite_size")
     n = min(int(k) for k in d["data"])
     block = d["data"][str(n)]
@@ -143,9 +123,6 @@ def test_finite_size_periodic_json_matches_fold() -> None:
 
 
 # --- P2 companion drift guards (issue #38 p2 substrate; see SPEC_P2_LADDER.md) --------------
-# Each historical drift guard grows a p2 companion assertion that exercises the smallest N in the
-# p2 block. Skips cleanly if the p2 block isn't present yet (a JSON generated before the
-# dual-ladder migration landed; ``experiments.measure --p2`` fills it in).
 
 
 def _load_p2(name: str) -> dict:

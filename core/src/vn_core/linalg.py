@@ -1,22 +1,4 @@
-"""Tiny dense linear algebra - pure Python, zero deps, shared across the repo.
-
-Two solvers live here so nothing re-implements them:
-
-- ``solve_linear(A, b)`` - a square dense system by Gaussian elimination with partial
-  pivoting. Used by the implicit ODE solver (a Newton step per stage) where A is the
-  size of the ODE state - scalar or a handful of components.
-- ``solve_lstsq(A, b)`` - an overdetermined least-squares problem min ||A x - b|| by
-  Householder QR. Used by PCE regression, where A is the (N x n_terms) design matrix.
-  QR is the numerically stable route: forming the normal equations A^T A first would
-  *square* the condition number, so a mildly ill-conditioned design that QR handles
-  cleanly can lose half its digits through the normal equations.
-
-Keeping this hand-written rather than reaching for numpy is a §7 call as much as a
-dependency one (vn-core is deliberately ``dependencies = []``): the fold must be
-deterministic, and elimination / reflection in a fixed operation order is trivially
-reproducible across machines. Both are validated against numpy in the tests, which are
-a dev-only oracle - never a runtime dependency.
-"""
+"""Tiny dense linear algebra - pure Python, zero deps, shared across the repo."""
 
 from __future__ import annotations
 
@@ -24,12 +6,7 @@ import math
 
 
 def solve_linear(a: list[list[float]], b: list[float]) -> list[float]:
-    """Solve the dense system ``a x = b`` by Gaussian elimination w/ partial pivot.
-
-    ``a`` is an n x n matrix (list of rows), ``b`` a length-n vector. Returns the
-    solution ``x``. Raises ValueError if the matrix is singular to working
-    precision. Operates on copies, so the inputs are not mutated.
-    """
+    """Solve the dense system ``a x = b`` by Gaussian elimination w/ partial pivot."""
     n = len(b)
     if any(len(row) != n for row in a) or len(a) != n:
         raise ValueError("a must be square and match len(b)")
@@ -60,18 +37,7 @@ def solve_linear(a: list[list[float]], b: list[float]) -> list[float]:
 
 
 def solve_lstsq(a: list[list[float]], b: list[float]) -> list[float]:
-    """Least-squares solution of the overdetermined system ``a x ~= b`` by Householder QR.
-
-    ``a`` is an m x n matrix with m >= n (more equations than unknowns), ``b`` a
-    length-m vector. Returns the ``x`` minimizing ||a x - b||_2. Raises ValueError on
-    a rank-deficient design (a zero pivot in R) or a shape mismatch. Operates on
-    copies; inputs are not mutated.
-
-    Method: apply Householder reflections to triangularize ``a`` into R while carrying
-    the same reflections through ``b`` (forming Q^T b implicitly), then back-substitute
-    the top n rows R x = (Q^T b)[:n]. Q is never formed. This is the standard stable LS
-    solve; unlike the normal equations it never squares the condition number.
-    """
+    """Least-squares solution of the overdetermined system ``a x ~= b`` by Householder QR."""
     m = len(a)
     if m == 0:
         raise ValueError("solve_lstsq needs at least one equation")
@@ -114,9 +80,7 @@ def solve_lstsq(a: list[list[float]], b: list[float]) -> list[float]:
     x = [0.0] * n
     for i in range(n - 1, -1, -1):
         if r[i][i] == 0.0:  # pragma: no cover - unreachable: R[i][i] was set to alpha
-            # with |alpha| = norm_x > 0 and is never modified by later steps, so a
-            # rank-deficient column trips the norm_x==0 guard above instead. Kept as a
-            # defensive floor against a future refactor.
+            # Unreachable: R[i][i] was set to alpha with norm_x > 0 as its magnitude and is never modified by later steps.
             raise ValueError("solve_lstsq: rank-deficient design (zero pivot in R)")
         acc = qtb[i]
         for j in range(i + 1, n):

@@ -1,25 +1,11 @@
-/**
- * TS port of the `swarm` module (slice 1) - a deterministic settlement front.
- *
- * Faithful port of the Python `swarm.sim`: probes spread star-to-star through a seeded
- * field, settling the nearest unsettled star at a fraction of c and launching offspring.
- * Pure, seeded, fixed-step; the mulberry32 RNG is byte-identical to the Python (and to
- * the other modules), so the star field and the whole run replay bit-for-bit. Parity
- * tested against the Python ground truth in `swarm.test.ts` (Layer A). Self-contained
- * (no sibling ports), so it loads directly under `node --test`.
- *
- * The result exposes the final star field (positions + per-star settlement year) so the
- * frontend can draw the front at any scrubbed year without re-running the fold.
- */
+/** TS port of the `swarm` module (slice 1) - a deterministic settlement front. */
 
 // c in parsecs per Julian year - derived from defined constants (see swarm/REFERENCES.md).
 export const C_PC_PER_YEAR = (299792.458 * 3.15576e7) / 3.0856775814913673e13;
 export const KM_S_TO_PC_YR = (3.15576e7) / 3.0856775814913673e13; // 1 km/s in pc/yr
 
 export type Policy = "powered" | "slingshot_nearest" | "slingshot_maxboost";
-// Knowledge regime (FRONTIER #1). "instant" = perfect global info (bit-identical to the
-// perfect-info port). "lightspeed" = a decider at a star knows a distant star is settled
-// only once the news-light has arrived. See swarm/REFERENCES.md.
+// Knowledge regime (FRONTIER #1): "instant" is perfect global info (bit-identical to the perfect-info port), "lightspeed" lets a decider know a star is settled only once the news-light arrives (swarm/REFERENCES.md).
 export type Coordination = "instant" | "lightspeed";
 
 // ── mulberry32, threaded - mirrors vn_core.rng (pinned by core/tests/test_rng.py) ─
@@ -80,15 +66,7 @@ interface Probe {
   retargets: number; // times this probe has lost a race and re-aimed (capped by maxRetargets)
 }
 
-/**
- * A uniform-grid spatial index over the (static) star positions. Cells hold star
- * indices; nearest-unsettled queries expand Chebyshev shells outward and stop once no
- * unexamined cell can beat the best distance. Built once (positions never move); only
- * the settled mask changes between queries. Returns EXACTLY what the brute-force scan
- * returns - same nearest star, same lowest-index tie-break - so it's a pure speedup
- * (proven bit-identical in the tests). This is the "scale" slice's core (§7: the
- * spatial index lives in the frontend, not the pure Python ground truth).
- */
+/** A uniform-grid spatial index over the (static) star positions. */
 export interface Grid {
   cellSize: number;
   dim: number; // cells per axis
@@ -132,8 +110,7 @@ function buildGrid(xs: number[], ys: number[], zs: number[], boxSide: number): G
   return { cellSize, dim, cells };
 }
 
-/** Remove a (now-settled) star from its grid cell, so future queries never scan it.
- *  This keeps nearest-unsettled fast even late in the fill, when most stars are settled. */
+/** Remove a (now-settled) star from its grid cell, so future queries never scan it. */
 function removeFromGrid(s: SwarmState, i: number): void {
   const g = s.grid;
   const ix = Math.min(g.dim - 1, Math.max(0, Math.floor(s.xs[i] / g.cellSize)));
@@ -144,12 +121,7 @@ function removeFromGrid(s: SwarmState, i: number): void {
   if (at !== -1) cell[cell.length - 1] === i ? cell.pop() : (cell[at] = cell.pop()!);
 }
 
-/**
- * Does a decider AT star `frm` in year `s.year` know star `i` is settled? The light-cone
- * gate (FRONTIER #1), mirroring the Python `_believes_settled`. A settled star is a beacon
- * emitting at `settledYear[i]`; the news reaches `frm` only after `dist/c`. Under "instant"
- * this collapses to `settledYear[i] >= 0` - bit-identical to the perfect-info port.
- */
+/** Does a decider AT star `frm` in year `s.year` know star `i` is settled? */
 function believesSettled(s: SwarmState, frm: number, i: number, p: SwarmParams): boolean {
   if (s.settledYear[i] < 0) return false;
   if (p.coordination === "instant") return true;
@@ -256,8 +228,7 @@ function generateGalaxy(p: SwarmParams, rng: number): { xs: number[]; ys: number
     ys.push(y * L);
     zs.push(z * L);
   }
-  // Second pass: star speeds (magnitudes, pc/yr). Drawn AFTER all positions so the
-  // position stream - and hence the powered policy - is bit-identical to before.
+  // Second pass: star speeds (magnitudes, pc/yr).
   const base = p.starSpeedKmS * KM_S_TO_PC_YR;
   const disp = p.starSpeedDispersionKmS * KM_S_TO_PC_YR;
   const starSpeed: number[] = [];
@@ -280,8 +251,7 @@ const nearestUnsettled = gridNearestUnsettled;
 // Exported so the tests can prove grid ≡ brute across many queries.
 export { bruteNearestUnsettled, gridNearestUnsettled };
 
-/** The k nearest *believed*-unsettled stars to `frm`, ordered by (distance, index) - brute
- *  force, matching the Python (used only by the max-boost policy). */
+/** The k nearest *believed*-unsettled stars to `frm`, ordered by (distance, index) - brute force, matching the Python (used only by the max-boost policy). */
 function nearestKUnsettled(s: SwarmState, frm: number, exclude: Set<number>, k: number, p: SwarmParams): number[] {
   const fx = s.xs[frm], fy = s.ys[frm], fz = s.zs[frm];
   const cands: [number, number][] = [];
@@ -352,8 +322,7 @@ export function initialState(p: SwarmParams, seed: number): SwarmState {
     grid, settledCount: 1, frontMaxPc: 0, starSpeedPcYr: starSpeed, maxSpeedPcYr: vMax,
     totalArrivals: 0, wastedArrivals: 0, retargetCount: 0,
   };
-  // Under lightspeed, a settled star must stay in the grid - a distant probe may still
-  // (correctly, per its stale view) target it; belief is gated in the search instead.
+  // Under lightspeed, a settled star must stay in the grid - a distant probe may still (correctly, per its stale view) target it; belief is gated in the search instead.
   if (p.coordination === "instant") removeFromGrid(s, origin);
   launchFrom(s, origin, p, vMax); // seed probes leave at powered cruise, taking the homeworld's slingshot
   return s;
@@ -380,11 +349,9 @@ export function step(s: SwarmState, p: SwarmParams): SwarmState {
       if (d > s.frontMaxPc) s.frontMaxPc = d;
       launchFrom(s, pr.target, p, pr.speedPcYr); // slingshot off it; offspring inherit the boost
     } else {
-      // Raced and lost: a wasted trip (the cost of stale info). Re-target from this star's
-      // belief, keeping the probe's speed - up to the cap.
+      // Raced and lost: a wasted trip (the cost of stale info).
       s.wastedArrivals += 1;
-      // Cap bites only under lightspeed (stale-view bounce chains); instant re-targets
-      // unbounded to a truly-unsettled star, keeping the perfect-info baseline identical.
+      // Cap bites only under lightspeed (stale-view bounce chains); instant re-targets unbounded to a truly-unsettled star, keeping the perfect-info baseline identical.
       if (p.coordination === "lightspeed" && pr.retargets >= p.maxRetargets) continue;
       const target = selectTarget(s, pr.target, new Set(), p);
       if (target !== null) {

@@ -1,9 +1,4 @@
-/**
- * Layer A (pimas-free) tests for the project bibliography. The bibliography is public-
- * facing research provenance, so these assert on its integrity, not just that it loads:
- * ids are unique, every entry is complete, every URL is real or explicitly null, the
- * citation numbering is stable, and the load-bearing sources are present.
- */
+/** Layer A (pimas-free) tests for the project bibliography. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -61,10 +56,7 @@ test("every URL is either null or a real http(s) link (no fabricated/relative li
 });
 
 test("arXiv links and titles reference a consistent arXiv id", () => {
-  // A title may name its arXiv id, e.g. "(arXiv:2005.12303)"; when it does and the url
-  // is an arxiv.org/abs link, the two must match. This catches the class of error where
-  // a real link is pasted under the wrong paper's title/authors (as happened with the
-  // 2105.02082 entry, which had a valid link under the wrong "Chasing Carbon" title).
+  // A title may name its arXiv id, e.g.
   const idIn = (s: string) => s.match(/arxiv[.:/]+(?:abs\/)?(\d{4}\.\d{4,5})/i)?.[1];
   for (const s of SOURCES) {
     const titleId = idIn(s.title);
@@ -75,12 +67,7 @@ test("arXiv links and titles reference a consistent arXiv id", () => {
   }
 });
 
-// Provenance verified by hand against the primary source (2026-07-07): each entry pins
-// the author surname and a distinctive title token confirmed at the cited work. A unit
-// test cannot reach the live web, so this locks what a human already checked - a later
-// careless edit that reintroduces a wrong attribution (as had happened with 2110.15198
-// = Shubov, and 2105.02082 = Pirson & Bol) fails here instead of shipping green. Extend
-// this table only after re-verifying the entry against its actual source.
+// Provenance verified by hand against the primary source (2026-07-07): each entry pins the author surname and a distinctive title token confirmed at the cited work.
 const VERIFIED: Record<string, { author: string; titleToken: string }> = {
   "guided-self-replicating-factory-2021": { author: "Shubov", titleToken: "Colonization of Solar System" },
   "sensor-embodied-2021": { author: "Pirson", titleToken: "IoT edge devices" },
@@ -109,7 +96,7 @@ test("hand-verified provenance is locked (author + title token match the cited s
 
 test("no em-dash or emoji leaks into the public bibliography text", () => {
   // The repo-wide typography rule (CLAUDE.md 5) applies to this user-facing data too.
-  const emdash = /—/;
+  const emdash = /—/; // typography-allow: the rule's own fixture
   const emoji = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{26FF}\u{2705}\u{2714}\u{2717}\u{274C}]/u;
   for (const s of SOURCES) {
     const blob = `${s.short} ${s.authors} ${s.title} ${s.venue} ${s.grounds}`;

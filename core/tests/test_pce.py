@@ -1,21 +1,4 @@
-"""Red-hat (adversarial) + validation tests for polynomial chaos (`pce_fit`).
-
-PCE is only honest if (a) the quadrature engine is exact where it claims to be,
-(b) it recovers smooth findings and pins their Sobol structure, and - the one that
-matters most - (c) it *tells you when it failed* on a non-smooth finding instead of
-returning confident nonsense. These tests attack each:
-
-- the Gauss nodes must integrate polynomials exactly to degree 2m-1;
-- a polynomial finding must be recovered to machine precision, moments + Sobol;
-- the Ishigami benchmark must match analytic Sobol, including x3's ZERO first-
-  order but nonzero total-order (pure interaction - the case a first-order-only
-  implementation gets wrong);
-- PCE moments/indices must agree with the MC surfaces on a smooth finding;
-- **the fit_residual must spike on a kink** so is_trustworthy() reads False - the
-  honest-null guard;
-- unsupported distributions and nonfinite returns must raise, not limp on;
-- same inputs -> byte-identical (§7).
-"""
+"""Red-hat (adversarial) + validation tests for polynomial chaos (`pce_fit`)."""
 
 from __future__ import annotations
 
@@ -40,8 +23,7 @@ PI = math.pi
 
 
 def test_legendre_nodes_integrate_polynomials_exactly():
-    """m-point Gauss-Legendre integrates x^k exactly to k = 2m-1. Reference
-    measure is uniform on [-1, 1] (weight 1/2): E[x^k] = 0 (odd), 1/(k+1) (even)."""
+    """m-point Gauss-Legendre integrates x^k exactly to k = 2m-1. Reference."""
     m = 5
     nodes, weights = _gauss_nodes_weights("legendre", m)
     assert sum(weights) == pytest.approx(1.0)  # probability measure
@@ -52,8 +34,7 @@ def test_legendre_nodes_integrate_polynomials_exactly():
 
 
 def test_hermite_nodes_integrate_standard_normal_moments_exactly():
-    """m-point Gauss-Hermite integrates standard-normal moments: E[x^k] = 0 (odd),
-    (k-1)!! (even)."""
+    """m-point Gauss-Hermite integrates standard-normal moments: E[x^k] = 0 (odd), (k-1)!! (even)."""
     m = 5
     nodes, weights = _gauss_nodes_weights("hermite", m)
     assert sum(weights) == pytest.approx(1.0)
@@ -94,8 +75,7 @@ def test_polynomial_finding_recovered_to_machine_precision():
 
 
 def test_surrogate_predict_reproduces_a_polynomial_finding():
-    """predict() must equal the finding at arbitrary points for a polynomial -
-    an arithmetic-independent check of the whole basis/coefficient machinery."""
+    """predict() must equal the finding at arbitrary points for a polynomial -."""
     r = pce_fit(_POLY_INPUTS, _poly, degree=2, seed=1)
     for a, b in [(-0.9, 0.4), (0.1, -0.7), (0.5, 0.5), (-0.3, -0.2)]:
         s = {"a": a, "b": b}
@@ -103,8 +83,7 @@ def test_surrogate_predict_reproduces_a_polynomial_finding():
 
 
 def test_higher_degree_still_exact_no_spurious_high_terms():
-    """Fitting at degree 5 a degree-2 finding must still be exact - the extra
-    coefficients must come out ~0, not inject noise."""
+    """Fitting at degree 5 a degree-2 finding must still be exact - the extra."""
     r = pce_fit(_POLY_INPUTS, _poly, degree=5, seed=1)
     assert r.fit_residual < 1e-9
     assert r.variance == pytest.approx(3.0 + 1.0 / 9.0 + 1.0 / 45.0, abs=1e-8)
@@ -135,8 +114,7 @@ def test_ishigami_matches_analytic_variance_and_total_order():
 
 
 def test_ishigami_x3_is_pure_interaction():
-    """x3 has ZERO first-order effect but a real total-order one (only via its
-    interaction with x1). This is the case a first-order-only estimator botches."""
+    """x3 has ZERO first-order effect but a real total-order one (only via its."""
     r = pce_fit(_ISHIGAMI_INPUTS, _ishigami, degree=10, seed=1)
     assert r.first_order["x3"] == pytest.approx(0.0, abs=5e-3)
     assert r.total_order["x3"] > 0.2  # analytic ~0.244
@@ -171,9 +149,7 @@ def test_pce_total_order_agrees_with_saltelli_sobol():
 
 
 def test_fit_residual_flags_a_kink_as_untrustworthy():
-    """A finding with a kink (a min()/threshold - the repo's regime-switch shape)
-    breaks spectral convergence. PCE must report an elevated fit_residual and
-    is_trustworthy() == False rather than emit confident-but-wrong moments."""
+    """A finding with a kink (a min()/threshold - the repo's regime-switch shape)."""
 
     def kink(s):
         return max(0.0, s["a"] - 0.5) + 0.3 * s["b"]
@@ -210,8 +186,7 @@ def test_all_fixed_inputs_is_a_constant():
 
 
 def test_unsupported_distribution_raises():
-    # LogNormal/LogUniform ARE supported now (arbitrary PCE); a distribution the
-    # adapter does not recognize at all still raises.
+    # LogNormal/LogUniform ARE supported now (arbitrary PCE); a distribution the basis builder does not know still raises NotImplementedError.
     class Weird:
         mean = 0.0
 
@@ -257,8 +232,7 @@ def test_same_inputs_are_byte_identical():
 
 
 def test_quadrature_fit_is_seed_independent():
-    """Only the validation sample uses the seed; the fitted coefficients (and thus
-    the moments/indices) come from deterministic quadrature nodes."""
+    """Only the validation sample uses the seed; the fitted coefficients (and thus."""
     a = pce_fit(_SMOOTH_INPUTS, _smooth, degree=6, seed=1, validation=0)
     b = pce_fit(_SMOOTH_INPUTS, _smooth, degree=6, seed=999, validation=0)
     assert a.coefficients == b.coefficients

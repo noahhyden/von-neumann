@@ -1,16 +1,4 @@
-"""UQ end-to-end on the operational-range **bisection** finding.
-
-`scripts/uq_probe_range.py` uses the closed-form analytic reach; this script
-targets probe_sim.range.operational_range, which is the actual load-bearing
-finding of the module (it wraps closure-sim's simulate() at each bisection
-step). Slower per evaluation, so a smaller sample size is honest.
-
-Confirms the same four validation properties from issue #35 on the bisection
-finding, so the UQ prototype is not only correct on analytic maths - it also
-works on the finding a paper would actually cite.
-
-Run: `uv run --extra dev python scripts/uq_bisection_range.py`
-"""
+"""UQ end-to-end on the operational-range **bisection** finding."""
 
 from __future__ import annotations
 
@@ -69,20 +57,14 @@ REP = _rep()
 
 
 def bisection_range_au(sample: dict[str, float]) -> float:
-    """The load-bearing finding: how far can the probe still self-replicate?
-
-    Wraps operational_range, closing over the factory / rep from the scenario;
-    only the sourced inputs (S0, area, efficiency) are sampled.
-    """
+    """The load-bearing finding: how far can the probe still self-replicate?"""
     array = SolarArray(area_m2=sample["area_m2"], efficiency=sample["efficiency"])
     result = operational_range(
         array, FACTORY, REP, lo_au=0.1, hi_au=20.0, tol_au=1e-2,
         solar_constant=sample["S0"],
     )
     if result.operational_range_au is None:
-        # Underpowered even at 0.1 AU - return a floor so MC / Sobol still
-        # produce numeric outputs. This is more informative than raising: a
-        # sampled parameter making the probe non-viable IS the finding.
+        # Underpowered even at 0.1 AU - return a floor so MC / Sobol still produce numeric outputs.
         return 0.0
     return result.operational_range_au
 
@@ -123,7 +105,6 @@ def main() -> int:
     print("  [OK] (d) deterministic under seeding (byte-identical)")
 
     # (b) - (c): Sobol total-order, on the actual bisection finding.
-    # n=100 * (K+2)=5 = 500 evaluations of a ~0.5 s bisection.
     print()
     print(f"Sobol total-order (n=100, {100 * (len(HEADLINE_INPUTS) + 2)} evals) ...")
     t0 = time.time()

@@ -1,16 +1,7 @@
-/**
- * The swarm model as a pimas reactive graph - the seventh surface, a live settlement
- * front you can watch fill the galaxy.
- *
- * Knob signals + a memo over the parity-tested TS port (`swarm.ts`) that reruns the
- * deterministic fold, plus a "year" scrubber (and a play flag) that select a moment in
- * the run. The canvas draws the star field at the scrubbed year straight from the
- * result's per-star settlement years - no re-run while scrubbing (§7: rendering reads
- * the fold's buffers). Re-running only happens when a knob changes.
- */
+/** The swarm model as a pimas reactive graph - the seventh surface, a live settlement front you can watch fill the galaxy. */
 import { createSignal, createMemo } from "pimas";
 import type { Accessor, Setter } from "pimas";
-import type { ParamSignal } from "./reactive-model.js";
+import { param, type ParamSignal } from "./reactive-model.js";
 import { simulateSwarm, SWARM_DEFAULTS } from "./swarm.js";
 import type { SwarmResult, Policy, Coordination } from "./swarm.js";
 import { lightTimeYears, roundTripYears, rho, classifyRung } from "./coordination.js";
@@ -39,8 +30,7 @@ export interface SwarmModel {
   setPolicy: Setter<Policy>;
   /** stars settled at or before the scrubbed year, and the front radius then. */
   settledAt: Accessor<{ count: number; frontPc: number }>;
-  /** the star the pointer is over (index into the field), or null. §7: the reactive
-   * graph scales with the one thing a human looks at, never with nStars. */
+  /** the star the pointer is over (index into the field), or null. */
   hoverStar: Accessor<number | null>;
   setHoverStar: Setter<number | null>;
   /** the decision timescale τ (years) in ρ = latency/τ - a knob, default 1 yr [ESTIMATE]. */
@@ -51,16 +41,15 @@ export interface SwarmModel {
   /** knowledge regime: "instant" (perfect global info) | "lightspeed" (news travels at c). */
   coordination: Accessor<Coordination>;
   setCoordination: Setter<Coordination>;
-  /** the perfect-info run at the same knobs - only when in lightspeed mode (else null), so
-   * the surface can show the cost of lag as a delta. */
+  /** the perfect-info run at the same knobs - only when in lightspeed mode (else null), so the surface can show the cost of lag as a delta. */
   instantBaseline: Accessor<SwarmResult | null>;
 }
 
 export function createSwarmModel(): SwarmModel {
-  const [nStars, setNStars] = createSignal(1200);
-  const [offspring, setOffspring] = createSignal(2);
-  const [probeSpeedKmS, setProbeSpeedKmS] = createSignal(9); // N&F powered cruise ≈ 9 km/s
-  const [seed, setSeed] = createSignal(1);
+  const nStars = param(1200, { min: 50, max: 5000, step: 50, label: "Stars in the field", unit: "", commitOnRelease: true });
+  const offspring = param(2, { min: 0, max: 6, step: 1, label: "Offspring per settlement", unit: "", commitOnRelease: true });
+  const probeSpeedKmS = param(9, { min: 1, max: 100, step: 1, label: "Powered speed", unit: "km/s", commitOnRelease: true }); // N&F powered cruise ≈ 9 km/s
+  const seed = param(1, { min: 1, max: 9999, step: 1, label: "Galaxy seed", unit: "", commitOnRelease: true });
   const [scrubYear, setScrubYear] = createSignal(0);
   const [playing, setPlaying] = createSignal(false);
   const [policy, setPolicy] = createSignal<Policy>("powered");
@@ -69,29 +58,27 @@ export function createSwarmModel(): SwarmModel {
   const [coordination, setCoordination] = createSignal<Coordination>("instant");
 
   // All four feed the `result` memo → each `set` re-runs the whole simulateSwarm fold.
-  // commitOnRelease: a drag then triggers one re-sim on release, not one per pixel.
   const params: ParamSignal[] = [
-    { get: nStars, set: setNStars, min: 50, max: 5000, step: 50, label: "Stars in the field", unit: "", commitOnRelease: true },
-    { get: offspring, set: setOffspring, min: 0, max: 6, step: 1, label: "Offspring per settlement", unit: "", commitOnRelease: true },
-    { get: probeSpeedKmS, set: setProbeSpeedKmS, min: 1, max: 100, step: 1, label: "Powered speed", unit: "km/s", commitOnRelease: true },
-    { get: seed, set: setSeed, min: 1, max: 9999, step: 1, label: "Galaxy seed", unit: "", commitOnRelease: true },
+    nStars,
+    offspring,
+    probeSpeedKmS,
+    seed,
   ];
 
   const KM_S_TO_C = 1 / 299792.458;
   const paramsFor = (coord: Coordination) => ({
     ...SWARM_DEFAULTS,
-    nStars: nStars(),
-    offspringPerSettlement: offspring(),
-    probeSpeedC: probeSpeedKmS() * KM_S_TO_C,
+    nStars: nStars.get(),
+    offspringPerSettlement: offspring.get(),
+    probeSpeedC: probeSpeedKmS.get() * KM_S_TO_C,
     policy: policy(),
     coordination: coord,
   });
-  const result = createMemo<SwarmResult>(() => simulateSwarm(paramsFor(coordination()), seed()));
+  const result = createMemo<SwarmResult>(() => simulateSwarm(paramsFor(coordination()), seed.get()));
 
-  // The perfect-info run at the same knobs, so the surface can show lag as a delta. Only
-  // computed in lightspeed mode (in instant it would just duplicate `result`).
+  // The perfect-info run at the same knobs, so the surface can show lag as a delta.
   const instantBaseline = createMemo<SwarmResult | null>(() =>
-    coordination() === "lightspeed" ? simulateSwarm(paramsFor("instant"), seed()) : null,
+    coordination() === "lightspeed" ? simulateSwarm(paramsFor("instant"), seed.get()) : null,
   );
 
   const maxYear = createMemo<number>(() => {
@@ -117,9 +104,7 @@ export function createSwarmModel(): SwarmModel {
     return { count, frontPc: front };
   });
 
-  // The coordination readout for the hovered star - reads the fold's position buffers,
-  // classifies the light-time to the homeworld into a rung. Recomputes only when the
-  // hover, the run, or τ changes; independent of nStars (§7).
+  // The coordination readout for the hovered star - reads the fold's position buffers, classifies the light-time to the homeworld into a rung.
   const hoverInfo = createMemo<HoverInfo | null>(() => {
     const i = hoverStar();
     if (i === null) return null;

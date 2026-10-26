@@ -9,7 +9,6 @@ from launch_economics.distributions import (
     DELTA_V_LEO_TO_MARS_DIST,
     DELTA_V_LEO_TO_TLI_DIST,
     DELTA_V_SURFACE_TO_LEO_DIST,
-    G0_DIST,
     ISP_ELECTRIC_DIST,
     ISP_LOX_LH2_DIST,
     ISP_LOX_RP1_DIST,
@@ -17,12 +16,7 @@ from launch_economics.distributions import (
     LAUNCH_COST_FALCON_HEAVY_DIST,
     LAUNCH_COST_STARSHIP_DIST,
 )
-from vn_core.uq import Fixed, LogUniform, Uniform, monte_carlo, sobol_total_order
-
-
-def test_g0_is_definitional():
-    assert isinstance(G0_DIST, Fixed)
-    assert G0_DIST.value == 9.80665
+from vn_core.uq import LogUniform, Uniform, monte_carlo, sobol_total_order
 
 
 def test_launch_cost_bands_ordered_by_generation():

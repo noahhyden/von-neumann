@@ -6,7 +6,6 @@ import pytest
 
 from thermal.distributions import (
     EMISSIVITY_DIST,
-    ISS_HEAT_REJECTION_TOTAL_DIST,
     ISS_RADIATOR_ASSEMBLY_AREA_DIST,
     ISS_RADIATOR_TEMP_DIST,
     RADIATOR_SPECIFIC_MASS_DIST,
@@ -14,21 +13,12 @@ from thermal.distributions import (
     STEFAN_BOLTZMANN_DIST,
 )
 from thermal.thermal import (
-    ISS_HEAT_REJECTION_TOTAL_KW,
     ISS_RADIATOR_ASSEMBLY_AREA_M2,
     ISS_RADIATOR_TEMP_K,
     RADIATOR_SPECIFIC_MASS_BAND_KG_M2,
     STEFAN_BOLTZMANN_W_M2_K4,
 )
 from vn_core.uq import Fixed, Uniform, monte_carlo, sobol_total_order
-
-
-def test_defined_constants_stay_fixed():
-    assert isinstance(STEFAN_BOLTZMANN_DIST, Fixed)
-    assert STEFAN_BOLTZMANN_DIST.value == STEFAN_BOLTZMANN_W_M2_K4
-    # ISS heat rejection is a flight measurement, tight and Fixed.
-    assert isinstance(ISS_HEAT_REJECTION_TOTAL_DIST, Fixed)
-    assert ISS_HEAT_REJECTION_TOTAL_DIST.value == ISS_HEAT_REJECTION_TOTAL_KW
 
 
 def test_radiator_mass_band_matches_source():

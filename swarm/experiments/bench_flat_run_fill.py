@@ -1,11 +1,4 @@
-"""Live verification: `run_fill_flat` wall-clock vs `run_fill` (pointer tree) at p2 N.
-
-Follows the same "does it actually go faster" step as `bench_flat_kdtree.py`, but for the
-whole event loop rather than the query alone. Both paths return byte-identical aggregates
-(`tests/test_flat_run_fill_oracle.py`); this script is only about wall-clock.
-
-Run: `uv run --extra dev python -O experiments/bench_flat_run_fill.py`
-"""
+"""Live verification: `run_fill_flat` wall-clock vs `run_fill` (pointer tree) at p2 N."""
 
 from __future__ import annotations
 

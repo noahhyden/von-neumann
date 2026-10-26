@@ -1,20 +1,4 @@
-"""Oracle: `swarm_rust.run_fill_flat` is byte-identical to `swarm_rust.run_fill` at p2 N.
-
-Follows the same discipline as ``test_rust_fill_loop.py`` (the pointer-tree oracle), but
-substitutes the flat p2 kd-tree (issue #38 p2 substrate; landed in PR #79). Every
-committed aggregate the fold produces - ``final_settled``, ``wasted_arrivals``,
-``front_radius_pc``, all the hop/wall histograms, ``midflight_aborts``, etc. - must
-match to the printed digit for the paper's drift guards to survive a p2 migration.
-
-Covered:
-- powered policy (fast-path config).
-- coordination in {instant, lightspeed, inflight} - all three modes #78 wired into run_fill.
-- periodic and non-periodic boxes.
-- Multiple offspring, retarget caps, seeds.
-- p2 N in {512, 1024, 2048, 4096} (small enough to run in CI; large enough for real events).
-
-Skips cleanly if ``run_fill_flat`` is not compiled yet (tests-first stage).
-"""
+"""Oracle: `swarm_rust.run_fill_flat` is byte-identical to `swarm_rust.run_fill` at p2 N."""
 
 from __future__ import annotations
 
@@ -157,10 +141,7 @@ def test_flat_run_fill_matches_pointer(n_stars: int, coordination: str, seed: in
 
 
 def test_simulate_swarm_dispatch_prefers_flat_at_p2() -> None:
-    """simulate_swarm's dispatch (via _use_flat_fill): at p2 N the flat path fires and matches
-    the pointer path under SWARM_NO_RUST_FLAT=1. The env override is the escape hatch that keeps
-    the pointer path reachable from the oracle even after this PR wires the flat path as default.
-    """
+    """simulate_swarm's dispatch (via _use_flat_fill): at p2 N the flat path fires and matches the pointer path under SWARM_NO_RUST_FLAT=1."""
     import os
 
     from dataclasses import fields

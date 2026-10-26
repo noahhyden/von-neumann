@@ -1,22 +1,4 @@
-/**
- * The closure-sim model, expressed as a pimas reactive graph.
- *
- * This is the whole point of the exercise: the factory's bill-of-materials is a
- * `createStore` (so a hypothetical "make the chips locally" edit is a copy-on-write
- * shadow write), the replication assumptions are signals (the sliders), and every
- * result - closure, doubling time, the binding regime, the growth trajectory - is
- * a `createMemo` over the SAME pure functions the Python CLI runs. Given that, the
- * three agent-native powers fall out for free:
- *
- *   • SUBSCRIBE  - the DOM reads the memos directly; drag a slider, only the outputs
- *                  that actually depend on it re-render.
- *   • SPECULATE  - `previewChipsLocal()` runs the electronics-wall what-if against a
- *                  SHADOW of the graph (`speculate`): the exact after-state, computed
- *                  by re-running the real model, with NOTHING committed. Free rollback.
- *   • EXPLAIN    - `explainRegime()` reads the live model to say WHY growth is capped
- *                  (which of the three ceilings binds), and the agent bridge records
- *                  the field-level causal chain of a committed action.
- */
+/** The closure-sim model, expressed as a pimas reactive graph. */
 import { createSignal, createMemo, speculate, untrack } from "pimas";
 import type { Accessor, Setter } from "pimas";
 import { createStore, onStoreWrite } from "pimas/store";
@@ -38,11 +20,13 @@ export interface ParamSignal {
   step: number;
   label: string;
   unit: string;
-  /** When true, the slider commits (fires `set`) only on release, not on every drag
-   * pixel - the thumb/readout still track live. For knobs whose `set` triggers an
-   * expensive recompute (e.g. a full swarm re-simulation), this turns a drag from dozens
-   * of synchronous re-runs into one. Omit for cheap knobs that should update live. */
+  /** When true, the slider commits (fires `set`) only on release, not on every drag pixel - the thumb/readout still track live. */
   commitOnRelease?: boolean;
+}
+
+export function param(value: number, spec: Omit<ParamSignal, "get" | "set">): ParamSignal {
+  const [get, set] = createSignal(value);
+  return { get, set, ...spec };
 }
 
 export interface WallModel {
@@ -84,36 +68,34 @@ export function createWallModel(initialFactory: Factory): WallModel {
   });
 
   // Replication assumptions as signals - the sliders.
-  const mk = (v: number): [Accessor<number>, Setter<number>] => createSignal(v);
-  const [power, setPower] = mk(rep0.available_power_kw);
-  const [buildRate, setBuildRate] = mk(rep0.local_build_rate_kg_per_day);
-  const [resupplyMass, setResupplyMass] = mk(rep0.vitamin_resupply_mass_kg);
-  const [cadence, setCadence] = mk(rep0.resupply_cadence_days);
-  const [target, setTarget] = mk(rep0.target_output_kg_per_day);
-  const [seedMass, setSeedMass] = mk(rep0.seed_mass_kg);
+  const power = param(rep0.available_power_kw, { min: 250, max: 12000, step: 250, label: "Available power", unit: "kW" });
+  const buildRate = param(rep0.local_build_rate_kg_per_day, { min: 2, max: 100, step: 1, label: "Seed build rate", unit: "kg/day" });
+  const resupplyMass = param(rep0.vitamin_resupply_mass_kg, { min: 0, max: 500, step: 10, label: "Vitamin resupply / delivery", unit: "kg" });
+  const cadence = param(rep0.resupply_cadence_days, { min: 7, max: 180, step: 1, label: "Resupply cadence", unit: "days" });
+  const target = param(rep0.target_output_kg_per_day, { min: 50, max: 3000, step: 50, label: "Output goal", unit: "kg/day" });
+  const seedMass = param(rep0.seed_mass_kg, { min: 2000, max: 40000, step: 500, label: "Seed mass (landed)", unit: "kg" });
 
   const params: Record<string, ParamSignal> = {
-    power: { get: power, set: setPower, min: 250, max: 12000, step: 250, label: "Available power", unit: "kW" },
-    resupplyMass: { get: resupplyMass, set: setResupplyMass, min: 0, max: 500, step: 10, label: "Vitamin resupply / delivery", unit: "kg" },
-    cadence: { get: cadence, set: setCadence, min: 7, max: 180, step: 1, label: "Resupply cadence", unit: "days" },
-    buildRate: { get: buildRate, set: setBuildRate, min: 2, max: 100, step: 1, label: "Seed build rate", unit: "kg/day" },
-    seedMass: { get: seedMass, set: setSeedMass, min: 2000, max: 40000, step: 500, label: "Seed mass (landed)", unit: "kg" },
-    target: { get: target, set: setTarget, min: 50, max: 3000, step: 50, label: "Output goal", unit: "kg/day" },
+        power,
+        resupplyMass,
+        cadence,
+        buildRate,
+        seedMass,
+        target,
   };
 
   const repParams = createMemo<ReplicationParams>(() => ({
-    seed_mass_kg: seedMass(),
-    local_build_rate_kg_per_day: buildRate(),
-    vitamin_resupply_mass_kg: resupplyMass(),
-    resupply_cadence_days: cadence(),
-    available_power_kw: power(),
-    target_output_kg_per_day: target(),
+    seed_mass_kg: seedMass.get(),
+    local_build_rate_kg_per_day: buildRate.get(),
+    vitamin_resupply_mass_kg: resupplyMass.get(),
+    resupply_cadence_days: cadence.get(),
+    available_power_kw: power.get(),
+    target_output_kg_per_day: target.get(),
     duration_days: rep0.duration_days,
     dt_days: rep0.dt_days,
   }));
 
-  // Assemble the factory from the live store (field reads inside simulate/closure
-  // are what actually get tracked by the memos below).
+  // Assemble the factory from the live store (field reads inside simulate/closure are what actually get tracked by the memos below).
   const currentFactory = (): Factory => ({
     name: initialFactory.name,
     subsystems: store.subsystems as unknown as Subsystem[],
@@ -141,10 +123,7 @@ export function createWallModel(initialFactory: Factory): WallModel {
   const setChips = (local: boolean) =>
     elecIndices.forEach((i) => setStore("subsystems", i, "producible_locally", local));
 
-  // L3 - the electronics wall, run as a SHADOW what-if. `before` is the live
-  // committed model; `after` is computed by applying the toggle inside speculate
-  // and re-reading the sim memo against the shadow graph. On return the real
-  // store is untouched (chipsAreLocal() is still whatever it was).
+  // L3 - the electronics wall, run as a SHADOW what-if.
   const previewChipsLocal = (): { before: SimResult; after: SimResult } => {
     const before = untrack(() => sim());
     const after = speculate(
@@ -158,12 +137,12 @@ export function createWallModel(initialFactory: Factory): WallModel {
   const restoreChips = () => elecIndices.forEach((i) => setStore("subsystems", i, "producible_locally", elecOriginal.get(i)!));
 
   const reset = () => {
-    setPower(rep0.available_power_kw);
-    setBuildRate(rep0.local_build_rate_kg_per_day);
-    setResupplyMass(rep0.vitamin_resupply_mass_kg);
-    setCadence(rep0.resupply_cadence_days);
-    setTarget(rep0.target_output_kg_per_day);
-    setSeedMass(rep0.seed_mass_kg);
+    power.set(rep0.available_power_kw);
+    buildRate.set(rep0.local_build_rate_kg_per_day);
+    resupplyMass.set(rep0.vitamin_resupply_mass_kg);
+    cadence.set(rep0.resupply_cadence_days);
+    target.set(rep0.target_output_kg_per_day);
+    seedMass.set(rep0.seed_mass_kg);
     restoreChips();
   };
 
@@ -179,10 +158,7 @@ export function createWallModel(initialFactory: Factory): WallModel {
     return `Material-limited (still exponential). Local production α·F is the binding path and hasn't yet hit a fixed ceiling - the factory is compounding. Doubling time ≈ ${s.empirical_doubling_time_days ? s.empirical_doubling_time_days.toFixed(0) + " days" : "n/a"}.`;
   };
 
-  // The SAME model, projected as an agent-facing surface (the pivot's thesis made
-  // literal): scalar outputs are exposed/subscribable, actions are callable, and
-  // `bridge.speculate`/`bridge.explain` give an agent exact what-if + field-level
-  // causal provenance - with zero bespoke wiring beyond this block.
+  // The SAME model, projected as an agent-facing surface (the pivot's thesis made literal): scalar outputs are exposed/subscribable, actions are callable, and `bridge.speculate`/`bridge.explain` give an agent exact what-if + field-level causal provenance - with zero bespoke wiring beyond this block.
   const bridge = createAgentBridge(
     (r) => {
       r.expose("closure_ratio", () => sim().closure_ratio, { description: "mass fraction the factory can build locally" });
@@ -195,7 +171,7 @@ export function createWallModel(initialFactory: Factory): WallModel {
       r.expose("chips_are_local", () => chipsAreLocal());
       r.action("makeChipsLocal", () => commitChipsLocal(), { params: [], readOnly: false, description: "Toggle every electronics subsystem to locally producible" });
       r.action("restoreChips", () => restoreChips(), { params: [], readOnly: false, description: "Revert electronics to imported vitamins" });
-      r.action("setPowerKw", (kw) => setPower(Number(kw)), { params: ["kw"], description: "Set available power in kW" });
+      r.action("setPowerKw", (kw) => power.set(Number(kw)), { params: ["kw"], description: "Set available power in kW" });
     },
     { writeTap: (record) => onStoreWrite((e) => record(e.path.join("."))) },
   );

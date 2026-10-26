@@ -9,7 +9,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { toFamilyGiven, buildMetadata } from "./zenodo-publish.mjs";
 
@@ -58,7 +57,7 @@ test("paper.license overrides the sandbox default", () => {
 });
 
 test("real paper.json files build valid metadata (no empty title/description)", () => {
-  const papersRoot = fileURLToPath(new URL("..", import.meta.url));
+  const papersRoot = join(import.meta.dirname, "..");
   for (const slug of ["coordination-tax", "electronics-wall"]) {
     const paper = JSON.parse(readFileSync(join(papersRoot, slug, "paper.json"), "utf8"));
     const m = buildMetadata(paper);

@@ -1,11 +1,4 @@
-/**
- * TS port of the `power-budget` module - pure math, no pimas.
- *
- * The model a frontend surface will render: split a power budget among making and
- * thinking, convert compute-watts to throughput, floored by the Landauer limit and
- * anchored to the ~20 W brain. Parity-tested against the Python in
- * `power-budget.test.ts` (Layer A). Sources: ../../power-budget/REFERENCES.md.
- */
+/** TS port of the `power-budget` module - pure math, no pimas; sources: ../../power-budget/REFERENCES.md. */
 
 // Boltzmann constant, J/K - exact by the 2019 SI redefinition.
 export const BOLTZMANN_J_PER_K = 1.380649e-23;

@@ -1,16 +1,4 @@
-"""Operational-range mechanism: power vs distance gating replication viability.
-
-These use a small SYNTHETIC factory to exercise the sweep/bisection logic - the
-values are test scaffolding, not physical claims (the real Borgue & Hein probe
-factory awaits the per-module mass [GAP]; see REFERENCES.md). The assertions are on
-structural behaviour: monotonic viability, correct crossover bracketing, and the
-underpowered / saturated edges.
-
-With this fixture the crossover is clean: local build energy is 100 kWh/kg over
-1000 kg of local mass, so e_local = 100 kWh/kg and energy_cap = power_kwh_per_day /
-100. Output reaches the 50 kg/day target iff energy_cap >= 50, i.e. iff
-available_power_kw >= 50 * 100 / 24 ~= 208 kW.
-"""
+"""Operational-range mechanism: power vs distance gating replication viability."""
 
 import pytest
 from closure_sim.models import Factory, ReplicationParams, Subsystem

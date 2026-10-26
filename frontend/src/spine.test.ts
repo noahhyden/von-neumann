@@ -1,9 +1,4 @@
-/**
- * Layer A parity: the TS spine port must reproduce `spine/run.py` exactly on the shared
- * lunar-regolith factory. Ground-truth values are transcribed from the Python module
- * (see the print in the commit that added spine); this test fails if the composition of
- * the (individually parity-tested) ports drifts. No pimas here - pure model.
- */
+/** Layer A parity: the TS spine port must reproduce `spine/run.py` exactly on the shared lunar-regolith factory. */
 import test from "node:test";
 import assert from "node:assert/strict";
 

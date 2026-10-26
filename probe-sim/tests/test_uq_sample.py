@@ -1,10 +1,4 @@
-"""Monte Carlo propagation: assert behavior, not execution.
-
-The one discipline that silently breaks everything downstream is a random draw
-that isn't seeded (CLAUDE.md §7). These tests pin: byte-identical determinism,
-independence from dict-insertion accidents, error-bar shrinkage when spread
-shrinks, and analytic sanity on cases with closed forms.
-"""
+"""Monte Carlo propagation: assert behavior, not execution."""
 
 import math
 
@@ -56,8 +50,7 @@ def test_mc_recovers_the_analytic_mean_and_std_for_pure_normal():
 
 
 def test_error_bars_shrink_when_the_inputs_spread_shrinks():
-    # THIS IS THE HEADLINE BEHAVIORAL TEST from issue #35: "error bars shrink when
-    # an input's spread shrinks". If it fails, something upstream is not honest UQ.
+    # THIS IS THE HEADLINE BEHAVIORAL TEST from issue #35: "error bars shrink when an input's spread shrinks".
     def_finding = irradiance_at_jupiter
     wide = monte_carlo(
         {"S0": Normal(mean=1360.8, std=5.0), "distance_au": Fixed(5.203)},
@@ -103,8 +96,7 @@ def test_quantiles_are_monotonic():
 
 
 def test_dict_insertion_order_does_not_change_reproducibility_shape():
-    # Reordering keys changes which uniform gets pushed through which distribution,
-    # so raw `values` will differ - but the empirical mean/std should not.
+    # Reordering keys changes which uniform gets pushed through which distribution, so raw `values` will differ - but the empirical mean/std should not.
     a_inputs = {
         "S0": Normal(mean=1360.8, std=0.5),
         "distance_au": Fixed(5.203),
@@ -115,9 +107,7 @@ def test_dict_insertion_order_does_not_change_reproducibility_shape():
     }
     a = monte_carlo(a_inputs, irradiance_at_jupiter, n=5000, seed=11)
     b = monte_carlo(b_inputs, irradiance_at_jupiter, n=5000, seed=11)
-    # Same seed + same insertion order = byte-identical; reordering IS allowed to
-    # produce a different stream (this is honest to the RNG model), but the
-    # statistics of the finding shouldn't drift.
+    # Same seed + same insertion order = byte-identical; reordering IS allowed to produce a different stream (this is honest to the RNG model), but the statistics of the finding shouldn't drift.
     assert a.mean == pytest.approx(b.mean, rel=1e-3)
     assert a.std == pytest.approx(b.std, rel=0.03)
 
@@ -137,10 +127,7 @@ def test_monte_carlo_rejects_nonfinite_finding():
 
 
 def test_probe_range_headline_uq_delivers_a_useful_error_bar():
-    # A realistic probe-sim finding: max heliocentric distance for a 208 kW demand
-    # on a 200 m^2 array with a cell efficiency in [0.28, 0.32] (Landis & Bailey
-    # range) and TSI = 1360.8 +/- 0.5 (Kopp & Lean). Analytic finding:
-    #   d = sqrt(S0 * area * eff / P)
+    # A realistic probe-sim finding: max heliocentric distance for a 208 kW demand on a 200 m^2 array with a cell efficiency in [0.28, 0.32] (Landis & Bailey range) and TSI = 1360.8 +/- 0.5 (Kopp & Lean).
     inputs = {
         "S0": Normal(mean=1360.8, std=0.5),
         "efficiency": Uniform(low=0.28, high=0.32),
@@ -149,10 +136,7 @@ def test_probe_range_headline_uq_delivers_a_useful_error_bar():
     }
 
     def finding(sample):
-        # Closed form for max reach: d = sqrt(S0 * area * eff / P_req). Written
-        # out from the sourced pieces so *every* sampled input actually flows
-        # into the answer (contrast: SolarArray.max_distance_au reads the module
-        # constant for S0 and would silently drop the sampled S0).
+        # Closed form for max reach: d = sqrt(S0 * area * eff / P_req).
         return math.sqrt(
             sample["S0"] * sample["area_m2"] * sample["efficiency"]
             / sample["required_power_w"]
@@ -161,18 +145,14 @@ def test_probe_range_headline_uq_delivers_a_useful_error_bar():
     r = monte_carlo(inputs, finding, n=5000, seed=17)
     # Nominal at efficiency=0.30: d = sqrt(1360.8 * 200 * 0.30 / 208000) ~ 0.626 AU.
     assert r.mean == pytest.approx(0.626, abs=0.02)
-    # Error bar should be nontrivial (efficiency spans a factor 32/28 ~ 14%,
-    # so d spans a factor sqrt(1.14) ~ 1.07): std must be > 0 and much smaller
-    # than the mean.
+    # Error bar should be nontrivial (efficiency spans a factor 32/28 ~ 14%, so d spans a factor sqrt(1.14) ~ 1.07): std must be > 0 and much smaller than the mean.
     assert 0.005 < r.std < 0.05
     lo, hi = r.error_bar_95
     assert lo > 0.55 and hi < 0.70
 
 
 def test_stderr_of_mean_shrinks_as_one_over_sqrt_n():
-    # Central-limit-theorem property: doubling N shrinks stderr_of_mean by
-    # sqrt(2). Same distribution, two seeds, two Ns - stderr scales as
-    # 1/sqrt(N) to within a few percent at these sample sizes.
+    # Central-limit-theorem property: doubling N shrinks stderr_of_mean by sqrt(2).
     inputs = {"x": Uniform(0.0, 1.0)}
     finding = lambda s: s["x"]  # noqa: E731
     small = monte_carlo(inputs, finding, n=1000, seed=201)
@@ -191,9 +171,7 @@ def test_stderr_zero_when_finding_is_constant():
 
 
 def test_probe_range_narrow_efficiency_shrinks_error_bar():
-    # Same shape as above but with efficiency pinned. Error bar collapses to the
-    # (tiny) TSI contribution only. This is the second half of the shrink-spread
-    # validation, targeted at a *real* probe-sim finding.
+    # Same shape as above but with efficiency pinned, so the error bar collapses to the tiny TSI contribution alone.
     def finding(sample):
         return math.sqrt(
             sample["S0"] * sample["area_m2"] * sample["efficiency"]
@@ -223,7 +201,6 @@ def test_probe_range_narrow_efficiency_shrinks_error_bar():
         seed=19,
     )
     assert narrow.std < wide.std
-    # With efficiency pinned, only TSI contributes: std ~ 0.5 * d / (2 * S0)
-    # ~ 1.15e-4 AU. Must be tiny but positive.
+    # With efficiency pinned, only TSI contributes: std ~ 0.5 * d / (2 * S0) ~ 1.15e-4 AU.
     assert narrow.std < 5e-4
     assert narrow.std > 0
