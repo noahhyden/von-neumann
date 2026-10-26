@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
 from vn_runner import load, progress, run
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+class _ChildOwnsProgress:
+    """The child process writes the status file; the parent has nothing to report."""
+
+    def update(self, *, step: int, total: int | None = None, label: str = "") -> None:
+        pass
 
 
 def _ls() -> int:
@@ -37,10 +43,7 @@ def _run(path: Path) -> int:
     except ValueError as e:
         print(f"vn-run: {e}", file=sys.stderr)
         return 2
-    if run.needs_reexec(spec):
-        # sys.flags.optimize is 1 after exec, so needs_reexec is False and this cannot loop.
-        os.execv(sys.executable, [sys.executable, "-O", "-m", "vn_runner.cli", str(path.resolve())])
-    return run.execute(spec, REPO_ROOT, progress.FileProgress(spec, REPO_ROOT))
+    return run.execute(spec, REPO_ROOT, _ChildOwnsProgress())
 
 
 def main(argv: list[str] | None = None) -> int:

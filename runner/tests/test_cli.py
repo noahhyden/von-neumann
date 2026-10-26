@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 
 import pytest
@@ -37,34 +36,12 @@ def test_run_bad_file_exit_2(monkeypatch, capsys):
     assert "x.yaml" in capsys.readouterr().err
 
 
-def test_run_reexecs_with_dash_O(monkeypatch):
+@pytest.mark.parametrize("rc", [0, 3])
+def test_run_returns_execute_code(monkeypatch, rc):
     monkeypatch.setattr(load, "load_spec", lambda p: SPEC)
-    monkeypatch.setattr(run, "needs_reexec", lambda s: True)
-    calls = []
-
-    def fake_execv(exe, args):
-        calls.append(args)
-        raise SystemExit(0)
-    monkeypatch.setattr(cli.os, "execv", fake_execv)
-    with pytest.raises(SystemExit):
-        cli.main(["x.yaml"])
-    assert calls[0][:4] == [sys.executable, "-O", "-m", "vn_runner.cli"]
+    monkeypatch.setattr(run, "execute", lambda s, r, p: rc)
+    assert cli.main(["x.yaml"]) == rc
 
 
-def test_no_reexec_loop_when_optimized(monkeypatch):
-    class F:
-        optimize = 1
-    monkeypatch.setattr(run.sys, "flags", F)
-    monkeypatch.setattr(load, "load_spec", lambda p: SPEC)
-    monkeypatch.setattr(cli.os, "execv", lambda *a: pytest.fail("re-exec loop"))
-    monkeypatch.setattr(progress, "FileProgress", lambda s, r: object())
-    monkeypatch.setattr(run, "execute", lambda s, r, p: 7)
-    assert cli.main(["x.yaml"]) == 7
-
-
-def test_run_returns_execute_code(monkeypatch):
-    spec = SPEC.model_copy(update={"runtime": SPEC.runtime.model_copy(update={"optimize": False})})
-    monkeypatch.setattr(load, "load_spec", lambda p: spec)
-    monkeypatch.setattr(progress, "FileProgress", lambda s, r: object())
-    monkeypatch.setattr(run, "execute", lambda s, r, p: 3)
-    assert cli.main(["x.yaml"]) == 3
+def test_no_reexec_path_remains():
+    assert not hasattr(run, "needs_reexec") and not hasattr(cli, "os")

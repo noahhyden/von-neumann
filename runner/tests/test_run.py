@@ -1,6 +1,4 @@
-import os
-import sys
-import textwrap
+from types import SimpleNamespace
 
 import pytest
 
@@ -8,100 +6,85 @@ from vn_runner import load, run
 from vn_runner.spec import Backends, RunSpec, Runtime
 
 
-class Rec:
-    def __init__(self):
-        self.updates, self.finished = [], None
-
-    def update(self, *, step, total=None, label=""):
-        self.updates.append((step, label))
-
-    def finish(self, state, error=None):
-        self.finished = (state, error)
-
-
-def mk(entry="fakemod:go", **rt):
-    return RunSpec(name="fake", module="mod", entry=entry, description="d",
+def mk(**rt):
+    return RunSpec(name="fake", module="mod", entry="fakemod:go", description="d",
                    runtime=Runtime(**rt), params={"n": 3})
 
 
 @pytest.fixture
-def root(tmp_path, monkeypatch):
-    d = tmp_path / "mod"
-    d.mkdir()
-    (d / "fakemod.py").write_text(textwrap.dedent("""
-        import os
-        SEEN = {k: os.environ.get(k) for k in
-                ("SWARM_NO_RUST", "SWARM_NO_RUST_FILL", "SWARM_NO_RUST_FLAT",
-                 "SWARM_NO_NJIT", "SWARM_WORKERS")}
-        def go(n, progress=None):
-            SEEN["n"] = n
-            SEEN["cwd"] = os.getcwd()
-            SEEN["progress"] = progress
-        def plain(n):
-            SEEN["n"] = n
-        def boom(n):
-            raise RuntimeError("kaboom")
-    """))
+def calls(monkeypatch, tmp_path):
+    class L(list):
+        pass
+    out = L()
+
+    def fake_run(argv, cwd, env):
+        out.append(SimpleNamespace(argv=argv, cwd=cwd, env=env))
+        return SimpleNamespace(returncode=fake_run.rc)
+    fake_run.rc = 0
+    monkeypatch.setattr(run.subprocess, "run", fake_run)
     monkeypatch.setattr(load, "assert_clean_env", lambda: None)
-    yield tmp_path
-    sys.modules.pop("fakemod", None)
+    for k in ("SWARM_WORKERS", "SWARM_NO_RUST", "SWARM_NO_NJIT"):
+        monkeypatch.delenv(k, raising=False)
+    out.fake = fake_run
+    return out
 
 
-def seen():
-    return sys.modules["fakemod"].SEEN
+def test_optimize_flag_present_and_absent(calls, tmp_path):
+    run.execute(mk(optimize=True), tmp_path, None)
+    run.execute(mk(optimize=False), tmp_path, None)
+    on, off = (c.argv for c in calls)
+    assert on[:5] == ["uv", "run", "--extra", "dev", "python"] and on[5] == "-O"
+    assert "-O" not in off and off[5] == "-c"
 
 
-def test_needs_reexec_both_ways(monkeypatch):
-    class F:
-        optimize = 0
-    monkeypatch.setattr(run.sys, "flags", F)
-    assert run.needs_reexec(mk(optimize=True)) is True
-    assert run.needs_reexec(mk(optimize=False)) is False
-    F.optimize = 1  # already optimized: must not ask for another exec
-    assert run.needs_reexec(mk(optimize=True)) is False
+def test_cwd_is_module_dir_and_spec_json_passed(calls, tmp_path):
+    run.execute(mk(), tmp_path, None)
+    c = calls[0]
+    assert c.cwd == tmp_path / "mod"
+    assert c.argv[-2] == str(tmp_path)
+    assert RunSpec.model_validate_json(c.argv[-1]) == mk()
 
 
-def test_workers_reach_env_and_defaults_set_nothing_else(root):
-    p = Rec()
-    assert run.execute(mk(workers=2), root, p) == 0
-    s = seen()
-    assert s["SWARM_WORKERS"] == "2"
-    assert s["SWARM_NO_RUST"] is None and s["SWARM_NO_NJIT"] is None
-    assert s["n"] == 3 and s["cwd"] == str(root / "mod")
-    assert s["progress"] is p and p.finished == ("done", None) and p.updates
-    assert "SWARM_WORKERS" not in os.environ  # env restored
+def test_default_backends_set_no_switches(calls, tmp_path):
+    run.execute(mk(), tmp_path, None)
+    env = calls[0].env
+    assert not any(k in env for k in ("SWARM_NO_RUST", "SWARM_NO_RUST_FILL",
+                                      "SWARM_NO_RUST_FLAT", "SWARM_NO_NJIT", "SWARM_WORKERS"))
 
 
-def test_backends_off_sets_switches(root):
-    run.execute(mk(backends=Backends(rust=False, njit=False)), root, Rec())
-    s = seen()
-    assert s["SWARM_NO_RUST"] == s["SWARM_NO_RUST_FILL"] == s["SWARM_NO_RUST_FLAT"] == "1"
-    assert s["SWARM_NO_NJIT"] == "1" and s["SWARM_WORKERS"] is None
+def test_rust_off_sets_all_three_and_njit_stays_on(calls, tmp_path):
+    run.execute(mk(backends=Backends(rust=False)), tmp_path, None)
+    env = calls[0].env
+    assert env["SWARM_NO_RUST"] == env["SWARM_NO_RUST_FILL"] == env["SWARM_NO_RUST_FLAT"] == "1"
+    assert "SWARM_NO_NJIT" not in env
 
 
-def test_no_progress_kwarg_when_not_accepted(root):
-    assert run.execute(mk(entry="fakemod:plain"), root, Rec()) == 0
-    assert seen()["n"] == 3
+def test_njit_off_and_workers(calls, tmp_path):
+    run.execute(mk(backends=Backends(njit=False), workers=2), tmp_path, None)
+    env = calls[0].env
+    assert env["SWARM_NO_NJIT"] == "1" and env["SWARM_WORKERS"] == "2"
+    assert "SWARM_NO_RUST" not in env
 
 
-def test_bad_entry_names_spec(root, capsys):
-    p = Rec()
-    assert run.execute(mk(entry="nosuchmod:go"), root, p) != 0
-    assert "'fake'" in capsys.readouterr().err and p.finished[0] == "failed"
-    assert run.execute(mk(entry="fakemod:nope"), root, Rec()) != 0
+@pytest.mark.parametrize("rc", [0, 1, 7])
+def test_returncode_propagates(calls, tmp_path, rc):
+    calls.fake.rc = rc
+    assert run.execute(mk(), tmp_path, None) == rc
 
 
-def test_failing_entry_nonzero_and_named(root, capsys):
-    p = Rec()
-    assert run.execute(mk(entry="fakemod:boom"), root, p) == 1
-    err = capsys.readouterr().err
-    assert "'fake'" in err and "kaboom" in err
-    assert p.finished == ("failed", "RuntimeError: kaboom")
+def test_launch_failure_names_spec(monkeypatch, tmp_path, capsys):
+    def boom(*a, **k):
+        raise FileNotFoundError("uv")
+    monkeypatch.setattr(run.subprocess, "run", boom)
+    monkeypatch.setattr(load, "assert_clean_env", lambda: None)
+    assert run.execute(mk(), tmp_path, None) == 1
+    assert "'fake'" in capsys.readouterr().err
 
 
-def test_dirty_env_refuses(root, monkeypatch):
+def test_dirty_env_refuses_before_spawning(calls, monkeypatch, tmp_path):
     def bad():
         raise RuntimeError("SWARM_WORKERS set")
     monkeypatch.setattr(load, "assert_clean_env", bad)
     with pytest.raises(RuntimeError):
-        run.execute(mk(), root, Rec())
+        run.execute(mk(), tmp_path, None)
+    assert calls == []
