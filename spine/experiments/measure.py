@@ -261,6 +261,13 @@ MEASUREMENTS = {
 }
 
 
+def run_measurement(name: str, force: bool = False) -> None:
+    """Zero-argument-shaped entry for vn-run: the measurement functions take a scenario, specs do not."""
+    rc = main([name] + (["--force"] if force else []))
+    if rc:
+        raise RuntimeError(f"spine measurement {name!r} failed with exit code {rc}")
+
+
 def main(argv: list[str]) -> int:
     force = "--force" in argv
     names = [a for a in argv if not a.startswith("--")]

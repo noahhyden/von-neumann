@@ -1,0 +1,13 @@
+# The second consumer: spine's measurement suite uses the same contract as swarm's.
+name: dwell-tax
+module: spine
+entry: experiments.measure:run_measurement
+description: >
+  Galactic dwell tax: the share of settlement time spent building a copy
+  rather than in transit.
+
+runtime:
+  optimize: true
+
+params:
+  name: dwell_tax

@@ -13,7 +13,7 @@ from collections import defaultdict
 from pathlib import Path
 
 # Directories that are not Python modules (JS packages, docs, tooling, worktrees).
-_NON_MODULE = {"frontend", "papers", "docs", "scripts", ".git", ".github", ".claude"}
+_NON_MODULE = {"frontend", "papers", "docs", "scripts", "runner", ".git", ".github", ".claude"}
 # A path component under REPO named any of these prunes the file (venvs, caches, builds).
 _SKIP_PARTS = {".venv", "node_modules", "__pycache__", "build", "target", ".claude", ".git"}
 

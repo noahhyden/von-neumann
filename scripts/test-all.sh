@@ -10,7 +10,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.." # repo root
 ROOT="$(pwd)"
 
-mapfile -t PY_MODULES < <(python3 scripts/depgraph.py --json | python3 -c "import json,sys; print(*json.load(sys.stdin)['modules'], 'scripts', sep='\n')")
+mapfile -t PY_MODULES < <(python3 scripts/depgraph.py --json | python3 -c "import json,sys; print(*json.load(sys.stdin)['modules'], 'scripts', 'runner', sep='\n')")
 [ "${#PY_MODULES[@]}" -gt 1 ] || { echo "FAIL: module list is empty"; exit 1; }
 fail=0
 
