@@ -1,11 +1,4 @@
-"""Tests for depgraph.py - the monorepo dependency graph.
-
-Two layers:
-  - synthetic mini-repos (tmp_path) drive every branch of the graph logic with
-    controlled inputs, so a mutation to that logic has somewhere to fail;
-  - live-repo integration asserts the correctness contract (selftest) and the
-    real edges, so the tool cannot silently diverge from the actual repo.
-"""
+"""Tests for depgraph.py - the monorepo dependency graph."""
 
 from __future__ import annotations
 
@@ -19,9 +12,7 @@ import depgraph as dg
 REPO = dg.repo_root()
 
 
-# --------------------------------------------------------------------------- #
 # synthetic mini-repo fixture
-# --------------------------------------------------------------------------- #
 def _mk_module(root: Path, mod: str, pkg: str, imports=()) -> Path:
     d = root / mod / "src" / pkg
     d.mkdir(parents=True)
@@ -35,9 +26,7 @@ def _mk_module(root: Path, mod: str, pkg: str, imports=()) -> Path:
 
 @pytest.fixture
 def mini(tmp_path: Path) -> Path:
-    """aa -> {bb, cc}; cc -> {bb}; bb, dd leaves. cc owns a result; aa emits a figure;
-    paper p1 includes that figure. Plus edge cases: third-party import, self-import,
-    a pruned .venv file, a src dir with a non-package child, a non-module top dir."""
+    """aa -> {bb, cc}; cc -> {bb}; bb, dd leaves."""
     _mk_module(tmp_path, "aa", "aa", imports=["bb", "cc.sub", "third_party", "aa"])
     _mk_module(tmp_path, "bb", "bb")
     _mk_module(tmp_path, "cc", "cc", imports=["bb"])
@@ -59,8 +48,7 @@ def mini(tmp_path: Path) -> Path:
     (p1 / "main.tex").write_text(r"\includegraphics[width=0.5\linewidth]{fig_x.pdf}")
     (tmp_path / "papers" / "scripts").mkdir()
 
-    # a pruned dir: without the skip, aa would gain a spurious edge to dd and a
-    # spurious figure fig_junk.pdf; _skip must prune both.
+    # a pruned dir: without the skip, aa would gain a spurious edge to dd and a spurious figure fig_junk.pdf; _skip must prune both.
     venv = tmp_path / "aa" / ".venv"
     venv.mkdir()
     (venv / "junk.py").write_text("import dd\n")
@@ -83,8 +71,6 @@ def mini(tmp_path: Path) -> Path:
     (fsrc / "reactive-model.ts").write_text("// generic base, not a module\n")
 
     # a ci.yml whose paths-filter matches the graph (paper p1 sourced from module aa).
-    # Exercises the parser: shared anchor group, *shared ref, non-module globs, a blank
-    # line inside the block, and a dedent that ends the block.
     wf = tmp_path / ".github" / "workflows"
     wf.mkdir(parents=True)
     (wf / "ci.yml").write_text(
@@ -107,9 +93,7 @@ def mini(tmp_path: Path) -> Path:
     return tmp_path
 
 
-# --------------------------------------------------------------------------- #
 # discover / imports
-# --------------------------------------------------------------------------- #
 def test_discover_modules(mini: Path):
     assert dg.discover_modules(mini) == {"aa": "aa", "bb": "bb", "cc": "cc", "dd": "dd"}
 
@@ -143,9 +127,7 @@ def test_skip_outside_repo_uses_path_parts():
     assert dg._skip(Path("/somewhere/src/x.py"), Path("/other/repo")) is False
 
 
-# --------------------------------------------------------------------------- #
 # results / figures / papers
-# --------------------------------------------------------------------------- #
 def test_results(mini: Path):
     mods = sorted(set(dg.discover_modules(mini).values()))
     assert dg.build_results(mini, mods) == {"cc": ["cc/experiments/results/out.json"]}
@@ -175,9 +157,7 @@ def test_frontend_ports_no_frontend_dir(tmp_path: Path):
     assert dg.build_frontend_ports(tmp_path, ["aa"]) == {}        # frontend/src absent
 
 
-# --------------------------------------------------------------------------- #
 # CI paths-filter: parse, expected, check (pass + drift)
-# --------------------------------------------------------------------------- #
 def test_parse_ci_filter(mini: Path):
     mods = set(dg.discover_modules(mini).values())
     # 'shared' skipped; papers/** non-module glob skipped; *shared ref skipped; aa kept.
@@ -230,9 +210,7 @@ def test_live_ci_filter_matches(capsys):
     assert "ci filter OK" in capsys.readouterr().out
 
 
-# --------------------------------------------------------------------------- #
 # reachability / impact
-# --------------------------------------------------------------------------- #
 def test_reverse_reachable(mini: Path):
     edges = dg.build_import_edges(mini, dg.discover_modules(mini))
     assert dg.reverse_reachable(edges, {"bb"}) == {"aa", "bb", "cc"}  # bb's importers, transitively
@@ -252,9 +230,7 @@ def test_graph_impact(mini: Path):
     assert imp2["stale_frontend"] == []
 
 
-# --------------------------------------------------------------------------- #
 # resolve_changed
-# --------------------------------------------------------------------------- #
 def test_resolve_changed(mini: Path, capsys):
     mods = set(dg.discover_modules(mini).values())
     assert dg.resolve_changed(mini, ["aa"], mods) == {"aa"}            # module name
@@ -272,9 +248,7 @@ def test_resolve_changed_package_name_distinct_from_dir(tmp_path: Path):
     assert dg.resolve_changed(tmp_path, ["my_mod"], mods) == {"my-mod"}
 
 
-# --------------------------------------------------------------------------- #
 # selftest: pass on real repo, fail on a synthetic one
-# --------------------------------------------------------------------------- #
 def test_selftest_passes_on_real_repo(capsys):
     assert dg.selftest(REPO) == 0
     assert "selftest OK" in capsys.readouterr().out
@@ -285,9 +259,7 @@ def test_selftest_fails_on_mini(mini: Path, capsys):
     assert "SELFTEST FAILED" in capsys.readouterr().out
 
 
-# --------------------------------------------------------------------------- #
 # live-repo edges (the tool must match reality, not just be internally consistent)
-# --------------------------------------------------------------------------- #
 def test_live_core_is_universal_substrate():
     g = dg.Graph(REPO)
     assert all("core" in g.edges[m] for m in g.modules if m != "core")
@@ -316,9 +288,7 @@ def test_live_frontend_ports():
     assert "frontend/src/swarm-model.ts" in g.impact({"swarm"})["stale_frontend"]
 
 
-# --------------------------------------------------------------------------- #
 # main() CLI dispatch (driven over the real repo)
-# --------------------------------------------------------------------------- #
 def test_main_default(capsys):
     assert dg.main([]) == 0
     assert "import DAG" in capsys.readouterr().out

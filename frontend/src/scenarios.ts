@@ -1,9 +1,4 @@
-/**
- * The two example factories, transcribed verbatim from closure-sim's YAML
- * scenarios (scenarios/*.yaml). Kept as data so the live explainer ships no
- * YAML parser and stays a single client bundle. If the Python scenarios change,
- * re-transcribe here (the parity test pins the numbers that matter).
- */
+/** The two example factories, transcribed verbatim from closure-sim's YAML scenarios (scenarios/*.yaml). */
 import type { Factory } from "./model.js";
 
 export const LUNAR_REGOLITH_SEED: Factory = {

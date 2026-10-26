@@ -1,16 +1,4 @@
-/**
- * Layer B - the pimas framework canary.
- *
- * This file imports ONLY pimas primitives - nothing from closure-sim's model.
- * It asserts the exact contracts the frontend leans on (see reactive-model.ts):
- * fine-grained memo tracking, untrack, `speculate` free rollback, store writes +
- * `onStoreWrite` provenance, and the agent bridge (descriptor / speculate / call /
- * explain). Blame attribution: if Layer A (`npm test`, pure model, no pimas) is
- * green and our tree is unchanged but THIS fails, the regression is in pimas, not
- * in us - flag it in the pimas repo, don't work around it here.
- *
- * Run: node --test src/pimas-contract.test.ts   (needs pimas built: dist is gitignored)
- */
+/** Layer B - the pimas framework canary. */
 import test from "node:test";
 import assert from "node:assert/strict";
 

@@ -1,10 +1,4 @@
-/**
- * The power-budget model as a pimas reactive graph - the third surface.
- *
- * Sliders are signals; the compute outputs are a memo over the parity-tested TS port
- * (`power-budget.ts`). Same shape as the launch-economics model: signals + one memo,
- * no store/speculate/bridge needed.
- */
+/** The power-budget model as a pimas reactive graph - the third surface. */
 import { createSignal, createMemo } from "pimas";
 import type { Accessor } from "pimas";
 import type { ParamSignal } from "./reactive-model.js";

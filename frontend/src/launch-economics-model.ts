@@ -1,10 +1,4 @@
-/**
- * The launch-economics model as a pimas reactive graph - the second surface.
- *
- * Sliders are signals; the launch comparison is a memo over the pure, parity-tested
- * TS port (`launch-economics.ts`). Same pattern as `reactive-model.ts`, minus the
- * store/speculate/agent-bridge machinery this simpler model doesn't need.
- */
+/** The launch-economics model as a pimas reactive graph - the second surface. */
 import { createSignal, createMemo } from "pimas";
 import type { Accessor } from "pimas";
 import type { ParamSignal } from "./reactive-model.js";

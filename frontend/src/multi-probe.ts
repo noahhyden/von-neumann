@@ -1,18 +1,4 @@
-/**
- * TS port of the `multi-probe` module - a small, deterministic, seeded fleet fold.
- *
- * Faithful port of the Python package (`multi_probe.fleet`): each probe builds copies
- * at `min(machinery rate, energy cap)` - closure-sim's regime logic for a fixed-size
- * probe, reusing probe-sim's 1/d² power - and spawns children that disperse outward
- * and consume imported vitamins. Two ceilings emerge: a finite vitamin pool (the
- * electronics wall at fleet scale) and a spatial power wall (~13.6 AU crossover).
- *
- * Randomness (optional transit jitter) is a seeded mulberry32 generator threaded
- * through the state (CLAUDE.md §7) - byte-identical to the Python and to
- * scripts/gen-diff.mjs, so the fold replays bit-for-bit. Parity-tested against the
- * Python ground truth in `multi-probe.test.ts` (Layer A). Sibling ports imported with
- * `.ts` so this loads under `node --test` (see mission.ts for the why).
- */
+/** TS port of the `multi-probe` module - a small, deterministic, seeded fleet fold with a ~13.6 AU spatial power wall (see ../../multi-probe/REFERENCES.md). */
 import { computeClosure } from "./model.ts";
 import type { Factory } from "./model.ts";
 import { solarArrayPowerW } from "./probe-sim.ts";
@@ -132,11 +118,7 @@ export function buildRateKgPerDay(params: FleetParams, distanceAu: number): numb
   return Math.min(params.localBuildRateKgPerDay, energyCap);
 }
 
-/**
- * Days for one probe to build one copy's worth of local structure at a distance:
- * local_per_child / build_rate. The fleet's fundamental replication cadence, and (at
- * 1 AU) the swarm's per-star manufacturing dwell. Mirrors multi_probe.fleet.
- */
+/** Days for one probe to build one copy's worth of local structure at a distance: local_per_child / build_rate. */
 export function timeToBuildOneCopyDays(params: FleetParams, distanceAu: number): number {
   const localPerChild = params.closureRatio * params.seedMassKg;
   const rate = buildRateKgPerDay(params, distanceAu);

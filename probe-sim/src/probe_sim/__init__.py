@@ -1,14 +1,4 @@
-"""probe-sim - a single self-replicating probe.
-
-Models the Borgue & Hein (2020) near-term self-replicating probe concept: a
-solar-electric spacecraft of six modules that replicates ~70% of its own mass and
-imports the rest (mostly electronics) as "vitamins". This module starts from the
-physics that gates such a probe's reach - how much power sunlight delivers at a
-given heliocentric distance - and builds toward the operational range where
-replication is viable.
-
-Every number traces to a source; see REFERENCES.md.
-"""
+"""probe-sim - a single self-replicating probe."""
 
 from probe_sim.environment import (
     SOLAR_CONSTANT_1AU_W_M2,

@@ -1,10 +1,4 @@
-/**
- * The probe-sim model as a pimas reactive graph - the fourth surface.
- *
- * Signals for the probe's array and where it is; a memo over the parity-tested TS
- * port (`probe-sim.ts`) for delivered power and the compute headroom that power
- * buys. Same shape as the other lightweight surfaces: signals + one memo.
- */
+/** The probe-sim model as a pimas reactive graph - the fourth surface. */
 import { createSignal, createMemo } from "pimas";
 import type { Accessor } from "pimas";
 import type { ParamSignal } from "./reactive-model.js";

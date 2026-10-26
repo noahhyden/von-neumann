@@ -1,8 +1,4 @@
-/**
- * Parity test: the TS port must reproduce the Python probe-sim exactly.
- * Ground-truth mirrors probe-sim/tests/test_environment.py and test_autonomy.py.
- * Pure - no pimas (Layer A).
- */
+/** Parity test: the TS port must reproduce the Python probe-sim exactly. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {

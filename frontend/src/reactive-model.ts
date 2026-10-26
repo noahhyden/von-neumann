@@ -1,22 +1,4 @@
-/**
- * The closure-sim model, expressed as a pimas reactive graph.
- *
- * This is the whole point of the exercise: the factory's bill-of-materials is a
- * `createStore` (so a hypothetical "make the chips locally" edit is a copy-on-write
- * shadow write), the replication assumptions are signals (the sliders), and every
- * result - closure, doubling time, the binding regime, the growth trajectory - is
- * a `createMemo` over the SAME pure functions the Python CLI runs. Given that, the
- * three agent-native powers fall out for free:
- *
- *   • SUBSCRIBE  - the DOM reads the memos directly; drag a slider, only the outputs
- *                  that actually depend on it re-render.
- *   • SPECULATE  - `previewChipsLocal()` runs the electronics-wall what-if against a
- *                  SHADOW of the graph (`speculate`): the exact after-state, computed
- *                  by re-running the real model, with NOTHING committed. Free rollback.
- *   • EXPLAIN    - `explainRegime()` reads the live model to say WHY growth is capped
- *                  (which of the three ceilings binds), and the agent bridge records
- *                  the field-level causal chain of a committed action.
- */
+/** The closure-sim model, expressed as a pimas reactive graph. */
 import { createSignal, createMemo, speculate, untrack } from "pimas";
 import type { Accessor, Setter } from "pimas";
 import { createStore, onStoreWrite } from "pimas/store";
@@ -38,10 +20,7 @@ export interface ParamSignal {
   step: number;
   label: string;
   unit: string;
-  /** When true, the slider commits (fires `set`) only on release, not on every drag
-   * pixel - the thumb/readout still track live. For knobs whose `set` triggers an
-   * expensive recompute (e.g. a full swarm re-simulation), this turns a drag from dozens
-   * of synchronous re-runs into one. Omit for cheap knobs that should update live. */
+  /** When true, the slider commits (fires `set`) only on release, not on every drag pixel - the thumb/readout still track live. */
   commitOnRelease?: boolean;
 }
 
@@ -112,8 +91,7 @@ export function createWallModel(initialFactory: Factory): WallModel {
     dt_days: rep0.dt_days,
   }));
 
-  // Assemble the factory from the live store (field reads inside simulate/closure
-  // are what actually get tracked by the memos below).
+  // Assemble the factory from the live store (field reads inside simulate/closure are what actually get tracked by the memos below).
   const currentFactory = (): Factory => ({
     name: initialFactory.name,
     subsystems: store.subsystems as unknown as Subsystem[],
@@ -141,10 +119,7 @@ export function createWallModel(initialFactory: Factory): WallModel {
   const setChips = (local: boolean) =>
     elecIndices.forEach((i) => setStore("subsystems", i, "producible_locally", local));
 
-  // L3 - the electronics wall, run as a SHADOW what-if. `before` is the live
-  // committed model; `after` is computed by applying the toggle inside speculate
-  // and re-reading the sim memo against the shadow graph. On return the real
-  // store is untouched (chipsAreLocal() is still whatever it was).
+  // L3 - the electronics wall, run as a SHADOW what-if.
   const previewChipsLocal = (): { before: SimResult; after: SimResult } => {
     const before = untrack(() => sim());
     const after = speculate(
@@ -179,10 +154,7 @@ export function createWallModel(initialFactory: Factory): WallModel {
     return `Material-limited (still exponential). Local production α·F is the binding path and hasn't yet hit a fixed ceiling - the factory is compounding. Doubling time ≈ ${s.empirical_doubling_time_days ? s.empirical_doubling_time_days.toFixed(0) + " days" : "n/a"}.`;
   };
 
-  // The SAME model, projected as an agent-facing surface (the pivot's thesis made
-  // literal): scalar outputs are exposed/subscribable, actions are callable, and
-  // `bridge.speculate`/`bridge.explain` give an agent exact what-if + field-level
-  // causal provenance - with zero bespoke wiring beyond this block.
+  // The SAME model, projected as an agent-facing surface (the pivot's thesis made literal): scalar outputs are exposed/subscribable, actions are callable, and `bridge.speculate`/`bridge.explain` give an agent exact what-if + field-level causal provenance - with zero bespoke wiring beyond this block.
   const bridge = createAgentBridge(
     (r) => {
       r.expose("closure_ratio", () => sim().closure_ratio, { description: "mass fraction the factory can build locally" });

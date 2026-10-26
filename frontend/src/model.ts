@@ -1,11 +1,4 @@
-/**
- * A faithful TypeScript port of closure-sim's pure math - models.py + closure.py
- * + replication.py, ported 1:1 so the live explainer runs the SAME model the
- * Python CLI does (verified against it in model.test.ts). Nothing here touches
- * pimas or the DOM: these are plain, deterministic functions of their inputs,
- * which is exactly what lets the reactive layer wrap them in signals/memos and
- * lets `speculate` predict hypotheticals exactly. Keep it pure.
- */
+/** A faithful TypeScript port of closure-sim's pure math - models.py + closure.py + replication.py, ported 1:1 so the live explainer runs the SAME model the Python CLI does (verified against it in model.test.ts). */
 
 // Categories treated as "electronics" for the electronics-wall analysis.
 export const ELECTRONICS_CATEGORIES: ReadonlySet<string> = new Set([

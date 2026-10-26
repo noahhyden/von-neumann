@@ -1,10 +1,4 @@
-/**
- * The growth chart - driven by the REAL model output (sim().steps), not a faked
- * curve. Plots output (kg/day) against years, with the target line and the day
- * each curve crosses it. When a speculation is active, the hypothetical "chips
- * local" trajectory is overlaid (bronze, dashed) beside the committed one (teal) -
- * a before/after you can see, computed without committing.
- */
+/** The growth chart - driven by the REAL model output (sim().steps), not a faked curve. */
 import { createMemo } from "pimas";
 import type { Accessor } from "pimas";
 import type { SimResult } from "./model.js";

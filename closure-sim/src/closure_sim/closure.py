@@ -1,11 +1,4 @@
-"""Mass-closure calculation and vitamin breakdown.
-
-Closure is the fraction of a factory's own mass it can manufacture locally. The
-headline caveat, surfaced deliberately: mass closure *flatters electronics*. A
-factory can be 99% closed by mass yet non-viable because the missing 1% is the
-chips. So we also expose, in the replication layer, the resupply ceiling R/(1-C)
-that the vitamin fraction imposes.
-"""
+"""Mass-closure calculation and vitamin breakdown."""
 
 from __future__ import annotations
 

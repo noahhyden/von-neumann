@@ -1,10 +1,4 @@
-"""structures decision: the k=1.0 regression and the parameter-vs-module verdict.
-
-The mandatory test is that with no mass penalty (k=1.0) the closure numbers are
-identical to compute_closure - which is why `structures` stays a parameter here, not a
-new module. Sintered-regolith strengths span >100x. See REFERENCES.md and
-ROADMAP-PROPOSAL.md.
-"""
+"""structures decision: the k=1.0 regression and the parameter-vs-module verdict."""
 
 import pytest
 
@@ -61,9 +55,7 @@ def test_k_equals_one_reproduces_closure_sim_exactly():
 
 
 def test_mass_penalty_raises_closure_not_lowers_it():
-    # A weaker material makes local structure heavier, but that mass is still LOCAL, so
-    # closure goes UP (fixed imports, more local mass). Weakness costs throughput, not
-    # closure - the finding that keeps structures a parameter.
+    # A weaker material makes local structure heavier, but that mass is still LOCAL, so closure goes UP (fixed imports, more local mass).
     f = _factory()
     baseline = compute_closure(f).closure_ratio
     heavier = closure_with_structural_penalty(900.0, 0.0, 100.0, k=2.0)
@@ -75,8 +67,7 @@ def test_mass_penalty_raises_closure_not_lowers_it():
 
 
 def test_hard_threshold_failure_is_what_actually_moves_closure():
-    # If the structure can't meet a hard strength threshold it becomes an import, and
-    # THAT collapses closure - the case that would justify a real module.
+    # If the structure can't meet a hard strength threshold it becomes an import, and THAT collapses closure - the case that would justify a real module.
     if is_producible_locally(4.2, 40.0, hard_threshold=True):
         pytest.fail("weak material should fail a hard threshold")
     # Reclassify the 700 kg frame as a vitamin: closure drops from 0.9 to 0.2.
@@ -92,8 +83,7 @@ def test_hard_threshold_failure_is_what_actually_moves_closure():
 
 
 def test_sintered_regolith_strength_spans_over_100x():
-    # The sourced band (2.49 to 355 MPa) spans >100x - so strength must be a band, not a
-    # point. The discrete techniques all fall inside that band.
+    # The sourced band (2.49 to 355 MPa) spans >100x - so strength must be a band, not a point.
     lo, hi = SINTERED_REGOLITH_STRENGTH_BAND_MPA
     assert hi / lo > 100.0  # 355 / 2.49 ~ 142x
     for strength in SINTERED_REGOLITH_STRENGTH_MPA.values():

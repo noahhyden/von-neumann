@@ -1,11 +1,4 @@
-/**
- * The Electronics Wall, live. The narrative of closure-sim's electronics-wall
- * essay, but every number is the real model running in pimas: drag the assumptions and
- * the simulation recomputes; preview "make its own chips" as a speculation (the
- * exact after-state, nothing committed) before you commit it; and watch the model
- * explain which ceiling is binding. The last panel shows the very same reactive
- * graph projected as an agent surface (subscribe / speculate / explain).
- */
+/** The Electronics Wall, live. */
 import { createSignal, createMemo, createEffect, onCleanup } from "pimas";
 import { render } from "pimas/dom";
 import { Show, For } from "pimas/flow";
@@ -33,20 +26,13 @@ import { SOURCES, sourceById, sourceNumber, sourceCategories, STRENGTH_LABEL } f
 import type { Source } from "./sources.js";
 import { PAPERS } from "./papers-index.js";
 import type { PaperMeta } from "./papers-index.js";
-// Generated at build time from git history (a version = every commit touching
-// papers/<slug>/); see papers/scripts/gen-versions.mjs. Gitignored, always present
-// after a build. Empty when git history is unavailable, so the guards below no-op.
+// Generated at build time from git history (a version = every commit touching papers/<slug>/); see papers/scripts/gen-versions.mjs.
 import { PAPER_VERSIONS } from "./papers-versions.js";
 import type { VersionMeta } from "./papers-versions.js";
 
 type Surface = "overview" | "wall" | "mission" | "fleet" | "swarm" | "spine" | "launch" | "power" | "probe" | "sources" | "papers";
 
-/**
- * An inline citation marker: a superscript [n] (the source's stable bibliography number)
- * that reveals the full reference, its link, and what it grounds on hover or keyboard
- * focus. Pure and static - the tooltip is CSS-driven, so this creates no reactive nodes
- * (7). Pass one id or several; unknown ids are dropped rather than shown wrong.
- */
+/** An inline citation marker: a superscript [n] (the source's stable bibliography number) that reveals the full reference, its link, and what it grounds on hover or keyboard focus. */
 function Cite(props: { ids: string | string[] }) {
   const ids = Array.isArray(props.ids) ? props.ids : [props.ids];
   const srcs = ids.map(sourceById).filter((s): s is Source => Boolean(s));
@@ -94,9 +80,7 @@ const regimeWord = (r: string) => r.replace("-limited", "");
 
 function Slider(props: { p: ParamSignal }) {
   const p = props.p;
-  // For commit-on-release knobs, a local signal tracks the thumb + readout live during a
-  // drag while the model value (which may trigger an expensive recompute) is committed only
-  // on release. A cheap knob (no flag) sets the model directly on every input, as before.
+  // For commit-on-release knobs, a local signal tracks the thumb + readout live during a drag while the model value (which may trigger an expensive recompute) is committed only on release.
   const [disp, setDisp] = createSignal(p.get());
   if (p.commitOnRelease) createEffect(() => setDisp(p.get())); // pull in external changes
   const shown = () => (p.commitOnRelease ? disp() : p.get());
@@ -520,8 +504,7 @@ function ProbeSurface(props: { model: ProbeModel }) {
   );
 }
 
-// ── the mission surface: the whole operation, end to end ─────────────────────
-// Quick-jump destinations (heliocentric distance, AU) - mean distances, NASA fact sheet.
+// Mission surface quick-jump destinations (heliocentric distance, AU): mean distances from the NASA planetary fact sheet.
 const DESTINATIONS: [string, number][] = [["Earth orbit", 1.0], ["Mars", 1.524], ["Asteroid belt", 2.7], ["Jupiter", 5.203], ["Deep", 20]];
 
 const explainMission = (m: MissionModel): string => {
@@ -823,9 +806,7 @@ function drawSwarm(cv: HTMLCanvasElement, m: SwarmModel): void {
   ctx.fillStyle = vg;
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-  // Stars, drawn additively so settled clusters bloom into a glowing front. Settled
-  // stars flash white when the scrub has just crossed their settlement year, then cool
-  // from slate-teal to deep teal with age; unsettled stars are a dim dust.
+  // Stars, drawn additively so settled clusters bloom into a glowing front.
   const flash = Math.max(1, m.maxYear() * 0.03);
   const coolSpan = Math.max(1, m.maxYear() * 0.6);
   ctx.globalCompositeOperation = "lighter";
@@ -874,10 +855,7 @@ function drawSwarm(cv: HTMLCanvasElement, m: SwarmModel): void {
   ctx.arc(ox, oy, 4, 0, Math.PI * 2);
   ctx.fill();
 
-  // Coordination cue: the link from the homeworld to the hovered star, drawn in the
-  // rung's colour, plus a ring on the star. The "aha" - every inter-star link is red
-  // (independent colonies). Reading hoverStar here means a hover redraws the field, which
-  // at ~10³ stars is trivially cheap (§7: still one canvas, one effect).
+  // Coordination cue: the link from the homeworld to the hovered star, drawn in the rung's colour, plus a ring on the star.
   const hv = m.hoverStar();
   const info = m.hoverInfo();
   if (hv !== null && info !== null && hv < r.xs.length) {
@@ -897,11 +875,7 @@ function drawSwarm(cv: HTMLCanvasElement, m: SwarmModel): void {
   }
 }
 
-/**
- * Map a canvas-space point to the nearest star index (within ~8 px), or null. Inverts the
- * same projection `drawSwarm` uses - no per-star DOM, no hit regions; a brute O(N) scan is
- * negligible at slice-1 field sizes.
- */
+/** Map a canvas-space point to the nearest star index (within ~8 px), or null. */
 function pickStar(m: SwarmModel, mx: number, my: number): number | null {
   const r = m.result();
   const L = r.boxSidePc;
@@ -952,8 +926,7 @@ const fmtLatency = (years: number): string => {
   return `${fmtNum(years, years < 100 ? 1 : 0)} yr`;
 };
 
-// The coordination-mode readout for the hovered star. Reads one memo (hoverInfo) - the
-// reactive graph scales with the star a human inspects, never with nStars (§7).
+// The coordination-mode readout for the hovered star.
 const explainCoord = (m: SwarmModel): string => {
   const info = m.hoverInfo();
   if (info === null)
@@ -988,8 +961,7 @@ function SwarmSurface(props: { model: SwarmModel }) {
   const m = props.model;
   const [canvas, setCanvas] = createSignal<HTMLCanvasElement | null>(null);
 
-  // Draw whenever the field (knobs/seed) or the scrubbed year changes - a single effect
-  // reading the fold's buffers (§7), never a DOM node per star.
+  // Draw whenever the field (knobs/seed) or the scrubbed year changes - a single effect reading the fold's buffers (§7), never a DOM node per star.
   createEffect(() => {
     const cv = canvas();
     if (cv) drawSwarm(cv, m);
@@ -1170,8 +1142,7 @@ function SwarmSurface(props: { model: SwarmModel }) {
 function SpineSurface(props: { model: SpineModel }) {
   const m = props.model;
   const r = () => m.result();
-  // The dwell's galactic cost, in words: measured A/B for the fast policies, the analytic
-  // fraction for powered (where a brute-force A/B is infeasible - itself the finding).
+  // The dwell's galactic cost, in words: measured A/B for the fast policies, the analytic fraction for powered (where a brute-force A/B is infeasible - itself the finding).
   const taxLabel = () => {
     const t = m.dwellTax();
     if (t && t.taxFraction !== null && t.t100ZeroDwell !== null && t.t100WithDwell !== null)
@@ -1277,8 +1248,6 @@ const MODULE_STATUS: ModuleRow[] = [
 ];
 
 // The project's stated research conclusions, each backed by a source and a live surface.
-// Kept here (not in a repo doc) because the site is standalone: this is the public
-// findings page. Numbers trace to the modules' REFERENCES.md and FINDINGS.md.
 type FindingRow = { headline: string; surface: Surface; cite: string | string[]; detail: string };
 const FINDINGS: FindingRow[] = [
   { headline: "Chips are the wall - made of energy as much as supply chain", surface: "wall",
@@ -1502,12 +1471,7 @@ function SourcesSurface() {
   );
 }
 
-// ── papers: longer-form write-ups typeset in LaTeX (IEEE template) ───────────────
-// The list (frontend/src/papers-index.ts) is generated by papers/scripts/gen-index.mjs
-// from each paper's paper.json, and every cited id is validated against the same SOURCES
-// bibliography that powers the site's <Cite> markers - a paper and a live surface point
-// at the identical reference. The typeset PDF is compiled from LaTeX in CI and published
-// under /papers/<slug>.pdf beside this app.
+// Papers surface: LaTeX write-ups listed from papers-index.ts (generated by papers/scripts/gen-index.mjs), with every cited id validated against the same SOURCES bibliography that powers the <Cite> markers.
 function PapersSurface() {
   return (
     <div>
@@ -1621,13 +1585,7 @@ function Nav(props: { surface: Surface }) {
   );
 }
 
-// ── mount + routing: a shell hosting one surface per model, swapped by re-render ─
-// The surface lives in the URL hash (#/swarm, #/wall/low_closure) so every surface is
-// shareable, the browser Back/Forward buttons work, and a refresh restores where you
-// were. mount() is the single navigation entry point (every onClick calls it); it
-// renders, sets the title, and syncs the hash. A hashchange listener drives mount()
-// back for external changes (Back/Forward, a pasted deep link), guarded so the two
-// never loop. Kept here in the skin, not in pimas (7): routing is app plumbing.
+// Mount + routing: a shell hosting one surface per model, with the surface kept in the URL hash (#/swarm, #/wall/low_closure) so views are shareable and Back/Forward and refresh work.
 const appEl = document.getElementById("app")!;
 let disposeRender: (() => void) | null = null;
 let model: WallModel | null = null;

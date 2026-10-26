@@ -1,9 +1,4 @@
-/**
- * Parity test: the composed TS mission port must reproduce the Python
- * `mission.run_mission` exactly. Ground truth was generated from the Python package
- * (uv run python -c ... asdict(run_mission(default_mission_scenario(**overrides)))).
- * Pure - no pimas (Layer A). If the Python model changes, regenerate these numbers.
- */
+/** Parity test: the composed TS mission port must reproduce the Python `mission.run_mission` exactly. */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { runMission, defaultMissionScenario } from "./mission.ts";
