@@ -106,3 +106,20 @@ band that violates it is a malformed value that callers must not silently see.
   <= high_kg_per_day`. Uncertainty bands must be well-formed.
 
 Tests: `tests/test_invariants.py`.
+
+## Distribution bands (distributions.py)
+
+UQ spreads around the point values above, not new measurements.
+
+- **`WAAM_RATE_DIST = Uniform(1, 10)` and `LPBF_RATE_DIST = Uniform(0.2, 1.4)` kg/h** - the
+  sourced ranges above, used as given.
+- **`WORLD_CLASS_OEE_DIST = Uniform(0.80, 0.90)`** - `[ESTIMATE]`: Nakajima's 0.85 is a
+  benchmark floor, so values above it are possible; the +/-0.05 width has no citation
+  recoverable from this repo.
+- **`TYPICAL_OEE_DIST = Uniform(0.50, 0.70)`** - `[ESTIMATE]`: discrete manufacturing
+  spreads roughly 0.50-0.70 around the ~0.60 (66.8% quoted) typical figure above; the
+  band is carried over from the earlier code comment with no separate citation.
+- **`WORLD_CLASS_QUALITY_DIST = Uniform(0.995, 0.9999)`** - `[ESTIMATE]`: brackets the 0.999
+  first-pass-yield benchmark; band edges have no citation recoverable from this repo.
+- **`AASM_SEED_MASS_DIST`, `AASM_SELF_COPY_DAYS_DIST` and `HOURS_PER_DAY_DIST`** - Fixed:
+  the NASA CP-2255 design point and a definitional 24 h, as above.

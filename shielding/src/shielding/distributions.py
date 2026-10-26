@@ -1,17 +1,4 @@
-"""Distributional companions to shielding's sourced numbers.
-
-Issue #35 (UQ). Sourced spreads:
-
-- GCR deep-space dose ~1.8 mSv/day (MSL RAD). The literature spread across
-  cruise conditions is 1.5-2.1 mSv/day. Uniform.
-- Material densities (Ti, Al, regolith) are tightly known but regolith
-  varies 1.5-1.8 g/cm^3 with compaction. Ti / Al Fixed; regolith Uniform.
-- Juno vault attenuation factor ~800x is the design target; real measured
-  attenuation runs 500-1000x depending on interior geometry. Uniform.
-- Vault masses are flight measurements -> Fixed.
-- GCR dose minimum areal density is an HZETRN design point, treated as
-  Uniform over the documented 15-25 g/cm^2 band.
-"""
+"""Distributional companions to shielding's sourced numbers."""
 
 from __future__ import annotations
 

@@ -1,14 +1,4 @@
-"""Plain-data types for the deterministic multi-probe fold.
-
-A probe is an *agent*: it sits at a heliocentric distance, builds toward its next copy
-at a rate its local sunlight allows, and - when it has built one copy's worth of local
-structure and the fleet still has imported "vitamins" (non-replicable electronics) -
-spawns a child that travels outward to a new distance. The whole fleet state is plain,
-serializable data with a seeded RNG carried inside it (CLAUDE.md §7), so the
-simulation is a pure function of (params, seed).
-
-Nothing here imports pimas, the DOM, or a clock.
-"""
+"""Plain-data types for the deterministic multi-probe fold."""
 
 from __future__ import annotations
 
@@ -35,12 +25,7 @@ class Probe:
 
 
 class FleetParams(BaseModel):
-    """Everything the fold needs; the factory-derived fields come from a real BOM.
-
-    The three factory-derived numbers (seed mass, closure, local build energy) are read
-    from a closure-sim ``Factory`` via ``params_from_factory`` - they are sourced. The
-    rest are flagged scenario choices/estimates (see REFERENCES.md).
-    """
+    """Everything the fold needs; the factory-derived fields come from a real BOM."""
 
     # --- factory-derived (sourced via closure-sim) ---
     seed_mass_kg: float = Field(gt=0, description="mass of one probe copy (the seed)")

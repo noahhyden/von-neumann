@@ -1,13 +1,4 @@
-"""power-source - solar vs fission vs RTG, and the Pu-238 wall.
-
-Picks the lightest power source by two crossovers - a distance crossover
-`d = sqrt(sp_solar_1AU / sp_nuclear)` ~4-5 AU (independent of power level) and a
-power-level crossover (RTG below ~1 kWe, fission above) - and surfaces the sharpest
-vitamin in the project: one GPHS-RTG needs ~8 kg of plutonium-238, of which the US makes
-only ~0.5-1.5 kg per year. It reuses `probe-sim`'s 1/d^2 law and calls `thermal` to size
-a reactor's radiator. Pure, deterministic, no pimas, no RNG (CLAUDE.md 7). Every number
-traces to a source; see REFERENCES.md.
-"""
+"""power-source - solar vs fission vs RTG, and the Pu-238 wall."""
 
 from power_source.power_source import (
     FISSION_CONVERSION_EFFICIENCY,

@@ -38,8 +38,7 @@ def test_every_dist_has_a_nontrivial_band():
 
 
 def test_point_values_sit_inside_their_bands():
-    # Every module constant must lie inside the band it maps to; otherwise the
-    # distribution and the fold have drifted apart.
+    # Every module constant must lie inside the band it maps to; otherwise the distribution and the fold have drifted apart.
     assert (
         SOLAR_SPECIFIC_POWER_1AU_DIST.quantile(0.0)
         <= SOLAR_SPECIFIC_POWER_1AU_W_PER_KG
@@ -63,10 +62,7 @@ def test_point_values_sit_inside_their_bands():
 
 
 def test_solar_fission_crossover_stays_in_the_4_to_5_au_band_under_uq():
-    # THE headline finding of power-source: d_cross = sqrt(sp_solar / sp_nuclear).
-    # Under UQ over both specific powers, does the crossover still sit in the
-    # "4-5 AU band matches reality" claim REFERENCES.md makes? Answer with an
-    # MC of the sqrt formula.
+    # THE headline finding of power-source, d_cross = sqrt(sp_solar / sp_nuclear): does the crossover under UQ over both specific powers still sit in the 4-5 AU band REFERENCES.md claims, answered by an MC of the sqrt formula.
     inputs = {
         "sp_solar": SOLAR_SPECIFIC_POWER_1AU_DIST,
         "sp_fission": FISSION_SPECIFIC_POWER_DIST,
@@ -76,15 +72,12 @@ def test_solar_fission_crossover_stays_in_the_4_to_5_au_band_under_uq():
         return math.sqrt(sample["sp_solar"] / sample["sp_fission"])
 
     r = monte_carlo(inputs, d_cross, n=5000, seed=79)
-    # Mean should sit in the "4-5 AU" reality-cross-check region, but with a
-    # wide 90% CI because the solar-basis spread is 4x.
+    # Mean should sit in the "4-5 AU" reality-cross-check region, but with a wide 90% CI because the solar-basis spread is 4x.
     assert 4.0 < r.mean < 12.0
     lo, hi = r.error_bar_95
     assert hi > lo + 1.0, "spread should be nontrivial"
 
-    # Sobol: which side of the ratio drives the variance? The solar-basis 4x
-    # spread outweighs the ~3x fission spread on a per-order-of-magnitude
-    # basis, so it should dominate.
+    # Sobol: the solar-basis 4x spread outweighs the ~3x fission spread on a per-order-of-magnitude basis, so it should dominate the ratio variance.
     s = sobol_total_order(inputs, d_cross, n=1500, seed=79)
     assert s.ranked()[0][0] == "sp_solar"
 
@@ -95,8 +88,7 @@ def test_pu238_production_bandwidth_matches_the_source():
 
 
 def test_crossover_threshold_dist_covers_the_1_kwe_point():
-    # The 1 kWe point value is sourced as "order-of-magnitude"; LogUniform
-    # around it must comfortably contain 1000.
+    # The 1 kWe point value is sourced as "order-of-magnitude", so the LogUniform around it must comfortably contain 1000.
     assert RTG_FISSION_CROSSOVER_DIST.low < 1000.0 < RTG_FISSION_CROSSOVER_DIST.high
     # And the log-midpoint should be near 1000.
     med = RTG_FISSION_CROSSOVER_DIST.quantile(0.5)

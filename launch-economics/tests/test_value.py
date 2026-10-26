@@ -1,9 +1,4 @@
-"""value validation: the launch-cost-avoided output and the headline debunk.
-
-The defensible output is launch-cost-avoided (definitional arithmetic); the platinum-
-market anchors exist only to debunk the "$X quintillion asteroid" figures. See
-REFERENCES.md.
-"""
+"""value validation: the launch-cost-avoided output and the headline debunk."""
 
 import pytest
 
@@ -37,8 +32,7 @@ def test_psyche_headline_is_arithmetic_fiction():
 
 
 def test_realizable_ceiling_is_bounded_by_the_market():
-    # Over a century the most a commodity can realize is ~100 years of market turnover,
-    # vastly below the quoted Psyche figure - the honest cap.
+    # Over a century the most a commodity can realize is ~100 years of market turnover, vastly below the quoted Psyche figure - the honest cap.
     ceiling_100yr = realizable_value_ceiling_usd(100.0)
     assert ceiling_100yr == pytest.approx(100.0 * PLATINUM_MARKET_ANNUAL_USD)
     assert ceiling_100yr < PSYCHE_QUOTED_VALUE_USD / 1.0e6  # off by >6 orders of magnitude

@@ -1,21 +1,4 @@
-"""A small seeded deterministic PRNG, carried as plain data.
-
-`reliability` is the only module in the project that introduces randomness, and CLAUDE.md
-7 is explicit about the trap: a stray `random.random()` or wall-clock seed *works* until
-someone asks the model to reproduce or replay, then silently breaks everything. So the
-generator here is a pure function of an explicit integer state, threaded through the fold
-exactly like the JS folds elsewhere in the repo. Same seed in -> same stream out, forever.
-
-This is splitmix64 (Vigna), a well-tested 64-bit generator: fast, tiny, and fully
-deterministic. The state is a plain `int`; nothing hidden, no global, no clock.
-
-Draws return ``(value, new_state)`` - value first, state second - matching the
-one threading contract used everywhere else in the repo (``vn_core.rng``,
-``swarm.rng``, ``multi_probe.rng``). splitmix64 stays the algorithm here because
-`reliability` has no frontend/JS surface and so no mulberry32 parity requirement;
-only the tuple order is shared, so a callsite moved between generators cannot
-silently swap value and state (issue #65).
-"""
+"""A small seeded deterministic PRNG, carried as plain data."""
 
 from __future__ import annotations
 

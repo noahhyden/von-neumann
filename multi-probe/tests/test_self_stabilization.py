@@ -1,17 +1,4 @@
-"""Self-stabilization scenarios for multi-probe (issue #49).
-
-Dijkstra's question, applied to the fleet: given a legal running system, if we
-perturb it to an arbitrary state, does the survivor set converge to a legal
-replication regime? Each perturbation is a deterministic state-to-state
-function seeded by the caller's RNG (the same discipline as the folds, CLAUDE
-§7). Perturbations are applied *between* legal `step` calls, so the
-step-level invariants added in #48 do not trip on the perturbed state (they
-compare consecutive-step in/out, which is where the physics runs).
-
-The predicates and perturbations live in the test file rather than a new
-module; if the suite grows meaningful shared infrastructure it can be
-promoted (see spec at issue #49#issuecomment-5015587903, §8).
-"""
+"""Self-stabilization scenarios for multi-probe (issue #49)."""
 
 from __future__ import annotations
 
@@ -32,14 +19,7 @@ def is_legal_fleet(
     *,
     v_per_child: float | None = None,
 ) -> bool:
-    """Legality of a fleet state given a recent history of snapshots.
-
-    All four conditions must hold on the current (last) snapshot:
-    - active fraction >= 0.5 across all probes (not stranded in TRAVELING),
-    - population is non-decreasing across the whole history window,
-    - remaining vitamins cover at least one more child,
-    - not cap-bound (cap is the ceiling, not a legality question).
-    """
+    """Legality of a fleet state given a recent history of snapshots."""
     if not history:
         return False
     state = history[-1]
@@ -124,11 +104,7 @@ def pert_mp_stranding(state: FleetState, params: FleetParams, rng: int, frac: fl
 
 
 def pert_mp_status_flip(state: FleetState, params: FleetParams, rng: int, frac: float) -> FleetState:
-    """[pert:mp-status-flip(frac)] Flip `frac` of ACTIVE probes back to TRAVELING.
-
-    Applied between legal `step` calls, so [inv:mp-status-transitions] compares
-    the *next* step's before/after (both TRAVELING/ACTIVE, legal transition).
-    """
+    """[pert:mp-status-flip(frac)] Flip `frac` of ACTIVE probes back to TRAVELING."""
     if not 0.0 <= frac <= 1.0:
         raise ValueError("frac must be in [0, 1]")
     active_ids = [p.id for p in state.probes if p.status == ProbeStatus.ACTIVE]

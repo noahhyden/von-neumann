@@ -1,8 +1,4 @@
-"""comms validation: calibration, the two regimes, edges, and the data-return wall.
-
-Anchors are JPL's DSOC verified rates (25 Mbps @ 1.506 AU, 8.3 Mbps @ 2.582 AU) and
-the 267 Mbps modem ceiling. See comms-SPEC.md and REFERENCES.md.
-"""
+"""comms validation: calibration, the two regimes, edges, and the data-return wall."""
 
 import math
 
@@ -88,8 +84,7 @@ def test_defaults_are_the_dsoc_calibration():
 
 
 def test_data_return_wall_backlog_grows():
-    # Probe generates 100 Mbit/s of science at 5 AU, where the link returns only
-    # 56/25 = 2.24 Mbps. A backlog must accumulate.
+    # Probe generates 100 Mbit/s of science at 5 AU, where the link returns only 56/25 = 2.24 Mbps, so a backlog must accumulate.
     day = 86_400.0
     gen_bps = 100.0e6
     r = return_backlog(gen_bps, 5.0, day, k_mbps_au2=56.0, r_max_mbps=267.0)
@@ -114,8 +109,7 @@ def test_no_wall_when_generation_below_link_rate():
 
 
 def test_aggregate_saturates_at_sum_not_count():
-    # Ten saturated probes at various distances: aggregate is the sum of link rates,
-    # which is far below 10 * near-Earth cap once they are spread out.
+    # Ten saturated probes at various distances: aggregate is the sum of link rates, far below 10 * the near-Earth cap once they are spread out.
     distances = [3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0]
     agg = aggregate_return_rate_mbps(distances)
     expected = sum(data_rate_at(d) for d in distances)

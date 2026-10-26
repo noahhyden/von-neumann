@@ -17,8 +17,7 @@ def test_definitional_constants_are_fixed():
 
 
 def test_dsoc_fit_uncertainty_is_the_disagreement_between_anchors():
-    # The +/- ~1% between the two verified DSOC anchors (56.7 and 55.3) IS
-    # the honest error bar on k.
+    # The +/- ~1% between the two verified DSOC anchors (56.7 and 55.3) IS the honest error bar on k.
     assert K_OPTICAL_MBPS_AU2_DIST.low == 55.3
     assert K_OPTICAL_MBPS_AU2_DIST.high == 56.7
     assert K_OPTICAL_MBPS_AU2_DIST.low <= K_OPTICAL_MBPS_AU2 <= K_OPTICAL_MBPS_AU2_DIST.high
@@ -29,10 +28,7 @@ def test_rmax_band_contains_the_point_value():
 
 
 def test_dsoc_data_rate_at_2au_stays_below_rmax():
-    # Sanity finding: at 2 AU, k / d^2 = 56 / 4 = 14 Mbps, well below R_max.
-    # UQ over both must preserve this: no draw should push rate over R_max
-    # at 2 AU. This catches a regression that would silently swap the
-    # min(k/d^2, R_max) branch.
+    # Sanity finding: at 2 AU, k / d^2 = 56 / 4 = 14 Mbps, well below R_max, and no UQ draw may push the rate over R_max there (catches a swapped min(k/d^2, R_max) branch).
     def rate_at_2au(sample):
         power_limited = sample["k"] / (2.0**2)
         return min(power_limited, sample["r_max"])

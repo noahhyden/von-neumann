@@ -1,9 +1,4 @@
-"""Impulsive-transfer validation: real transfers, edges, and monotonicity.
-
-Targets are recomputed from the sourced constants (GM_sun, AU, orbital radii) and
-cross-checked against textbook values (Earth->Mars ~5.59 km/s, ~259 d). See
-transfer-SPEC.md and REFERENCES.md.
-"""
+"""Impulsive-transfer validation: real transfers, edges, and monotonicity."""
 
 import math
 

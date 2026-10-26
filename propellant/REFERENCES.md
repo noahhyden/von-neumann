@@ -82,3 +82,19 @@ closure axis.
   chain water-ice-to-propellant energy (~11 kWh/kg), the practical anchor above.
 - **NASA NTRS 20150023080** - Xenon Acquisition Strategies for High-Power Electric
   Propulsion. The 10 t = >10% of world supply anchor behind the import wall.
+
+## Distribution bands (distributions.py)
+
+UQ spreads around the point values above, not new measurements.
+
+- **`KORNUTA_FULL_CHAIN_DIST = Uniform(9, 15)` kWh/kg** - `[ESTIMATE]`: the 11.3 kWh/kg
+  point with a roughly -20% / +33% (about 30%) band for mining and liquefaction variability.
+  The band is carried over from the earlier code comment with no citation recoverable
+  from this repo; it matches the band used for the same figure in `isru`.
+- **`XENON_WORLD_SUPPLY_DIST = Uniform(40, 60)` t/yr** - the sourced range above, used as given.
+- **Isp bands** - LOX/LH2 `Uniform(440, 460)` s, water resistojet `Uniform(280, 320)` s,
+  xenon Hall `Uniform(1500, 2000)` s, xenon ion `Uniform(4000, 4300)` s: `[ESTIMATE]` windows
+  around the Isp points above (launch-economics sources); the window widths have no
+  separate citation recoverable from this repo.
+- **`HHV_HYDROGEN_DIST` and `HYDROGEN_MASS_FRACTION_OF_WATER_DIST`** - Fixed (thermodynamic
+  and atomic-mass derived).

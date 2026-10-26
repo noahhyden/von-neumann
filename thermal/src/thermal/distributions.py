@@ -1,19 +1,4 @@
-"""Distributional companions to thermal's sourced numbers.
-
-Issue #35 (UQ) applied to thermal. The physics constant is exact; the material
-and hardware inputs have real bands; the ISS anchor is a flight measurement.
-
-- Stefan-Boltzmann is exact by SI redefinition -> `Fixed`.
-- Emissivity of a high-emissivity radiator coating is a documented ~0.8-0.9
-  band (white paints / OSRs). `Uniform(0.8, 0.9)` is the honest read.
-- Radiator specific mass explicitly has a 3-12 kg/m^2 band (target vs SOA
-  vs conservative). `Uniform(3.0, 12.0)`.
-- Fission surface power SOA range 5.24-10.95 kg/m^2 (sub-band inside the
-  larger 3-12 band). Exposed separately for scenarios that pin the reactor
-  case.
-- ISS EATCS anchors (heat rejection kW, radiator temp, geometry) are tight
-  flight measurements, treated as `Fixed`.
-"""
+"""Distributional companions to thermal's sourced numbers."""
 
 from __future__ import annotations
 
@@ -37,8 +22,7 @@ STEFAN_BOLTZMANN_DIST: Distribution = Fixed(STEFAN_BOLTZMANN_W_M2_K4)
 # Radiator emissivity: representative high-emissivity coating ~0.8-0.9 band.
 EMISSIVITY_DIST: Distribution = Uniform(low=0.8, high=0.9)
 
-# Radiator areal density (kg/m^2): documented 3-12 band across
-# target -> conservative-deployable.
+# Radiator areal density (kg/m^2): a documented 3-12 band spanning the NASA target to conservative deployable radiators (REFERENCES.md).
 RADIATOR_SPECIFIC_MASS_DIST: Distribution = Uniform(
     low=RADIATOR_SPECIFIC_MASS_BAND_KG_M2[0],
     high=RADIATOR_SPECIFIC_MASS_BAND_KG_M2[1],

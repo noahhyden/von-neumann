@@ -1,8 +1,4 @@
-"""shielding validation: mass conversion, the Juno anchor, GCR non-monotonicity, closure.
-
-Anchors: Juno vault ~200 kg (1 cm Ti, ~800x TID reduction), Europa Clipper 150 kg, GCR
-dose-equivalent minimum ~20 g/cm^2 Al. See REFERENCES.md.
-"""
+"""shielding validation: mass conversion, the Juno anchor, GCR non-monotonicity, closure."""
 
 import math
 

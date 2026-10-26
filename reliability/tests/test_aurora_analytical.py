@@ -1,44 +1,4 @@
-"""Analytical companion for the Aurora ODE (issue #50, Phase 2).
-
-Formalizes finding #11: the equilibrium settled fraction is
-`X_eq = 1 - T_l/T_s` (Carroll-Nellenback 2019 Eq. 32). Adds two derived
-results the existing tests do not cover:
-
-## 1. Approach time constant
-
-Near equilibrium `X_eq = 1 - T_l/T_s`, let `delta = X - X_eq`. Expanding the
-Aurora RHS and dropping O(delta^2):
-
-    d delta / dt = delta * [(1 - 2*X_eq)/T_l - 1/T_s]
-
-Using `X_eq = 1 - T_l/T_s`, so `1 - 2*X_eq = 2*T_l/T_s - 1`:
-
-    d delta / dt = delta * (1/T_s - 1/T_l)
-
-For `T_l < T_s` (the existence condition), the coefficient is negative, so
-delta decays exponentially with time constant
-
-    tau = 1 / (1/T_l - 1/T_s)  =  T_l * T_s / (T_s - T_l)
-
-## 2. Collapse rate at T_l >= T_s
-
-`X = 0` is always a fixed point. Linearizing the RHS at X = 0:
-
-    dX/dt |_{X=0}, d/dX  =  1/T_l - 1/T_s
-
-For `T_l > T_s`, this is negative, so X = 0 is stable: any initial X decays
-to zero at rate `1/T_l - 1/T_s` (equivalently, time constant
-`T_l T_s / (T_l - T_s)`).
-
-The critical case `T_l == T_s` gives zero linear coefficient: X decays
-sub-exponentially (dominated by the quadratic term).
-
-## 3. Time symmetry
-
-X_eq depends only on the ratio `T_l/T_s`, not either time individually.
-Scaling both times by any positive factor leaves the plateau unchanged
-(though it stretches the approach time by the same factor).
-"""
+"""Analytical companion for the Aurora ODE (issue #50, Phase 2)."""
 
 import pytest
 
@@ -59,8 +19,7 @@ def test_approach_time_constant():
     gap0 = X_eq - x0
     x_tau = aurora_integrate(x0, T_l, T_s, t_end=tau)
     gap_tau = X_eq - x_tau
-    # Linearization predicts gap_tau = gap0 / e. Allow 5% tolerance for the O(delta^2)
-    # correction and ODE tolerance.
+    # Linearization predicts gap_tau = gap0 / e; allow 5% tolerance for the O(delta^2) correction and ODE tolerance.
     assert gap_tau == pytest.approx(gap0 / math.e, rel=0.05)
 
 

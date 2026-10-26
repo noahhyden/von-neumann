@@ -90,3 +90,16 @@ The power-limited `R(d) = k/d^2` is not a fitted guess; it is Shannon meeting Fr
 - **JPL DSOC 2024** - NASA/JPL Deep Space Optical Communications first-phase results
   (links above). The primary source for the 1/d^2 confirmation and the calibration
   anchors.
+
+## Distribution bands (distributions.py)
+
+UQ spreads around the point values above, not new measurements.
+
+- **`K_OPTICAL_MBPS_AU2_DIST = Uniform(55.3, 56.7)` Mbps*AU^2** - the two DSOC anchor fits
+  (k = 55.3 and k = 56.7) taken as the band edges; their ~2.5% disagreement (+/- ~1.25% about
+  the 56.0 midpoint) is the honest error bar on k. Sourced (phys.org / JPL, above).
+- **`R_MAX_DSOC_MBPS_DIST = Uniform(200, 267)` Mbps** - upper edge is the published 267 Mbps
+  DSOC ceiling (sourced above). `[ESTIMATE]`: the 200 Mbps lower edge reflects the
+  near-Earth plateau running lower with link margin; it was carried over from the earlier
+  code comment and has no citation recoverable from this repo.
+- **`BITS_PER_MBIT_DIST`** - Fixed, a definitional unit conversion.

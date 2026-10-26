@@ -1,9 +1,4 @@
-"""propellant validation: reaction mass, production energy, and propellant closure.
-
-Cross-checks against launch-economics (Tsiolkovsky) and transfer (Delta-v). Anchors:
-HHV(H2)=39.4 kWh/kg -> 4.41 kWh/kg water; xenon world supply ~40-60 t/yr (NASA: 10 t is
->10% of it). See REFERENCES.md.
-"""
+"""propellant validation: reaction mass, production energy, and propellant closure."""
 
 import pytest
 
@@ -90,8 +85,7 @@ def test_xenon_import_wall_matches_nasa_anchor():
 
 
 def test_the_trade_mass_versus_tether():
-    # The payoff: xenon EP carries far less propellant mass, but ALL of it is imported;
-    # the water route carries more mass but imports none (on a water body).
+    # The payoff: xenon EP carries far less propellant mass but ALL of it is imported, while the water route carries more mass and imports none (on a water body).
     dv, dry = 5000.0, 1000.0
     routes = [LOX_LH2_FROM_WATER, XENON_HALL_EP]
     comps = {c.name: c for c in compare_routes(dv, dry, routes, body_has_water=True)}

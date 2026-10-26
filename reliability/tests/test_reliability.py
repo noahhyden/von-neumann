@@ -1,9 +1,4 @@
-"""reliability validation: seeded-fold determinism, the hazard=0 guard, Aurora, decay.
-
-The load-bearing tests are the RNG discipline (CLAUDE.md 7): same seed reproduces
-bit-for-bit, and hazard=0 leaves the population untouched (the mandatory regression
-against the failure-free models). See REFERENCES.md.
-"""
+"""reliability validation: seeded-fold determinism, the hazard=0 guard, Aurora, decay."""
 
 import pytest
 
@@ -104,8 +99,7 @@ def test_aurora_equilibrium_formula():
 
 def test_aurora_ode_converges_to_equilibrium():
     t_l, t_s = 1000.0, 5000.0
-    # t_end = 50000 is ~10 spread-times, long past the plateau (approach constant
-    # ~min(T_l, T_s) = 1000). The adaptive solver picks its own step.
+    # t_end = 50000 is ~10 spread-times, long past the plateau (approach constant ~min(T_l, T_s) = 1000); the adaptive solver picks its own step.
     x_final = aurora_integrate(0.01, t_l, t_s, t_end=50000.0)
     assert x_final == pytest.approx(aurora_equilibrium(t_l, t_s), rel=1e-3)
     # When lifetime <= spread time, the fraction decays toward zero.

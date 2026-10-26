@@ -1,37 +1,4 @@
-"""Analytical companion for autonomy (issue #50, Phase 2).
-
-Formalizes finding #30: the autonomy wall
-`d_wall = sqrt(supply_flops_at_1AU / required_flops)`. This is the compute
-analogue of the power-source distance crossover (finding #24), from the
-demand side.
-
-## Derivation
-
-Compute supply from a 1/d^2 solar array is
-
-    S(d) = S_1AU / d^2                              (1)
-
-Compute demand is distance-independent (autonomy needs are set by the
-control problem, not the range):
-
-    D = required_flops                              (2)
-
-The wall is where the supply drops below demand: S(d_wall) = D, hence
-
-    S_1AU / d_wall^2 = D
-    d_wall = sqrt(S_1AU / D)                        (3)
-
-Two structural facts follow:
-- **Absolute magnitude cancels** if both supply and demand scale together.
-  Rescaling S_1AU -> alpha S_1AU and D -> alpha D leaves d_wall unchanged.
-- Only the **ratio** S_1AU / D controls the wall.
-
-## Test coverage
-- `autonomy_wall_au` matches (3) analytically.
-- At d = d_wall, affordable_compute == required_flops (to float tolerance).
-- Rescaling S and D by the same factor leaves d_wall unchanged.
-- Doubling only the demand shrinks d_wall by sqrt(2) (elasticity check).
-"""
+"""Analytical companion for autonomy (issue #50, Phase 2)."""
 
 import math
 

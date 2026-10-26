@@ -1,19 +1,4 @@
-"""The self-replication launch payoff: leverage from not launching the mass.
-
-The whole economic case for a von Neumann factory is that you launch a small *seed*
-and let it build the rest from local material, instead of launching the finished
-installation. This compares the two:
-
-- **direct**: launch the entire target installed mass.
-- **replication**: launch only the seed plus the "vitamins" (parts that can't be made
-  locally) delivered over the campaign.
-
-The ratio of those masses is the **launch-mass leverage** - how many kilograms of
-installed capability each launched kilogram ultimately yields. It ties straight to
-`closure-sim`: lower mass closure means more vitamins, means less leverage.
-
-Deterministic, plain data, zero pimas imports (CLAUDE.md §7). Units: kg, USD.
-"""
+"""The self-replication launch payoff: leverage from not launching the mass."""
 
 from __future__ import annotations
 

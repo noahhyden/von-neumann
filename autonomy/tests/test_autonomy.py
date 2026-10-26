@@ -1,9 +1,4 @@
-"""autonomy validation: the demand band, the derived split, and the autonomy wall.
-
-Anchors: honeybee brain ~1e13, self-driving car ~1.4e14 ops/s, mouse brain ~1e15. The
-wall must equal probe-sim's supply-side max_distance_for_compute (loop closed). See
-REFERENCES.md.
-"""
+"""autonomy validation: the demand band, the derived split, and the autonomy wall."""
 
 import math
 
@@ -27,8 +22,7 @@ from autonomy.autonomy import (
 
 def test_three_lines_converge_on_the_same_band():
     band = required_compute_band()
-    # honeybee < self-driving car < mouse: the central engineered anchor lands between
-    # the two independent brain estimates.
+    # honeybee < self-driving car < mouse: the central engineered anchor lands between the two independent brain estimates.
     assert band.low_flops == HONEYBEE_BRAIN_FLOPS == 1e13
     assert band.high_flops == MOUSE_BRAIN_FLOPS == 1e15
     assert band.central_flops == SELF_DRIVING_OPS_PER_S == 1.4e14
@@ -45,8 +39,7 @@ def test_required_power_is_inverse_of_capacity():
 
 
 def test_compute_fraction_is_derived_not_the_free_0_70_split():
-    # 140 TOPS at 1e10 FLOPS/W needs 14 kW; of a 100 kW bus that is a 0.14 compute
-    # fraction - DERIVED, replacing the hand-set 0.30 (the complement of 0.70 manuf).
+    # 140 TOPS at 1e10 FLOPS/W needs 14 kW; of a 100 kW bus that is a 0.14 compute fraction, DERIVED and replacing the hand-set 0.30 (the complement of 0.70 manufacturing).
     frac = compute_fraction_needed(1.4e14, total_power_w=100_000.0, efficiency_flops_per_w=1e10)
     assert frac == pytest.approx(0.14, rel=1e-9)
     assert frac != 0.30  # it is not the assumed split
@@ -78,8 +71,7 @@ def test_autonomy_wall_and_demand_ordering():
 
 
 def test_wall_closes_probe_sims_supply_loop():
-    # The wall computed here must equal probe-sim's supply-side max_distance_for_compute
-    # when fed the same array, split, and efficiency - the loop closure.
+    # The wall computed here must equal probe-sim supply-side max_distance_for_compute when fed the same array, split, and efficiency - the loop closure.
     array = SolarArray(area_m2=10.0, efficiency=0.30)
     compute_fraction = 0.30
     efficiency = 1e10

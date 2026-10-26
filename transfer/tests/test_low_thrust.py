@@ -1,9 +1,4 @@
-"""Low-thrust (SEP / Edelbaum) validation.
-
-Checks: Edelbaum coplanar reduces to |V1-V2| and exceeds the impulsive Hohmann total;
-the 1/d^2 power law; the F/P ~ 60 mN/kW cross-check against Psyche; propellant
-round-trips against launch-economics; and the Δv -> 0 edge. See transfer-SPEC.md.
-"""
+"""Low-thrust (SEP / Edelbaum) validation."""
 
 import pytest
 
@@ -54,8 +49,7 @@ def test_power_law_is_inverse_square():
 
 
 def test_thrust_to_power_matches_psyche():
-    # Psyche Hall thruster: ~60 mN/kW. F/P = 2*eta/(g0*Isp). At Isp 1820 s, eta 0.5:
-    # F/P = 2*0.5/(9.80665*1820) = 5.60e-5 N/W = 56 mN/kW - matches ~60 mN/kW.
+    # Psyche Hall thruster ~60 mN/kW: F/P = 2*eta/(g0*Isp) = 2*0.5/(9.80665*1820) = 5.60e-5 N/W = 56 mN/kW at Isp 1820 s, eta 0.5, matching ~60 mN/kW.
     f = sep_thrust_n(power_w=1000.0, isp_s=1820.0, efficiency=0.5)
     # 56 mN/kW = 56e-3 N / 1000 W = 5.6e-5 N/W.
     assert f / 1000.0 == pytest.approx(5.6e-5, rel=0.05)
@@ -83,8 +77,7 @@ def test_sep_trip_time_grows_with_distance():
 
 
 def test_sep_propellant_round_trips_launch_economics():
-    # propellant_mass / wet_mass must equal launch-economics' propellant_fraction
-    # for the same (Δv, Isp) - single source of truth for Tsiolkovsky.
+    # propellant_mass / wet_mass must equal launch-economics propellant_fraction for the same (dv, Isp), a single source of truth for Tsiolkovsky.
     dv, isp, dry = 5655.8, 3000.0, 1000.0
     r = sep_transfer(dv, isp_s=isp, dry_mass_kg=dry,
                      power_w_at_1au=10_000.0, distance_au=1.0, efficiency=0.6)
@@ -96,8 +89,7 @@ def test_sep_propellant_round_trips_launch_economics():
 
 
 def test_sep_propellant_far_below_chemical():
-    # High-Isp SEP uses a fraction of the reaction mass a chemical stage would for the
-    # same Δv. Compare propellant per kg of dry mass.
+    # High-Isp SEP uses a fraction of the reaction mass a chemical stage would for the same Δv; compare propellant per kg of dry mass.
     dv, dry = 5655.8, 1000.0
     sep = sep_transfer(dv, isp_s=3000.0, dry_mass_kg=dry,
                        power_w_at_1au=10_000.0, distance_au=1.0, efficiency=0.6)

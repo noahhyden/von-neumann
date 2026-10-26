@@ -1,25 +1,10 @@
-"""Launch physics and cost: what it takes to put a kilogram somewhere.
-
-Two pieces:
-
-- **cost** - `launch_cost_usd(mass, cost_per_kg)`. The $/kg is a scenario input (it
-  varies by vehicle and year); representative sourced values live in REFERENCES.md.
-- **the Δv penalty** - the Tsiolkovsky rocket equation, `mass_ratio = exp(Δv / v_e)`.
-  Reaching a higher-energy destination costs exponentially more propellant per kg of
-  payload, which is the physical reason launching finished mass across the solar
-  system is so expensive - and why replicating it in place is worth so much.
-
-Only defined physical constants are hardcoded (standard gravity); Δv budgets and
-specific impulse are inputs, documented in REFERENCES.md. Deterministic, plain data,
-zero pimas imports (CLAUDE.md §7). SI units: m/s, kg, seconds, USD.
-"""
+"""Launch physics and cost: what it takes to put a kilogram somewhere."""
 
 from __future__ import annotations
 
 import math
 
-# Standard gravity, m/s^2 - defined constant (BIPM/SI), used to turn specific impulse
-# (seconds) into exhaust velocity. Exact by definition.
+# Standard gravity, m/s^2: a defined constant (BIPM/SI, exact), used to turn specific impulse (seconds) into exhaust velocity.
 G0_M_S2: float = 9.80665
 
 

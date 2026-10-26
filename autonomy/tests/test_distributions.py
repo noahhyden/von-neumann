@@ -35,9 +35,7 @@ def test_point_values_sit_inside_their_bands():
 
 
 def test_autonomy_band_ordering_survives_uq():
-    # REFERENCES.md's story: honeybee < self-driving-car < mouse (roughly).
-    # Under LogUniform on the biological ends, does the ORDERING hold in the
-    # MC medians? Yes for the point values; UQ shouldn't accidentally flip it.
+    # REFERENCES.md story is honeybee < self-driving-car < mouse (roughly); under LogUniform on the biological ends the ordering holds in the MC medians and UQ must not flip it.
     r_bee = monte_carlo({"x": HONEYBEE_BRAIN_FLOPS_DIST}, lambda s: s["x"], n=2000, seed=131)
     r_mouse = monte_carlo({"x": MOUSE_BRAIN_FLOPS_DIST}, lambda s: s["x"], n=2000, seed=131)
     # Compare geometric means (log-space).

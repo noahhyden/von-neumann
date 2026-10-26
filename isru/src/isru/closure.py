@@ -1,29 +1,10 @@
-"""The closure ceiling: you cannot build from an element the body does not have.
-
-`closure-sim` marks each subsystem `producible_locally` as a hand-set boolean. This
-module gives that boolean a physical basis: a part is producible locally only if every
-element it requires is present in the local feedstock above a usable abundance. The
-**closure ceiling** is then the mass fraction of a copy made of such parts - a hard
-upper bound on closure that no amount of clever manufacturing can beat, because the raw
-element simply is not there.
-
-The lunar case makes the point sharp. Mare regolith is rich in O, Si, Fe, Ca, Al, Mg,
-Ti - so structure and oxygen close easily - but carbon, hydrogen, and nitrogen occur
-only as tens of ppm of solar-wind implantation (polar water ice aside). Anything needing
-bulk C/H/N (polymers, many electronics) must be imported: it sits above the ceiling.
-
-Pure accounting over a sourced composition - no geochemistry or extraction simulation
-(over-nesting, CLAUDE.md 3). Composition figures are in REFERENCES.md.
-"""
+"""The closure ceiling: you cannot build from an element the body does not have."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-# Representative lunar mare-soil elemental abundance, wt% (Lunar Sourcebook, Apollo
-# averages). Bulk major elements; trace elements below ~0.1 wt% are omitted. Volatiles
-# (H, C, N) are present only as tens of ppm from solar wind - well below any usable
-# threshold - so they are deliberately absent from this bulk table. See REFERENCES.md.
+# Representative lunar mare-soil bulk abundance, wt% (Lunar Sourcebook, Apollo averages); trace <0.1 wt% omitted and volatiles H/C/N excluded (ppm solar wind), see REFERENCES.md.
 LUNAR_REGOLITH_ELEMENT_WT_PCT: dict[str, float] = {
     "O": 44.0,
     "Si": 21.0,
@@ -38,9 +19,7 @@ LUNAR_REGOLITH_ELEMENT_WT_PCT: dict[str, float] = {
     "K": 0.1,
 }
 
-# Default usable-abundance threshold, wt%. An element below this in the feedstock cannot
-# be a bulk local source. 0.1 wt% is a representative bulk-extraction floor; it is a
-# documented modelling choice, adjustable per scenario (CLAUDE.md 1).
+# Default usable-abundance floor, wt%: 0.1 is a representative bulk-extraction floor, a documented modelling choice adjustable per scenario (CLAUDE.md 1).
 DEFAULT_USABLE_THRESHOLD_WT_PCT: float = 0.1
 
 
@@ -66,22 +45,12 @@ def available_elements(
 
 
 def part_producible_locally(part: Part, available: frozenset[str]) -> bool:
-    """True iff every element the part requires is available locally.
-
-    A part with no listed required elements is treated as producible (nothing gates it);
-    callers should list the gating elements for parts that have one.
-    """
+    """True iff every element the part requires is available locally."""
     return part.required_elements <= available
 
 
 def closure_ceiling(parts: list[Part], available: frozenset[str]) -> float:
-    """Max fraction of a copy's mass that can be built locally, given the feedstock.
-
-    ceiling = (mass of parts whose required elements are all available) / (total mass).
-    This is the hard upper bound on closure-sim's closure ratio C: C <= ceiling, with
-    equality only if every producible part is actually produced locally. Cannot close on
-    an element the body lacks - such parts count against the ceiling.
-    """
+    """Max fraction of a copy's mass that can be built locally, given the feedstock."""
     total = sum(p.mass_kg for p in parts)
     if total <= 0:
         raise ValueError("total part mass must be positive")

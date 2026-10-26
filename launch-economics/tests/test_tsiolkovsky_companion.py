@@ -1,36 +1,4 @@
-"""Analytical companion for the Tsiolkovsky rocket equation (issue #50, #22).
-
-The propellant-fraction claim is a one-liner over sourced constants, and
-Tsiolkovsky's derivation is the cleanest exponential in propulsion physics.
-This file states the derivation and asserts sim matches at multiple regimes.
-
-## Derivation
-
-A rocket ejects mass at effective exhaust velocity `v_e`. Momentum
-conservation over a thrust interval gives
-
-    m * dv/dt = -v_e * dm/dt
-
-which integrates to Tsiolkovsky:
-
-    Δv = v_e * ln(m0 / mf)                          (1)
-
-Rearranging:
-
-    mass_ratio  = m0 / mf = exp(Δv / v_e)            (2)
-    prop_frac   = 1 - mf/m0 = 1 - exp(-Δv / v_e)     (3)
-
-The exhaust velocity is set by specific impulse: `v_e = Isp * g0`.
-
-## Test coverage
-- (2) and (3) match the closed forms at 1e-12 relative.
-- Boundary Δv = 0 gives mass_ratio = 1 and prop_frac = 0 exactly.
-- Additivity: two sequential burns Δv1 + Δv2 give mass_ratio = ratio1 * ratio2
-  (a direct consequence of ln converting sums to products).
-- LEO anchor: Δv ≈ 9.4 km/s at typical Isp (450 s H2/O2) gives prop_frac ≈ 0.88.
-  At Isp = 300 s (kerolox typical) it gives ≈ 0.96. The frequently-cited "93%"
-  sits between these depending on which Isp is anchored.
-"""
+"""Analytical companion for the Tsiolkovsky rocket equation (issue #50, #22)."""
 
 import math
 

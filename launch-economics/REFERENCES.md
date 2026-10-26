@@ -146,3 +146,22 @@ Tests in `tests/test_tsiolkovsky_companion.py` verify: closed-form
 agreement, Δv=0 boundary, additivity of sequential burns (Δv_total ->
 product of ratios), the SI-defined `g0`, the LEO 88%-96% bracket, and Isp
 monotonicity.
+
+## Distribution bands (distributions.py)
+
+UQ spreads around the point values above, not new measurements. Bands that are the sourced
+range itself are marked sourced; the rest are `[ESTIMATE]` and say why.
+
+- **Sourced ranges:** Starship `LogUniform(100, 1000)` $/kg (the `[ESTIMATE]` label above);
+  surface-to-LEO `Uniform(9300, 10000)` m/s; LOX/RP-1 Isp `Uniform(280, 340)` s; LOX/LH2 Isp
+  centred on ~450 s; electric Isp `LogUniform(1500, 4000)` s (lower edge and ~4000 within the
+  sourced 1500-4190 s). All as in the sections above.
+- **`LAUNCH_COST_FALCON_9_DIST = Uniform(2500, 3500)` $/kg and `..._FALCON_HEAVY_DIST =
+  Uniform(1200, 2000)` $/kg** - `[ESTIMATE]`: roughly +/-15% (F9) and +/-25% (FH) around the
+  ~$3,060 and ~$1,520 list-price figures above. The band widths have no citation
+  recoverable from this repo; they express price variation by year and manifest.
+- **LEO to TLI `Uniform(3050, 3150)`, to Mars `Uniform(3550, 3650)`, to Earth escape
+  `Uniform(3150, 3250)` m/s** - `[ESTIMATE]`: +/-50 m/s around the ~3,100 / ~3,600 / ~3,200
+  m/s table values above; the +/-50 m/s width has no citation recoverable from this repo.
+- **LOX/LH2 `Uniform(440, 460)` s** - `[ESTIMATE]`: +/-10 s around the ~450 s (RS-25 ~452 s
+  vacuum) figure above; width not separately sourced.
