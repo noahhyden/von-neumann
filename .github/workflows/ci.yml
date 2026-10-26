@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       swarm: ${{ steps.f.outputs.swarm }}
+      frontend: ${{ steps.f.outputs.frontend }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -22,6 +23,9 @@ jobs:
             swarm:
               - 'swarm/**'
               - 'core/**'
+            frontend:
+              - 'frontend/**'
+              - 'papers/**'
 
   core:
     if: github.event_name != 'pull_request'
@@ -211,7 +215,8 @@ jobs:
           retention-days: 14
 
   frontend-render:
-    if: github.event_name == 'pull_request'
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
