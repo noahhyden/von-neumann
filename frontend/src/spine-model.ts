@@ -14,7 +14,7 @@
  */
 import { createSignal, createMemo } from "pimas";
 import type { Accessor } from "pimas";
-import type { ParamSignal } from "./reactive-model.js";
+import { param, type ParamSignal } from "./reactive-model.js";
 import { runSpine, measureDwellTax, scenarioFrom } from "./spine.js";
 import type { SpineResult, DwellTax } from "./spine.js";
 import type { Policy } from "./swarm.js";
@@ -30,19 +30,19 @@ export interface SpineModel {
 }
 
 export function createSpineModel(): SpineModel {
-  const [nStars, setNStars] = createSignal(1200);
-  const [offspring, setOffspring] = createSignal(2);
+  const nStars = param(1200, { min: 200, max: 4000, step: 100, label: "Stars in the field", unit: "" });
+  const offspring = param(2, { min: 0, max: 4, step: 1, label: "Offspring per settlement", unit: "" });
   const [policy, setPolicy] = createSignal<Policy>("powered");
 
   const params: ParamSignal[] = [
-    { get: nStars, set: setNStars, min: 200, max: 4000, step: 100, label: "Stars in the field", unit: "" },
-    { get: offspring, set: setOffspring, min: 0, max: 4, step: 1, label: "Offspring per settlement", unit: "" },
+    nStars,
+    offspring,
   ];
 
   const scenario = () =>
     scenarioFrom(LUNAR_REGOLITH_SEED, {
-      nStars: Math.round(nStars()),
-      offspringPerSettlement: Math.round(offspring()),
+      nStars: Math.round(nStars.get()),
+      offspringPerSettlement: Math.round(offspring.get()),
       policy: policy(),
     });
 
