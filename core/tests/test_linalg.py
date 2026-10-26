@@ -1,14 +1,4 @@
-"""Validation for vn_core.linalg (shared dense solvers).
-
-- ``solve_linear`` (square, Gaussian elimination) - the solver the implicit ODE
-  integrator relies on. Verified against numpy and on hand-checkable systems.
-- ``solve_lstsq`` (overdetermined, Householder QR) - the solver PCE regression relies
-  on. Verified against numpy.linalg.lstsq, by residual orthogonality, and - the reason
-  it exists - shown to be far more accurate than the normal equations on an
-  ill-conditioned design (the normal equations square the condition number).
-
-numpy is a dev-only oracle (it comes in via scipy); vn-core itself imports neither.
-"""
+"""Validation for vn_core.linalg (shared dense solvers)."""
 
 from __future__ import annotations
 
@@ -101,8 +91,7 @@ def test_lstsq_residual_is_orthogonal_to_columns():
 
 
 def test_lstsq_beats_normal_equations_on_ill_conditioned_design():
-    """The reason QR is here: on a nearly-collinear design the normal equations lose
-    ~half the digits; QR keeps them. This must be a wide, not marginal, margin."""
+    """The reason QR is here: on a nearly-collinear design the normal equations lose."""
     np = pytest.importorskip("numpy")
     eps = 1e-7
     a = [[1.0, 1.0 + i * eps] for i in range(50)]
@@ -122,10 +111,7 @@ def test_lstsq_beats_normal_equations_on_ill_conditioned_design():
 
 
 def test_lstsq_stable_householder_sign_on_large_leading_entry():
-    """Pins the numerically-stable Householder sign/vector choice. A design with a
-    huge leading entry makes the *unstable* sign (v[k] = x[k] +/- alpha with the wrong
-    sign) cancel catastrophically and lose ~13 digits; the stable choice stays exact.
-    This is what makes the reflection well-conditioned, not just correct in principle."""
+    """Pins the numerically-stable Householder sign/vector choice. A design with a."""
     np = pytest.importorskip("numpy")
     a = [[1e8, 1.0], [1.0, 1.0], [1.0, 2.0], [1.0, 3.0]]
     x_true = [2.0, -3.0]
@@ -140,7 +126,7 @@ def test_lstsq_handles_negative_leading_pivot():
     a = [[-3.0, 1.0], [-1.0, 2.0], [-2.0, 0.5]]
     b = [1.0, 2.0, 3.0]
     x = solve_lstsq(a, b)
-    # cross-check by residual optimality via numpy if available, else just runs
+    # Cross-check by residual optimality against numpy if available, else skip.
     np = pytest.importorskip("numpy")
     ref, *_ = np.linalg.lstsq(np.array(a), np.array(b), rcond=None)
     assert x == pytest.approx(list(ref), abs=1e-10)

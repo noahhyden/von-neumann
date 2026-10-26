@@ -1,33 +1,4 @@
-"""Randomized quasi-Monte Carlo (RQMC): a faster-converging mean estimator.
-
-Plain Monte Carlo places samples randomly; its mean estimate converges as
-1/sqrt(N). Quasi-Monte Carlo places them on a low-discrepancy sequence that fills the
-input cube far more evenly, so for a smooth, low-dimensional finding the mean
-converges close to 1/N - a large win at small N (on the Ishigami mean, QMC at N=64
-beat plain MC by ~20x).
-
-Two sequences are available (both from [[sequences]]):
-- ``"halton"`` (default) - van der Corput in the first primes. The historical
-  default; kept as the default so existing seeded results stay bit-identical.
-- ``"sobol"`` - a digital (t,s)-sequence with better equidistribution as the input
-  count grows (Halton's high-prime bases correlate; Sobol's do not). Prefer it for
-  moderate dimension; opt in explicitly so downstream pinned results do not move
-  underneath a caller who did not ask.
-
-The honest catch: QMC points are *not* iid, so the usual `std/sqrt(N)` error bar
-is invalid for them - reporting it would be a confident lie. The fix is
-**randomization** (Cranley-Patterson): run R independent, seeded random shifts of
-the sequence; each is an unbiased QMC estimate, and the spread *between* the R
-replicate means is an honest error bar. So RQMC keeps the QMC convergence and
-recovers a real confidence interval (CLAUDE.md §1), while staying a deterministic
-seeded fold (§7).
-
-Scope: this estimates the **mean** (the headline "X" of a finding). For the full
-output distribution / quantile error bars, iid `monte_carlo` stays cleaner - QMC's
-guarantees are about integrals, not order statistics. Low-dimensional only: both
-sequences have a dimension cap, and more inputs than that raises rather than quietly
-returning a bad estimate.
-"""
+"""Randomized quasi-Monte Carlo (RQMC): a faster-converging mean estimator."""
 
 from __future__ import annotations
 
@@ -62,11 +33,7 @@ class QMCMean:
 
 
 def _base_points(sequence: str, n: int, k: int) -> list[tuple[float, ...]]:
-    """The n un-randomized quasi-random points in [0,1)^k for the chosen sequence.
-
-    Computed once and reused across replicates (only the Cranley-Patterson shift
-    differs per replicate), so the sequence work is not repeated R times.
-    """
+    """The n un-randomized quasi-random points in [0,1)^k for the chosen sequence."""
     if sequence == "halton":
         if k > MAX_HALTON_DIM:
             raise ValueError(
@@ -95,19 +62,7 @@ def qmc_mean(
     replicates: int = 16,
     sequence: str = "halton",
 ) -> QMCMean:
-    """Estimate the mean of ``finding`` by randomized quasi-Monte Carlo.
-
-    ``n`` points per replicate, ``replicates`` independent seeded shifts; total
-    finding evaluations = n * replicates. The mean converges faster than plain
-    Monte Carlo for smooth low-dimensional findings, and the error bar comes from
-    the spread between replicate means (honest, unlike QMC's invalid iid stderr).
-
-    ``sequence`` picks the low-discrepancy sequence: ``"halton"`` (default, the
-    historical behavior - seeded results are unchanged) or ``"sobol"`` (better in
-    moderate dimension). Raises if there are more inputs than the chosen sequence's
-    dimension cap (high-dimensional QMC is not honest here) or if the finding returns
-    a nonfinite value.
-    """
+    """Estimate the mean of ``finding`` by randomized quasi-Monte Carlo."""
     if n < 1:
         raise ValueError(f"n must be >= 1, got {n}")
     if replicates < 2:

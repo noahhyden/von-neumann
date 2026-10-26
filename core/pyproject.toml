@@ -10,11 +10,7 @@ requires-python = ">=3.12"
 dependencies = []
 
 [project.optional-dependencies]
-# scipy is a TEST-ONLY oracle for the validation gates: the ODE gate (issue #38)
-# compares vn_core.ode against scipy.integrate.solve_ivp, and the Sobol'-sequence
-# gate compares vn_core.uq.sequences against scipy.stats.qmc.Sobol (the authoritative
-# Joe-Kuo direction numbers). It is never a runtime dependency - vn-core itself stays
-# `dependencies = []` and pure Python. coverage[toml] is the test-only coverage gate.
+# scipy is a TEST-ONLY oracle (ODE and Sobol' gates), never a runtime dependency.
 dev = ["pytest>=8.0", "scipy>=1.11", "coverage[toml]>=7.0"]
 
 [tool.setuptools.packages.find]

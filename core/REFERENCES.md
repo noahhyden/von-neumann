@@ -170,6 +170,14 @@ integers are tabulated data whose provenance is pinned below.
     (b) this module's points are bit-identical to scipy's - so a drift is a red test,
     the same discipline the RNG's JS-parity fixture holds. Verdict: reasonable -
     verified bit-for-bit against the reference implementation.
+- **Sobol' bit depth (30) and dimension cap (21); Halton bases = first 21 primes.**
+  Points are integers in [0, 2^30) scaled by 2^-30, matching SciPy's default bit
+  depth; 2^30 = 1,073,741,824 (about 1.07e9) points before the sequence repeats, far
+  beyond any sample count this repo runs. Dimension 1 is the van der Corput column
+  generated in code and dimensions 2..21 are the tabulated Joe-Kuo rows, so the cap is
+  21 (the table size, not a tuning choice); the Halton bases are the first 21 primes
+  so a caller can switch sequences without changing how many inputs it has. Verdict:
+  reasonable - a table size and word length, pinned by `tests/test_sequences.py`.
 - **Randomization (Cranley-Patterson rotation).** A seeded uniform shift per
   dimension, applied mod 1, per replicate - makes each replicate an unbiased QMC
   estimate so the spread between replicate means is an honest error bar (plain
@@ -318,6 +326,66 @@ constants, each a mathematical identity, not an assumption.
   - **Ishigami, T. and Homma, T. (1990), "An importance quantification technique
     in uncertainty analysis for computer models", ISUMA '90.** Verdict: standard
     GSA benchmark; PCE degree 10 reproduces its analytic indices to ~1e-3.
+
+## UQ: inverse normal CDF (`vn_core.uq.distributions`)
+
+- **Inverse error function (`_erfinv`) used by `Normal.quantile`/`LogNormal.quantile`.**
+  `Phi^-1(u) = sqrt(2) * erfinv(2u - 1)`, with `u = 0` nudged off the boundary to match
+  the half-open [0, 1) uniform (the nudge floor is 1e-15, a round-off guard, not a
+  physical number). `erfinv` starts from Winitzki's closed-form initial guess with
+  `a = 0.147` (Winitzki's published constant) and is polished by two Halley-style
+  iterations against the true `erf` for ~1e-9 accuracy on [-0.999999, 0.999999] (the
+  code's stated figure; not independently re-measured here).
+  - **Winitzki, S. (2008), "A handy approximation for the error function and its
+    inverse".** The initial guess only; accuracy of the final value rests on the Halley
+    polish. Verdict: reasonable - a standard approximation used as a start value.
+
+## Empirical quantile and benchmark figures (`sample.py`, `pce.py`, `qmc.py`)
+
+- **Quantile interpolation ("type 7").** `h = q*(n-1)`, `result = v[floor(h)] +
+  (h - floor(h)) * (v[floor(h)+1] - v[floor(h)])`, the default in `numpy.quantile` and
+  R. Correct on the endpoints and monotonic in q.
+  - **Hyndman, R. J. and Fan, Y. (1996), "Sample quantiles in statistical packages",
+    The American Statistician 50(4), 361-365.** Defines the nine sample-quantile
+    types; type 7 is this one. Verdict: reasonable - a standard, documented convention.
+- **Measured benchmark claims quoted in the module docs.** These are repo measurements
+  on the Ishigami function (analytic variance and indices, Ishigami and Homma 1990
+  above), not literature values: PCE degree 8 (729 evaluations) matches the analytic
+  variance and every Sobol' index, where plain Monte Carlo is still ~0.5% off on the
+  variance at 100k evaluations; randomized QMC at N=64 beat plain MC on the Ishigami
+  mean by ~20x; a kink finding (a `min()` regime switch) gives `fit_residual` of
+  ~0.04-0.11; bootstrap CIs cost ~4 s at N=8000, n_boot=500. Exercised (not exactly
+  pinned) by `tests/test_pce.py` and `tests/test_qmc_cv.py`; timings are machine-dependent
+  wall-clock figures, not results. Verdict: reasonable as illustrations.
+- **Report threshold: two drivers are named when their S_T differ by < 0.1
+  (`report.py`).** [GAP] No source; a presentation cutoff for "no single dominant
+  input", not a physical number.
+- **PCE defaults: oversampling = 2.0 (see Hosder et al. below), `is_trustworthy`
+  tol = 1e-2, `_STIELTJES_DISC` = 4000 discretization points, Jacobi eigensolver cap
+  of 100 sweeps with a 1e-300 convergence floor.** [GAP] `tol = 1e-2` and 4000 have no
+  recorded source: they are tolerances and resolutions the test suite passes with
+  (the Stieltjes accuracy of ~1e-4 / ~1e-6 is quoted in the Gautschi entry above).
+  The Jacobi cap is never the exit in practice (the 1e-300 floor is hit first).
+
+## Solver safeguards without a literature value (`ode/`)
+
+- **Implicit first step = 0.01 * span (when `first_step` is None), shrink factor 0.25
+  on Newton non-convergence, `min_step = 10 * span * 2.22e-16`, `max_steps = 10^7`,
+  Newton cap 30 iterations.** [GAP] None has a source. [ESTIMATE] The first step is a
+  start value only (L-stability tolerates an over-large one, it is rejected and
+  shrunk); 0.25 is a conventional hard backoff; `min_step` is ~10 ulp of the span
+  (machine epsilon 2.22e-16 = 2^-52); the two caps are failure floors that only a
+  pathological RHS reaches. Uncertainty: they change cost, not the converged answer.
+
+## Test-only dependencies (`pyproject.toml`)
+
+- **`scipy>=1.11` and `coverage[toml]>=7.0` are `dev` extras, never runtime
+  dependencies.** scipy is the oracle for the validation gates: the ODE gate compares
+  `vn_core.ode` against `scipy.integrate.solve_ivp`, and the Sobol' gate compares
+  `vn_core.uq.sequences` against `scipy.stats.qmc.Sobol` (the authoritative Joe-Kuo
+  direction numbers). `vn-core` itself keeps `dependencies = []` and stays pure Python.
+  [GAP] The `>=1.11` and `>=7.0` version floors have no recorded source; they are
+  lower bounds the suite currently passes with, not verified minimums.
 
 ## Everything else in `vn-core`
 

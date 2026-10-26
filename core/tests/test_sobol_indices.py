@@ -1,18 +1,4 @@
-"""Red-hat + validation for the honest-sensitivity additions to Sobol.
-
-Two additions, one PR: first-order indices (free - they reuse the total-order
-evaluations) and confidence intervals on every index (asymptotic by default,
-bootstrap opt-in). The claims under attack:
-
-- first-order is *correct* (matches Ishigami analytic and PCE) and *free* (no
-  extra model evaluations, even with bootstrap);
-- the total-order point estimate is **unchanged** by all of this;
-- the CIs are honest: they bracket the estimate, shrink with N, are deterministic,
-  and - the headline - an unresolved index reads as "CI straddles 0" rather than a
-  confident number (Ishigami x3's main effect);
-- S_i <= S_Ti always (a first/total swap would trip this);
-- bootstrap agrees with the cheap asymptotic default but never moves the estimate.
-"""
+"""Red-hat + validation for the honest-sensitivity additions to Sobol."""
 
 from __future__ import annotations
 
@@ -48,8 +34,7 @@ def test_first_order_matches_ishigami_analytic():
 
 
 def test_first_order_agrees_with_pce():
-    """The MC first-order estimator and PCE's closed-form first-order must agree
-    on a smooth finding - two independent routes to the same quantity."""
+    """The MC first-order estimator and PCE's closed-form first-order must agree."""
     sob = sobol_total_order(_ISH, _ishigami, n=8000, seed=1)
     pce = pce_fit(_ISH, _ishigami, degree=10, seed=1)
     for name in ("x1", "x2", "x3"):
@@ -57,9 +42,7 @@ def test_first_order_agrees_with_pce():
 
 
 def test_first_order_and_bootstrap_add_no_model_evaluations():
-    """First-order reuses the total-order evaluations, and bootstrap resamples
-    cached values - so the model is still called exactly N*(K+2) times even with
-    bootstrap on. This is the 'free' claim."""
+    """First-order reuses the total-order evaluations, and bootstrap resamples."""
     n, k = 2000, len(_ISH)
     calls = {"n": 0}
 
@@ -83,8 +66,7 @@ def test_total_order_still_matches_analytic():
 
 
 def test_bootstrap_does_not_change_the_point_estimates():
-    """Bootstrap only fills the CI fields; the indices themselves come from the
-    (deterministic) design and must be byte-identical with or without it."""
+    """Bootstrap only fills the CI fields; the indices themselves come from the."""
     a = sobol_total_order(_ISH, _ishigami, n=1500, seed=1)
     b = sobol_total_order(_ISH, _ishigami, n=1500, seed=1, bootstrap=300)
     assert a.total_order == b.total_order
@@ -102,13 +84,9 @@ def test_first_order_never_exceeds_total_order():
 
 
 def test_first_order_is_sane_for_a_low_cov_finding():
-    """A large output mean relative to its spread (low coefficient of variation)
-    used to wreck the un-centered first-order estimator via catastrophic
-    cancellation - it read ~2.5 where the truth is ~0.8. The centered estimator
-    must stay sane. This is the regression guard for the centering fix."""
+    """A large output mean relative to its spread (low coefficient of variation)."""
     inputs = {"a": Uniform(-1.0, 1.0), "b": Uniform(-1.0, 1.0)}
-    # f = 500 + 2a + b: additive (so first-order == total-order), but a huge
-    # constant offset -> mean ~500, std ~1.4 -> CoV ~ 0.3%.
+    # f = 500 + 2a + b: additive (so first-order == total-order) but with a huge mean, which the centered first-order estimator must survive.
     r = sobol_total_order(inputs, lambda s: 500.0 + 2.0 * s["a"] + s["b"], n=4000, seed=1)
     # analytic additive shares: Var(2a)=4/3, Var(b)=1/3 -> S_a=0.8, S_b=0.2.
     assert r.first_order["a"] == pytest.approx(0.8, abs=0.05)
@@ -123,9 +101,7 @@ def test_first_order_is_sane_for_a_low_cov_finding():
 
 
 def test_x3_main_effect_ci_contains_zero_but_total_effect_does_not():
-    """Ishigami x3 has NO main effect but a real interaction effect. The honest
-    reading: its first-order CI straddles 0 (unresolved / consistent with zero),
-    while its total-order CI sits strictly above 0."""
+    """Ishigami x3 has NO main effect but a real interaction effect. The honest."""
     r = sobol_total_order(_ISH, _ishigami, n=4000, seed=1)
     lo_f, hi_f = r.first_order_ci["x3"]
     assert lo_f <= 0.0 <= hi_f  # main effect indistinguishable from zero
@@ -143,8 +119,7 @@ def test_ci_brackets_the_point_estimate():
 
 
 def test_ci_width_shrinks_with_n():
-    """More samples must resolve the index better: a 4x larger design gives a
-    narrower CI."""
+    """More samples must resolve the index better: a 4x larger design gives a."""
     small = sobol_total_order(_ISH, _ishigami, n=1000, seed=1)
     big = sobol_total_order(_ISH, _ishigami, n=8000, seed=1)
 
@@ -157,8 +132,7 @@ def test_ci_width_shrinks_with_n():
 
 
 def test_bootstrap_ci_agrees_with_asymptotic():
-    """The cheap default (asymptotic) must track the resampling CI - this is why
-    asymptotic can be the always-on default."""
+    """The cheap default (asymptotic) must track the resampling CI - this is why."""
     asy = sobol_total_order(_ISH, _ishigami, n=4000, seed=1)
     boot = sobol_total_order(_ISH, _ishigami, n=4000, seed=1, bootstrap=500)
     for name in ("x1", "x2"):
