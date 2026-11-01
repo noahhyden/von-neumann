@@ -1,15 +1,10 @@
 /** TS port of the `multi-probe` module - a small, deterministic, seeded fleet fold with a ~13.6 AU spatial power wall (see ../../multi-probe/REFERENCES.md). */
+import { nextFloat } from "./rng.ts";
 import { computeClosure } from "./model.ts";
 import type { Factory } from "./model.ts";
 import { solarArrayPowerW } from "./probe-sim.ts";
 
-// ── mulberry32, threaded (never ambient) - mirrors vn_core.rng (pinned by core/tests/test_rng.py) ─
-export function nextFloat(state: number): [number, number] {
-  const s = (state + 0x6d2b79f5) | 0;
-  let t = Math.imul(s ^ (s >>> 15), 1 | s);
-  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-  return [((t ^ (t >>> 14)) >>> 0) / 4294967296, s | 0];
-}
+export { nextFloat };
 export const seedState = (seed: number): number => seed | 0;
 
 export const ProbeStatus = { TRAVELING: "traveling", ACTIVE: "active" } as const;

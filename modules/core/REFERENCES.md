@@ -64,10 +64,9 @@ polynomial in theta built from the step's seven stage derivatives.
     Verdict: reasonable - a transcribed, reference-verified standard interpolant, no
     tuned constants.
 
-### Adaptive step-size control constants (`rk45.py`, `implicit.py`)
+### Adaptive step-size control constants (`rk45.py`)
 
-- **safety = 0.9, min shrink factor = 0.2, max growth factor = 10.0 (explicit) /
-  5.0 (implicit).** Standard step-controller clamp factors.
+- **safety = 0.9, min shrink factor = 0.2, max growth factor = 10.0.** Standard step-controller clamp factors.
   - **Hairer, E., Norsett, S. P., Wanner, G. (1993), "Solving Ordinary
     Differential Equations I: Nonstiff Problems", 2nd ed., Springer**, Section
     II.4 ("Automatic Step Size Control"). These are the textbook default factors.
@@ -87,9 +86,6 @@ polynomial in theta built from the step's seven stage derivatives.
     - https://doi.org/10.1145/210232.210242
   - **Hairer/Wanner (1993), Section II.4**, and Hairer's DOPRI5 source, for the
     beta = 0.04 default and the alpha = 1/(q+1) - 0.75*beta form (q = 4).
-- **Error-estimate exponent -1/(order+1) (implicit solver):** -1/2 for backward Euler
-  (order 1); same source (Hairer/Wanner II.4). The order the local error scales at,
-  so it is derived, not chosen. (rk45 uses the PI exponents above instead.)
 - **Automatic first-step heuristic (`common.select_initial_step`).** The
   balance-of-scales starting-step formula is Hairer/Wanner I, "Starting Step Size"
   (the routine `hinit`). Verdict: reasonable - a start value only; the controller
@@ -100,40 +96,6 @@ polynomial in theta built from the step's seven stage derivatives.
 - Per-component scale `atol + rtol * max(|y0|, |y1|)`, combined as root-mean-square.
   This is the mixed absolute/relative weighting from Hairer/Wanner II.4, and again
   matches scipy. A step is accepted when the norm is <= 1.
-
-### Backward Euler + finite-difference Jacobian (`implicit.py`, `linalg.py`)
-
-- **Backward (implicit) Euler** (`bdf1`), the order-1 L-stable method, is textbook
-  (Hairer & Wanner, "Solving ODEs II: Stiff and Differential-Algebraic Problems",
-  Section IV). Chosen for L-stability + simplicity; kept as the simple, robust option.
-- **TR-BDF2** (`trbdf2`), an order-2 L-stable one-step method: a trapezoidal sub-step
-  to t + gamma*h then a BDF2 sub-step to t + h, with `gamma = 2 - sqrt(2)`. The
-  BDF2-stage coefficients are `a = 1/(gamma(2-gamma))`, `b = (1-gamma)^2/(gamma(2-
-  gamma))`, `c = (1-gamma)/(2-gamma)` (with `a - b = 1`, exact for constants). The
-  gamma value is the standard choice that makes the two stages' Newton iteration
-  matrices share a coefficient (`gamma/2 = c`) and yields an L-stable, second-order,
-  stiffly-accurate method. On a stiff system this reaches a given accuracy in far
-  fewer / larger steps than backward Euler (measured ~14x fewer steps, ~6x fewer RHS
-  evaluations on `y' = -1000(y - cos t)` at rtol 1e-6), while staying bounded.
-  - **Bank, R. E., Coughran, W. M., Fichtner, W., Grosse, E. H., Rose, D. J., Smith,
-    R. K. (1985), "Transient simulation of silicon devices and circuits", IEEE Trans.
-    CAD 4(4), 436-451.** The origin of TR-BDF2 and the gamma = 2 - sqrt(2) choice.
-    - https://doi.org/10.1109/TCAD.1985.1270142
-  - **Hosea, M. E. and Shampine, L. F. (1996), "Analysis and implementation of
-    TR-BDF2", Applied Numerical Mathematics 20(1-2), 21-37.** The modern analysis
-    (order 2, L-stability). Verdict: reasonable - a standard L-stable order-2 method;
-    validated here against scipy's stiff solvers (BDF/Radau) to tolerance.
-- **Finite-difference Jacobian perturbation `h = sqrt(eps_machine) * max(|y_j|,
-  1)`** with `eps_machine ~ 2.22e-16`. The `sqrt(eps)` forward-difference step is
-  the standard optimum trading truncation against round-off.
-  - **Nocedal, J. and Wright, S. (2006), "Numerical Optimization", 2nd ed.,
-    Springer**, Section 8.1 (finite-difference derivatives). Verdict: reasonable -
-    standard choice; the resulting Jacobian is only used to drive Newton, which
-    self-corrects.
-- **Newton convergence tolerance 1e-3 (scaled correction norm).** Not a physical
-  number: it only needs to be comfortably below the step's own error budget so the
-  nonlinear solve is not the accuracy bottleneck. Verdict: reasonable - loose by
-  design, tightening it would only cost iterations.
 
 ## UQ: low-discrepancy sequences (`vn_core.uq.sequences`)
 
@@ -367,15 +329,6 @@ constants, each a mathematical identity, not an assumption.
   (the Stieltjes accuracy of ~1e-4 / ~1e-6 is quoted in the Gautschi entry above).
   The Jacobi cap is never the exit in practice (the 1e-300 floor is hit first).
 
-## Solver safeguards without a literature value (`ode/`)
-
-- **Implicit first step = 0.01 * span (when `first_step` is None), shrink factor 0.25
-  on Newton non-convergence, `min_step = 10 * span * 2.22e-16`, `max_steps = 10^7`,
-  Newton cap 30 iterations.** [GAP] None has a source. [ESTIMATE] The first step is a
-  start value only (L-stability tolerates an over-large one, it is rejected and
-  shrunk); 0.25 is a conventional hard backoff; `min_step` is ~10 ulp of the span
-  (machine epsilon 2.22e-16 = 2^-52); the two caps are failure floors that only a
-  pathological RHS reaches. Uncertainty: they change cost, not the converged answer.
 
 ## Test-only dependencies (`pyproject.toml`)
 

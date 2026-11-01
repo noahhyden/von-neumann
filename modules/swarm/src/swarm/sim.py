@@ -21,7 +21,7 @@ from swarm.models import (
     SwarmState,
     SwarmStep,
 )
-from swarm.rng import next_float, seed_state
+from vn_core.rng import next_float, seed_state
 
 
 def _reflect(x: float, L: float) -> float:

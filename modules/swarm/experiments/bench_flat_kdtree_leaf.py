@@ -7,7 +7,7 @@ import time
 import numpy as np
 
 from swarm import models
-from swarm.rng import seed_state
+from vn_core.rng import seed_state
 from swarm.sim import _generate_galaxy
 
 import swarm_rust

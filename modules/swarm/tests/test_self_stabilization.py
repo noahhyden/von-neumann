@@ -8,7 +8,7 @@ import pytest
 
 from swarm import SwarmParams, initial_state, simulate_swarm
 from swarm.models import SwarmState
-from swarm.rng import next_float, seed_state
+from vn_core.rng import next_float, seed_state
 from swarm.sim import step_event
 
 

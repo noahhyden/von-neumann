@@ -1,0 +1,18 @@
+# Committed spec for the validation measurement; nothing here is read from the environment.
+name: validation
+module: swarm
+entry: experiments.measure:m_validation
+description: >
+  Nicholson and Forgan quantitative reproduction at the event timestep, one canonical seed.
+
+runtime:
+  # No RAM cap recorded for this run, so workers is blank (every core).
+  workers:
+  # Was `python -O`. Strips the fold's __debug__ invariants; bit-identical, ~2-3x faster.
+  optimize: true
+  backends:
+    rust: true
+    njit: true
+
+params:
+  n_stars: 400

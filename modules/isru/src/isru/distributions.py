@@ -41,12 +41,3 @@ LUNAR_REGOLITH_ELEMENT_WT_PCT_DIST: dict[str, Distribution] = {
     name: (Uniform(low=v * 0.75, high=v * 1.25) if v >= 0.5 else Fixed(v))
     for name, v in LUNAR_REGOLITH_ELEMENT_WT_PCT.items()
 }
-
-
-__all__ = [
-    "OXYGEN_FULL_CHAIN_KWH_PER_KG_DIST",
-    "WATER_ICE_LOX_DIST",
-    "METAL_MOE_DIST",
-    "USABLE_THRESHOLD_WT_PCT_DIST",
-    "LUNAR_REGOLITH_ELEMENT_WT_PCT_DIST",
-]

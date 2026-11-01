@@ -46,7 +46,7 @@ _NJIT = _try_import_numba()
 def universe():
     """A real k-d tree over a Thomas-clustered galaxy with a half-settled state."""
     params = models.SwarmParams(n_stars=3000, coordination="lightspeed")
-    from swarm.rng import seed_state
+    from vn_core.rng import seed_state
 
     xs, ys, zs, _star_speed, _rng = _generate_galaxy(params, seed_state(12345))
     kd = _build_kdtree(xs, ys, zs)

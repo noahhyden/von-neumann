@@ -1,0 +1,13 @@
+# Committed spec for the policy_sweep spine measurement; nothing here is read from the environment.
+name: policy-sweep
+module: spine
+entry: experiments.measure:run_measurement
+description: >
+  Dwell fraction and break-even copy time for every swarm policy, on the small tax field.
+
+runtime:
+  optimize: true
+
+params:
+  name: policy_sweep
+  n_stars: 400

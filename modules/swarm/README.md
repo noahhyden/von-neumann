@@ -95,6 +95,10 @@ Knobs (`SwarmParams`): `n_stars`, `density_stars_per_pc3`, `probe_speed_c`,
     (~3x cheaper than the paired sweep), reporting the smallest cap past which `b` stops moving,
     or no plateau in range. See `experiments/SPEC_PLATEAU_LOCATOR.md`.
 
+## Run specs
+
+Every `m_*` measurement in `experiments/measure.py` has a committed spec in `runs/<kebab-name>.yaml`, run with `make run SPEC=modules/swarm/runs/<name>.yaml` (see `runner/README.md`). `runtime` (workers, `-O`, backends) sets how it executes and `params` (`n_stars`, `n_seeds`, or the `n_seeds_by_n` ladder) sets what it computes; each defaults to the value that produced the committed `results/*.json`, so `m_energy_tax()` with no arguments is unchanged. Only `branching-scale` caps workers (RAM-bound at 200k stars); the rest use every core. The `p2_*` companions take the same keywords, defaulting to `P2_FIXED_N`; they are not specs, and the old `SWARM_P2_N_OVERRIDE` probe is gone in favour of passing `n_stars`.
+
 ## Performance: what makes the fold fast
 
 All of it is bit-identical: `results/*.json` reproduce to the printed digit (`tests/test_measure_results.py`) and timing never changes a number (CLAUDE.md 7). Figures: REFERENCES.md ("Scale ladder", "Compute-speed figures").

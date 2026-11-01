@@ -1,0 +1,27 @@
+# Committed spec for the finite_size_interior measurement; nothing here is read from the environment.
+name: finite-size-interior
+module: swarm
+entry: experiments.measure:m_finite_size_interior
+description: >
+  Finite-size edge test: the tax measured on bulk (interior) stars only, shells at 1 and 2 nearest-neighbour distances from any wall.
+
+runtime:
+  # No RAM cap recorded for this run, so workers is blank (every core).
+  workers:
+  # Was `python -O`. Strips the fold's __debug__ invariants; bit-identical, ~2-3x faster.
+  optimize: true
+  backends:
+    rust: true
+    njit: true
+
+params:
+  n_seeds_by_n:   # [N, seeds] pairs, one ladder rung each
+    - [300, 32]
+    - [600, 32]
+    - [1200, 24]
+    - [2400, 16]
+    - [4800, 12]
+    - [9600, 12]
+    - [24000, 10]
+    - [48000, 8]
+    - [200000, 6]

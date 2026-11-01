@@ -6,15 +6,7 @@ import math
 from collections.abc import Sequence
 
 from vn_core.ode.common import RHS, ODEResult
-from vn_core.ode.implicit import integrate_bdf1, integrate_trbdf2
 from vn_core.ode.rk45 import integrate_rk45
-
-_INTEGRATORS = {
-    "rk45": integrate_rk45,
-    "bdf1": integrate_bdf1,
-    "trbdf2": integrate_trbdf2,
-}
-
 
 def solve(
     f: RHS,
@@ -29,8 +21,8 @@ def solve(
     t_eval: Sequence[float] | None = None,
 ) -> ODEResult:
     """Integrate dy/dt = f(t, y) from t_span[0] to t_span[1] starting at y0."""
-    if method not in _INTEGRATORS:
-        raise ValueError(f"unknown method {method!r}; choose from {sorted(_INTEGRATORS)}")
+    if method != "rk45":
+        raise ValueError(f"unknown method {method!r}; only 'rk45' is supported")
     t0, t1 = t_span
     if not math.isfinite(t0) or not math.isfinite(t1):
         raise ValueError("t_span endpoints must be finite")
@@ -62,21 +54,17 @@ def solve(
             message="empty span (t0 == t1); returned initial state",
         )
 
-    integrator = _INTEGRATORS[method]
-    try:
-        ts, ys, accepted, rejected, f_evals, steps = integrator(
-            f,
-            t0,
-            t1,
-            y0,
-            rtol=rtol,
-            atol=atol,
-            max_step=resolved_max_step,
-            first_step=first_step,
-            t_eval=t_eval,
-        )
-    except ValueError:
-        raise
+    ts, ys, accepted, rejected, f_evals, steps = integrate_rk45(
+        f,
+        t0,
+        t1,
+        y0,
+        rtol=rtol,
+        atol=atol,
+        max_step=resolved_max_step,
+        first_step=first_step,
+        t_eval=t_eval,
+    )
 
     reached = ts[-1] if ts else t0
     success = bool(ys) and abs(reached - t1) <= 1e-9 * max(1.0, abs(t1)) and all(

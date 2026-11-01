@@ -20,6 +20,7 @@ from vn_core.uq.sequences import (
     sobol_points,
 )
 from vn_core.uq.sobol import Analysis, SobolResult, sobol_total_order, uq_and_gsa
+from vn_core.uq.verify import VerifyResult, verify_finding
 
 __all__ = [
     "Distribution",
@@ -47,4 +48,6 @@ __all__ = [
     "QMCMean",
     "qmc_mean",
     "one_line_finding",
+    "VerifyResult",
+    "verify_finding",
 ]

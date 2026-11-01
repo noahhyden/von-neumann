@@ -1,0 +1,13 @@
+# Committed spec for the copy_time_robustness spine measurement; nothing here is read from the environment.
+name: copy-time-robustness
+module: spine
+entry: experiments.measure:run_measurement
+description: >
+  Copy-time robustness margin: sweep the derived copy time over seven decades and find the break-even multiplier where the dwell reaches 1% of the fill.
+
+runtime:
+  optimize: true
+
+params:
+  name: copy_time_robustness
+  n_stars: 1200

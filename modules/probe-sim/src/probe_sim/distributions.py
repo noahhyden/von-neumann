@@ -35,11 +35,3 @@ REPLICATED_MASS_FRACTION_DIST: Distribution = Fixed(REPLICATED_MASS_FRACTION)
 AU_DISTANCE_DIST: dict[str, Distribution] = {
     name: Fixed(value) for name, value in AU_DISTANCE.items()
 }
-
-
-__all__ = [
-    "SOLAR_CONSTANT_1AU_DIST",
-    "SOLAR_CELL_EFFICIENCY_DIST",
-    "REPLICATED_MASS_FRACTION_DIST",
-    "AU_DISTANCE_DIST",
-]
