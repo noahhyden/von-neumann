@@ -18,6 +18,10 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+# pyo3 0.22 supports Python <= 3.13, and uv does not look above a module's own pyproject.toml for a .python-version, so the interpreter is pinned here for every uv call.
+env:
+  UV_PYTHON: "3.12"
+
 jobs:
   # Same render check as ci.yml frontend-render, run on every push to main so a broken page never reaches deploy.
   build:
