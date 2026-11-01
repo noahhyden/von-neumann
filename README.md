@@ -8,44 +8,36 @@
 [![live site](https://img.shields.io/badge/live-vn.noahhyden.com-brightgreen)](https://vn.noahhyden.com)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21249296.svg)](https://doi.org/10.5281/zenodo.21249296)
 
-A long-term, modular exploration of **self-replicating space manufacturing** - the
-idea that you could land a single factory on the Moon (or an asteroid, or Mars) and
-let it build copies of itself from local material, growing an entire industry from
-one rocket's worth of cargo. The name is the standard term for the concept:
-"von Neumann"-style self-replicating machines.
+A monorepo of small, independently runnable models, each covering one slice of the
+problem rather than one giant simulation. Models live in `modules/` (including
+`modules/core`, the shared `vn_core` library); `frontend/`, `papers/`, `runner/`,
+`scripts/` and `docs/` sit beside it.
 
-This is a **monorepo**. The models live in `modules/` (including `modules/core`, the shared
-`vn_core` library); `frontend/`, `papers/`, `runner/`, `scripts/` and `docs/` sit beside
-it at the root. Each module is its own directory, is
-independently runnable and tested, and models one slice of the problem. They share
-concepts (and, over time, data) but not a single giant simulation - the whole point
-is to keep each piece small, honest, and verifiable.
-
-**New here?** [FINDINGS.md](docs/FINDINGS.md) collects what the models have concluded so far -
-nine sourced results, from the electronics wall to the light-speed coordination tax -
-as one read. The same findings are live and interactive on the frontend's overview.
-The machines these runs execute on are inventoried in [HARDWARE.md](docs/HARDWARE.md).
+**New here?** [FINDINGS.md](docs/FINDINGS.md) collects what the models have concluded
+so far, as one read. The same findings are live and interactive on the
+[frontend](https://vn.noahhyden.com).
 
 ## Modules
 
 | Module | Status | What it does |
 |---|---|---|
-| [`closure-sim`](modules/closure-sim/) | v1 | **Closure & replication.** Define a factory as a bill of materials; compute how much of itself it can build locally ("closure"), simulate how a seed multiplies over time, and analyze the "electronics wall" - why chips are the part that can't be made in space. |
-| [`frontend`](frontend/) | live | **The monorepo's central interactive surface.** The project's models run live in the browser, built entirely on [pimas](https://github.com/noahhyden/pimas). A shell that hosts one surface per model; the first is the interactive electronics wall (drag the assumptions, speculate "make its own chips" before committing, watch the model explain which ceiling binds). |
-| [`probe-sim`](modules/probe-sim/) | in progress | **A single self-replicating probe** (after Borgue & Hein 2020). Solar-electric power vs heliocentric distance, and the operational range it gates - feeds delivered power into `closure-sim`'s replication to find where a probe stops being able to reproduce. |
-| [`power-budget`](modules/power-budget/) | live | **Making vs. thinking, per watt.** Split a solar-limited power budget among manufacturing, compute, and housekeeping; convert compute-watts to throughput - floored by the Landauer limit and anchored to the ~20 W human brain. |
-| [`launch-economics`](modules/launch-economics/) | live | **The economics of not launching mass.** Launch cost, the rocket-equation Δv penalty, and the launch-mass leverage of shipping a self-replicating seed instead of the finished installation. |
-| [`mission`](modules/mission/) | live | **The whole operation, end to end.** One pure fold that composes all four modules above: launch a seed, arrive at a heliocentric distance, split its solar power between building and thinking, replicate, and price the launch-mass payoff. The frontend's "Full mission" surface follows the chain stage by stage. |
-| [`multi-probe`](modules/multi-probe/) | live | **A small, deterministic fleet.** Tens of self-replicating probes, each an agent that builds copies at a rate its local sunlight allows and disperses children outward. Seeded and pure, so `speculate` stays exact. Re-instantiates two ceilings: the electronics wall (a finite vitamin pool) and a spatial power wall (1/d² sunlight vs dispersal). The frontend's "Fleet" surface scrubs the 40-year mission live. The intermediate step before the swarm. |
-| [`swarm`](modules/swarm/) | core done + live surface | **How fast a probe fills the galaxy.** A deterministic, seeded settlement front: probes spread star-to-star through a field, settling and re-launching, filling the reachable galaxy outward from one homeworld (the exploration-timescale question of Nicholson & Forgan 2013). The pure algorithm core, plus **three travel policies** - powered flight and two **gravitational-slingshot** policies that steal speed from stellar motion (Nicholson & Forgan's headline: slingshots ≫ powered, and nearest-star beats max-boost on time). A live canvas "Swarm" surface plays/scrubs the fill, toggles the policy, and - hover any star - reads its **light-speed coordination lag** from home (every interstellar hop is years of latency: the "independent colonies" regime). A proven spatial hash keeps the fill fast. It also **simulates light-speed-limited coordination** ([FRONTIER #1](https://github.com/noahhyden/von-neumann/issues/1)): probes decide against a light-delayed *belief* of what's settled, so they race for the same star from stale views - costing a median ~30–50% of the exploration timescale in the slingshot regime (but ~0% for powered flight), a live-toggle finding that refines Nicholson & Forgan. The one parked fork left is the **200k-star WebGL** render engine. |
-| [`spine`](modules/spine/) | done | **One factory across all three scales.** The cross-scale integrator: threads one `closure-sim` factory through the single-factory fold, the local fleet (`multi-probe`), and the galaxy (`swarm`), so their replication cadences are *derived from one source* instead of assumed independently. It adds no new numbers - it replaces the swarm's old unsourced zero manufacturing dwell with a figure derived from the same build physics the fleet uses, and shows that dwell is a negligible tax on galactic exploration. The frontend's "Across scales" surface follows it. |
-| [`papers`](papers/) | live | **Longer-form write-ups, in LaTeX.** The place to publish papers typeset with the IEEE template. A small generator builds each paper's bibliography (`refs.bib`) from the same [`sources.ts`](frontend/src/sources.ts) that powers the site's citations, so a claim in a paper and a claim on a live surface point at the identical reference. CI compiles the PDF and publishes it; the frontend's "Papers" surface lists each one. |
-| _more to come_ | | Modules are added over time; the full list is the directories under `modules/` and the CI module matrix. Architecture rationale: [ROADMAP.md](ROADMAP.md). |
+| [`closure-sim`](modules/closure-sim/) | v1 | Closure and replication from a bill of materials, plus the "electronics wall" - why chips are the part that can't be made in space. |
+| [`frontend`](frontend/) | live | The repo's one interactive surface, built entirely on [pimas](https://github.com/noahhyden/pimas). One surface per model. |
+| [`probe-sim`](modules/probe-sim/) | in progress | A single probe (after Borgue & Hein 2020): solar-electric power vs heliocentric distance, and the range it gates. |
+| [`power-budget`](modules/power-budget/) | live | Splitting a solar-limited budget among manufacturing, compute and housekeeping; compute-watts to throughput. |
+| [`launch-economics`](modules/launch-economics/) | live | Launch cost, the Δv penalty, and the mass leverage of shipping a seed instead of the finished installation. |
+| [`mission`](modules/mission/) | live | One pure fold composing the four above: launch, arrive, split power, replicate, price the payoff. |
+| [`multi-probe`](modules/multi-probe/) | live | A deterministic fleet of tens of probes. Re-instantiates two ceilings: the electronics wall and a 1/d² spatial power wall. |
+| [`swarm`](modules/swarm/) | live | A settlement front filling the reachable galaxy (Nicholson & Forgan 2013), with three travel policies and light-speed-limited coordination ([FRONTIER #1](https://github.com/noahhyden/von-neumann/issues/1)). |
+| [`spine`](modules/spine/) | done | Threads one factory through all three scales so their replication cadences derive from one source. |
+| [`papers`](papers/) | live | LaTeX write-ups. Bibliographies generate from the same [`sources.ts`](frontend/src/sources.ts) the site cites. |
+
+Architecture rationale: [ROADMAP.md](ROADMAP.md). Run machines: [HARDWARE.md](docs/HARDWARE.md).
 
 ## Working in here
 
-Each module is self-contained - `cd` into it and follow its own README. They don't
-share a top-level build; a module brings its own dependencies and tests.
+Each module is self-contained - `cd` in and follow its README. There is no
+top-level build.
 
 ```bash
 cd modules/closure-sim
@@ -54,62 +46,40 @@ uv pip install -e ".[dev]"
 .venv/bin/pytest
 ```
 
-## Reproducing all results
-
-Every result in this repo is meant to be reproducible from a clone. The Python
-modules use [`uv`](https://docs.astral.sh/uv/) and stand alone. The **frontend** is
-built on [pimas](https://github.com/noahhyden/pimas), consumed from npm as
-[`pimas-ui`](https://www.npmjs.com/package/pimas-ui) (aliased to the bare `pimas`
-specifier in `frontend/package.json`), so `npm ci` in `frontend/` resolves it like any
-ordinary registry dependency - no sibling clone or source build required.
-
-Run everything - every module suite plus the frontend's two test layers and build
-- with one command from the repo root:
+Everything at once - every module suite plus the frontend's two test layers and
+build - from the repo root:
 
 ```bash
 ./scripts/test-all.sh
 ```
 
-It exits nonzero if any suite fails.
+It exits nonzero if any suite fails. The frontend needs only `npm ci` in
+`frontend/`; pimas resolves from npm as
+[`pimas-ui`](https://www.npmjs.com/package/pimas-ui), no sibling clone needed.
 
 ## Conventions
 
-- **One module = one directory** with its own README, dependencies, and tests.
-- **`frontend` is the one shared surface.** It's the single interactive/presentation
-  layer, built on [pimas](https://github.com/noahhyden/pimas) and pimas only. It hosts
-  *one surface per model* rather than fusing them - each model still owns its slice;
-  the frontend just presents it.
-- **Real tests, real numbers.** Assertions check that the math behaves correctly,
-  not just that code runs.
-- **Grounded inputs.** Assumptions trace to real research; modules document their
-  sources (see, e.g., [`modules/closure-sim/REFERENCES.md`](modules/closure-sim/REFERENCES.md)).
-- **Plain language.** This work gets shared with non-specialists; explanations are
-  written to be read by people who aren't engineers.
+- One module = one directory, with its own README, dependencies and tests.
+- `frontend` is the one shared surface, pimas-only, one surface per model.
+- Tests assert that the math behaves correctly, not that the code runs.
+- Every number traces to a source - see e.g.
+  [`modules/closure-sim/REFERENCES.md`](modules/closure-sim/REFERENCES.md).
+- Plain language: this gets read by people who aren't engineers.
 
 ## License
 
-This repository is split by intent, because it holds two different kinds of work:
+Split by intent. **Code, tests, scripts and scenario data:** PolyForm Strict 1.0.0
+([LICENSE](LICENSE)) - read and run it noncommercially; no redistribution,
+modification or commercial use. **Written research** (all Markdown, including this
+file): CC BY-NC-ND 4.0 ([LICENSE-DOCS](LICENSE-DOCS)) - cite with attribution, no
+commercial or derivative use.
 
-- **Source code, tests, build scripts, and data** (the scenario YAML) are under the
-  **PolyForm Strict License 1.0.0** - see [LICENSE](LICENSE). You may read and run it
-  for noncommercial purposes; you may not redistribute it, modify it, build on it, or
-  use it commercially.
-- **The written research** - all Markdown prose, including this README, `FINDINGS.md`,
-  `ROADMAP.md`, the module READMEs, and the `REFERENCES.md` files - is under
-  **Creative Commons Attribution-NonCommercial-NoDerivatives 4.0** (CC BY-NC-ND 4.0) -
-  see [LICENSE-DOCS](LICENSE-DOCS). Read it and cite it with attribution; no commercial
-  use, and no derivative or altered versions.
+The bundled frontend build embeds pimas (MIT) - see
+[THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES). Cite via [CITATION.cff](CITATION.cff).
 
-The bundled frontend build embeds [pimas](https://github.com/noahhyden/pimas)
-(MIT-licensed) - see [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES). To cite this project,
-use [CITATION.cff](CITATION.cff).
+## Contributing and security
 
-## Contributing
-
-This is a solo research project. The most useful contribution is an issue flagging a
-sourcing or factual error; code pull requests are generally not accepted. See
+Solo research project; the most useful contribution is an issue flagging a sourcing
+or factual error. Code PRs are generally not accepted - see
 [CONTRIBUTING.md](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md).
-
-## Security
-
-Report security issues privately - see [SECURITY.md](SECURITY.md).
+Report security issues privately via [SECURITY.md](SECURITY.md).
