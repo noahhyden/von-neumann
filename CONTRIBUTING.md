@@ -36,6 +36,21 @@ bar the work is held to, and so a flagged issue can point at the one that is bro
 - **One module = one directory**, independently runnable and tested, and nesting no
   deeper than the question needs.
 
+## Hooks (one-time, per clone)
+
+`AGENTS.md` is generated from the `AGENTS.d/` beside it and is gitignored, so it is
+never committed and never edited by hand. A [pre-commit](https://pre-commit.com) hook
+regenerates it for you: on checkout, on merge, on rebase, and on any commit that
+touches a rule file. Install the hooks once per clone:
+
+    uv tool install pre-commit      # or: pipx install pre-commit
+    pre-commit install --hook-type pre-commit --hook-type post-checkout \
+                       --hook-type post-merge --hook-type post-rewrite
+
+Because `AGENTS.md` is untracked, these hooks only ever rewrite an untracked file.
+They cannot dirty your index and cannot block a commit. `make agents` still forces a
+regeneration by hand if you want one.
+
 ## Running the tests
 
 Each Python module is self-contained:
