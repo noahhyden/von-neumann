@@ -64,12 +64,18 @@ def build_command(spec: RunSpec, repo_root: Path) -> list[str]:
     return ["uv", "run", "--extra", "dev", *py, "-c", _BOOTSTRAP, str(repo_root), spec.model_dump_json()]
 
 
+def module_dir(repo_root: Path, module: str) -> Path:
+    """Where a module lives: modules/<name>, else <name> at the root (runner, scripts)."""
+    m = repo_root / "modules" / module
+    return m if m.is_dir() else repo_root / module
+
+
 def execute(spec: RunSpec, repo_root: Path, progress: Progress) -> int:
     """Run the entry in a child under the module's env; the child owns progress, so `progress` is unused."""
     load.assert_clean_env()
     env = {**os.environ, **_env_for(spec)}
     try:
-        return subprocess.run(build_command(spec, repo_root), cwd=repo_root / spec.module, env=env).returncode
+        return subprocess.run(build_command(spec, repo_root), cwd=module_dir(repo_root, spec.module), env=env).returncode
     except (OSError, KeyboardInterrupt) as e:
         print(f"vn-run: spec {spec.name!r} failed to launch: {e!r}", file=sys.stderr)
         return 1

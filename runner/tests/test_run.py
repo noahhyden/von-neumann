@@ -1,3 +1,4 @@
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -37,12 +38,38 @@ def test_optimize_flag_present_and_absent(calls, tmp_path):
     assert "-O" not in off and off[5] == "-c"
 
 
-def test_cwd_is_module_dir_and_spec_json_passed(calls, tmp_path):
+def test_cwd_is_existing_module_dir_and_spec_json_passed(calls, tmp_path):
+    (tmp_path / "modules" / "mod").mkdir(parents=True)
     run.execute(mk(), tmp_path, None)
     c = calls[0]
-    assert c.cwd == tmp_path / "mod"
+    assert c.cwd == tmp_path / "modules" / "mod" and c.cwd.is_dir()
     assert c.argv[-2] == str(tmp_path)
     assert RunSpec.model_validate_json(c.argv[-1]) == mk()
+
+
+def test_module_dir_falls_back_to_root_level(tmp_path):
+    (tmp_path / "mod").mkdir()
+    assert run.module_dir(tmp_path, "mod") == tmp_path / "mod"
+    (tmp_path / "modules" / "mod").mkdir(parents=True)
+    assert run.module_dir(tmp_path, "mod") == tmp_path / "modules" / "mod"
+
+
+def test_committed_specs_resolve_to_real_dirs():
+    root = Path(__file__).resolve().parents[2]
+    specs = load.discover(root)
+    assert specs
+    for path, spec in specs:
+        assert run.module_dir(root, spec.module).is_dir(), path
+
+
+def test_execute_really_spawns_child_in_module_dir(tmp_path, monkeypatch):
+    real = Path(__file__).resolve().parents[2]
+    (tmp_path / "runner").symlink_to(real / "runner")
+    for k in ("SWARM_WORKERS", "SWARM_NO_RUST", "SWARM_NO_NJIT"):
+        monkeypatch.delenv(k, raising=False)
+    spec = RunSpec(name="e2e", module="runner", entry="os:getcwd", description="d")
+    assert run.execute(spec, tmp_path, None) == 0
+    assert (tmp_path / ".vn-runs" / "e2e.json").is_file()
 
 
 def test_default_backends_set_no_switches(calls, tmp_path):
