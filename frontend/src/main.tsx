@@ -1254,21 +1254,30 @@ function PapersSurface() {
 }
 
 // ── shell nav: one surface per model ────────────────────────────────────────
+const NAV_MODULES: Surface[] = ["wall", "mission", "fleet", "swarm", "spine", "probe", "launch", "power"];
+const navLabel = (s: Surface) => SURFACE_TITLE[s].split(" - ")[0];
+const navItem = (cur: Surface, s: Surface) => `nav-item${cur === s ? " nav-item-active" : ""}`;
+
 function Nav(props: { surface: Surface }) {
+  const pick = (e: MouseEvent, s: Surface) => {
+    (e.currentTarget as HTMLElement).closest("details")?.removeAttribute("open");
+    mount(s);
+  };
   return (
     <div class="wrap nav-row">
       <button class="nav-brand" onClick={() => mount("overview")} title="Project overview">The Arithmetic of Self-Replication</button>
-      <button class={`act ${props.surface === "overview" ? "act-primary" : "act-ghost"}`} onClick={() => mount("overview")}>Overview</button>
-      <button class={`act ${props.surface === "mission" ? "act-primary" : "act-ghost"}`} onClick={() => mount("mission")}>Full mission</button>
-      <button class={`act ${props.surface === "fleet" ? "act-primary" : "act-ghost"}`} onClick={() => mount("fleet")}>Fleet</button>
-      <button class={`act ${props.surface === "swarm" ? "act-primary" : "act-ghost"}`} onClick={() => mount("swarm")}>Swarm</button>
-      <button class={`act ${props.surface === "spine" ? "act-primary" : "act-ghost"}`} onClick={() => mount("spine")}>Across scales</button>
-      <button class={`act ${props.surface === "wall" ? "act-primary" : "act-ghost"}`} onClick={() => mount("wall")}>Electronics wall</button>
-      <button class={`act ${props.surface === "probe" ? "act-primary" : "act-ghost"}`} onClick={() => mount("probe")}>Single probe</button>
-      <button class={`act ${props.surface === "launch" ? "act-primary" : "act-ghost"}`} onClick={() => mount("launch")}>Launch economics</button>
-      <button class={`act ${props.surface === "power" ? "act-primary" : "act-ghost"}`} onClick={() => mount("power")}>Power budget</button>
-      <button class={`act ${props.surface === "papers" ? "act-primary" : "act-ghost"}`} onClick={() => mount("papers")}>Papers</button>
-      <button class={`act ${props.surface === "sources" ? "act-primary" : "act-ghost"}`} onClick={() => mount("sources")}>Sources</button>
+      <nav class="nav-links">
+        <details class="nav-menu" name="vn-nav">
+          <summary class={`nav-summary${NAV_MODULES.includes(props.surface) ? " nav-item-active" : ""}`}>Modules<span class="nav-chevron" aria-hidden="true">▾</span></summary>
+          <div class="nav-panel">
+            <For each={NAV_MODULES}>{(s) => (
+              <button class={navItem(props.surface, s)} onClick={(e) => pick(e, s)}>{navLabel(s)}</button>
+            )}</For>
+          </div>
+        </details>
+        <button class={navItem(props.surface, "papers")} onClick={() => mount("papers")}>Papers</button>
+        <button class={navItem(props.surface, "sources")} onClick={() => mount("sources")}>Sources</button>
+      </nav>
     </div>
   );
 }

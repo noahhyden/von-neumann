@@ -7,6 +7,7 @@ import { build as esbuild } from "esbuild";
 import { gzipSync } from "node:zlib";
 import { mkdir, writeFile, rm, readFile, cp, readdir } from "node:fs/promises";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 
 const ROOT = import.meta.dirname;
@@ -39,7 +40,14 @@ const result = await esbuild({
   metafile: true,
 });
 
-await cp(join(ROOT, "index.html"), join(OUT, "index.html"));
+// design.ts is build-only, so compile it into the gitignored .cache and import it.
+const DESIGN = join(ROOT, ".cache", "design.mjs");
+await esbuild({ entryPoints: [join(ROOT, "src/design.ts")], outfile: DESIGN, bundle: true, format: "esm", platform: "node", logLevel: "warning" });
+const { BASE_CSS } = await import(pathToFileURL(DESIGN).href);
+const PLACEHOLDER = "/*__DESIGN_TOKENS__*/";
+const html = await readFile(join(ROOT, "index.html"), "utf8");
+if (!html.includes(PLACEHOLDER)) throw new Error(`build: index.html has no ${PLACEHOLDER} placeholder; the design tokens would not ship`);
+await writeFile(join(OUT, "index.html"), html.replace(PLACEHOLDER, () => BASE_CSS));
 // Static assets referenced by index.html (the social-card image for link unfurls).
 await cp(join(ROOT, "og.svg"), join(OUT, "og.svg"));
 // GitHub Pages custom domain: the CNAME must live in the published artifact.
