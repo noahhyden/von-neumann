@@ -385,81 +385,25 @@ overlaid), `fig_fuel_tax_by_seed`, `fig_time_tax_vs_dt`, `fig_concurrency` (mech
 `uv run --extra dev python -m experiments.measure` and the figures via
 `uv run --extra dev python -m experiments.paper_figures`.
 
-## Performance and the scale ceiling (issues #27, #30)
+## Scale ladder: fuel tax vs N (finite-size sweeps)
 
-The fold was sped up to push toward Nicholson & Forgan's 200,000-star field, under a hard
-constraint: **every change is bit-identical** - the committed `results/*.json` reproduce to the
-printed digit (`tests/test_measure_results.py` stays green) and the pinned-baseline tests are
-unchanged. Timing never changes a number (the fold is a pure seeded function, CLAUDE.md 7); these
-are wall-clock changes only.
+Every speed-up behind these sweeps is bit-identical: the committed `results/*.json` reproduce to the
+printed digit and timing never changes a number (CLAUDE.md 7). How the fold got fast is in the
+README ("Performance: what makes the fold fast"); the measured figures it produced are here.
 
-Profiling a large-N run (`experiments/scaling_benchmark.py`) showed the cost was **four** O(N)- or
-O(P)-per-event terms, not the one the nearest-neighbour scan alone. Three were removed outright:
-
-- **Cell-list nearest-neighbour index.** `_nearest_unsettled_at` / `_nearest_k_unsettled_at`
-  replace the O(N) linear scan with a uniform grid of `grid_res = round(N^(1/3))` cells per axis
-  (`grid_res³ ≈ N`, so ~1 star per cell at the paper's 1 star/pc³), built once over the fixed
-  positions. A query expands cell shells outward and stops once the best distance provably beats
-  every unexamined cell. It reproduces the linear scan's `(distance, lowest-index)` result exactly
-  (the equality case expands one more shell so boundary ties keep the lowest index). The plain,
-  non-wrapped metric matches target selection, which never uses the periodic minimum image.
-- **Event heap.** A lazy min-heap of `(actionable_year, probe_id)` plus an id-keyed `probes` dict
-  replaces the O(P) `min`-over-all-probes each event and the O(P) probe-list rebuilds. Under
-  `inflight`, a settled star reschedules the probes still heading to it (the decrease-key: their
-  mid-flight learning time), via a `by_target` index; stale heap entries are discarded on pop.
-- **Incremental snapshot.** `settled_count` and `front_radius` are maintained at the single settle
-  site instead of rescanned O(N) every event. (`n_settled()` / `_front_radius()` remain as the
-  O(N) ground truth used once at the end - a built-in cross-check against the incremental values.)
-
-Together these make the **event loop and bookkeeping near-linear**, and the whole run 5-9x faster
-at N ≈ 2400-4800. The seed ensemble is also parallelised across cores (`experiments/measure.py`,
-`experiments/lightspeed_coordination.py`; `SWARM_WORKERS` env, `=1` forces serial), giving another
-~N_cores, bit-identical because each `(seed, mode)` run is independent and results are re-collected
-in seed order.
-
-**The #27 ceiling, and how #30 broke it.** After #27 a single run still stayed **super-linear
-(empirically ~O(N²))**, and a flat cell list could not fix it. The reason is intrinsic: a wasted
-probe re-targets from wherever it landed - often deep inside the already-settled core - and the
-nearest *believed*-unsettled star from such a point sits out at the front. That is a genuinely
-**non-local** query, so the ring search had to expand out to the front (some queries spanning the
-whole box; measured `cells/query` grew with N). Under `lightspeed` the target may even be a
-recently-settled star whose beacon is still in transit, so the truly-unsettled set alone does not
-answer it.
-
-Issue #30 replaced the flat cell list with a **k-d tree over the unsettled set**
-(`sim._build_kdtree`, `sim._nearest_unsettled_at`). It is a balanced median-split tree built once
-over the fixed positions, carrying two aggregates maintained as stars settle (`_kd_mark_settled`,
-O(depth) per settle):
-
-- `kd_nuns[node]` - the count of still-unsettled stars in the subtree (a deletion counter), and
-- `kd_tsmax[node]` - the latest `settled_year` in the subtree.
-
-A branch-and-bound nearest search then prunes two ways, and **each prune only ever skips stars that
-cannot be the answer**, so the argmin over the stars actually examined is bit-identical to the old
-linear scan (same `(distance, lowest-index)` tie-break; verified directly in
-`tests/test_kdtree_oracle.py` against a brute-force reference, and end-to-end by the pinned-baseline
-and JSON drift-guard tests):
-
-- **Distance prune** - skip a subtree whose nearest possible point is strictly farther than the
-  best found (a true lower bound, so nothing skipped could beat or tie it; equality descends, so a
-  same-distance lower-index star is never lost).
-- **Belief prune** - skip a subtree provably entirely *believed*-settled from the query point:
-  every star settled (`kd_nuns == 0`) and, for the light-delayed regimes, the beacon of even the
-  most-recently-settled star (`kd_tsmax`) already reached the box's farthest corner
-  (`kd_tsmax + dhi/c ≤ year`, mirroring the leaf gate's own arithmetic so the bound is exact).
-  This is the **news-in-transit** correctness point: a recently-settled star whose beacon is still
-  in flight is *not* pruned - it is believed-unsettled and a valid target, so it is examined.
-
-The effect is that the settled core is skipped in O(log N) and a deep-core-to-front query examines
-a near-**constant** local patch (a few leaves, ~tens of candidates) instead of O(core). The residual
-mild super-linearity is not the index: it is (i) the model's own arrival count, which grows
-**~N^0.09 per star** as a larger field breeds more stale-view races (a physics/combinatorics
-property of the racing model, unchanged by any index), and (ii) the O(log N) tree descent. The
-local scaling exponent drops from the old ~2 toward ~1 (the doubling-ratios keep shrinking as the
-polylog flattens), and the `finite_size` / `finite_size_interior` / `finite_size_periodic` sweeps
-now reach **N = 200,000** (a single run fills in ~140-170 s; seeds are scaled to a precision target,
-not to compute). Out of scope, as in #27: no Rust beyond a pure `pyo3` drop-in, no distributed
-ensemble, no GPU.
+- **Event loop and bookkeeping, 5-9x faster at N = 2400-4800.** Basis: `experiments/scaling_benchmark.py`
+  profile after the cell-list index, lazy event heap and incremental snapshot replaced per-event
+  O(N)/O(P) scans. Verdict: measured; a wall-clock figure only.
+- **Seed-ensemble parallelism, ~N_cores.** `SWARM_WORKERS` env (`=1` forces serial); bit-identical
+  because each `(seed, mode)` run is independent and results are re-collected in seed order.
+- **Pre-k-d-tree single run ~O(N^2) empirically**, and measured `cells/query` grew with N (some queries
+  spanned the whole box). Verdict: the flat cell list could not fix the non-local re-target query.
+- **k-d tree: a deep-core-to-front query examines a near-constant patch** (a few leaves, ~tens of
+  candidates). The local scaling exponent drops from ~2 toward ~1; the residual comes from the model's
+  own arrival count, which grows **~N^0.09 per star** (more stale-view races in a larger field,
+  unchanged by any index), plus the O(log N) tree descent.
+- **A single 200,000-star run fills in ~140-170 s.** Seeds are scaled to a precision target, not to
+  compute. Verdict: measured wall-clock; see `docs/HARDWARE.md` for the machine.
 
 **What the 200,000-star reach shows.** The long lever arm confirms and extends the paper's scale
 result. The coordination-tax paper already reports that the redundant-travel (fuel) tax as a
@@ -690,7 +634,7 @@ Sources that ground this module's ideas or cross-check its numbers, consolidated
 - **Thomas / Neyman-Scott cluster process** - M. Thomas (1949), A generalization of Poisson's binomial limit for use in ecology, Biometrika 36:18-25, DOI 10.1093/biomet/36.1-2.18 (https://doi.org/10.1093/biomet/36.1-2.18); J. Neyman & E. L. Scott (1958), Statistical approach to problems of cosmology, J. R. Stat. Soc. B 20:1-43. The parent-plus-offspring point process used to generate the non-uniform star field: cluster centres scattered uniformly, stars placed Gaussian around them. A standard, tunable clustering model whose scatter interpolates cleanly to the uniform limit, which is what lets the `clumpiness` sweep use the uniform slope as a hard null.
 - **Lubin 2016** - P. Lubin (UC Santa Barbara) (2016). A Roadmap to Interstellar Flight (arXiv:1604.01356). Journal of the British Interplanetary Society 69:40-72. https://arxiv.org/abs/1604.01356. The far end of the propulsion spectrum for a self-replicating seed: beamed directed-energy light-sail acceleration of gram-scale craft toward ~0.2c, sidestepping the rocket-equation penalty by leaving the energy source at home. Connects to the swarm's interstellar cruise-speed assumptions.
 
-## Invariants (issue #48, phase A)
+## Invariants
 
 Swarm mutates state in place, so `_verify_step_invariants(before_snap, after)` is called
 under `if __debug__:` in both `step` (fixed) and `step_event` (event). The snapshot is a
@@ -716,7 +660,7 @@ the 200k-star sweeps in `experiments/`). Positive + negative tests live in
   The dict key is unique by construction; this catches a bug where the `.id` field
   drifts from its key.
 
-## Self-stabilization scenarios (issue #49)
+## Self-stabilization scenarios
 
 `tests/test_self_stabilization.py` answers the Dijkstra question for the
 interstellar settlement front. Perturbations mutate `SwarmState` in place
@@ -738,7 +682,7 @@ interstellar settlement front. Perturbations mutate `SwarmState` in place
   the suite records that as the terminal state rather than pretending the front
   advances by other means.
 
-## Analytical companion: coordination-tax scaling (issue #50, Phase 2)
+## Analytical companion: coordination-tax scaling
 
 `docs/FINDINGS_CLASSIFICATION.md` #6 classifies the coordination tax as
 class **B** (rigorous bound). The derivation, formalized here as a numbered
@@ -776,66 +720,7 @@ A **fast smoke check** at N=200 with 16 seeds is in
 change silently breaking the `1 + Λ` relation without pretending to be the
 finding itself (which is the paired 512-seed sweep).
 
-## Numba-jitted nearest-unsettled kernel (issue #27 Part 4)
-
-The `_nearest_unsettled_at` k-d tree branch-and-bound moved into a
-`@njit(cache=True, fastmath=False, parallel=False, nogil=False)` function in
-`swarm/kd_njit.py`. The Python wrapper in `sim.py` unpacks `SwarmState` and
-passes flat numpy arrays; the jitted body reproduces the DFS traversal, the
-`(distance^2, lowest-index)` tie-break, and the inlined
-`_believes_settled_at` gate bit-identically. Environment override
-`SWARM_NO_NJIT=1` selects the pure-Python reference (still bit-identical, but
-slower - kept in-tree as the readable ground truth).
-
-State fields converted to numpy arrays so the jit function reads them
-directly without per-call conversion: `xs, ys, zs, star_speed_pc_yr,
-settled_year, kd_axis, kd_split, kd_lo, kd_hi, kd_parent, kd_bucket_flat,
-kd_bucket_offsets, kd_bxmin..bzmax, kd_nuns, kd_tsmax, star_leaf`. The
-former list-of-lists `kd_bucket` is now `kd_bucket_flat` (concatenated star
-ids) + `kd_bucket_offsets` (start index per leaf).
-
-Bit-identical to the pre-refactor list-based fold on every drift-guard
-committed artifact (`test_measure_results.py`) and the whole test suite. The
-`_nearest_unsettled_at` cumulative time drops ~8x on a small N=2000 event
-run (0.30 s -> 0.036 s); overall wall clock for a fresh run drops ~40-60%
-because Python overhead outside the kernel remains.
-
-## Per-arrival hot-loop speed-up (post-#27)
-
-Follow-up to #27 Part 4. After the njit kernel landed, `_nearest_unsettled_at`
-dropped from ~60% self-time to a wrapper cost; the leading cost shifted to
-`_process_arrivals` (~15% self-time in the profile). Three small changes shave
-another ~2x off the residual:
-
-- **Tuple storage for the fixed star field.** `xs, ys, zs,
-  star_speed_pc_yr` become tuples of Python floats. Numpy mirrors
-  (`xs_np, ys_np, zs_np`) exist alongside for the njit kernel. Per-element
-  scalar access is ~40% faster than numpy in the tight loop and, unlike
-  numpy scalars, does not implicitly return `np.float64` (avoids downstream
-  numpy overhead).
-- **Inlined `_wall_bin` and `_hop_bin` inside `_process_arrivals`.** Two
-  function calls per arrival * 40k arrivals per N=5000 run were the leading
-  per-loop cost. The inlined version also caches `1/d_nn`
-  (~`density^(1/3)` constant) rather than recomputing per call.
-- **`@dataclass(slots=True)` on `SwarmState`** and a pre-built `_njit_args`
-  tuple. Attribute lookups compress from ~20 per query to one lookup + one
-  tuple unpack.
-
-Full monorepo tests remain green (drift-guard bit-identical). Wall-clock
-speedups vs. pre-#27 baseline, event mode, warm JIT:
-
-| N     | pre-#27 (list) | this state | overall |
-|-------|----------------|------------|---------|
-| 1000  | 0.088 s        | 0.043 s    | 2.0x    |
-| 2000  | 0.163 s        | 0.081 s    | 2.0x    |
-| 5000  | 0.542 s        | 0.259 s    | 2.1x    |
-
-## Rationale restored from the one-line-comment sweep
-
-The one-line-comment guard cut long code comments to one line. This section keeps the
-sourcing and design rationale those comments carried, as value -> basis -> verdict.
-
-**Measurement design (`experiments/measure.py`)**
+## Measurement design (`experiments/measure.py`)
 
 - **Seed pool = 512 seeds, `SEEDS[k] = 0x9E3779B9 + 2654435761*k`.** Both constants are the
   standard 32-bit golden-ratio / Knuth multiplicative-hash constants (definitional, not
@@ -889,7 +774,7 @@ sourcing and design rationale those comments carried, as value -> basis -> verdi
   below any real reversal. Units: percentage points for tau, arrivals-per-star for b.
   Verdict: an empirical tolerance read off the committed JSONs `[ESTIMATE]`.
 
-**Spatial-statistics bins (`models.py`)**
+## Spatial-statistics bins (`models.py`)
 
 - **`HOP_BIN_EDGES = 0.1 * 300^(k/12) pc, k = 0..12`** (0.1 to 30 pc, 12 log-spaced bins plus
   under/overflow). Fixed so bins are comparable across fields. 0.1 pc is below the mean NN
@@ -904,7 +789,7 @@ sourcing and design rationale those comments carried, as value -> basis -> verdi
   `gamma - 1 = 1/sqrt(1 - 0.04) - 1 = 0.02062` vs `0.02`, a ratio of 1.031, so Newtonian
   is within 3.1% up to 0.2 c.
 
-**Compute-speed figures**
+## Compute-speed figures
 
 - **Flat-tree query microbench (`experiments/bench_flat_kdtree_leaf.py`).** Single thread on
   k02, min of 5 runs, N=32,768, 10,000 queries, all-unsettled state: 529k qps before the p2
@@ -912,11 +797,29 @@ sourcing and design rationale those comments carried, as value -> basis -> verdi
   small gain is deliberate: the p2 substrate pays off at whole-fill level, and an explicit
   AVX2 leaf scan was a net loss at `KD_LEAF = 8` (`rust/README.md`, "The SIMD-leaf-scan
   finding"). Dated measurement, not a guarantee.
+- **Numba nearest-unsettled kernel (`swarm/kd_njit.py`).** `_nearest_unsettled_at` cumulative time
+  0.30 s -> 0.036 s (~8x) on a small N=2000 event run; overall wall clock for a fresh run drops
+  ~40-60% because Python overhead outside the kernel remains. Bit-identical on every drift-guard
+  artifact (`test_measure_results.py`). Machine not recorded `[GAP]`; a dated measurement.
+- **Per-arrival hot loop, event mode, warm JIT.** After the kernel landed, `_nearest_unsettled_at`
+  fell from ~60% self-time to a wrapper cost and `_process_arrivals` led at ~15% self-time. Three
+  changes (tuple star fields, inlined `_wall_bin`/`_hop_bin`, `slots=True` state plus a pre-built
+  argument tuple) took ~2x off the residual. Per-element scalar access on tuples is ~40% faster than
+  numpy in the tight loop; the inlined bin calls were 2 calls per arrival x 40k arrivals per N=5000
+  run; attribute lookups per query fall from ~20 to one lookup plus one tuple unpack.
+
+  | N    | pre-#27 (list) | after   | overall |
+  |------|----------------|---------|---------|
+  | 1000 | 0.088 s        | 0.043 s | 2.0x    |
+  | 2000 | 0.163 s        | 0.081 s | 2.0x    |
+  | 5000 | 0.542 s        | 0.259 s | 2.1x    |
+
+  Verdict: profile-derived, machine not recorded `[GAP]`; wall-clock only.
 - **`-O` assertion stripping.** The `if __debug__:` step invariants cost roughly 60% of wall
-  time on a 20k-star run (profile in issue #33's PR body); stripping them is bit-identical
+  time on a 20k-star run (profile in the #33 PR body); stripping them is bit-identical
   because they only read state. Policy in `docs/HARDWARE.md`, "Assertion mode".
 
-**Distributional companions (`distributions.py`, issue #35)**
+## Distributional companions (`distributions.py`)
 
 - **Powered cruise `LogUniform(1e-5, 1e-4) c` `[ESTIMATE]`.** The point value 3e-5 c is
   Nicholson & Forgan's; the bracket is NOT sourced to a propulsion survey. It is a

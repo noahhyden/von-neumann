@@ -14,6 +14,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
+SCANNED: tuple[str, ...] = (".py", ".ts", ".tsx", ".mjs", ".rs", ".sh", ".yml", ".yaml", ".toml")
+
 SKIP_PREFIXES: tuple[str, ...] = (
     "node_modules/",
     ".venv/",
@@ -40,6 +42,8 @@ PRAGMAS: tuple[str, ...] = (
     "SPDX-",
     "Copyright",
     "!/usr/bin",
+    "clippy:",
+    "allow(",
     "-*- coding",
 )
 
@@ -232,7 +236,7 @@ def scan(paths: list[str]) -> dict[str, list[tuple[int, str]]]:
     """Violations per path, skipping exempt and generated files."""
     found: dict[str, list[tuple[int, str]]] = {}
     for rel in paths:
-        if is_skipped(rel) or not rel.endswith((".py", ".ts", ".tsx", ".yml", ".yaml", ".toml")):
+        if is_skipped(rel) or not rel.endswith(SCANNED):
             continue
         full = REPO_ROOT / rel
         if not full.is_file():
@@ -245,7 +249,7 @@ def scan(paths: list[str]) -> dict[str, list[tuple[int, str]]]:
             continue
         if rel.endswith(".py"):
             hits = python_violations(text)
-        elif rel.endswith((".yml", ".yaml")):
+        elif rel.endswith((".yml", ".yaml", ".sh")):
             hits = yaml_violations(text)
         elif rel.endswith(".toml"):
             hits = toml_violations(text)
@@ -257,9 +261,9 @@ def scan(paths: list[str]) -> dict[str, list[tuple[int, str]]]:
 
 
 def all_source_paths() -> list[str]:
-    """Every tracked .py/.ts/.tsx/.yml/.yaml/.toml path."""
+    """Every tracked path with a scanned extension."""
     out = subprocess.run(
-        ["git", "ls-files", "*.py", "*.ts", "*.tsx", "*.yml", "*.yaml", "*.toml"],
+        ["git", "ls-files", *(f"*{e}" for e in SCANNED)],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -291,9 +295,10 @@ def main() -> int:
     print(
         f"\n{total} violation(s) in {len(found)} file(s) ({len(scanned)} scanned).\n"
         "A module, class or function gets a one-line docstring or none, and a run of\n"
-        "standalone comments is one line. Move the rest into an AGENTS.d/ rule, the\n"
-        "module README, or REFERENCES.md - markdown is never scanned. A run carrying a\n"
-        "pragma (noqa / type: ignore / eslint-disable) is exempt."
+        "standalone comments is one line. Move the why into the module README and the\n"
+        "number, its source and its basis into REFERENCES.md - markdown is never\n"
+        "scanned. Never drop a citation to satisfy this guard (CLAUDE.md 1). A run\n"
+        "carrying a pragma (noqa / type: ignore / eslint-disable) is exempt."
     )
     return 1
 

@@ -1,29 +1,4 @@
-//! swarm_rust - Rust drop-in for the swarm hot paths.
-//!
-//! Issue #33 Phase 1 shipped the k-d tree nearest-unsettled QUERY
-//! (`nearest_unsettled`, mirror of `swarm/src/swarm/kd_njit.py`). Tier 2 of the
-//! 200k event-loop speedup adds `run_fill`, which owns the WHOLE event loop for
-//! the supported config (`policy="powered"`, `coordination in {instant,
-//! lightspeed}`, `stepping="event"`) - the config the 200k scale sweeps use.
-//! Galaxy generation and the k-d tree build stay in Python (the seeded RNG is
-//! not ported); Rust receives the pre-built SoA field + tree and returns raw
-//! aggregates, from which `swarm.sim` builds an identical `SwarmResult`.
-//!
-//! Determinism (matches `sim.py` / `kd_njit.py`, and gated by the oracle in
-//! `tests/test_rust_fill_loop.py`):
-//!   - Every arithmetic op is written in the same left-to-right order as the
-//!     Python reference; both sides are IEEE 754 f64.
-//!   - No `fastmath`; `f64::sqrt` is the correctly-rounded hardware sqrt.
-//!   - The ONE transcendental in the reference (`density**(-1/3)` for the mean
-//!     NN distance) is precomputed in Python and passed as `inv_d_nn`, so the
-//!     loop has no `powf` whose libm rounding could drift.
-//!   - Periodic minimum-image wrap uses `round_ties_even` to match Python's
-//!     banker's-rounding `round()`.
-//!   - Event order is reproduced with a min-heap keyed `(arrive_year, pid)` plus
-//!     the same `(arrive_year, id)` batch re-sort the Python `_resolve_batch`
-//!     does, so heap internals are not load-bearing (see the audit in the branch
-//!     history). For powered/instant+lightspeed no heap entry is ever stale
-//!     (each pid has at most one live entry), so no lazy-validation is needed.
+//! swarm_rust - Rust drop-in for the swarm hot paths; see README.md for scope and determinism.
 
 use numpy::{IntoPyArray, PyReadonlyArray1, PyReadwriteArray1};
 use pyo3::prelude::*;
@@ -31,17 +6,10 @@ use pyo3::types::PyDict;
 use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashSet};
 
-/// Speed of light in parsecs per Julian year (from `swarm/models.py`). Same
-/// left-to-right expression so the Rust `const` matches Python's runtime f64.
+/// Speed of light in pc/yr, same expression as `swarm/models.py`.
 const C_PC_PER_YEAR: f64 = 299792.458_f64 * 3.15576e7_f64 / 3.0856775814913673e13_f64;
 
-// The pure-Python fold computes inter-star and mid-flight distances with `** 0.5`, which CPython
-// evaluates as libm `pow(x, 0.5)`. On this platform glibc `pow(x, 0.5)` is NOT bit-identical to
-// hardware `sqrt(x)` - it is 1 ULP off for some arguments (a real glibc pow imperfection). The
-// QUERY kernel uses `sqrt` (matching numba `nearest_unsettled_njit` and the committed query
-// backend), but the fold's HOP distances use `pow`, so a bit-identical fill must reproduce glibc
-// `pow` for hops. `black_box` on the exponent stops LLVM's SimplifyLibCalls from folding
-// `pow(x, 0.5)` back into `sqrt` (which would silently reintroduce the 1-ULP divergence).
+// Hops use glibc `pow(x, 0.5)` to match CPython `** 0.5`; see README.md (pow vs sqrt).
 extern "C" {
     fn pow(base: f64, exp: f64) -> f64;
 }
@@ -50,11 +18,7 @@ fn ref_root(s: f64) -> f64 {
     unsafe { pow(s, std::hint::black_box(0.5)) }
 }
 
-/// Nearest believed-unsettled star to `(px, py, pz)` at `year`, or -1 if none.
-///
-/// Bit-identical mirror of `swarm._nearest_unsettled_at_python`. Written as a
-/// plain function over slices so both the `#[pyfunction]` wrapper and the
-/// in-process `run_fill` loop call the exact same traversal.
+/// Nearest believed-unsettled star to `(px, py, pz)` at `year`, or -1; mirror of `_nearest_unsettled_at_python`.
 #[allow(clippy::too_many_arguments)]
 fn nn_impl(
     px: f64,
@@ -177,8 +141,7 @@ fn nn_impl(
                     let dx = xs[i] - px;
                     let dy = ys[i] - py;
                     let dz = zs[i] - pz;
-                    // The QUERY (kernel) uses sqrt - matches numba `nearest_unsettled_njit` and the
-                    // committed query backend. (Hops are a separate story; see `dist` / `ref_root`.)
+                    // Query kernel uses sqrt; hops use `ref_root` (README.md, pow vs sqrt).
                     let d = (dx * dx + dy * dy + dz * dz).sqrt();
                     if sy_i + d / c <= year {
                         continue;
@@ -218,8 +181,7 @@ fn nn_impl(
     best
 }
 
-/// Fold star `star`'s settlement into the subtree aggregates leaf->root.
-/// Mirror of `sim._kd_mark_settled`.
+/// Fold star `star`'s settlement into the subtree aggregates; mirror of `sim._kd_mark_settled`.
 fn mark_settled(
     star: usize,
     y: f64,
@@ -239,8 +201,7 @@ fn mark_settled(
     }
 }
 
-/// Minimum-image separation between two points on a torus (or plain distance).
-/// Mirror of `sim._dist`; `round_ties_even` matches Python's `round()`.
+/// Minimum-image separation on a torus (or plain distance); mirror of `sim._dist`.
 #[inline]
 fn dist(
     xs: &[f64],
@@ -260,14 +221,11 @@ fn dist(
         dy -= l * (dy / l).round_ties_even();
         dz -= l * (dz / l).round_ties_even();
     }
-    // Python `_dist` uses `** 0.5` (glibc `pow`), NOT hardware sqrt (see `ref_root`). Matching it
-    // exactly matters: a 1-ULP hop cascades (hop -> arrive -> a star's settled_year -> every
-    // downstream learn_year -> which target a mid-flight learner re-selects).
+    // Uses `ref_root` (glibc pow), not sqrt; a 1-ULP hop cascades (README.md, pow vs sqrt).
     ref_root(dx * dx + dy * dy + dz * dz)
 }
 
-/// hop-length bin: count of leading edges `<= d` (mirror of `sim._hop_bin` /
-/// the inlined loop in `_process_arrivals`).
+/// Hop-length bin: count of leading edges `<= d`; mirror of `sim._hop_bin`.
 #[inline]
 fn bin_ge(edges: &[f64], v: f64) -> usize {
     let mut k = 0usize;
@@ -281,10 +239,7 @@ fn bin_ge(edges: &[f64], v: f64) -> usize {
     k
 }
 
-// State-of-arrays probe pool for the powered/event fast path. Speed is constant
-// (= probe cruise) under the powered policy, so it is not stored per probe. The
-// `from_*` launch position is read only by inflight mid-flight interpolation
-// (unset/zero and unread under instant/lightspeed, matching the Python defaults).
+// State-of-arrays probe pool; see README.md (Pool).
 struct Pool {
     target: Vec<i64>,
     arrive: Vec<f64>,
@@ -385,21 +340,12 @@ impl PartialOrd for Ev {
 }
 impl Ord for Ev {
     fn cmp(&self, o: &Self) -> std::cmp::Ordering {
-        // Total order on finite positive years; ties broken by pid. Wrapped in
-        // Reverse at the heap so the smallest (arrive_year, pid) pops first.
+        // Total order on (arrive_year, pid); Reverse at the heap pops the smallest first.
         self.key.total_cmp(&o.key).then(self.pid.cmp(&o.pid))
     }
 }
 
-/// Run the whole powered/event fill loop and return raw aggregates as a dict.
-///
-/// Bit-identical to `swarm.sim.simulate_swarm` for `policy="powered"`,
-/// `coordination in {instant, lightspeed, inflight}`, `stepping="event"`,
-/// `record_steps=False`. Under `inflight` (`is_inflight=true`) the loop also runs
-/// mid-flight relay: a probe whose target is claimed learns at `_learn_year` and
-/// redirects from its interpolated position; `by_target` + lazy heap validation
-/// reproduce the decrease-key. The caller (`swarm.sim._simulate_swarm_rust`) builds
-/// `SwarmResult` from the returned dict exactly as the Python loop's tail does.
+/// Run the whole powered/event fill loop and return raw aggregates as a dict; see README.md (run_fill).
 #[pyfunction]
 #[allow(clippy::too_many_arguments)]
 fn run_fill(
@@ -507,8 +453,7 @@ fn run_fill(
 
     let mut pool = Pool::new();
     let mut heap: BinaryHeap<Reverse<Ev>> = BinaryHeap::new();
-    // inflight decrease-key index: for each star, the probe ids that have targeted it (with
-    // stale entries; `_on_settled` filters by live + still-targeting). Empty/unused otherwise.
+    // Inflight decrease-key index (probe ids per target, stale entries filtered in `_on_settled`).
     let mut by_target: Vec<Vec<i64>> = if is_inflight {
         (0..n).map(|_| Vec::new()).collect()
     } else {
@@ -532,8 +477,7 @@ fn run_fill(
             actionable_of($pu, &pool.target, &pool.arrive, &sy, is_inflight, v_over_c)
         };
     }
-    // Register a probe: mark live, push its heap entry keyed at the actionable time, and (inflight)
-    // index it under its target for the decrease-key. Mirror of _add_probe.
+    // Register a probe: mark live, push its heap entry, index by target; mirror of `_add_probe`.
     macro_rules! add_probe {
         ($pid:expr) => {{
             let _pid: i64 = $pid;
@@ -583,8 +527,7 @@ fn run_fill(
     let mut learns: Vec<i64> = Vec::new();
     let mut seen: HashSet<i64> = HashSet::new();
     loop {
-        // _next_valid_event: discard stale heap tops (probe dead, or key superseded by an
-        // inflight decrease-key), return the earliest valid actionable time; NaN = none left.
+        // Mirror of `_next_valid_event`: drop stale heap tops, return earliest valid time (NaN = none).
         let ne = loop {
             match heap.peek() {
                 None => break f64::NAN,
@@ -805,9 +748,7 @@ fn run_fill(
         record_thresholds(settled_count, year, &mut thr);
     }
 
-    // final front radius: the Python `_front_radius` rescan equals the incrementally
-    // maintained maximum (both are max over settled stars of dist-to-origin), so we
-    // return the incremental value; sim._simulate_swarm_rust uses it directly.
+    // Incremental max equals Python's `_front_radius` rescan (README.md, front radius).
     let d = PyDict::new_bound(py);
     d.set_item("final_settled", settled_count)?;
     d.set_item("total_launched", total_launched)?;
@@ -843,9 +784,7 @@ fn run_fill(
     Ok(d.into())
 }
 
-/// Nearest believed-unsettled star to `(px, py, pz)` at `year`, or -1 if none.
-/// Bit-identical mirror of `swarm.kd_njit.nearest_unsettled_njit` (thin wrapper
-/// around `nn_impl`; kept for the k-d tree backend + its oracle).
+/// Pyfunction wrapper over `nn_impl`; mirror of `swarm.kd_njit.nearest_unsettled_njit`.
 #[pyfunction]
 #[allow(clippy::too_many_arguments)]
 fn nearest_unsettled(
@@ -912,30 +851,17 @@ fn c_pc_per_year() -> f64 {
     C_PC_PER_YEAR
 }
 
-// ============================================================================
-// Flat p2 kd-tree (issue #38 P2 spec: swarm/rust/SPEC_FLAT_KDTREE.md).
-//
-// At `N = 2^k, k >= 3` and `_KD_LEAF = 8`, the pointer tree collapses to a
-// perfect binary tree with `M = N/8` leaves. Heap indexing (`children = 2i+1,
-// 2i+2; parent = (i-1) >> 1; leaf iff i >= M-1`) replaces the `lo`, `hi`,
-// `parent` arrays entirely - the "bit-shift shenanigans" the p2 standardization
-// buys. The build's median-split rule (widest axis, sort by `(coord, index)`,
-// split at `mid = len/2`) is byte-for-byte identical to `sim._build_kdtree`,
-// so the flat tree is a drop-in for the pointer tree at matching p2 N and
-// returns star indices in the *original* space via `star_perm`.
-// ============================================================================
+// Flat p2 kd-tree (issue #38, SPEC_FLAT_KDTREE.md); see README.md.
 
 const KD_LEAF: usize = 8;
 
-/// Kd-tree leaf capacity (mirrors `sim._KD_LEAF` = 8). Exposed as a `const` so
-/// the compiler can bake the value into the leaf indexing arithmetic.
+/// Kd-tree leaf capacity, mirrors `sim._KD_LEAF` = 8.
 #[inline]
 fn is_power_of_two(n: usize) -> bool {
     n > 0 && (n & (n - 1)) == 0
 }
 
-/// Recursive median-split build (matches the pointer tree's recursion). Not a
-/// closure: passes each buffer by `&mut` so the compiler can prove aliasing.
+/// Recursive median-split build matching the pointer tree; buffers passed by `&mut`.
 #[allow(clippy::too_many_arguments)]
 fn flat_build(
     node: usize,
@@ -1061,12 +987,7 @@ fn flat_build(
     );
 }
 
-/// Build a perfect binary flat kd-tree over N stars, `N = 2^k, k >= 3`.
-///
-/// Returns a dict with the tree arrays (see `SPEC_FLAT_KDTREE.md`). Raises
-/// `ValueError` for any N that is not a power of two >= 8 - the p2 discipline
-/// is enforced at the build boundary so callers never silently get a broken
-/// tree.
+/// Build a perfect flat kd-tree over N = 2^k (k >= 3) stars; ValueError otherwise.
 #[pyfunction]
 fn build_flat_kdtree(
     py: Python<'_>,
@@ -1091,8 +1012,7 @@ fn build_flat_kdtree(
     }
     let m = n / KD_LEAF;
     if !is_power_of_two(m) {
-        // Redundant given `n` is p2 and `KD_LEAF` is 8 (also p2), but a defense against a future
-        // KD_LEAF bump breaking the invariant silently.
+        // Redundant while KD_LEAF is p2; guards a future KD_LEAF bump.
         return Err(pyo3::exceptions::PyValueError::new_err(format!(
             "n_stars / KD_LEAF must also be a power of two (got m={})",
             m
@@ -1142,10 +1062,7 @@ fn build_flat_kdtree(
         star_perm_inv[orig] = i as i32;
     }
 
-    // Subtree aggregates at build: every star unsettled -> nuns = subtree_size, tsmax = -1.
-    // subtree_size for a perfect binary tree with M leaves and 8 stars/leaf: node i's subtree
-    // holds N / 2^depth(i) stars. At the root (depth 0) that's N; at each leaf that's 8. Easier
-    // to compute in one BFS pass than to track depth explicitly.
+    // Build aggregates: nuns = subtree size, tsmax = -1; subtree size via one BFS pass (README.md).
     let mut nuns: Vec<i32> = vec![0; total];
     let tsmax: Vec<f64> = vec![-1.0; total];
     // Leaves (indices m-1..2m-2) each hold 8 stars.
@@ -1180,18 +1097,7 @@ fn build_flat_kdtree(
     Ok(d.into())
 }
 
-/// Nearest believed-unsettled star to (px, py, pz) at `year`, flat-tree edition.
-///
-/// Bit-identical mirror of `nn_impl` (the pointer-tree query) with two mechanical
-/// substitutions: `2i+1, 2i+2` for children, `i >= M-1` for the leaf test. The
-/// `dhi`/`dlo` pruning, lightcone gate, and (d^2, lowest-original-index) tie-break
-/// are copied verbatim, so at matching p2 N this returns the SAME original index
-/// as the pointer tree for every query - the acceptance criterion in
-/// `test_flat_kdtree_oracle.py`.
-///
-/// `excl` contains ORIGINAL star indices; the leaf scan checks each candidate's
-/// original index (via `star_perm`) against `excl[..n_ex]`, matching the pointer
-/// tree's semantics.
+/// Flat-tree mirror of `nn_impl`; same result as the pointer tree at matching p2 N (README.md).
 #[allow(clippy::too_many_arguments)]
 fn flat_nn_impl(
     px: f64,
@@ -1222,8 +1128,7 @@ fn flat_nn_impl(
     let mut best: i64 = -1;
     let mut best_d2 = f64::INFINITY;
 
-    // Traversal stack. At N=2^k the tree has depth k-3, so at most k-3 <= ~29 nodes on the
-    // stack at once (log2 of 2^32); a fixed 128 is defensively over-sized (matches nn_impl).
+    // Traversal stack: depth k-3 <= ~29 nodes; a fixed 128 matches nn_impl (README.md).
     let mut stack: [i32; 128] = [0; 128];
     stack[0] = 0; // root
     let mut sp: usize = 1;
@@ -1289,28 +1194,9 @@ fn flat_nn_impl(
             }
         }
         if node >= m_minus_one {
-            // Leaf: 8 contiguous permuted stars at [leaf_offset .. leaf_offset+8).
-            //
-            // Two-pass structure for auto-vectorization:
-            //   Pass 1: branch-free d² compute over 8 contiguous stars. LLVM can vectorize this
-            //           as 8 lanes on AVX-512 (or 4+4 on AVX2). Bit-identical to scalar
-            //           `((dx*dx) + (dy*dy)) + (dz*dz)` per lane - IEEE 754 rounds every mulpd/addpd
-            //           the same as the scalar equivalents, and there is no FMA (default rustc has
-            //           no fast-math).
-            //   Pass 2: scalar mask/reduce with settled + exclude + light-cone + tie-break. This
-            //           keeps the branching out of the vector pipeline, and the reduce visits stars
-            //           0..8 in the SAME order as the old single-pass loop, so the tie-break
-            //           `(d², lowest original index)` is preserved.
+            // Leaf scan, 8 contiguous stars: pass 1 branch-free d2, pass 2 scalar mask/reduce (README.md).
             let leaf_offset = (node - m_minus_one) * KD_LEAF;
-            // Two-pass structure: (1) branch-free d² compute over 8 contiguous stars,
-            // (2) scalar mask/reduce with the settled/exclude/light-cone/tie-break logic.
-            //
-            // Explicit AVX2 intrinsics for step (1) were tried and measured *slower* than
-            // this scalar loop at `KD_LEAF = 8` (440k vs 557k qps at N=32768, single-thread).
-            // The setup/store overhead of writing an intermediate `[f64; 8]` outweighs the
-            // arithmetic savings; scalar `vsubsd`/`vmulsd`/`vaddsd` under `-C target-cpu=
-            // x86-64-v3` keeps everything in registers. SIMD would win at leaf sizes of
-            // ~32-64 stars, but a wider leaf is a separate architectural call.
+            // Scalar pass 1 beat explicit AVX2 at KD_LEAF = 8 (README.md, AVX2 measurement).
             let mut d2s: [f64; KD_LEAF] = [0.0; KD_LEAF];
             for k in 0..KD_LEAF {
                 let i = leaf_offset + k;
@@ -1339,8 +1225,7 @@ fn flat_nn_impl(
                     if is_instant {
                         continue;
                     }
-                    // Reuse d2 from Pass 1 for the light-cone check; the scalar version recomputed
-                    // dx/dy/dz here, so both `d` values here are IEEE-identical.
+                    // Reuse d2 from pass 1 for the light-cone check (IEEE-identical to recomputing).
                     let d = d2.sqrt();
                     if sy_i + d / c <= year {
                         continue;
@@ -1360,8 +1245,7 @@ fn flat_nn_impl(
             } else {
                 pz
             };
-            // Same "near-first" ordering as the pointer tree: push far first, then near, so
-            // the near child pops next (DFS matches, same visitation order, same pruning).
+            // Near-first: push far then near so the near child pops next, as in the pointer tree.
             let (lo_idx, hi_idx) = (2 * node + 1, 2 * node + 2);
             if p_ax < split[node] {
                 stack[sp] = hi_idx as i32;
@@ -1440,13 +1324,7 @@ fn nearest_unsettled_flat(
     ))
 }
 
-/// Fold star `original_idx`'s settlement into the flat tree's leaf-to-root
-/// aggregates. Pointer-free: parent walk uses `(i - 1) >> 1`.
-///
-/// Mutates `sy_p`, `nuns`, `tsmax` in place; `star_perm_inv` is read to find the
-/// star's permuted position. Must be called exactly once per star, at the time
-/// its `settled_year` is first assigned - same contract as
-/// `swarm.sim._kd_mark_settled` for the pointer tree.
+/// Fold star `original_idx`'s settlement into the flat tree aggregates; call once per star.
 #[pyfunction]
 fn mark_settled_flat(
     original_idx: i64,
@@ -1490,14 +1368,7 @@ fn mark_settled_flat(
     Ok(())
 }
 
-/// Fold star `star_orig`'s settlement into the flat tree's aggregates. Free
-/// function used inside `run_fill_flat` (which holds mutable borrows to sy, sy_p,
-/// nuns, tsmax and cannot use the `#[pyfunction]` `mark_settled_flat` above).
-///
-/// Updates both `sy` (unpermuted, for O(1) reads by original index in the event
-/// loop) and `sy_p` (permuted, threaded into `flat_nn_impl`). The dual write is
-/// cheap - one memory store each - and eliminates the permutation lookup in the
-/// hot query.
+/// Free-function twin of `mark_settled_flat` for `run_fill_flat`; writes both `sy` and `sy_p`.
 #[inline]
 fn mark_settled_flat_impl(
     star_orig: usize,
@@ -1527,19 +1398,7 @@ fn mark_settled_flat_impl(
     }
 }
 
-/// The p2 twin of `run_fill`: same event loop, same aggregate outputs, but the
-/// tree ops (`nearest_unsettled`, `mark_settled`) go through the flat p2 kd-tree
-/// (issue #38 p2 substrate). At `n_stars = 2^k, k >= 3` this is a drop-in for
-/// `run_fill`; the oracle `test_flat_run_fill_oracle.py` requires the two return
-/// byte-identical aggregates across every coordination mode + periodicity +
-/// (offspring, retarget-cap, seed) combination in the test matrix.
-///
-/// Every f64 discipline of `run_fill` carries over: `sqrt` in the query kernel
-/// (matches numba `nearest_unsettled_njit`), `ref_root` (glibc `pow(x, 0.5)`)
-/// for hop distances (matches CPython `** 0.5`, see the module-level notes on
-/// the 1-ULP glibc pow/sqrt divergence #78 pinned). The heap, `Pool`, event
-/// resolution, and inflight decrease-key are unchanged from `run_fill` because
-/// they are tree-agnostic.
+/// The p2 twin of `run_fill` over the flat kd-tree; see README.md (run_fill_flat).
 #[pyfunction]
 #[allow(clippy::too_many_arguments)]
 fn run_fill_flat(

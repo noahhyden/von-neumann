@@ -91,9 +91,11 @@ Binding repo-wide (`CLAUDE.md` 5) and enforced here for the module's authored fi
   approximately-equal and much-greater signs (≈, ≫), superscripts (²), the sun symbol
   (☉), arrows. Accented letters in names (for example the author's) are fine too.
 
-*Enforcement:* `scripts/check-typography.mjs` (run in CI) scans authored files and
-exits nonzero on any em-dash, en-dash, or emoji. It skips generated/build artifacts
-(`refs.bib`, `build/`, `node_modules/`).
+*Enforcement:* `npm run check:typography`, which is the repo-wide guard
+`.github/guards/check_typography.py` run over `papers/` with `--en-dash` (the en-dash
+rule is papers-only; the rest of the repo bans em-dash and emoji only). It exits
+nonzero on any em-dash, en-dash, or emoji, and skips generated and binary artifacts
+(`refs.bib`, `build/`, `node_modules/`, PDFs, lock files).
 
 ## R6. Generated files vs authored files. [enforced]
 

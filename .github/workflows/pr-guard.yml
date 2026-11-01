@@ -68,6 +68,12 @@ jobs:
         continue-on-error: true
         run: python3 .github/guards/check_typography.py /tmp/changed.txt
 
+      # CLAUDE.md section 5: explanation in code is capped at ONE line. Enforced at zero over the whole tracked tree, so there is no baseline to ratchet and no changed-file list to get wrong.
+      - name: 'comments: the one-line explanation cap'
+        id: comments
+        continue-on-error: true
+        run: make lint-rules
+
       # The import DAG, result owners and paper edges are derived, not remembered; selftest asserts the correctness contract depgraph documents.
       - name: 'depgraph: the import DAG still matches its correctness contract'
         id: depgraph
@@ -124,7 +130,7 @@ jobs:
           cd papers && node scripts/gen-versions.mjs
           node -e "const {PAPER_VERSIONS}=await import('../frontend/src/papers-versions.ts'); const n=Object.values(PAPER_VERSIONS).reduce((a,v)=>a+v.length,0); if(!n){console.error('gen-versions produced no versions; is the checkout shallow?');process.exit(1);} console.log('gen-versions OK:',n,'versions');"
           node --test scripts/zenodo-publish.test.mjs
-          node scripts/check-typography.mjs
+          python3 ../.github/guards/check_typography.py --en-dash .
 
       - name: Aggregate guard results
         if: always()

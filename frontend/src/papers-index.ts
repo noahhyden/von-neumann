@@ -24,10 +24,7 @@ export interface PaperMeta {
   cites: string[];
   /** Path to the compiled PDF, relative to the site root: papers/<slug>.pdf */
   pdf: string;
-  /**
-   * Per-paper Zenodo concept DOI (always resolves to the latest version), or null
-   * until one is minted. Production preferred over sandbox; see doiIsSandbox.
-   */
+  /** Per-paper Zenodo concept DOI (latest version), or null until minted; production over sandbox. */
   doi: string | null;
   /** True when `doi` is a sandbox.zenodo.org DOI (label it as such; not citable). */
   doiIsSandbox: boolean;

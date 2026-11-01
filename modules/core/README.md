@@ -101,6 +101,10 @@ plain Monte Carlo readout comes from the same 2N A and B rows, which is why `uq_
 returns uncertainty and attribution for the price of one. Citations for each estimator
 are in [`REFERENCES.md`](REFERENCES.md).
 
+## The mulberry32 parity fixture
+
+`tests/rng_js_fixture/gen.mjs` feeds `tests/test_rng_js_parity.py`. JS is the algorithmic reference; Python mirrors it in `swarm/src/swarm/rng.py`, `multi_probe/src/multi_probe/rng.py` and the copies under `frontend/`. Regenerate with `node core/tests/rng_js_fixture/gen.mjs > core/tests/rng_js_fixture/fixture.json`. The generator deliberately has no imports (its `nextFloat` is a verbatim copy), so drift from a frontend file is caught by the parity test, not hidden by a shared import.
+
 ## Discipline (still binding)
 
 Everything here is a **pure fold with a seeded RNG threaded through** (CLAUDE.md

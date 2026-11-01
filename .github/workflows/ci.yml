@@ -154,8 +154,7 @@ jobs:
       - name: Zenodo metadata builder tests
         run: node --test papers/scripts/zenodo-publish.test.mjs
       - name: Typography rules - no em-dash, no en-dash, no emoji (papers/RULES.md)
-        working-directory: papers
-        run: node scripts/check-typography.mjs
+        run: python3 .github/guards/check_typography.py --en-dash papers
       # Figures are generated (gitignored vector PDFs) from the validated source modules, so the paper restates only their real output (papers/RULES.md R1, P4); a figure-build failure fails the PR because the typeset needs them.
       - name: Render coordination-tax figures from committed results (swarm)
         if: steps.changed.outputs.coordination_tax == 'true'

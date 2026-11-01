@@ -1,22 +1,8 @@
-# von-neumann dev-suite (trial)
-#
-# A thin root task runner over the monorepo. It does NOT fuse modules or add a server -
-# each module stays independently runnable (CLAUDE.md 4); this just gives one place to
-# run them together. Python modules use `uv run pytest`; `frontend` and `papers` are the
-# two JS packages. Sweeps take a memory-aware worker cap so they stop OOMing.
-#
-# Common use:
-#   make            # help
-#   make test       # every module's tests (python + frontend)
-#   make test-py    # just the python modules
-#   make test M=swarm   # one module
-#   make frontend   # live-rebuild the frontend (npm run serve)
-#   make run SPEC=modules/swarm/runs/branching-scale.yaml   # one simulation, config in the yaml
-#   make papers     # generate + typography-check the papers
+# von-neumann dev-suite: a thin root task runner over the monorepo (see README.md).
 
-# Python modules = dirs under modules/ or the repo root with a pyproject.toml but no package.json (JS).
-PY_MODULES := $(sort $(shell for d in modules/*/ */; do d=$${d%/}; \
-	[ -f "$$d/pyproject.toml" ] && [ ! -f "$$d/package.json" ] && basename $$d; done))
+# The module list has one source of truth: scripts/depgraph.py (plus the two tooling packages).
+PY_MODULES := $(shell python3 scripts/depgraph.py --json | python3 -c \
+	"import json,sys; print(*json.load(sys.stdin)['modules'], 'scripts', 'runner')")
 # Shell snippet: cd into module $$m, wherever it lives.
 MODCD = cd "$$([ -d modules/$$m ] && echo modules/$$m || echo $$m)"
 
@@ -103,7 +89,7 @@ ps:
 papers:
 	@cd papers && npm run check
 
-# Guards ported from pivi: comments are one line, an AGENTS.d rule is one line of 255.
+# Guards: comments are one line, an AGENTS.d rule is one line of 255.
 lint-rules:
 	@python3 .github/scripts/check_one_line_comments.py
 	@python3 .github/scripts/check_agents_rule_length.py

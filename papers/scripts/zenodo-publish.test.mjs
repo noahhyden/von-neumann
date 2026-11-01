@@ -1,10 +1,4 @@
-// Validation tests for the pure (network-free) core of zenodo-publish.mjs (issue #8).
-// The API-driving phases need a live Zenodo token and are exercised by a real sandbox
-// run; what we CAN assert here is that the metadata we would send is well-formed and
-// faithfully mirrors paper.json - the part most likely to silently drift. Run with:
-//   node --test papers/scripts/zenodo-publish.test.mjs
-//
-// ASCII only, no em-dash (CLAUDE.md 5).
+// Network-free tests for zenodo-publish.mjs; run: node --test papers/scripts/zenodo-publish.test.mjs
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

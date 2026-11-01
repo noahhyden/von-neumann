@@ -104,5 +104,6 @@ The tool reads the tree and never runs a fold, so it can never change a number
 cd scripts && uv run --extra dev coverage run -m pytest -q && uv run --extra dev coverage report
 ```
 
-`test-all.sh` runs every module's suite plus the frontend; the CI `scripts` job runs
-this suite under the coverage gate.
+`make test` at the repo root runs every module's suite plus the frontend, taking its
+module list from this file's `--json` output; the CI `scripts` job runs the depgraph
+suite under the coverage gate.

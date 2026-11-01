@@ -1,32 +1,4 @@
-// zenodo-publish.mjs - mint a per-paper Zenodo DOI from CI (issue #8).
-//
-// The repo already has ONE Zenodo concept DOI (10.5281/zenodo.21249296, recorded in
-// CITATION.cff) minted by the repo-scoped GitHub->Zenodo auto-integration: it archives
-// the whole monorepo on every Release and is a legitimate software citation we keep.
-// But that integration cannot scope to a subdirectory, so every paper shares it. This
-// script bypasses the auto-integration and drives Zenodo's REST API directly, ONE
-// deposition per paper, so each paper is independently citable under its own concept
-// DOI, with a fresh version DOI per version (the same "version = commit" spine as #7).
-//
-// It runs in two phases so the reserved DOI can be printed ON the PDF before upload:
-//   reserve  - create the deposition (or a new version of an existing one), read back
-//              the pre-reserved DOI, write it into papers/<slug>/doi.tex, and stash the
-//              deposition id + upload bucket in a state file.
-//   finalize - upload the (DOI-stamped) PDF + reproducibility zip, set the metadata
-//              from paper.json, publish, and write the minted DOIs back into paper.json.
-//
-// Sandbox vs production is chosen by ZENODO_BASE (sandbox.zenodo.org/api by default).
-// The concept-id state is namespaced per environment (zenodo_sandbox_* vs zenodo_*), so
-// a sandbox run never pollutes the production identifiers and graduating is additive.
-//
-// API contract verified against https://developers.zenodo.org (endpoints, prereserve_
-// doi.doi, links.bucket, actions/newversion -> links.latest_draft, actions/publish,
-// conceptrecid/conceptdoi, Bearer auth with scopes deposit:write + deposit:actions).
-//
-// No numbers invented (CLAUDE.md 1): the only literal identifiers are the repo concept
-// DOI and repo URL, both sourced from CITATION.cff.
-//
-// ASCII only, no em-dash (CLAUDE.md 5).
+// zenodo-publish.mjs - mint a per-paper Zenodo DOI from CI in two phases, reserve and finalize (issue #8; see papers/README.md).
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -48,12 +20,7 @@ export function toFamilyGiven(name) {
   return `${family}, ${given}`;
 }
 
-/**
- * Build the Zenodo deposition metadata from a paper.json object. Pure - no I/O, no
- * network - so it is unit-testable. The license defaults to the repo's documented
- * research-prose license, CC BY-NC-ND 4.0 (papers/README.md, LICENSE-DOCS); a paper
- * can override it with paper.license (an SPDX id).
- */
+/** Zenodo deposition metadata from a paper.json; pure, so it is unit-testable. */
 export function buildMetadata(paper, { license } = {}) {
   return {
     upload_type: "publication",

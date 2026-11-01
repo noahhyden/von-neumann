@@ -1,39 +1,14 @@
-// gen-versions.mjs - build frontend/src/papers-versions.ts, the per-paper version
-// list, from git history. A "version" is every commit whose diff touches
-// papers/<slug>/ (the paper.json, main.tex, or body/*.tex); git history IS the
-// version list, no manual tagging (issue #7).
-//
-// This is a BUILD-TIME generator, not a committed one, and that distinction is
-// load-bearing: the newest version entry references the current commit's own SHA,
-// which does not exist until after the commit is made, so the version list can
-// never be committed without contradicting the `git diff --exit-code
-// frontend/src/papers-index.ts` gate in ci.yml. papers-index.ts stays git-derived-
-// free and deterministic; the git-derived version data lives HERE, in a gitignored
-// module regenerated on every build (like refs.bib).
-//
-// It introduces NO numbers of its own: every field mirrors git metadata (commit
-// sha, author date, subject) or is a path/URL derived from the slug and sha.
-//
-// The rendered PDF for a version lives on the `paper-pdfs` orphan branch at
-// <slug>/<shortSha>.pdf (issue #7 uses release-archive, not historical recompiles).
-// We detect which versions have an archived PDF with `git ls-tree` over that branch;
-// a version with no archived PDF falls back to a link to its frozen source on GitHub.
-//
-// ASCII only, no em-dash (CLAUDE.md 5).
+// gen-versions.mjs - build frontend/src/papers-versions.ts from git history (issue #7; see papers/README.md).
 
 import { readdirSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 
-// papers/ (one up from scripts/) and the repo root (two up). All git commands run
-// with cwd = repoRoot and repo-relative pathspecs, so cwd at call time does not
-// matter.
+// papers/ is one up from scripts/, the repo root two up; git runs with cwd = repoRoot.
 const papersRoot = join(import.meta.dirname, "..");
 const repoRoot = join(import.meta.dirname, "..", "..");
 
-// The candidate refs that may hold the archived PDFs, most-local first. In CI the
-// orphan branch is fetched as origin/paper-pdfs; locally it may be checked out as
-// paper-pdfs. PAPER_PDFS_REF overrides for tests.
+// Candidate refs holding archived PDFs, most-local first; PAPER_PDFS_REF overrides for tests.
 const PDF_REFS = [
   process.env.PAPER_PDFS_REF,
   "paper-pdfs",
@@ -56,14 +31,7 @@ function repoSlug() {
   return m ? m[1] : "noahhyden/von-neumann";
 }
 
-/**
- * The set of "<slug>/<shortSha>.pdf" paths archived on the paper-pdfs branch. We
- * try each candidate ref and use the first that resolves; if none do (no branch
- * yet, or a shallow clone that never fetched it), the set is empty and every
- * version falls back to a source link. This is the whole reason gen-versions can
- * run before the archive is assembled in CI: it reads the branch, not the built
- * files.
- */
+/** The "<slug>/<shortSha>.pdf" paths archived on paper-pdfs; see README, "Reading the PDF archive". */
 function archivedPdfs() {
   for (const ref of PDF_REFS) {
     const out = git(["ls-tree", "-r", "--name-only", ref]);
@@ -86,9 +54,7 @@ const slugs = readdirSync(papersRoot, { withFileTypes: true })
 
 /** Versions for one slug, newest first, from commits touching papers/<slug>/. */
 function versionsFor(slug) {
-  // NUL-delimited fields, newline-delimited records: full sha, short sha, author
-  // date (ISO, date only), subject. --date=short gives YYYY-MM-DD to match the
-  // ISO dates the site already shows.
+  // NUL-delimited fields, newline-delimited records: full sha, short sha, author date (YYYY-MM-DD), subject.
   const out = git(["log", "--date=short", "--format=%H%x00%h%x00%ad%x00%s", "--", `papers/${slug}/`]);
   if (!out) return [];
   return out

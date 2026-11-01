@@ -1,16 +1,4 @@
-// gen-bib.mjs - generate papers/refs.bib from the project's single bibliography
-// source of truth, frontend/src/sources.ts (CLAUDE.md 1, 4).
-//
-// This script introduces NO numbers of its own: every BibTeX entry mirrors a
-// source that already lives in sources.ts, keyed by that source's `id` so a
-// \cite{williams-ayres-heller-2002} in a paper matches the site's Cite id.
-//
-// sources.ts is TypeScript with no runtime imports, so Node (>=22.6, native type
-// stripping) imports it directly - no build step and no reaching into another
-// module's toolchain. Paths are resolved relative to this file (import.meta.url), so
-// the script runs correctly from any working directory.
-//
-// ASCII only, no em-dash (CLAUDE.md 5).
+// gen-bib.mjs - generate papers/refs.bib from frontend/src/sources.ts (see papers/README.md).
 
 import { writeFileSync } from "node:fs";
 
@@ -21,18 +9,7 @@ function esc(s) {
   return String(s).replace(/([&%#_])/g, "\\$1");
 }
 
-/**
- * Convert one author DISPLAY token ("A. Nicholson", "R. A. Freitas Jr.") into BibTeX's
- * canonical "Last, First" (or "Last, Suffix, First") form.
- *
- * We use "Last, First" rather than the raw display order so BibTeX can identify the
- * surname: numeric styles (IEEEtran) still print "A. Nicholson", and author-year styles
- * (natbib/plainnat, used by the astrobiology-journal manuscript) can form proper Harvard
- * labels like "(Nicholson, 2013)" instead of the whole name. Person names in sources.ts
- * always begin with initials ("A.", "M. H."); a token that does not (an institutional
- * author such as "International Astronomical Union") is left brace-wrapped verbatim so
- * BibTeX does not mistake its last word for a surname.
- */
+/** One author DISPLAY token into BibTeX's "Last, First" form; see README, "Author-name conversion". */
 function toBibName(token) {
   const words = token.split(/\s+/).filter(Boolean);
   if (words.length <= 1 || !/^[A-Z]\.$/.test(words[0])) return `{${token}}`;
@@ -43,18 +20,7 @@ function toBibName(token) {
   return suffix ? `${last}, ${suffix}, ${first}` : `${last}, ${first}`;
 }
 
-/**
- * Convert an author DISPLAY string into BibTeX's "A and B and C" form.
- *
- * The display strings in sources.ts intentionally carry affiliations, "(eds.)",
- * "et al." / "and others", and name suffixes ("Jr.", "III"). We strip the parts that must
- * never enter the author field, split into individual names on the display separators
- * (comma, ampersand, semicolon, or the word "and"), and hand each to toBibName. A trailing
- * "et al." or "and others" becomes BibTeX's "others" keyword (IEEEtran renders it "et al.";
- * author-year styles render it "et al." too).
- *
- * Applied before esc(), so any "&" here is still a literal separator.
- */
+/** A full author DISPLAY string into BibTeX's "A and B and C" form; see README, "Author-name conversion". */
 function authorsToBib(authors) {
   // 1. Strip parenthetical groups (affiliations, "(eds.)", "(ed.)") and collapse whitespace.
   let s = String(authors)
@@ -70,8 +36,7 @@ function authorsToBib(authors) {
     s = stripped.trim();
   }
 
-  // 3. Split into author tokens on the display separators (&, ;, comma, or the word "and"),
-  //    convert each to "Last, First", and drop empties.
+  // 3. Split into author tokens on the display separators, convert each to "Last, First", drop empties.
   const tokens = s
     .split(/\s*(?:[&;,]|\band\b)\s*/i)
     .map((t) => t.trim())
@@ -83,10 +48,7 @@ function authorsToBib(authors) {
   return tokens.join(" and ");
 }
 
-/**
- * Pick an entry type from the venue text. Order matters: the more specific
- * tests run first. This is a heuristic over free-text venues, not a schema.
- */
+/** Pick an entry type from free-text venue; most specific test first. Heuristic, not a schema. */
 function entryType(venue) {
   const v = String(venue);
   if (/textbook|isbn/i.test(v)) return "book";
@@ -118,8 +80,7 @@ function toBibEntry(src) {
   const venueField = VENUE_FIELD[type];
   if (src.venue) lines.push(`  ${venueField} = {${esc(src.venue)}},`);
   if (src.url) lines.push(`  url = {${src.url}},`);
-  // A note only where it adds something: flag entries the repo cites by
-  // reference with no online link, so the gap is visible in the .bib too.
+  // A note only where it adds something: flag entries cited by reference with no online link.
   if (!src.url) lines.push(`  note = {Cited by reference; no online link.},`);
   lines.push(`}`);
   return lines.join("\n");

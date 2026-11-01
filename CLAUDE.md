@@ -118,12 +118,13 @@ This is physics-heavy. Grounding is not optional.
 - New numbers in a change → update that module's `REFERENCES.md` in the same change.
 - **Explanation in code is capped at ONE line.** A module, class or function gets a
   one-line docstring or none, and a run of standalone comments is one line.
-  `make lint-rules` enforces it at zero over tracked `.py/.ts/.tsx/.yml/.yaml/.toml`;
-  a run carrying a pragma (`noqa`, `type: ignore`, `eslint-disable`) and a generated
-  file are exempt. What the cap evicts does not get deleted: the *why* goes to the
-  module README, the *number, its source and its basis* to `REFERENCES.md`, and a
-  *trap for the next agent* to an `AGENTS.d/` rule. Markdown is never scanned, so
-  prose has room - always-loaded code context does not.
+  `make lint-rules` enforces it at zero over tracked
+  `.py/.ts/.tsx/.mjs/.rs/.sh/.yml/.yaml/.toml`; a run carrying a pragma (`noqa`,
+  `type: ignore`, `eslint-disable`) and a generated file are exempt. What the cap
+  evicts does not get deleted: the *why* goes to the module README, the *number, its
+  source and its basis* to `REFERENCES.md`, and a *trap for the next agent* to an
+  `AGENTS.d/` rule. Markdown is never scanned, so prose has room - always-loaded code
+  context does not. Moving bloat from a comment into a README is not a win: cut it.
 - **Adding an agent rule? Add a FILE, never edit `AGENTS.md`.** Every `AGENTS.md` is
   generated from the `AGENTS.d/` beside it and is gitignored. Write
   `<dir>/AGENTS.d/NNN-<slug>.md` - a `## heading` plus ONE body line of at most 255

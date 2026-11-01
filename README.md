@@ -46,25 +46,26 @@ uv pip install -e ".[dev]"
 .venv/bin/pytest
 ```
 
-Everything at once - every module suite plus the frontend's two test layers and
-build - from the repo root:
+Everything at once - every module suite plus the frontend's two test layers -
+from the repo root:
 
 ```bash
-./scripts/test-all.sh
+make test
 ```
 
 It exits nonzero if any suite fails. The frontend needs only `npm ci` in
 `frontend/`; pimas resolves from npm as
 [`pimas-ui`](https://www.npmjs.com/package/pimas-ui), no sibling clone needed.
+`make` on its own lists the other targets.
 
 ## Conventions
 
-- One module = one directory, with its own README, dependencies and tests.
-- `frontend` is the one shared surface, pimas-only, one surface per model.
-- Tests assert that the math behaves correctly, not that the code runs.
-- Every number traces to a source - see e.g.
-  [`modules/closure-sim/REFERENCES.md`](modules/closure-sim/REFERENCES.md).
-- Plain language: this gets read by people who aren't engineers.
+The invariants behind every change here are written once, in
+[CLAUDE.md](CLAUDE.md), and [CONTRIBUTING.md](CONTRIBUTING.md) summarises them for
+contributors. In short: one module = one directory, every number traces to a cited
+source, tests assert that the math behaves correctly rather than that the code ran,
+`frontend` is the one shared pimas-only surface, and the prose is plain enough for
+people who aren't engineers.
 
 ## License
 

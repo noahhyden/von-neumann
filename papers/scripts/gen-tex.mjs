@@ -1,12 +1,4 @@
-// gen-tex.mjs - scaffold an IEEEtran paper from papers/<slug>/paper.json.
-//
-// Usage: node scripts/gen-tex.mjs <slug>
-//
-// This only ever CREATES missing files. It never overwrites an existing
-// main.tex or an existing body/<section>.tex, so hand-written prose is safe.
-// Run it once to lay down the skeleton, then edit the .tex files by hand.
-//
-// ASCII only, no em-dash (CLAUDE.md 5).
+// gen-tex.mjs - scaffold an IEEEtran paper from papers/<slug>/paper.json; usage: node scripts/gen-tex.mjs <slug>
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

@@ -132,3 +132,16 @@ in this project builds on (GH Actions Linux runners included). A checkout on an
 older CPU would fail at runtime with SIGILL - if that ever matters, remove the
 `target-feature` line and the extension will fall back to baseline SSE2 at a
 modest wall-clock cost.
+
+## Design notes
+
+Long-form rationale for `src/lib.rs`, whose comments are capped at one line. Tests: `tests/test_rust_fill_loop.py` (run_fill oracle), `tests/test_flat_kdtree_oracle.py` and `tests/test_flat_run_fill_oracle.py` (flat tree). Spec: `SPEC_FLAT_KDTREE.md`.
+
+- **Scope (#33).** `run_fill` owns the whole event loop for `policy="powered"`, `coordination in {instant, lightspeed, inflight}`, `stepping="event"`. Galaxy generation and the tree build stay in Python (seeded RNG not ported); Rust gets the SoA field and tree and returns raw aggregates for `swarm.sim` to build `SwarmResult`.
+- **Determinism contract.** Same left-to-right f64 order as the Python reference, no fastmath, `round_ties_even` to match Python `round()`. `density**(-1/3)` is precomputed in Python (`inv_d_nn`) so the loop has no `powf`. Event order is a min-heap on `(arrive_year, pid)` plus the same batch re-sort as `_resolve_batch`, so heap internals are not load-bearing.
+- **Hops use glibc `pow(x, 0.5)`, the query uses `sqrt` (#78).** CPython `** 0.5` is libm `pow`, which is 1 ULP off hardware `sqrt` for some arguments. A 1-ULP hop cascades (arrive -> settled_year -> learn_year -> retarget), so hops must reproduce `pow`; `black_box` on the exponent stops LLVM folding it back into `sqrt`. The query matches numba `nearest_unsettled_njit` with `sqrt`.
+- **Flat kd-tree (#38).** At `N = 2^k, k >= 3` and `KD_LEAF = 8` the tree is perfect with `M = N/8` leaves, so heap indexing (children `2i+1, 2i+2`, leaf iff `i >= M-1`) replaces the `lo`/`hi`/`parent` arrays. The median-split build is identical to `sim._build_kdtree`, so results match the pointer tree at every p2 N. `build_flat_kdtree` raises `ValueError` for non-p2 N so callers never get a broken tree.
+- **Stack bound.** Depth is k-3, so at most about 29 nodes on the stack for N up to 2^32; the fixed 128 is safe.
+- **Leaf scan.** Two passes: branch-free d^2 over 8 stars, then a scalar mask/reduce in the original order so the `(d^2, lowest original index)` tie-break holds; no FMA. Explicit AVX2 for pass 1 measured slower than scalar (440k vs 557k qps at N=32768, single-thread) because of the `[f64; 8]` store overhead; SIMD would only pay at leaf sizes of about 32-64.
+- **Settlement.** `mark_settled_flat` is called exactly once per star and walks leaf-to-root with `(i - 1) >> 1`. The inline variant writes both `sy` and `sy_p` so the hot query needs no permutation lookup.
+- **Inflight.** `by_target` plus lazy heap validation reproduces the Python decrease-key; the final front radius uses the incrementally maintained maximum, equal to the `_front_radius` rescan.

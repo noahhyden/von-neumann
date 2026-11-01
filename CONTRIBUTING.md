@@ -63,4 +63,4 @@ Each Python module is self-contained:
     cd <module> && uv run --extra dev pytest -q
 
 The whole suite (all modules plus the frontend's two test layers) runs from the repo
-root with `./scripts/test-all.sh` - see the README's "Reproducing all results".
+root with `make test`; `make lint-rules` checks the one-line explanation cap.

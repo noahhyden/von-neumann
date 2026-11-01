@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 EM_DASH = "\u2014"
+EN_DASH = "\u2013"
 
 # Emoji only. Greek letters, arrows and the math symbols CLAUDE.md allows sit below U+2600 and are deliberately absent.
 _EMOJI_RANGES = (
@@ -30,6 +31,14 @@ _SKIP_SUFFIX = {".lock", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".ico", ".woff
 _SKIP_NAME = {"package-lock.json", "uv.lock", "Cargo.lock"}
 
 
+_PRUNE_DIRS = frozenset({".git", "node_modules", ".venv", "__pycache__", "build", "dist", "target"})
+
+
+def _pruned(path: Path) -> bool:
+    """True when any path segment is a build or vendor directory."""
+    return any(part in _PRUNE_DIRS for part in path.parts)
+
+
 def is_emoji(ch: str) -> bool:
     cp = ord(ch)
     if cp in _ASTRONOMY:
@@ -37,8 +46,8 @@ def is_emoji(ch: str) -> bool:
     return any(lo <= cp <= hi for lo, hi in _EMOJI_RANGES)
 
 
-def scan(path: Path) -> list[str]:
-    """Return one message per offending line in `path`."""
+def scan(path: Path, en_dash: bool = False) -> list[str]:
+    """Return one message per offending line in `path`; `en_dash` adds the papers-only U+2013 rule."""
     if path.name in _SKIP_NAME or path.suffix.lower() in _SKIP_SUFFIX:
         return []
     try:
@@ -51,6 +60,8 @@ def scan(path: Path) -> list[str]:
             continue
         if EM_DASH in line:
             out.append(f"{path}:{n}: em-dash (U+2014); use a plain ASCII hyphen")
+        if en_dash and EN_DASH in line:
+            out.append(f"{path}:{n}: en-dash (U+2013); use a plain ASCII hyphen")
         bad = sorted({c for c in line if is_emoji(c)})
         if bad:
             out.append(f"{path}:{n}: emoji {' '.join(repr(c) for c in bad)}")
@@ -60,12 +71,18 @@ def scan(path: Path) -> list[str]:
 def main(argv: list[str]) -> int:
     if argv and argv[0] == "--selftest":
         return selftest()
+    en_dash = "--en-dash" in argv
+    argv = [a for a in argv if a != "--en-dash"]
     if not argv:
-        print("usage: check_typography.py <changed-files-list>", file=sys.stderr)
+        print("usage: check_typography.py [--en-dash] <changed-files-list|directory>", file=sys.stderr)
         return 2
-    listing = Path(argv[0])
-    paths = [Path(p) for p in listing.read_text().split() if p]
-    failures = [m for p in paths for m in scan(p)]
+    target = Path(argv[0])
+    # A directory is walked in full; anything else is a newline-separated list of paths.
+    if target.is_dir():
+        paths = sorted(p for p in target.rglob("*") if p.is_file() and not _pruned(p))
+    else:
+        paths = [Path(p) for p in target.read_text().split() if p]
+    failures = [m for p in paths for m in scan(p, en_dash)]
     for m in failures:
         print(f"::error::{m}")
     print(f"typography: scanned {len(paths)} files, {len(failures)} violations")
@@ -105,6 +122,10 @@ def selftest() -> int:
         lock = Path(d) / "uv.lock"
         lock.write_text("this \u2014 that\n")
         assert scan(lock) == [], "lock files are exempt"
+        endash = Path(d) / "endash.tex"
+        endash.write_text("pages 10\u201320\n")
+        assert scan(endash) == [], "en-dash is off by default"
+        assert len(scan(endash, en_dash=True)) == 1, scan(endash, en_dash=True)
     print("check_typography selftest OK")
     return 0
 

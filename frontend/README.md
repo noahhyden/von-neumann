@@ -152,6 +152,18 @@ src/
   smoke.ts               headless integration check (reactive graph + speculate rollback + bridge)
 ```
 
+## Build and test notes
+
+- Differential test: `gen-diff.mjs` runs seeded random factories through the TS port; `diff_check.py` recomputes them with the Python closure-sim and asserts agreement. Seeded, never `Math.random` (CLAUDE.md 7), so failures reproduce.
+
+```sh
+node scripts/gen-diff.mjs && (cd ../closure-sim && uv run python ../frontend/scripts/diff_check.py)
+```
+
+- `serve-dist.mjs` exists because browsers refuse `<script type="module">` over `file://` (module CORS); it serves the exact built bytes that `pages.yml` deploys.
+- `build.mjs` runs `papers/scripts/gen-versions.mjs` first; `src/papers-versions.ts` is gitignored because it names the current commit's SHA (empty if git history is missing, so shallow clones build).
+- The bundle keeps a `/*! ... */` legal banner through minification: it embeds pimas (MIT), see [THIRD_PARTY_NOTICES](../THIRD_PARTY_NOTICES).
+
 ## Develop
 
 ```sh

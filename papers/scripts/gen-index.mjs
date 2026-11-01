@@ -1,21 +1,9 @@
-// gen-index.mjs - build frontend/src/papers-index.ts from every
-// papers/<slug>/paper.json, after validating that each declared \cite id
-// resolves to a real source in frontend/src/sources.ts.
-//
-// The emitted file is committed and imported by the frontend bundle, so it is
-// pure data with ZERO pimas imports (Layer A, CLAUDE.md 7). It introduces no
-// numbers: it only carries paper metadata already written in the paper.json
-// files. Run from inside papers/.
-//
-// ASCII only, no em-dash (CLAUDE.md 5).
+// gen-index.mjs - build frontend/src/papers-index.ts from papers/<slug>/paper.json (see papers/README.md).
 
 import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 
-/** Every citation id used in a compiled document. Handles both the numeric \cite (IEEEtran
- * papers, e.g. electronics-wall) and natbib's \citep / \citet (author-year papers, e.g.
- * coordination-tax), including their starred forms, optional [pre][post] notes, and
- * comma-separated id lists. */
+/** Every citation id used in a compiled document; see README, "Citation and abstract parsing". */
 function citesInTex(tex) {
   const ids = new Set();
   for (const m of tex.matchAll(/\\cite[pt]?\*?(?:\[[^\]]*\])*\{([^}]*)\}/g)) {
@@ -24,13 +12,7 @@ function citesInTex(tex) {
   return ids;
 }
 
-/**
- * Canonicalize an abstract so the LaTeX copy (main.tex) and the plain-text copy
- * (paper.json, shown on the site) compare equal when they say the same thing.
- * Unwraps simple markup, drops inline-math delimiters, folds "N percent" and
- * "N\%" to a single "%" form, and strips the LaTeX thin-space `{,}` used inside
- * digit groupings (200{,}000 in main.tex vs 200,000 in paper.json).
- */
+/** Canonicalize an abstract so the LaTeX and plain-text copies compare equal; see README. */
 function normAbstract(s) {
   return String(s)
     .replace(/\\(?:emph|textbf|textit|texttt|mbox)\{([^}]*)\}/g, "$1")
@@ -45,8 +27,7 @@ function normAbstract(s) {
     .toLowerCase();
 }
 
-// sources.ts has no runtime imports, so Node imports the TypeScript directly (native
-// type stripping). Paths resolve relative to this file, so cwd does not matter.
+// Node imports the TypeScript sources.ts directly; paths resolve relative to this file.
 const { sourceById } = await import(new URL("../../frontend/src/sources.ts", import.meta.url).href);
 
 // The papers module root (papers/), one level up from scripts/.
@@ -71,19 +52,13 @@ for (const path of entries) {
     }
   }
 
-  // Prose- and abstract-level rules only apply once a paper is a real document
-  // (main.tex exists). A paper.json alone (pre-scaffold) is only checked for
-  // resolvable cite ids above.
+  // Prose- and abstract-level rules only apply once main.tex exists; paper.json alone is checked for cite ids only.
   const paperDir = dirname(path);
   const mainTexPath = join(paperDir, "main.tex");
   if (existsSync(mainTexPath)) {
     const mainTex = readFileSync(mainTexPath, "utf8");
 
-    // Rule: the declared cites (paper.json, shown on the site) and the cites the
-    // compiled paper actually uses (main.tex + body/*.tex) must match exactly.
-    // refs.bib carries every source, so nothing stops prose from citing an
-    // undeclared source or declaring one it never uses; this makes the site's
-    // reference list an exact manifest of the paper.
+    // Rule: declared cites (paper.json) and cites used in main.tex + body/*.tex must match exactly.
     const proseCites = citesInTex(mainTex);
     const bodyDir = join(paperDir, "body");
     if (existsSync(bodyDir)) {
@@ -105,9 +80,7 @@ for (const path of entries) {
       }
     }
 
-    // Rule: the LaTeX abstract must match paper.json.abstract (after folding the
-    // one legitimate LaTeX-vs-plaintext difference), so the site and the PDF
-    // present the same summary.
+    // Rule: the LaTeX abstract must match paper.json.abstract after folding the LaTeX-vs-plaintext difference.
     const m = mainTex.match(/\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}/);
     if (!m) {
       console.error(`gen-index: ${path}: main.tex has no \\begin{abstract}...\\end{abstract} block`);
@@ -118,11 +91,7 @@ for (const path of entries) {
     }
   }
 
-  // Per-paper Zenodo DOI (issue #8), written back into paper.json by the zenodo
-  // workflow. Production takes precedence over sandbox; while only a sandbox DOI
-  // exists we still surface it, flagged so the site can label it "(sandbox)". The
-  // DOI is an identifier from Zenodo, not a number we invent (CLAUDE.md 1): its
-  // source is the minted deposition, recorded in paper.json.
+  // Per-paper Zenodo DOI (issue #8) from paper.json: production wins over sandbox, sandbox is flagged.
   const prodDoi = paper.zenodo_concept_doi || "";
   const sandboxDoi = paper.zenodo_sandbox_concept_doi || "";
   const doi = prodDoi || sandboxDoi || null;
@@ -180,10 +149,7 @@ export interface PaperMeta {
   cites: string[];
   /** Path to the compiled PDF, relative to the site root: papers/<slug>.pdf */
   pdf: string;
-  /**
-   * Per-paper Zenodo concept DOI (always resolves to the latest version), or null
-   * until one is minted. Production preferred over sandbox; see doiIsSandbox.
-   */
+  /** Per-paper Zenodo concept DOI (latest version), or null until minted; production over sandbox. */
   doi: string | null;
   /** True when \`doi\` is a sandbox.zenodo.org DOI (label it as such; not citable). */
   doiIsSandbox: boolean;

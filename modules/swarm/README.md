@@ -74,7 +74,7 @@ Knobs (`SwarmParams`): `n_stars`, `density_stars_per_pc3`, `probe_speed_c`,
   instead of the core. Runs are now near-linear (the residual is the model's own ~N^0.09-per-star
   arrival growth, not the index), the `finite_size` sweeps reach **N = 200,000**, and
   `tests/test_kdtree_oracle.py` pins the tree to the brute-force scan star-for-star. See
-  `experiments/scaling_benchmark.py` and REFERENCES.md ("Performance and the scale ceiling").
+  `experiments/scaling_benchmark.py` and REFERENCES.md ("Scale ladder" and "Compute-speed figures").
 - **Light-speed-limited coordination** (FRONTIER issue #1) - *the novel extension*. The
   source paper grants every probe perfect instantaneous global knowledge; we add the
   finite-c gate (`coordination="lightspeed"`): a probe treats a distant star as settled only
@@ -94,6 +94,20 @@ Knobs (`SwarmParams`): `n_stars`, `density_stars_per_pc3`, `probe_speed_c`,
     retarget-cap plateau `cap*(N)` from the instant-only bounce depth `b = W_inst/N` alone
     (~3x cheaper than the paired sweep), reporting the smallest cap past which `b` stops moving,
     or no plateau in range. See `experiments/SPEC_PLATEAU_LOCATOR.md`.
+
+## Performance: what makes the fold fast
+
+All of it is bit-identical: `results/*.json` reproduce to the printed digit (`tests/test_measure_results.py`) and timing never changes a number (CLAUDE.md 7). Figures: REFERENCES.md ("Scale ladder", "Compute-speed figures").
+
+- **Cell-list index, event heap, incremental snapshot (#27).** A uniform `round(N^(1/3))`-per-axis grid for nearest-neighbour (ties keep the lowest index); a lazy min-heap of `(actionable_year, probe_id)` with a `by_target` decrease-key under `inflight`; `settled_count` / `front_radius` kept at the settle site (`n_settled()` / `_front_radius()` stay as the O(N) end-of-run cross-check).
+- **Seed ensemble across cores** (`SWARM_WORKERS`, `=1` forces serial): runs are independent and re-collected in seed order.
+- **k-d tree (#30).** A flat grid stayed ~O(N^2): a wasted probe re-targets from deep in the settled core, so the nearest *believed*-unsettled star is a non-local query. `sim._build_kdtree` / `sim._nearest_unsettled_at` carry `kd_nuns` (unsettled count) and `kd_tsmax` (latest `settled_year`) per node, updated in O(depth) per settle, with two prunes that only skip non-answers (oracle: `tests/test_kdtree_oracle.py`):
+  - *Distance prune:* nearest possible point strictly farther than the best (equality descends).
+  - *Belief prune:* every star settled and its beacon already at the box's far corner (`kd_tsmax + dhi/c <= year`); a beacon still in flight is a valid target and is never pruned.
+- **Numba kernel (#27 Part 4).** The search is an `@njit(cache=True, fastmath=False)` function in `swarm/kd_njit.py` over flat numpy arrays (`kd_bucket_flat` + `kd_bucket_offsets`). `SWARM_NO_NJIT=1` selects the pure-Python reference, kept as ground truth.
+- **Per-arrival loop.** Star field as tuples of Python floats (numpy mirrors for the kernel), `_wall_bin` / `_hop_bin` inlined with cached `1/d_nn`, `SwarmState` as `@dataclass(slots=True)` with a pre-built `_njit_args`.
+- **Flat p2 k-d tree and `-O`.** `n_stars = 2^k` uses the Rust heap-indexed tree (`rust/SPEC_FLAT_KDTREE.md`, `run_fill_flat`); non-p2 N keeps the pointer tree so the frozen JSONs stay oracles. `python -O` strips the read-only `if __debug__:` invariants.
+- Out of scope: Rust beyond a pure `pyo3` drop-in, a distributed ensemble, GPU.
 
 ## What's still deferred
 

@@ -160,6 +160,34 @@ separate `zenodo_*` keys, so the sandbox and production state never collide. The
 license defaults to the repo's research-prose license (CC BY-NC-ND 4.0); set
 `paper.license` (an SPDX id) to override.
 
+## Script notes
+
+- All scripts resolve paths from `import.meta.url` (run from anywhere), except `gen-index.mjs`, run from inside `papers/`. None introduces numbers (CLAUDE.md 1).
+- **gen-bib.mjs**: writes `refs.bib` from `frontend/src/sources.ts`, keyed by source `id`. Needs Node >=22.6 (native type stripping), so it imports the `.ts` with no build step. A `note` flags sources cited by reference with no online link.
+  - Names are emitted "Last, First" (not display order) so BibTeX finds the surname: IEEEtran still prints "A. Nicholson", natbib can form "(Nicholson, 2013)".
+  - A token not starting with initials (e.g. "International Astronomical Union") is brace-wrapped verbatim so its last word is not read as a surname.
+  - Affiliations, "(eds.)" and suffixes are stripped; a trailing "et al." or "and others" becomes BibTeX `others`.
+- **gen-index.mjs**: writes the committed `frontend/src/papers-index.ts` (pure data, no pimas, Layer A) after checking every declared cite resolves in `sources.ts`.
+  - Once `main.tex` exists, declared cites must equal the cites used in `main.tex` + `body/*.tex` (`\cite`, `\citep`, `\citet`, starred forms, `[pre][post]` notes), so the site's reference list is an exact manifest.
+  - The LaTeX abstract must equal `paper.json.abstract` after folding markup, "N percent" / "N\%", and the thin-space `{,}` (`200{,}000` vs `200,000`).
+  - The Zenodo DOI (issue #8) is written back to `paper.json`; production beats sandbox, and a sandbox-only DOI is shown flagged "(sandbox)".
+- **gen-tex.mjs** `<slug>`: only creates missing files, never overwrites `main.tex` or `body/<section>.tex`.
+- **gen-versions.mjs**: a version is every commit touching `papers/<slug>/` (issue #7). The output `papers-versions.ts` is gitignored and built every time because its newest entry holds the current commit's own SHA, which would contradict the `git diff --exit-code frontend/src/papers-index.ts` gate in `ci.yml` if committed.
+  - Git runs from the repo root; log fields are `--date=short` (YYYY-MM-DD, matching the site), full sha, short sha, subject.
+  - `archivedPdfs` lists `<slug>/<shortSha>.pdf` on the `paper-pdfs` orphan branch via `git ls-tree`, trying `origin/paper-pdfs` (CI), then `paper-pdfs` (local); `PAPER_PDFS_REF` overrides. If none resolves (shallow clone, no branch yet) the set is empty and each version falls back to a link to its frozen source on GitHub, so it can run before CI assembles the archive.
+- **zenodo-publish.mjs** (issue #8): the repo's one concept DOI `10.5281/zenodo.21249296` ([`CITATION.cff`](../CITATION.cff)) comes from the GitHub-Zenodo integration, which archives the whole monorepo and cannot scope to a subdirectory. This script drives the REST API instead (<https://developers.zenodo.org>), one deposition per paper.
+  - **reserve**: create the deposition or a new version, read `prereserve_doi.doi`, write `papers/<slug>/doi.tex`, stash the deposition id and `links.bucket` in a state file. **finalize**: upload the DOI-stamped PDF and reproducibility zip, set metadata from `paper.json`, publish, write minted DOIs back. Two phases so the DOI is printed on the PDF before upload.
+  - API fields used: `actions/newversion` -> `links.latest_draft`, `actions/publish`, `conceptrecid`/`conceptdoi`. Bearer auth with scopes `deposit:write` + `deposit:actions`.
+  - `ZENODO_BASE` picks the environment (`sandbox.zenodo.org/api` by default); state keys are `zenodo_sandbox_*` vs `zenodo_*` so sandbox never pollutes production.
+  - `node --test papers/scripts/zenodo-publish.test.mjs` checks the network-free metadata core against `paper.json`.
+- **backfill-paper-pdfs.sh**: one-time manual seed of `paper-pdfs` with PDFs of historical versions (not in CI; `pages.yml` archives new ones). It is the only place old LaTeX is recompiled, best-effort, because old LaTeX against old module state is brittle; a failed version is logged and falls back to the source link. Needs git, node (>=22.6), uv, latexmk and IEEEtran (`texlive-publishers`), and push access to origin.
+
+```bash
+papers/scripts/backfill-paper-pdfs.sh                       # all papers, all versions
+papers/scripts/backfill-paper-pdfs.sh coordination-tax      # one paper
+DRY_RUN=1 papers/scripts/backfill-paper-pdfs.sh             # compile + stage, do not push
+```
+
 ## License
 
 The written research (prose in `*.tex` and this Markdown) is licensed

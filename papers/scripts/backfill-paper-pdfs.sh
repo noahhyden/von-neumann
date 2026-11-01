@@ -1,33 +1,6 @@
 #!/usr/bin/env bash
-#
-# backfill-paper-pdfs.sh - ONE-TIME, MANUAL seed of the paper-pdfs orphan branch
-# with the rendered PDF of every historical paper version (issue #7).
-#
-# Why this exists, and why it is not in CI: the deploy pipeline (pages.yml) archives
-# each version's PDF the moment it is built, so from the day the feature lands
-# forward, every new version is captured with no recompilation. But versions that
-# predate the feature were never archived. This script closes that gap ONCE by
-# checking out each historical commit and compiling it best-effort. It is the single
-# accepted "recompile old LaTeX" event; the pipeline itself never recompiles history
-# (that is the whole point of the release-archive approach - old LaTeX against old
-# module state is brittle, e.g. the coordination-tax figure module did not exist at
-# the paper's first commit).
-#
-# A version that fails to compile (missing figure module, LaTeX error at that SHA) is
-# LOUDLY logged and simply left without an archived PDF: the site then links its
-# frozen source on GitHub instead. That is honest - rendered history is best-effort;
-# source history is complete.
-#
-# Prerequisites: git, node (>=22.6 for native TS), uv, and a LaTeX toolchain with
-# latexmk + the IEEEtran class (texlive-publishers). Run from anywhere inside the
-# repo. Requires push access to origin (it pushes the paper-pdfs branch).
-#
-# Usage:
-#   papers/scripts/backfill-paper-pdfs.sh            # all papers, all versions
-#   papers/scripts/backfill-paper-pdfs.sh coordination-tax   # one paper
-#   DRY_RUN=1 papers/scripts/backfill-paper-pdfs.sh  # compile + stage, do not push
-#
-# ASCII only, no em-dash (CLAUDE.md 5).
+
+# backfill-paper-pdfs.sh - one-time manual seed of the paper-pdfs branch with historical PDFs (issue #7; see papers/README.md).
 
 set -uo pipefail
 
