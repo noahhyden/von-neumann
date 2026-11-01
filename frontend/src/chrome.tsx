@@ -29,7 +29,7 @@ export function Nav(props: { surface: string }): Child {
   return (
     <nav style="position:sticky; top:0; z-index:10; background:var(--nav-bg); backdrop-filter:blur(8px);">
       <div style="max-width:var(--wrap); margin:0 auto; min-height:64px; padding:8px 40px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 28px;">
-        <a href="#/" style="display:inline-flex; align-items:center; gap:11px; font-family:var(--serif); font-weight:600; font-size:19px; letter-spacing:-.01em; color:var(--ink); white-space:nowrap;">
+        <a href="/" style="display:inline-flex; align-items:center; gap:11px; font-family:var(--serif); font-weight:600; font-size:19px; letter-spacing:-.01em; color:var(--ink); white-space:nowrap;">
           <Mark size={34} />
           <span>The Arithmetic of Self-Replication<span style="color:var(--falu);">.</span></span>
         </a>
@@ -40,13 +40,13 @@ export function Nav(props: { surface: string }): Child {
             <div class="nav-panel">
               <For each={NAV_MODULES}>
                 {([s, label]: [string, string]) => (
-                  <a href={`#/${s}`} class="ln" onClick={closeMenu} style={`${linkStyle(props.surface === s)} display:block; padding:6px 0; white-space:nowrap;`}>{label}</a>
+                  <a href={`/${s}`} class="ln" onClick={closeMenu} style={`${linkStyle(props.surface === s)} display:block; padding:6px 0; white-space:nowrap;`}>{label}</a>
                 )}
               </For>
             </div>
           </details>
-          <a href="#/papers" class="ln" style={linkStyle(props.surface === "papers")}>Papers</a>
-          <a href="#/sources" class="ln" style={linkStyle(props.surface === "sources")}>Sources</a>
+          <a href="/papers" class="ln" style={linkStyle(props.surface === "papers")}>Papers</a>
+          <a href="/sources" class="ln" style={linkStyle(props.surface === "sources")}>Sources</a>
         </div>
 
         <div style="display:flex; align-items:center; gap:18px;">
@@ -82,10 +82,10 @@ export function Footer(): Child {
           <div>
             <div style={HEAD}>Surfaces</div>
             <ul style={LIST}>
-              <li><a href="#/" class="ln" style={ITEM}>Overview</a></li>
-              <li><a href="#/mission" class="ln" style={ITEM}>Full mission</a></li>
-              <li><a href="#/papers" class="ln" style={ITEM}>Papers</a></li>
-              <li><a href="#/sources" class="ln" style={ITEM}>Sources</a></li>
+              <li><a href="/" class="ln" style={ITEM}>Overview</a></li>
+              <li><a href="/mission" class="ln" style={ITEM}>Full mission</a></li>
+              <li><a href="/papers" class="ln" style={ITEM}>Papers</a></li>
+              <li><a href="/sources" class="ln" style={ITEM}>Sources</a></li>
             </ul>
           </div>
           <div>

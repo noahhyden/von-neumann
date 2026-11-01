@@ -30,20 +30,39 @@ const result = await esbuild({
   metafile: true,
 });
 
-// design.ts is build-only, so compile it into the gitignored .cache and import it.
+// design.ts and routes.ts are build-only too, so compile both into the gitignored .cache and import them.
 const DESIGN = join(ROOT, ".cache", "design.mjs");
 await esbuild({ entryPoints: [join(ROOT, "src/design.ts")], outfile: DESIGN, bundle: true, format: "esm", platform: "node", logLevel: "warning" });
 const { BASE_CSS } = await import(pathToFileURL(DESIGN).href);
+const ROUTES = join(ROOT, ".cache", "routes.mjs");
+await esbuild({ entryPoints: [join(ROOT, "src/routes.ts")], outfile: ROUTES, bundle: true, format: "esm", platform: "node", logLevel: "warning" });
+const { allRoutePaths, SURFACE_TITLE, parsePath } = await import(pathToFileURL(ROUTES).href);
+
 const PLACEHOLDER = "/*__DESIGN_TOKENS__*/";
 const html = await readFile(join(ROOT, "index.html"), "utf8");
 if (!html.includes(PLACEHOLDER)) throw new Error(`build: index.html has no ${PLACEHOLDER} placeholder; the design tokens would not ship`);
-await writeFile(join(OUT, "index.html"), html.replace(PLACEHOLDER, () => BASE_CSS));
+const baseHtml = html.replace(PLACEHOLDER, () => BASE_CSS);
+await writeFile(join(OUT, "index.html"), baseHtml);
 // Static assets referenced by index.html (the social-card image for link unfurls).
 await cp(join(ROOT, "og.svg"), join(OUT, "og.svg"));
 // GitHub Pages custom domain: the CNAME must live in the published artifact.
 await cp(join(ROOT, "CNAME"), join(OUT, "CNAME"));
 // Self-hosted woff2 fonts referenced by index.html.
 await cp(join(ROOT, "fonts"), join(OUT, "fonts"), { recursive: true });
+
+// Pages has no server-side rewrites, so every client route (routes.ts) needs its own real file for a genuine 200; each copy only swaps <title>/og:url.
+const withRouteMeta = (routeHtml, path, title) =>
+  routeHtml
+    .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
+    .replace(/(<meta property="og:url" content=")[^"]*(")/, `$1https://vn.noahhyden.com${path}/$2`);
+for (const path of allRoutePaths()) {
+  const { surface } = parsePath(path);
+  const dir = join(OUT, ...path.split("/").filter(Boolean));
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, "index.html"), withRouteMeta(baseHtml, path, SURFACE_TITLE[surface]));
+}
+// An unknown deep path 404s (correct, Pages has no rewrites) but still renders the app, which falls back to overview client-side (routes.ts).
+await writeFile(join(OUT, "404.html"), baseHtml);
 
 // Report shipped size.
 const js = await readFile(join(OUT, "app.js"));
