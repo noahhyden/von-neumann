@@ -194,7 +194,7 @@ def main() -> int:
     if stale:
         print(
             f"\n{len(stale)} generated file(s) do not match AGENTS.d/: " + ", ".join(stale)
-            + "\nRegenerate with: python3 .github/scripts/gen_agents_md.py --write"
+            + "\nRegenerate with: make agents (pre-commit normally does it for you)"
             "\nA hand edit to AGENTS.md is the usual cause - make it in AGENTS.d/ instead."
         )
         return 1
