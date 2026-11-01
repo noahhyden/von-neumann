@@ -5,6 +5,7 @@ import { For } from "pimas/flow";
 import { sourceById, sourceNumber } from "./sources.js";
 import type { Source } from "./sources.js";
 import { AzulejoDefs, AzulejoField } from "./azulejo.js";
+import { Footer } from "./chrome.js";
 import type { ParamSignal } from "./reactive-model.js";
 
 const fmtNum = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
@@ -42,10 +43,10 @@ export function Band(props: { n?: string; label?: Child; title?: Child; children
   return (
     <section>
       <div class="wrap">
-        {props.n || props.label || props.title ? (
+        {props.label || props.title ? (
           <Scrim spread="md" style="width:fit-content; max-width:100%; padding:var(--sp-3) var(--sp-5); margin:calc(-1 * var(--sp-3)) calc(-1 * var(--sp-5)) var(--sp-2);">
-            {props.n || props.label ? (
-              <p class="marker">{props.n ? <b>{props.n}</b> : null}{props.n && props.label ? " / " : ""}{props.label}</p>
+            {props.label ? (
+              <p class="marker">{props.n ? <b>{props.n}</b> : null}{props.n ? " / " : ""}{props.label}</p>
             ) : null}
             {props.title ? <h2 style="margin:0;">{props.title}</h2> : null}
           </Scrim>
@@ -74,7 +75,7 @@ export function Shell(props: { children?: Child }): Child {
     <div style="position:relative;">
       <AzulejoDefs />
       <AzulejoField />
-      <div style="position:relative; z-index:1;">{props.children}</div>
+      <div style="position:relative; z-index:1;">{props.children}<Footer /></div>
     </div>
   );
 }

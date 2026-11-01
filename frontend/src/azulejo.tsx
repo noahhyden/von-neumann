@@ -61,3 +61,21 @@ export function AzulejoField(props: { pattern?: "quatrefoil" | "rosette"; opacit
     </svg>
   );
 }
+
+/** A horizontal band filled with a tile motif, faded out downward; used behind the footer. */
+export function AzulejoBand(props: { height?: number; opacity?: number; pattern?: string }) {
+  const h = props.height ?? 120;
+  const o = props.opacity ?? 0.28;
+  const pattern = props.pattern ?? "rosette";
+  return (
+    <svg
+      width="100%"
+      height={h}
+      preserveAspectRatio="xMidYMid slice"
+      style={`position:absolute; inset:0; opacity:${o}; pointer-events:none; -webkit-mask-image:linear-gradient(to bottom, #000 40%, transparent); mask-image:linear-gradient(to bottom, #000 40%, transparent);`}
+      aria-hidden="true"
+    >
+      <rect width="100%" height={h} fill={`url(#${pattern})`} />
+    </svg>
+  );
+}

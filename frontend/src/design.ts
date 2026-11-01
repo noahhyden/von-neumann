@@ -3,6 +3,7 @@ export const BASE_CSS = `:root {
   --ground: #12140f; --surface: #1b1e18; --line: #2c302a; --ink: #e5e4db; --granite: #9a988c;
   --laurel: #7fae8f; --ocean: #7fa0b6; --falu: #d67a72;
   --metal: #c79a5b;
+  --nav-bg: rgba(18, 20, 15, .86); --footer-tint: rgba(229, 228, 219, .03);
   --text: var(--ink);
   --muted: var(--granite);
   --panel: var(--surface);
