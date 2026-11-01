@@ -19,6 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Same render check as ci.yml frontend-render, run on every push to main so a broken page never reaches deploy.
   build:
     runs-on: ubuntu-latest
     steps:
@@ -39,6 +40,13 @@ jobs:
       - name: Install the frontend
         working-directory: frontend
         run: npm ci
+
+      # Gate the promotion before the expensive LaTeX steps: Layer A is our logic, Layer B is pimas at the pinned version.
+      - name: Test the frontend
+        working-directory: frontend
+        run: |
+          npm test
+          npm run test:contract
 
       # Papers: generate the .bib from sources.ts (the single bibliography source of truth), typeset each paper with the IEEE LaTeX template, and publish the PDFs beside the site at /papers/<slug>.pdf; best-effort, since a broken paper must never block the site deploy.
       - name: Generate the paper bibliography from sources.ts
