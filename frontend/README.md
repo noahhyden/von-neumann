@@ -140,7 +140,7 @@ range awaits a sourced per-module mass breakdown - an open `[GAP]` in the module
 src/
   model.ts               faithful TS port of closure-sim's math (models + closure + replication + wall)
   model.test.ts          parity test - the port must reproduce the Python CLI exactly (node --test)
-  pimas-contract.test.ts framework canary - exercises ONLY pimas primitives (see "pimas canary" below)
+  contract/pimas-contract.test.ts framework canary - exercises ONLY pimas primitives (see "pimas canary" below)
   scenarios.ts           the two example factories, transcribed from modules/closure-sim/scenarios/*.yaml
   sources.ts             the project-wide bibliography (pure data); sources.test.ts guards its integrity
   coordination.ts        the light-speed coordination-rung logic (pure); coordination.test.ts covers it
@@ -199,9 +199,9 @@ checked *before* merge, two ways, and neither needs a merge-to-check:
 pimas is first-party and single-maintainer, so telling **framework** breakage apart
 from **our** breakage matters. The tests are layered:
 
-- **Layer A** (`npm test`) imports only the pure TS model - a failure is *our*
+- **Layer A** (`npm test`, glob `src/*.test.ts`) imports only the pure TS model - a failure is *our*
   model logic, never pimas.
-- **Layer B** (`npm run test:contract`) imports *only* pimas primitives
+- **Layer B** (`npm run test:contract`, `src/contract/*.test.ts`) imports *only* pimas primitives
   (`createSignal`/`createMemo`/`speculate`/`untrack`, `createStore`/`onStoreWrite`,
   `createAgentBridge`) against the exact `pimas-ui` version pinned by the lockfile -
   with A green and our tree unchanged, a Layer B failure is **pimas**.
