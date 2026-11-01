@@ -4,6 +4,7 @@ import type { Child } from "pimas/dom";
 import { For } from "pimas/flow";
 import { sourceById, sourceNumber } from "./sources.js";
 import type { Source } from "./sources.js";
+import { AzulejoDefs, AzulejoField } from "./azulejo.js";
 import type { ParamSignal } from "./reactive-model.js";
 
 const fmtNum = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
@@ -11,9 +12,8 @@ const fmtNum = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFracti
 export type Tone = "metal" | "chip" | "good" | "bad" | "plain";
 export type ActionKind = "default" | "primary" | "commit" | "ghost";
 
-/** The one page frame: eyebrow, title, optional lede and hero figure, bands, footer. */
+/** The one page frame: title, optional lede and hero figure, bands, footer. */
 export function PageShell(props: {
-  eyebrow: string;
   title: Child;
   lede?: Child;
   hero?: Child;
@@ -24,9 +24,10 @@ export function PageShell(props: {
     <div>
       <section class="hero">
         <div class="wrap">
-          <p class="eyebrow">{props.eyebrow}</p>
-          <h1>{props.title}</h1>
-          {props.lede ? <p class="lede">{props.lede}</p> : null}
+          <Scrim spread="lg" style="width:fit-content; max-width:100%; padding:var(--sp-4) var(--sp-6); margin:calc(-1 * var(--sp-4)) calc(-1 * var(--sp-6));">
+            <h1>{props.title}</h1>
+            {props.lede ? <p class="lede">{props.lede}</p> : null}
+          </Scrim>
           {props.hero ?? null}
         </div>
       </section>
@@ -37,16 +38,44 @@ export function PageShell(props: {
 }
 
 /** One numbered band of the page. */
-export function Band(props: { n?: string; label?: Child; children?: Child }): Child {
+export function Band(props: { n?: string; label?: Child; title?: Child; children?: Child }): Child {
   return (
     <section>
       <div class="wrap">
-        {props.n || props.label ? (
-          <p class="marker">{props.n ? <b>{props.n}</b> : null}{props.n && props.label ? " / " : ""}{props.label}</p>
+        {props.n || props.label || props.title ? (
+          <Scrim spread="md" style="width:fit-content; max-width:100%; padding:var(--sp-3) var(--sp-5); margin:calc(-1 * var(--sp-3)) calc(-1 * var(--sp-5)) var(--sp-2);">
+            {props.n || props.label ? (
+              <p class="marker">{props.n ? <b>{props.n}</b> : null}{props.n && props.label ? " / " : ""}{props.label}</p>
+            ) : null}
+            {props.title ? <h2 style="margin:0;">{props.title}</h2> : null}
+          </Scrim>
         ) : null}
         {props.children ?? null}
       </div>
     </section>
+  );
+}
+
+const SPREAD = { sm: "45%", md: "62%", lg: "80%" };
+
+/** Radial ground halo so a block floats on the page tracery instead of punching a rectangular hole in it. */
+export function Scrim(props: { spread?: "sm" | "md" | "lg"; style?: string; children?: Child }): Child {
+  const stop = SPREAD[props.spread ?? "md"];
+  return (
+    <div style={`background:radial-gradient(ellipse at 50% 50%, var(--ground) 0%, var(--ground) ${stop}, transparent 100%);${props.style ?? ""}`}>
+      {props.children}
+    </div>
+  );
+}
+
+/** One document-height tracery field behind everything; content rides above it on z-index 1. */
+export function Shell(props: { children?: Child }): Child {
+  return (
+    <div style="position:relative;">
+      <AzulejoDefs />
+      <AzulejoField />
+      <div style="position:relative; z-index:1;">{props.children}</div>
+    </div>
   );
 }
 
