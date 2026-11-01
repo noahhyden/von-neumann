@@ -908,7 +908,7 @@ function SpineSurface(props: { model: SpineModel }) {
     if (t && t.taxFraction !== null && t.t100ZeroDwell !== null && t.t100WithDwell !== null)
       return `+${(t.taxFraction * 100).toFixed(2)}% (${fmtNum(t.t100ZeroDwell)} → ${fmtNum(t.t100WithDwell)} yr)`;
     const f = r().dwellFractionOfT100;
-    return f === null ? "-" : `~${fmtSci(f, 1)} of the fill (negligible)`;
+    return f === null ? "-" : `~${fmtSci(f, 1)} of fill`;
   };
   return (
     <PageShell title="One factory. Three scales. The same build time, weighed at each." lede={<>The project models self-replication at three scales: a <strong>single factory</strong>, a <strong>local fleet</strong> and a <strong>galaxy</strong>. This model threads <strong>one</strong> factory through all three. The galaxy model's per-star dwell (the time a settled star spends building before its next probes launch) was an unsourced <em>zero</em>; here it is derived from the fleet's factory build physics, and it is a negligible tax because interstellar travel dwarfs it.</>} hero={<>

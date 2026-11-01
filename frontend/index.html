@@ -63,12 +63,14 @@
   .marker b { color: var(--metal); font-weight: 600; }
 
   .panel { border: 1px solid var(--line); border-radius: var(--radius); }
+  .panel + .panel { margin-top: var(--sp-3); }
+  .fig + .btnrow, .fig + .ctl { margin-top: var(--sp-3); }
   .panel-controls, .panel-readouts, .panel-plain { padding: var(--sp-3); }
   .fig { margin: 0; padding: var(--sp-3) var(--sp-3) var(--sp-2); border: 1px solid var(--line); border-radius: var(--radius); }
   .figcap { font-family: var(--mono); font-size: var(--fs-tiny); color: var(--muted); letter-spacing: var(--track-label); margin: var(--sp-2) 0 0; line-height: var(--lh-mono); }
   svg.chart { display: block; width: 100%; height: auto; }
 
-  .lab { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: var(--sp-3); margin-top: var(--sp-1); }
+  .lab { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: var(--sp-3); margin-top: var(--sp-1); align-items: start; }
 
   .ctl { margin-bottom: var(--sp-2); }
   .ctl-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--sp-1); }
