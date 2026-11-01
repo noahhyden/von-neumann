@@ -2,7 +2,7 @@
 
 Cross-cutting tooling for the monorepo. Unlike the physics modules, this directory
 holds no folds and no numbers - just tools that reason about the repo as a whole. It
-is held to the same test bar as the modules (100% line+branch coverage, green CI).
+is held to the same test bar as the modules: assert on behaviour and edges, green CI.
 
 ## `depgraph.py` - the dependency graph
 
@@ -101,9 +101,9 @@ The tool reads the tree and never runs a fold, so it can never change a number
 ### Tests
 
 ```sh
-cd scripts && uv run --extra dev coverage run -m pytest -q && uv run --extra dev coverage report
+cd scripts && uv run --extra dev pytest -q
 ```
 
 `make test` at the repo root runs every module's suite plus the frontend, taking its
 module list from this file's `--json` output; the CI `scripts` job runs the depgraph
-suite under the coverage gate.
+suite. There is no coverage threshold - see `modules/core/README.md` for why.

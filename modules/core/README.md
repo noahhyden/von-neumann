@@ -115,13 +115,14 @@ Python today; when the rust drop-in appears it inherits the same rule.
 ```sh
 uv run --extra dev pytest -q                        # the test suite
 uv run --extra dev coverage run -m pytest && \
-  uv run --extra dev coverage report                # + the 100% coverage gate
+  uv run --extra dev coverage report                # optional, no threshold
 ```
 
-The package holds at **100% line+branch coverage**, enforced in CI (the `core` job
-in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)) via `fail_under = 100`
-in `pyproject.toml`. The comprehensive downstream UQ tests still live where the
-findings do (see `probe-sim/tests/test_uq_*.py`); the tests here validate each
+There is no coverage threshold. A percentage measures which lines ran, not whether
+anything was checked, and a gate at 100% pays for tests that reach a defensive
+branch rather than tests that pin a number. What this suite is held to instead is
+CLAUDE.md section 2: assert on behaviour and edges, against a closed form where one
+exists. The comprehensive downstream UQ tests still live where the findings do (see `probe-sim/tests/test_uq_*.py`); the tests here validate each
 primitive directly - RNG JS-parity, ODE vs scipy, Sobol' vs scipy, PCE vs analytic -
 and pin bit-reproducible golden values.
 
