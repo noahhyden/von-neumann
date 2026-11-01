@@ -26,6 +26,7 @@ import { SOURCES, sourceById, sourceNumber, sourceCategories, STRENGTH_LABEL } f
 import type { Source } from "./sources.js";
 import type { Tone } from "./ui.js";
 import { PageShell, Shell, Band, Lab, Panel, Figure, ActionRow, Action, Stat, Explain, Note, Slider, Cite } from "./ui.js";
+import { Nav } from "./chrome.js";
 import { token } from "./tokens.js";
 import { PAPERS } from "./papers-index.js";
 import type { PaperMeta } from "./papers-index.js";
@@ -96,9 +97,9 @@ function AgentPanel(props: { model: WallModel; explain: () => ReturnType<WallMod
   });
   const askAgent = () => setSpec(m.bridge.speculate("makeChipsLocal") as Record<string, unknown>);
   return (
-    <Panel kind="plain" head="The same graph, as an agent surface - pimas/agent">
+    <Panel kind="plain" head="State and actions">
       <Note>
-        No new wiring: the exposed values below are subscribable, the actions are callable, and the agent can <strong>speculate</strong> an action (exact prediction, nothing committed) or read <strong>why</strong> a committed one changed what it did.
+        An agent can read these values, call these actions, preview one without committing it, or ask why a committed one changed what it did.
       </Note>
       <pre class="desc">{descriptor}</pre>
       <ActionRow>
@@ -152,10 +153,9 @@ function App(props: { model: WallModel; scenarioKey: string; onScenario: (k: str
           <Figure caption="FIG.1 - factory output vs time, straight from the model. As built (solid line). Bronze, when previewing: if it made its own chips.">
             <GrowthChart model={m} preview={preview} />
           </Figure>
-      </>} footer={<>The model is closure-sim (NASA CP-2255, 1980; Freitas &amp; Merkle, 2004)<Cite ids={["nasa-cp-2255-1980", "freitas-merkle-2004"]} /> - the same pure functions the Python CLI runs, verified to match.
-            The live layer is <strong>pimas</strong>: signals + memos for the model, copy-on-write store + <strong>speculate</strong> for the what-if, and pimas/agent for the surface. Figures are research-grounded order-of-magnitude estimates, not predictions.</>}>
+      </>} footer={<>The model is closure-sim (NASA CP-2255, 1980; Freitas &amp; Merkle, 2004)<Cite ids={["nasa-cp-2255-1980", "freitas-merkle-2004"]} />. Figures are order-of-magnitude estimates, not predictions.</>}>
 
-      <Band n="01" label="The controls - steer the factory">
+      <Band n="01">
           <Lab>
             <Panel kind="controls" head="Assumptions">
               <For each={() => Object.values(m.params)}>
@@ -173,10 +173,10 @@ function App(props: { model: WallModel; scenarioKey: string; onScenario: (k: str
 
             <Panel kind="readouts" head="Live results">
               <Stat what="Closure" sub="mass built locally" value={() => `${(m.closureRatio() * 100).toFixed(1)}%`} tone={() => "metal"} />
-              <Stat what="Time to reach goal" sub="output ≥ target" value={() => fmtDays(m.sim().time_to_target_days)} tone={tttCls} />
+              <Stat what="Time to reach target" value={() => fmtDays(m.sim().time_to_target_days)} tone={tttCls} />
               <Stat what="Doubling time" sub="first mass doubling" value={() => fmtDays(m.sim().empirical_doubling_time_days)} />
               <Stat what="Final output" sub={`after ${fmtNum(m.sim().steps[m.sim().steps.length - 1].day / 365)} yr`} value={() => `${fmtNum(m.sim().final_output_kg_per_day)} kg/day`} />
-              <Stat what="Binding regime" sub="which ceiling caps growth" value={() => regimeWord(m.lateRegime())} tone={() => (m.lateRegime() === "energy-limited" ? "bad" : m.lateRegime() === "resupply-limited" ? "chip" : "metal")} />
+              <Stat what="What limits growth" sub="material, energy or resupply" value={() => regimeWord(m.lateRegime())} tone={() => (m.lateRegime() === "energy-limited" ? "bad" : m.lateRegime() === "resupply-limited" ? "chip" : "metal")} />
               <div>
                 <p class="panel-head">Regime over time</p>
                 <RegimeTimeline model={m} />
@@ -210,7 +210,7 @@ function App(props: { model: WallModel; scenarioKey: string; onScenario: (k: str
               <p class="ph">speculation · shadow graph · nothing committed yet</p>
               <div class="diff">
                 <div class="d">
-                  <span>time to goal</span>
+                  <span>time to target</span>
                   <b><span class="val val-chip">{() => fmtDays(preview()!.before.time_to_target_days)}</span> <span class="arrow">→</span> <span class="val val-metal">{() => fmtDays(preview()!.after.time_to_target_days)}</span></b>
                 </div>
                 <div class="d">
@@ -218,7 +218,7 @@ function App(props: { model: WallModel; scenarioKey: string; onScenario: (k: str
                   <b><span class="val val-chip">{() => (preview()!.before.closure_ratio * 100).toFixed(1)}%</span> <span class="arrow">→</span> <span class="val val-metal">{() => (preview()!.after.closure_ratio * 100).toFixed(1)}%</span></b>
                 </div>
                 <div class="d">
-                  <span>binding regime</span>
+                  <span>what limits growth</span>
                   <b><span class="val val-chip">{() => regimeWord(preview()!.before.regime_timeline.at(-1)!.regime)}</span> <span class="arrow">→</span> <span class="val val-metal">{() => regimeWord(preview()!.after.regime_timeline.at(-1)!.regime)}</span></b>
                 </div>
               </div>
@@ -226,10 +226,10 @@ function App(props: { model: WallModel; scenarioKey: string; onScenario: (k: str
                 {() => {
                   const b = preview()!.before.time_to_target_days;
                   const a = preview()!.after.time_to_target_days;
-                  if (a === null) return "Backfire: it runs out of power before reaching the goal. Add power and speculate again.";
-                  if (b === null) return "Making chips locally is what unlocks the goal at all.";
+                  if (a === null) return "Backfire: it runs out of power before reaching the target.";
+                  if (b === null) return "Making chips locally is what unlocks the target at all.";
                   const saved = (b - a) / 365;
-                  return saved > 0 ? `Making chips locally reaches the goal ${saved.toFixed(1)} years sooner. Worth committing if you can build the power plant.` : `Making chips locally is ${(-saved).toFixed(1)} years slower here - not worth the energy.`;
+                  return saved > 0 ? `Making chips locally reaches the target ${saved.toFixed(1)} years sooner.` : `Making chips locally is ${(-saved).toFixed(1)} years slower here - not worth the energy.`;
                 }}
               </Note>
             </div>
@@ -238,7 +238,10 @@ function App(props: { model: WallModel; scenarioKey: string; onScenario: (k: str
       </Band>
 
       <Band n="03" label="Under the hood">
-          <AgentPanel model={m} explain={explain} />
+          <details>
+            <summary>For developers: the same model as an agent surface</summary>
+            <AgentPanel model={m} explain={explain} />
+          </details>
       </Band>
     </PageShell>
   );
@@ -249,28 +252,28 @@ const explainLeverage = (m: LaunchModel): string => {
   const c = m.comparison();
   const pct = m.closurePct().toFixed(0);
   if (c.massLeverage <= 1) {
-    return `At ${pct}% closure you launch about as much as you install. Raise closure.`;
+    return `At ${pct}% closure you launch about as much as you install.`;
   }
-  return `At ${pct}% closure, ${(100 - m.closurePct()).toFixed(0)}% of the factory's mass is imported as vitamins and the rest is built locally.`;
+  return `At ${pct}% closure, ${(100 - m.closurePct()).toFixed(0)}% of the factory's mass is imported parts and the rest is built locally.`;
 };
 
 function LaunchSurface(props: { model: LaunchModel }) {
   const m = props.model;
   const c = () => m.comparison();
   return (
-    <PageShell title="Don't launch the factory. Launch a seed that builds it." lede={<>Every kilogram to orbit is expensive. Self-replication trades launched mass for local mass: the more of itself a factory builds (its <strong>closure</strong>), the less you launch.</>} footer={<>Launch-mass leverage = target ÷ (seed + vitamins), with the vitamin mass set by closure (mass balance: (1−C) imported per kg built) - the <strong>launch-economics</strong> module coupled to <strong>closure-sim</strong>, running live in pimas. $/kg figures are research-grounded (SpaceX published capabilities<Cite ids="spacex-capabilities" />; standard Δv tables<Cite ids="tsiolkovsky-1903" />), not predictions.</>}>
+    <PageShell title="Don't launch the factory. Launch a seed that builds it." lede={<>Every kilogram to orbit is expensive. Self-replication trades launched mass for local mass: the more of itself a factory builds (its <strong>closure</strong>), the less you launch.</>} footer={<>Leverage = target mass ÷ (seed + imported parts), where closure sets the imported share: (1−C) kg per kg built. $/kg figures are research-grounded (SpaceX published capabilities<Cite ids="spacex-capabilities" />; standard Δv tables<Cite ids="tsiolkovsky-1903" />), not predictions.</>}>
 
-      <Band n="01" label="The assumptions">
+      <Band n="01">
           <Lab>
             <Panel kind="controls" head="Assumptions">
               <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
             </Panel>
             <Panel kind="readouts" head="Live results">
               <Stat what="Launch-mass leverage" sub="installed kg per launched kg" value={() => `${c().massLeverage.toFixed(1)}×`} tone={() => "metal"} />
-              <Stat what="Mass launched" sub="seed + vitamins" value={() => `${fmtNum(c().launchedMassKg / 1000)} t`} />
+              <Stat what="Mass launched" sub="seed + imported parts" value={() => `${fmtNum(c().launchedMassKg / 1000)} t`} />
               <Stat what="Launch it all" sub="direct cost" value={() => fmtUsd(c().directLaunchCostUsd)} tone={() => "bad"} />
-              <Stat what="Launch a seed" sub="seed + vitamins" value={() => fmtUsd(c().replicationLaunchCostUsd)} tone={() => "metal"} />
-              <Stat what="Savings" sub="direct − replication" value={() => fmtUsd(c().costSavingsUsd)} tone={() => "good"} />
+              <Stat what="Launch a seed" value={() => fmtUsd(c().replicationLaunchCostUsd)} tone={() => "metal"} />
+              <Stat what="Savings" sub="launch it all minus launch a seed" value={() => fmtUsd(c().costSavingsUsd)} tone={() => "good"} />
               <Explain>{() => explainLeverage(m)}</Explain>
             </Panel>
           </Lab>
@@ -282,30 +285,28 @@ function LaunchSurface(props: { model: LaunchModel }) {
 // ── the power-budget surface ────────────────────────────────────────────────
 const explainPower = (m: PowerBudgetModel): string => {
   const o = m.outputs();
-  const be = o.brainEquivalents;
-  const beStr = be >= 1 ? `${be.toFixed(1)} human brains` : be >= 0.01 ? `${(be * 100).toFixed(0)}% of one brain` : `${fmtSci(be, 1)} of a brain`;
   const orders = Math.round(Math.log10(o.headroomOverLandauer));
-  return `This budget buys about ${beStr} of compute. Each FLOP burns ~${fmtSci(o.energyPerFlopJ, 1)} J - roughly ${orders} orders of magnitude above the single-bit Landauer floor, so the ceiling is hardware and waste heat, not thermodynamics.`;
+  return `Each FLOP burns ~${fmtSci(o.energyPerFlopJ, 1)} J - roughly ${orders} orders of magnitude above the single-bit Landauer floor, so the ceiling is hardware and waste heat, not thermodynamics.`;
 };
 
 function PowerBudgetSurface(props: { model: PowerBudgetModel }) {
   const m = props.model;
   const o = () => m.outputs();
   return (
-    <PageShell title="How much can a factory think, if it also has to build?" lede={<>An autonomous factory light-minutes from Earth spends some of its power making things and some <em>thinking</em>. The split sets how much compute it buys, against the ~20 W human brain and the thermodynamic floor.</>} footer={<>Throughput = compute-watts × efficiency; the <strong>Landauer floor</strong> is k·T·ln2 (~2.9e-21 J/bit at 300 K) - the hard thermodynamic minimum. This is the <strong>power-budget</strong> module live in pimas. The brain scale (~20 W<Cite ids="raichle-gusnard-2002" />, ~1e18 FLOPS<Cite ids="sandberg-bostrom-2008" />) and Landauer limit<Cite ids="landauer-1961" /> are sourced; brain-FLOPS is an order-of-magnitude estimate.</>}>
+    <PageShell title="How much can a factory think, if it also has to build?" lede={<>An autonomous factory light-minutes from Earth spends some of its power making things and some <em>thinking</em>. The split sets how much compute it buys, against the ~20 W human brain and the thermodynamic floor.</>} footer={<>Throughput = compute-watts × efficiency; the <strong>Landauer floor</strong> is k·T·ln2 (~2.9e-21 J/bit at 300 K). The brain scale (~20 W<Cite ids="raichle-gusnard-2002" />, ~1e18 FLOPS<Cite ids="sandberg-bostrom-2008" />) and Landauer limit<Cite ids="landauer-1961" /> are sourced; brain-FLOPS is an order-of-magnitude estimate.</>}>
 
-      <Band n="01" label="The budget">
+      <Band n="01">
           <Lab>
             <Panel kind="controls" head="Assumptions">
               <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
             </Panel>
             <Panel kind="readouts" head="Live results">
               <Stat what="Compute power" sub="share of the budget" value={() => `${fmtNum(o().computeW)} W`} tone={() => "metal"} />
-              <Stat what="Compute throughput" sub="at this efficiency" value={() => fmtFlops(o().computeFlops)} tone={() => "metal"} />
+              <Stat what="Compute throughput" value={() => fmtFlops(o().computeFlops)} tone={() => "metal"} />
               <Stat what="Brain-equivalents" sub="≈1e18 FLOPS each · [ESTIMATE]" value={() => fmtBrains(o().brainEquivalents)} tone={() => (o().brainEquivalents >= 1 ? "good" : "chip")} />
               <Stat what="Energy per FLOP" value={() => `${fmtSci(o().energyPerFlopJ, 2)} J`} />
               <Stat what="Landauer floor" cite="landauer-1961" sub="k·T·ln2 at the radiator temp" value={() => `${fmtSci(o().landauerJPerBit, 2)} J/bit`} />
-              <Stat what="Above the floor" sub="a FLOP is many bit-ops" value={() => `${fmtSci(o().headroomOverLandauer, 1)}×`} />
+              <Stat what="Above the floor" sub="energy per FLOP vs the Landauer floor" value={() => `${fmtSci(o().headroomOverLandauer, 1)}×`} />
               <Explain>{() => explainPower(m)}</Explain>
             </Panel>
           </Lab>
@@ -315,32 +316,24 @@ function PowerBudgetSurface(props: { model: PowerBudgetModel }) {
 }
 
 // ── the probe surface ───────────────────────────────────────────────────────
-const explainProbe = (m: ProbeModel): string => {
-  const o = m.outputs();
-  const d = m.distanceAu();
-  const be = o.brainEquivalents;
-  const beStr = be >= 1 ? `${be.toFixed(1)} brains` : be >= 0.01 ? `${(be * 100).toFixed(0)}% of a brain` : `${fmtSci(be, 1)} of a brain`;
-  return `At ${d.toFixed(1)} AU the array delivers ${fmtPower(o.deliveredPowerW)} - and its compute headroom is about ${beStr}. Both fall as 1/d²: at twice the distance, a quarter the power.`;
-};
-
 function ProbeSurface(props: { model: ProbeModel }) {
   const m = props.model;
   const o = () => m.outputs();
   return (
-    <PageShell title="How far out can a self-powered probe still work - and still think?" lede="A self-replicating probe runs on sunlight, and sunlight falls as the inverse square of distance." footer={<>Irradiance = solar constant ÷ distance² (1360.8 W/m² at 1 AU, Kopp &amp; Lean 2011<Cite ids="kopp-lean-2011" />); delivered power = irradiance × area × efficiency; compute headroom couples in the <strong>power-budget</strong> model. This is <strong>probe-sim</strong> live in pimas, after Borgue &amp; Hein (2020)<Cite ids="borgue-hein-2020" />. The probe's full replication range awaits a sourced per-module mass breakdown.</>}>
+    <PageShell title="How far out can a self-powered probe still work - and still think?" lede="A self-replicating probe runs on sunlight, and sunlight falls as the inverse square of distance." footer={<>Irradiance = solar constant ÷ distance² (1360.8 W/m² at 1 AU, Kopp &amp; Lean 2011<Cite ids="kopp-lean-2011" />); delivered power = irradiance × area × efficiency. After Borgue &amp; Hein (2020)<Cite ids="borgue-hein-2020" />. The probe's full replication range awaits a sourced per-module mass breakdown.</>}>
 
-      <Band n="01" label="The probe and where it is">
+      <Band n="01">
           <Lab>
             <Panel kind="controls" head="Assumptions">
               <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
             </Panel>
             <Panel kind="readouts" head="Live results">
               <Stat what="Sunlight here" cite="kopp-lean-2011" sub="irradiance, inverse-square" value={() => `${fmtNum(o().irradianceWM2)} W/m²`} />
-              <Stat what="Delivered power" sub="array × efficiency × sunlight" value={() => fmtPower(o().deliveredPowerW)} tone={() => "metal"} />
+              <Stat what="Delivered power" value={() => fmtPower(o().deliveredPowerW)} tone={() => "metal"} />
               <Stat what="Compute power" sub="share for thinking" value={() => fmtPower(o().computePowerW)} />
-              <Stat what="Compute throughput" sub="at this efficiency" value={() => fmtFlops(o().computeFlops)} tone={() => "metal"} />
+              <Stat what="Compute throughput" value={() => fmtFlops(o().computeFlops)} tone={() => "metal"} />
               <Stat what="Brain-equivalents" sub="≈1e18 FLOPS each · [ESTIMATE]" value={() => fmtBrains(o().brainEquivalents)} tone={() => (o().brainEquivalents >= 1 ? "good" : "chip")} />
-              <Explain>{() => explainProbe(m)}</Explain>
+              <Explain>{() => "Power and compute both fall as 1/d²: at twice the distance, a quarter."}</Explain>
             </Panel>
           </Lab>
       </Band>
@@ -360,16 +353,13 @@ const explainMission = (m: MissionModel): string => {
     }
     return `At ${r.distanceAu.toFixed(1)} AU the array delivers only ${fmtPower(r.deliveredPowerW)}, and the ${fmtPower(r.manufacturingW)} left for building isn't enough to reach target output. Move closer to the Sun, or grow the array.`;
   }
-  return `It works: launch ${fmtNum(r.launchedMassKg / 1000)} t of seed + vitamins, and it grows into a ${fmtNum(r.targetInstalledMassKg / 1000)} t factory - ${lev.toFixed(1)}× leverage, ${fmtUsd(r.costSavingsUsd)} saved versus launching it all, reaching full output in ${fmtDays(r.timeToTargetDays)}.`;
+  return `It works: a ${fmtNum(r.launchedMassKg / 1000)} t launch grows into a ${fmtNum(r.targetInstalledMassKg / 1000)} t factory, ${lev.toFixed(1)}× leverage.`;
 };
 
 function MissionStage(props: { n: string; title: string; value: () => string; tone?: () => Tone; note: () => string }) {
   return (
-    <Panel kind="plain" head={<><b>{props.n}</b> / {props.title}</>}>
-      <div class="stat-row stage-stat">
-        <span class="what" />
-        <span class={() => `val val-${props.tone ? props.tone() : "plain"} stage-val`}>{props.value}</span>
-      </div>
+    <Panel kind="plain">
+      <Stat what={<><span class="step-n">{props.n}</span> {props.title}</>} value={props.value} tone={props.tone} />
       <Explain>{props.note}</Explain>
     </Panel>
   );
@@ -380,17 +370,17 @@ function MissionSurface(props: { model: MissionModel }) {
   const r = () => m.outputs();
   const okCls = () => (r().reachesTarget ? "good" : "bad");
   return (
-    <PageShell title="Launch a seed. Fly it to the Sun's light. Watch it build a factory." lede={<>One deterministic run over the <strong>launch</strong> bill, <strong>closure</strong>, <strong>solar power</strong>, the build/think <strong>split</strong> and <strong>replication</strong>.</>} hero={<>
+    <PageShell title="Launch a seed. Fly it to the Sun's light. Watch it build a factory." lede={<>One run over the <strong>launch</strong> bill, <strong>closure</strong>, <strong>solar power</strong>, the build/think <strong>split</strong> and <strong>replication</strong>.</>} hero={<>
 
           <Panel kind="plain">
             <p class="panel-head">Does the operation succeed?</p>
             <Explain>{() => explainMission(m)}</Explain>
           </Panel>
-      </>} footer={<>One pure fold over all four modules - <strong>launch-economics</strong>, <strong>closure-sim</strong>, <strong>probe-sim</strong>, and <strong>power-budget</strong> - composed in the <strong>mission</strong> module and run live in pimas. Every number traces to a source (see each module's REFERENCES.md)<Cite ids={["nasa-cp-2255-1980", "kopp-lean-2011", "landauer-1961", "tsiolkovsky-1903"]} />; the launch scalars are representative sourced values.
+      </>} footer={<>Built from the launch, closure, probe and power models<Cite ids={["nasa-cp-2255-1980", "kopp-lean-2011", "landauer-1961", "tsiolkovsky-1903"]} />. Launch figures are representative sourced values.
             <br /><br />
-            There is no sourced per-module mass breakdown for the Borgue &amp; Hein probe<Cite ids="borgue-hein-2020" />, so the factory here is closure-sim's lunar-regolith seed scenario as a stand-in. It is a real bill of materials, not probe-specific.</>}>
+            There is no sourced per-module mass breakdown for the Borgue &amp; Hein probe<Cite ids="borgue-hein-2020" />, so the factory here is closure-sim's lunar-regolith seed scenario as a stand-in.</>}>
 
-      <Band n="01" label="The knobs">
+      <Band n="01">
           <Lab>
             <Panel kind="controls" head="Mission parameters">
               <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
@@ -407,10 +397,10 @@ function MissionSurface(props: { model: MissionModel }) {
               </ActionRow>
             </Panel>
             <Panel kind="readouts" head="Headline">
-              <Stat what="Reaches full output?" sub="does it ever hit target" value={() => (r().reachesTarget ? "yes" : "no")} tone={okCls} />
+              <Stat what="Reaches target output?" value={() => (r().reachesTarget ? "yes" : "no")} tone={okCls} />
               <Stat what="Launch-mass leverage" sub="installed kg per launched kg" value={() => `${r().massLeverage.toFixed(1)}×`} tone={() => "metal"} />
               <Stat what="Savings vs launch-it-all" value={() => fmtUsd(r().costSavingsUsd)} tone={() => "good"} />
-              <Stat what="Time to full output" value={() => fmtDays(r().timeToTargetDays)} tone={okCls} />
+              <Stat what="Time to target output" value={() => fmtDays(r().timeToTargetDays)} tone={okCls} />
               <Stat what="Delivered power here" sub="inverse-square" value={() => fmtPower(r().deliveredPowerW)} tone={() => "metal"} />
               <Stat what="Compute afforded" sub="brain-equivalents · [ESTIMATE]" value={() => fmtBrains(r().brainEquivalents)} tone={() => "chip"} />
             </Panel>
@@ -421,18 +411,18 @@ function MissionSurface(props: { model: MissionModel }) {
           <MissionStage n="00" title="Launch - put the seed in space"
             value={() => `${fmtNum(r().launchedMassKg / 1000)} t launched`}
             tone={() => "metal"}
-            note={() => `You launch the ${fmtNum(r().seedMassKg / 1000)} t seed plus ${fmtNum(r().vitaminMassKg / 1000)} t of "vitamins" (parts it can't make). Reaching orbit is ${(r().propellantFraction * 100).toFixed(0)}% propellant by mass (Δv ${fmtNum(r().deltaVMs)} m/s, Isp ${fmtNum(r().specificImpulseS)} s) - that exponential penalty is why launching the finished factory is unthinkable.`} />
+            note={() => `You launch the ${fmtNum(r().seedMassKg / 1000)} t seed plus ${fmtNum(r().vitaminMassKg / 1000)} t of imported parts (what it can't make). Reaching orbit is ${(r().propellantFraction * 100).toFixed(0)}% propellant by mass (Δv ${fmtNum(r().deltaVMs)} m/s, Isp ${fmtNum(r().specificImpulseS)} s) - that exponential penalty is why launching the finished factory is unthinkable.`} />
           <MissionStage n="01" title="Closure - how much it makes for itself"
             value={() => `${(r().closureRatio * 100).toFixed(1)}% closed`}
             tone={() => "metal"}
-            note={() => `The seed factory can build ${(r().closureRatio * 100).toFixed(1)}% of its own mass from local material; the remaining ${((1 - r().closureRatio) * 100).toFixed(1)}% must be imported as vitamins. That single fraction sets both the launch bill above and the payoff below.`} />
+            note={() => `The seed factory can build ${(r().closureRatio * 100).toFixed(1)}% of its own mass from local material; the remaining ${((1 - r().closureRatio) * 100).toFixed(1)}% must be imported as parts. That single fraction sets both the launch bill above and the payoff below.`} />
           <MissionStage n="02" title="Arrive - solar power at distance"
             value={() => fmtPower(r().deliveredPowerW)}
             tone={() => "metal"}
             note={() => `At ${r().distanceAu.toFixed(1)} AU sunlight is ${fmtNum(r().irradianceWM2)} W/m²; the ${fmtNum(m.params[2].get())} m² array converts it to ${fmtPower(r().deliveredPowerW)}. Double the distance and this quarters - the inverse-square law is the whole constraint on where a solar probe can work.`} />
           <MissionStage n="03" title="Split - build vs. think"
             value={() => `${fmtPower(r().manufacturingW)} build · ${fmtPower(r().computeW)} think`}
-            note={() => `Housekeeping takes the rest. This is the one dial the modules didn't share - here it's decided once and routed to the two stages below.`} />
+            note={() => `Housekeeping takes the rest. This is the one dial the models didn't share - here it's decided once and routed to the two stages below.`} />
           <MissionStage n="04" title="Replicate - does it grow?"
             value={() => (r().reachesTarget ? `reaches target in ${fmtDays(r().timeToTargetDays)}` : "never reaches target")}
             tone={okCls}
@@ -528,12 +518,11 @@ function FleetScatter(props: { model: MultiProbeModel }) {
 const explainFleet = (m: MultiProbeModel): string => {
   const r = m.result();
   const walls: string[] = [];
-  if (r.binding.vitaminLimited) walls.push("it runs out of imported vitamins - the electronics wall, now at fleet scale");
+  if (r.binding.vitaminLimited) walls.push("it runs out of imported parts - the electronics wall, now at fleet scale");
   if (r.binding.powerLimited) walls.push("its probes drift too far from the Sun to keep building - a spatial power wall");
   if (r.binding.capLimited) walls.push("it reaches the fleet cap you set");
   const why = walls.length ? walls.join("; and ") : "the mission window simply ends";
-  const dbl = r.doublingTimeDays === null ? "never doubles in the window" : `first doubles in ${fmtDays(r.doublingTimeDays)}`;
-  return `The fleet grows to ${r.finalPopulation} probes (${dbl}), spreading out to ${r.maxDistanceAu.toFixed(1)} AU and consuming ${fmtNum(r.vitaminsConsumedKg / 1000)} t of vitamins. It stops growing because ${why}.`;
+  return `Growth stops because ${why}.`;
 };
 
 function MultiProbeSurface(props: { model: MultiProbeModel }) {
@@ -541,14 +530,14 @@ function MultiProbeSurface(props: { model: MultiProbeModel }) {
   const r = () => m.result();
   const s = () => m.snap();
   return (
-    <PageShell title="One probe becomes a fleet - until it hits the same two walls." lede={<>Give one self-replicating probe local sunlight and imported parts and it copies itself; the copies disperse and copy again. This is a <strong>pure, seeded</strong> simulation of a handful of probes, not a swarm.</>} hero={<>
+    <PageShell title="One probe becomes a fleet - until it hits the same two walls." lede={<>Give one self-replicating probe local sunlight and imported parts and it copies itself; the copies disperse and copy again. This is a simulation of a handful of probes, not a swarm.</>} hero={<>
 
           <Figure caption="FIG.1 - fleet size (left axis) and how far the farthest probe has spread (bronze, right axis) over 40 years. The dashed line is the day you're scrubbed to.">
             <FleetChart model={m} />
           </Figure>
-      </>} footer={<>A pure, seeded fold (mulberry32 RNG threaded through state - byte-identical to the Python) over the <strong>multi-probe</strong> module, live in pimas. Each probe builds at <strong>closure-sim</strong>'s min(machinery, energy-cap) rate using <strong>probe-sim</strong>'s 1/d² power; a finite vitamin pool and 1/d² dispersal are the two ceilings. Physics and figures trace to the sibling modules' REFERENCES.md<Cite ids={["nasa-cp-2255-1980", "kopp-lean-2011", "borgue-hein-2020"]} />; the factory is the lunar-regolith seed scenario used as a stand-in (the probe-BOM gap persists).</>}>
+      </>} footer={<>Each probe builds at the slower of its machinery and energy limits (<strong>closure-sim</strong>), with power falling as 1/d² (<strong>probe-sim</strong>); a finite pool of imported parts and 1/d² dispersal are the two ceilings. Physics and figures trace to the cited sources<Cite ids={["nasa-cp-2255-1980", "kopp-lean-2011", "borgue-hein-2020"]} />; the factory is the lunar-regolith seed scenario used as a stand-in (the probe parts-list gap persists).</>}>
 
-      <Band n="01" label="The knobs, and the day">
+      <Band n="01">
           <Lab>
             <Panel kind="controls" head="Fleet parameters">
               <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
@@ -562,7 +551,7 @@ function MultiProbeSurface(props: { model: MultiProbeModel }) {
               <Stat what="Active (building)" value={() => fmtNum(s().active)} tone={() => "good"} />
               <Stat what="Dispersal frontier" sub="farthest probe" value={() => `${s().maxDistanceAu.toFixed(1)} AU`} tone={() => "metal"} />
               <Stat what="Mean distance" value={() => `${s().meanDistanceAu.toFixed(1)} AU`} />
-              <Stat what="Vitamins left" sub="the electronics budget" value={() => `${fmtNum(s().vitaminPoolKg / 1000)} t`} />
+              <Stat what="Imported parts left" value={() => `${fmtNum(s().vitaminPoolKg / 1000)} t`} />
               <Explain>{() => explainFleet(m)}</Explain>
             </Panel>
           </Lab>
@@ -701,17 +690,17 @@ const explainSwarm = (m: SwarmModel): string => {
   // Myr with adaptive precision - slingshot fills are sub-Myr and rounded to "0" at 0 dp.
   const myr = (y: number) => { const m = y / 1e6; return fmtNum(m, m >= 10 ? 0 : m >= 1 ? 1 : m >= 0.01 ? 2 : 3); };
   if (r.t100Years === null) {
-    return `With ${m.params[1].get()} offspring per settlement the front can't fill the field - raise it above zero and the reachable galaxy fills exponentially.`;
+    return `With ${m.params[1].get()} copies per settled star the front can't fill the field - raise it above zero and the reachable galaxy fills exponentially.`;
   }
   if (r.policy === "powered") {
     const probeSpeedPcPerYr = (m.params[2].get() * 3.15576e7) / 3.0856775814913673e13;
     const frontSpeedFrac = (r.frontRadiusPc / r.t100Years) / probeSpeedPcPerYr * 100;
-    return `Powered flight: from one homeworld the front settles all ${r.nStars} stars in ${myr(r.t100Years)} Myr (50% by ${myr(r.t50Years ?? 0)}, 90% by ${myr(r.t90Years ?? 0)}), the wavefront advancing at only ~${frontSpeedFrac.toFixed(0)}% of a probe's speed.`;
+    return `Powered flight: from one homeworld the front settles all ${r.nStars} stars in ${myr(r.t100Years)} Myr, the wavefront advancing at only ~${frontSpeedFrac.toFixed(0)}% of a probe's speed.`;
   }
   const tail = r.policy === "slingshot_maxboost"
-    ? "Chasing the biggest boost reaches higher speeds but wastes travel, so it's actually slower than nearest-star - exactly what Nicholson & Forgan found."
+    ? "Chasing the biggest boost reaches higher speeds but wastes travel, so it's actually slower than nearest-star - as Nicholson & Forgan found."
     : "Nearest-star slingshots stay the most time-effective policy (Nicholson & Forgan's headline).";
-  return `Slingshots: probes steal speed from the stars' galactic motion, peaking at ${fmtNum(r.maxProbeSpeedKmS)} km/s (from a ${fmtNum(m.params[2].get())} km/s powered cruise) and filling the field in just ${myr(r.t100Years)} Myr. ${tail}`;
+  return `Slingshots: probes steal speed from the stars' galactic motion, peaking at ${fmtNum(r.maxProbeSpeedKmS)} km/s (from a ${fmtNum(m.params[2].get())} km/s powered cruise). ${tail}`;
 };
 
 const SEC_PER_YEAR = 3.15576e7;
@@ -730,7 +719,7 @@ const fmtLatency = (years: number): string => {
 const explainCoord = (m: SwarmModel): string => {
   const info = m.hoverInfo();
   if (info === null)
-    return "Hover any star in the field above. Coordination fidelity is set by ρ = round-trip light-time ÷ decision timescale: when ρ ≪ 1 news arrives while it's still current (tight control possible); when ρ ≳ 1 the world changes faster than word of it arrives. Every ~1 pc hop in this galaxy already lands in the top rung - light-years of lag, so each settled system is a causally-disconnected autonomous colony. Across interstellar space you set a swarm's priors before launch.";
+    return "Coordination is set by ρ = round-trip light-time ÷ decision timescale: when ρ ≪ 1 news arrives while it's still current and tight control is possible; when ρ ≳ 1 the world changes faster than word of it arrives. Every ~1 pc hop in this galaxy already means light-years of lag, so each settled system must run as an autonomous colony, with its behaviour set before launch.";
   if (info.isOrigin) return "That's the homeworld - zero lag to itself. Hover another star to see the light-speed gap open up.";
   return `This star is ${info.distPc.toFixed(2)} pc from home. A signal takes ${fmtLatency(info.oneWayYears)} one way, ${fmtLatency(info.roundTripYears)} round-trip - that's ρ ≈ ${info.rho < 0.001 ? fmtSci(info.rho, 1) : fmtNum(info.rho, 2)} against a ${fmtNum(m.decisionTimescale(), 2)}-yr decision cadence. Coordination mode: ${info.rung.label} (${info.rung.who}), the ${info.rung.analog} regime.`;
 };
@@ -794,7 +783,7 @@ function SwarmSurface(props: { model: SwarmModel }) {
   const wastedPct = () => { const r = m.result(); return r.totalArrivals ? (r.wastedArrivals / r.totalArrivals) * 100 : 0; };
 
   return (
-    <PageShell title="One probe. Then the galaxy fills in." lede={<>Give a self-replicating probe a galaxy and it settles a star, builds copies and sends them to the next nearest stars. This is that front as a <strong>pure, seeded</strong> simulation (slice 1 of the swarm).</>} hero={<>
+    <PageShell title="One probe. Then the galaxy fills in." lede={<>Give a self-replicating probe a galaxy and it settles a star, builds copies and sends them to the next nearest stars. This is that front as a simulation.</>} hero={<>
 
           <Figure caption={<>FIG.1 - the star field. Bronze: the homeworld. Settled stars: those reached by the scrubbed year (pale flash = just settled). Grey: not yet reached. The bronze ring is the settlement wavefront. <b>Hover any star</b> to read its light-speed coordination lag from home.</>}>
             <canvas
@@ -848,9 +837,9 @@ function SwarmSurface(props: { model: SwarmModel }) {
               )}
             </For>
           </ActionRow>
-      </>} footer={<>A pure, seeded, fixed-step fold (mulberry32 threaded through state, byte-identical to the Python) over the <strong>swarm</strong> module, live in pimas - the canvas reads the fold's settlement buffers each frame; there is no DOM node per star (the rendering discipline that scales, CLAUDE.md §7). Three travel policies (powered, and two gravitational-slingshot policies that steal speed from stellar motion) after Nicholson &amp; Forgan (2013)<Cite ids="nicholson-forgan-2013" />; powered speed (3×10⁻⁵c ≈ 9 km/s), density (1 star/pc³), and the slingshot boost (their Eq. 4, u_esc ≈ 617.5 km/s solar) are the paper's parameters, with rotation/dispersion tagged [ESTIMATE]. The coordination-horizon overlay (§02) turns each link's light-lag into a coordination rung after Olfati-Saber &amp; Murray (2004), Ferrell (1965) and RFC 4838<Cite ids={["olfati-saber-murray-2004", "ferrell-1965", "rfc-4838"]} />; rung edges tagged [ESTIMATE]. The light-speed-limited-coordination <em>simulation</em> (FRONTIER #1) is built - toggle "Light-speed lag" above; the one remaining slice is the full 200k-star WebGL render engine. See swarm/REFERENCES.md.</>}>
+      </>} footer={<>Three travel policies (powered, and two gravitational-slingshot policies that steal speed from stellar motion) after Nicholson &amp; Forgan (2013)<Cite ids="nicholson-forgan-2013" />; powered speed (3×10⁻⁵c ≈ 9 km/s), density (1 star/pc³), and the slingshot boost (their Eq. 4, u_esc ≈ 617.5 km/s solar) are the paper's parameters, with rotation/dispersion tagged [ESTIMATE]. The coordination-lag overlay turns each link's light-lag into a coordination mode after Olfati-Saber &amp; Murray (2004), Ferrell (1965) and RFC 4838<Cite ids={["olfati-saber-murray-2004", "ferrell-1965", "rfc-4838"]} />; mode edges tagged [ESTIMATE]. Not built: a 200k-star WebGL renderer.</>}>
 
-      <Band n="01" label="The galaxy and the probes">
+      <Band n="01">
           <Lab>
             <Panel kind="controls" head="Parameters">
               <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
@@ -870,11 +859,11 @@ function SwarmSurface(props: { model: SwarmModel }) {
           </Lab>
       </Band>
 
-      <Band n="02" label="The coordination horizon - can the swarm even talk?">
+      <Band n="02" label="At interstellar distances, light-lag decides how the swarm coordinates">
           <Lab>
             <Panel kind="controls" head="The coordination ratio">
               <Note>
-                ρ = round-trip light-time ÷ decision timescale. The rung a link falls into is fixed by its <em>absolute</em> light-lag (sourced from teleoperation &amp; DTN regimes); ρ is a tunable lens - set the decision cadence you care about.
+                ρ = round-trip light-time ÷ decision timescale. The coordination mode of a link is fixed by its <em>absolute</em> light-lag (sourced from teleoperation and delay-tolerant networking regimes); ρ is a tunable lens - set the decision cadence you care about.
               </Note>
               <div class="ctl">
                 <div class="ctl-top">
@@ -892,7 +881,7 @@ function SwarmSurface(props: { model: SwarmModel }) {
                   class="tau-slider"
                 />
               </div>
-              <p class="panel-head">The staircase</p>
+              <p class="panel-head">Coordination modes</p>
               <RungLegend model={m} />
             </Panel>
             <Panel kind="readouts" head="The hovered star">
@@ -922,15 +911,15 @@ function SpineSurface(props: { model: SpineModel }) {
     return f === null ? "-" : `~${fmtSci(f, 1)} of the fill (negligible)`;
   };
   return (
-    <PageShell title="One factory. Three scales. The same build time, weighed at each." lede={<>The project models self-replication at three scales: a <strong>single factory</strong>, a <strong>local fleet</strong> and a <strong>galaxy</strong>. This surface threads <strong>one</strong> factory through all three. The galaxy model's per-star dwell was an unsourced <em>zero</em>; here it is derived from the fleet's factory build physics, and it is a negligible tax because interstellar travel dwarfs it.</>} hero={<>
+    <PageShell title="One factory. Three scales. The same build time, weighed at each." lede={<>The project models self-replication at three scales: a <strong>single factory</strong>, a <strong>local fleet</strong> and a <strong>galaxy</strong>. This model threads <strong>one</strong> factory through all three. The galaxy model's per-star dwell (the time a settled star spends building before its next probes launch) was an unsourced <em>zero</em>; here it is derived from the fleet's factory build physics, and it is a negligible tax because interstellar travel dwarfs it.</>} hero={<>
 
           <Panel kind="plain">
             <p class="panel-head">The cross-scale reading</p>
             <Explain>{() => r().verdict}</Explain>
           </Panel>
-      </>} footer={<>A pure, deterministic fold over the <strong>spine</strong> module - the cross-scale integrator - live in pimas, composing the parity-tested TS ports of closure-sim, multi-probe, and swarm. The galactic dwell is derived from the factory's 1-AU copy time (closure and machinery from NASA CP-2255 (1980)<Cite ids="nasa-cp-2255-1980" /> and Borgue &amp; Hein (2020)<Cite ids="borgue-hein-2020" />; the exploration timescale from Nicholson &amp; Forgan (2013)<Cite ids="nicholson-forgan-2013" />). It replaces one honest gap - the swarm's old zero dwell - by grounding it. See spine/REFERENCES.md.</>}>
+      </>} footer={<>The galactic dwell is derived from the factory's 1-AU copy time (closure and machinery from NASA CP-2255 (1980)<Cite ids="nasa-cp-2255-1980" /> and Borgue &amp; Hein (2020)<Cite ids="borgue-hein-2020" />; the exploration timescale from Nicholson &amp; Forgan (2013)<Cite ids="nicholson-forgan-2013" />).</>}>
 
-      <Band n="01" label="The knobs">
+      <Band n="01">
           <Lab>
             <Panel kind="controls" head="The galaxy">
               <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
@@ -942,7 +931,7 @@ function SpineSurface(props: { model: SpineModel }) {
                   )}
                 </For>
               </ActionRow>
-              <Note>The dwell tax is measured directly (a fine-step A/B of the derived dwell versus zero) only for the slingshot policies; for powered, resolving a roughly one-year dwell against hundred-thousand-year hops by brute force is impractical - so the analytic fraction is shown instead.</Note>
+              <Note>The dwell tax is measured directly (re-running the fill with the derived dwell and with zero) only for the slingshot policies; for powered, resolving a roughly one-year dwell against hundred-thousand-year hops by brute force is impractical - so the analytic fraction is shown instead.</Note>
             </Panel>
             <Panel kind="readouts" head="The shared factory, and what it derives">
               <Stat what="Closure ratio" cite="nasa-cp-2255-1980" sub="one factory, read once, used by every scale" value={() => `${(r().closureRatio * 100).toFixed(1)}%`} tone={() => "metal"} />
@@ -958,8 +947,8 @@ function SpineSurface(props: { model: SpineModel }) {
           <MissionStage n="01" title="One factory - the build cadence is set"
             value={() => `${fmtDays(r().copyTimeDays)} per copy`}
             tone={() => "chip"}
-            note={() => `The seed factory is ${(r().closureRatio * 100).toFixed(1)}% closed and reaches full output in ${fmtDays(r().singleFactoryTimeToTargetDays)}. The number that travels up the scales is simpler: the time to build one copy's worth of local structure at 1 AU, ${fmtDays(r().copyTimeDays)}. Every scale below reuses this exact figure - no scale invents its own.`} />
-          <MissionStage n="02" title="Local fleet - here the build time IS the clock"
+            note={() => `The seed factory is ${(r().closureRatio * 100).toFixed(1)}% closed and reaches full output in ${fmtDays(r().singleFactoryTimeToTargetDays)}. The number that travels up the scales is the time to build one copy's worth of local structure at 1 AU, ${fmtDays(r().copyTimeDays)}. Every scale below reuses it.`} />
+          <MissionStage n="02" title="Local fleet - here the build time is the clock"
             value={() => `doubles in ${fmtDays(r().fleetDoublingDays)}`}
             tone={() => "chip"}
             note={() => `Across AU distances transit is days, so replication time dominates: the fleet's first doubling lands at ~${fmtDays(r().fleetDoublingDays)} - essentially the ${fmtDays(r().copyTimeDays)} copy time above. It grows to ${fmtNum(r().fleetFinalPopulation)} probes and ends ${r().fleetBinding}.`} />
@@ -967,8 +956,8 @@ function SpineSurface(props: { model: SpineModel }) {
             value={() => (r().swarmT100Years === null ? "never fills" : `fills in ${fmtNum(r().swarmT100Years!)} yr`)}
             tone={() => (r().swarmT100Years === null ? "bad" : "good")}
             note={() => (r().swarmT100Years === null
-              ? `With these knobs the front cannot spread (no offspring), so the field never fills and the dwell is moot.`
-              : `The front reaches all ${fmtNum(r().nStars)} stars in ${fmtNum(r().swarmT100Years!)} yr under the ${POLICY_LABELS[r().policy]} policy. The same ${fmtNum(r().settleTimeYears, 1)} yr dwell that governs the fleet is only ${taxLabel()} of that - interstellar transit dominates by orders of magnitude, so the manufacturing cadence that is the clock for a fleet is a rounding error for a galaxy.`)} />
+              ? `With these settings the front cannot spread (no copies), so the field never fills and the dwell is moot.`
+              : `The front reaches all ${fmtNum(r().nStars)} stars in ${fmtNum(r().swarmT100Years!)} yr under the ${POLICY_LABELS[r().policy]} policy. The dwell that governs the fleet is only ${taxLabel()} of that - interstellar transit dominates by orders of magnitude, so the manufacturing cadence that is the clock for a fleet is a rounding error for a galaxy.`)} />
       </Band>
     </PageShell>
   );
@@ -984,9 +973,9 @@ const MODULE_STATUS: ModuleRow[] = [
   { name: "launch-economics", surface: "launch", status: "Done", statusCls: "good", cite: "tsiolkovsky-1903",
     desc: "Measures the launch-mass leverage of shipping a self-replicating seed instead of a finished factory - installed kilograms per launched kilogram, as a function of closure." },
   { name: "mission", surface: "mission", status: "Done", statusCls: "good", cite: "kopp-lean-2011",
-    desc: "Runs the whole operation end to end as one deterministic pass over the four modules above: launch, arrive, split power, replicate, and price the payoff." },
+    desc: "Runs the whole operation end to end as one deterministic pass over the four models above: launch, arrive, split power, replicate, and price the payoff." },
   { name: "multi-probe", surface: "fleet", status: "Done (v1)", statusCls: "good", cite: "borgue-hein-2020",
-    desc: "A deterministic fleet of tens of probes that reproduces two limits from first principles: a finite vitamin pool and a spatial power wall." },
+    desc: "A deterministic fleet of tens of probes that reproduces two limits from first principles: a finite pool of imported parts and a spatial power wall." },
   { name: "probe-sim", surface: "probe", status: "In progress", statusCls: "chip", cite: "borgue-hein-2020",
     desc: "Models a single solar-electric probe after Borgue and Hein (2020). The solar-power and range math is live; the full replication model waits on a per-module mass breakdown that does not exist in the literature yet." },
   { name: "swarm", surface: "swarm", status: "In progress", statusCls: "chip", cite: "nicholson-forgan-2013",
@@ -1015,7 +1004,7 @@ const FINDINGS: FindingRow[] = [
     detail: "Delivered power falls from ~1361 W/m2 at Earth to ~50 at Jupiter: twice the distance, a quarter the power and a quarter the compute. Replication stalls where the power budget drops below the build demand." },
   { headline: "At fleet scale, two ceilings emerge on their own", surface: "fleet",
     cite: "borgue-hein-2020",
-    detail: "The finite vitamin pool caps how many copies can ever exist (the electronics wall made spatial), and a spatial power wall stops expansion around 13.6 AU for the default scenario - not for lack of parts, but distance from the Sun." },
+    detail: "The finite pool of imported parts caps how many copies can ever exist (the electronics wall made spatial), and a spatial power wall stops expansion around 13.6 AU for the default scenario - not for lack of parts, but distance from the Sun." },
   { headline: "Filling the galaxy: slingshots dominate, nearest beats max-boost", surface: "swarm",
     cite: "nicholson-forgan-2013",
     detail: "A powered front advances at only ~40 percent of a probe's cruise speed. Gravitational slingshots reach ~1000 km/s and are far faster - and targeting the nearest star beats chasing the biggest boost on total time." },
@@ -1031,20 +1020,17 @@ function OverviewSurface() {
   return (
     <PageShell title="What if you launched one factory, and it built the rest?" lede="A self-replicating factory lands on the Moon, an asteroid or Mars, digs up local material and builds a copy of itself. One becomes two, two become four. You launch one seed instead of a finished installation. This site is a set of small live models that test how far that holds." hero={<>
 
-          <p class="lede">
-            Every model runs in your browser. Every number traces to published research.
-          </p>
           <ActionRow>
             <Action kind="primary" onClick={() => mount("mission")}>Start with the full mission</Action>
             <Action onClick={() => mount("wall")}>See the electronics wall</Action>
             <Action onClick={() => mount("swarm")}>Watch the galaxy fill</Action>
             <Action kind="ghost" onClick={() => mount("sources")}>Sources</Action>
           </ActionRow>
-      </>} footer={<>Explore the models directly - each is a live surface you can drive. Nothing here asks you to take a number on trust: every figure is backed by a source on the <a href="#/sources" onClick={(e: Event) => { e.preventDefault(); mount("sources"); }}>Sources</a> page, and every honest gap is marked as a gap. Built on <strong>pimas</strong>, a from-scratch reactive framework.</>}>
+      </>} footer={<>Every figure links to its source on the <a href="#/sources" onClick={(e: Event) => { e.preventDefault(); mount("sources"); }}>Sources</a> page, and gaps are marked as gaps. Built on <strong>pimas</strong>.</>}>
 
       <Band n="01" label="What this is" title="Research models, not predictions.">
           <p>
-            These are order-of-magnitude models. They show which physical limits bind and roughly how hard, not a schedule. Each module models one slice, runs and is tested alone, and connects to the others through clean interfaces.
+            These are order-of-magnitude models. They show which physical limits bind and roughly how hard, not a schedule. Each model covers one slice, runs and is tested alone, and connects to the others through clean interfaces.
           </p>
           <p>
             <strong>No number is assumed.</strong> Every mass, energy, rate and cost traces to a published source or is derived by explicit math from numbers that do<Cite ids={["nasa-cp-2255-1980", "kopp-lean-2011", "landauer-1961"]} />. Where the literature has no value, the gap is marked and not filled. Best-defensible estimates are labelled as estimates. The models are pure and deterministic: same inputs and seed, same result.
@@ -1056,7 +1042,7 @@ function OverviewSurface() {
 
       <Band n="02" label="What we have learned" title="One argument, told at every scale.">
           <p>
-            Self-replication buys large launch-mass leverage, but a physical wall reappears at every scale. Click a result to open its live surface.
+            Self-replication buys large launch-mass leverage, but a physical wall reappears at every scale.
           </p>
           <Panel kind="plain">
             <For each={() => FINDINGS}>
@@ -1074,9 +1060,9 @@ function OverviewSurface() {
           </Panel>
       </Band>
 
-      <Band n="03" label="Where the project is" title="Eight modules. Six complete, two in progress.">
+      <Band n="03" label="Where the project is" title="Eight models. Six complete, two in progress.">
           <p>
-            The plan is upwards of ten modules. Eight exist today. Click a row to open its surface.
+            The plan is upwards of ten models. Eight exist today.
           </p>
           <Panel kind="plain">
             <For each={() => MODULE_STATUS}>
@@ -1095,14 +1081,11 @@ function OverviewSurface() {
           </Panel>
       </Band>
 
-      <Band n="04" label="The honest gaps">
-          <p>
-            Six of the eight modules are done and live (closure-sim, power-budget, launch-economics, mission, multi-probe, spine). <strong>swarm</strong> is mostly built, with a parked rendering fork and some deferred coordination features. <strong>probe-sim</strong>'s full replication model is on hold behind a data gap. Open gaps:
-          </p>
+      <Band n="04" label="Open gaps">
           <ul class="gaps">
-            <li><strong>The probe bill-of-materials.</strong> There is no sourced per-module mass breakdown for the Borgue and Hein probe<Cite ids="borgue-hein-2020" />, which blocks probe-sim and forces the mission surface onto the lunar-regolith factory as a stand-in.</li>
+            <li><strong>The probe bill-of-materials.</strong> There is no sourced per-module mass breakdown for the Borgue and Hein probe<Cite ids="borgue-hein-2020" />, which blocks probe-sim and forces the mission model onto the lunar-regolith factory as a stand-in.</li>
             <li><strong>The 200,000-star WebGL renderer.</strong> The swarm's algorithm already scales; drawing 200,000 stars at full frame rate is a parked rendering fork, since the current canvas tops out around ten thousand.</li>
-            <li><strong>The swarm coordination siblings.</strong> Probe-to-probe relaying of news, a settlement death term, and a faster arrival index for the largest scales are deferred, built on the light-speed coordination slice that is already done.</li>
+            <li><strong>Deferred swarm coordination features.</strong> Probe-to-probe relaying of news, probes lost along the way, and a faster arrival lookup for the largest scales are deferred.</li>
           </ul>
       </Band>
     </PageShell>
@@ -1123,9 +1106,9 @@ function SourcesSurface() {
     <PageShell title="Every number on this site, and where it came from." lede="No number is assumed. Each mass, energy, rate and cost traces to a source below or is derived by explicit math from ones that do. Each entry gives what the source is, a link where one exists, and the quantity it grounds, tagged by weight: peer-reviewed work, vendor page or wiki cross-check." hero={<>
 
           <Note>
-            {() => `${SOURCES.length} sources across ${sourceCategories().length} areas. Where the literature has no value, the gap is marked in the module rather than filled - see the honesty note at the foot of this page.`}
+            {() => `${SOURCES.length} sources across ${sourceCategories().length} areas. Where the literature has no value, the gap is marked where it is used rather than filled - see Gaps and estimates at the foot of this page.`}
           </Note>
-      </>} footer={<>A mis-attributed number is treated as worse than an admitted gap. If you find a figure on this site that does not match its cited source, that is a bug - the whole project is meant to be checked against these references. Back to the <a href="#/" onClick={(e: Event) => { e.preventDefault(); mount("overview"); }}>overview</a>.</>}>
+      </>} footer={<>A figure that does not match its cited source is a bug.</>}>
 
       <For each={() => sourceCategories()}>
         {(cat: string, i: () => number) => (
@@ -1152,16 +1135,16 @@ function SourcesSurface() {
         )}
       </For>
 
-      <Band label="Honesty note: gaps and estimates">
+      <Band label="Gaps and estimates">
           <p>
-            Two kinds of number are called out at their use sites rather than sourced as fact, because sourcing them honestly is impossible today:
+            Two kinds of number are called out at their use sites rather than sourced as fact, because no source exists today:
           </p>
           <ul class="gaps">
-            <li><strong>[GAP] - the probe bill-of-materials.</strong> Borgue and Hein<Cite ids="borgue-hein-2020" /> give six modules and a 70/30 replicated-to-imported split, but not per-module masses at the fidelity a closure computation needs. No masses are invented; probe-sim and the mission surface use a real lunar-regolith factory as a stand-in until a defensible breakdown exists.</li>
+            <li><strong>[GAP] - the probe bill-of-materials.</strong> Borgue and Hein<Cite ids="borgue-hein-2020" /> give six modules and a 70/30 replicated-to-imported split, but not per-module masses at the detail a closure computation needs. No masses are invented; probe-sim and the mission model use a real lunar-regolith factory as a stand-in until a defensible breakdown exists.</li>
             <li><strong>[ESTIMATE] - values the literature brackets but does not pin.</strong> Examples: brain-equivalent compute (~1e18 FLOPS, uncertain by ~2 orders of magnitude)<Cite ids="sandberg-bostrom-2008" />; the stars' galactic velocity in the slingshot model (~220 +/- 40 km/s), which Nicholson and Forgan defer<Cite ids="nicholson-forgan-2013" />; the coordination decision-timescale and rung edges<Cite ids={["ferrell-1965", "olfati-saber-murray-2004", "rfc-4838"]} />; and solar-cell and compute efficiencies, which are scenario inputs, not constants. Each is labelled [ESTIMATE] with its reasoning where it is used.</li>
           </ul>
           <Note>
-            The per-module detail behind every entry here lives in that module's REFERENCES.md in the repository, which records value, source, and a verdict on how solid each one is.
+            The repository's REFERENCES.md files record each value, its source, and a verdict on how solid it is.
           </Note>
       </Band>
     </PageShell>
@@ -1176,7 +1159,7 @@ function PapersSurface() {
           <Note>
             {() => `${PAPERS.length} paper${PAPERS.length === 1 ? "" : "s"}. Working drafts; each PDF is compiled from LaTeX in CI and published beside this site.`}
           </Note>
-      </>} footer={<>Every reference above is drawn from the project <a href="#/sources" onClick={(e: Event) => { e.preventDefault(); mount("sources"); }}>bibliography</a>, so paper and site never drift. Back to the <a href="#/" onClick={(e: Event) => { e.preventDefault(); mount("overview"); }}>overview</a>.</>}>
+      </>}>
 
       <Show when={() => PAPERS.length > 0} fallback={(
         <Band><Note>No papers published yet.</Note></Band>
@@ -1240,35 +1223,6 @@ function PapersSurface() {
         </For>
       </Show>
     </PageShell>
-  );
-}
-
-// ── shell nav: one surface per model ────────────────────────────────────────
-const NAV_MODULES: Surface[] = ["wall", "mission", "fleet", "swarm", "spine", "probe", "launch", "power"];
-const navLabel = (s: Surface) => SURFACE_TITLE[s].split(" - ")[0];
-const navItem = (cur: Surface, s: Surface) => `nav-item${cur === s ? " nav-item-active" : ""}`;
-
-function Nav(props: { surface: Surface }) {
-  const pick = (e: MouseEvent, s: Surface) => {
-    (e.currentTarget as HTMLElement).closest("details")?.removeAttribute("open");
-    mount(s);
-  };
-  return (
-    <div class="wrap nav-row">
-      <button class="nav-brand" onClick={() => mount("overview")} title="Project overview">The Arithmetic of Self-Replication</button>
-      <nav class="nav-links">
-        <details class="nav-menu" name="vn-nav">
-          <summary class={`nav-summary${NAV_MODULES.includes(props.surface) ? " nav-item-active" : ""}`}>Modules<span class="nav-chevron" aria-hidden="true">▾</span></summary>
-          <div class="nav-panel">
-            <For each={NAV_MODULES}>{(s) => (
-              <button class={navItem(props.surface, s)} onClick={(e) => pick(e, s)}>{navLabel(s)}</button>
-            )}</For>
-          </div>
-        </details>
-        <button class={navItem(props.surface, "papers")} onClick={() => mount("papers")}>Papers</button>
-        <button class={navItem(props.surface, "sources")} onClick={() => mount("sources")}>Sources</button>
-      </nav>
-    </div>
   );
 }
 

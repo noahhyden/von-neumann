@@ -5,6 +5,7 @@ import { For } from "pimas/flow";
 import { sourceById, sourceNumber } from "./sources.js";
 import type { Source } from "./sources.js";
 import { AzulejoDefs, AzulejoField } from "./azulejo.js";
+import { Footer } from "./chrome.js";
 import type { ParamSignal } from "./reactive-model.js";
 
 const fmtNum = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
@@ -74,7 +75,7 @@ export function Shell(props: { children?: Child }): Child {
     <div style="position:relative;">
       <AzulejoDefs />
       <AzulejoField />
-      <div style="position:relative; z-index:1;">{props.children}</div>
+      <div style="position:relative; z-index:1;">{props.children}<Footer /></div>
     </div>
   );
 }
