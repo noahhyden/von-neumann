@@ -148,7 +148,7 @@ function App(props: { model: WallModel; scenarioKey: string; onScenario: (k: str
   const tttCls = () => (m.sim().time_to_target_days === null ? "bad" : "good");
 
   return (
-    <PageShell title="One factory makes two. Two make four. Then it hits a wall." lede={<>A single robotic factory on the Moon copies itself from local rock until it stalls on chips, the one part it can't make. This is the real <strong>closure-sim</strong> model, running live.</>} hero={<>
+    <PageShell title="One factory makes two. Two make four. Then it hits a wall." lede={<>A single robotic factory on the Moon copies itself from local rock until it stalls on chips, the one part it can't make.</>} hero={<>
 
           <Figure caption="FIG.1 - factory output vs time, straight from the model. As built (solid line). Bronze, when previewing: if it made its own chips.">
             <GrowthChart model={m} preview={preview} />

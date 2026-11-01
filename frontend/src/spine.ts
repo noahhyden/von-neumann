@@ -64,7 +64,7 @@ export function deriveSettleTimeYears(scenario: SpineScenario): number {
 }
 
 function fleetBindingLabel(b: { vitaminLimited: boolean; powerLimited: boolean; capLimited: boolean }): string {
-  if (b.vitaminLimited) return "vitamin-limited (the electronics wall: the imported-parts pool ran out)";
+  if (b.vitaminLimited) return "imported-parts-limited (the electronics wall: the pool ran out)";
   if (b.powerLimited) return "power-limited (dispersed probes build too slowly to copy - the spatial power wall)";
   if (b.capLimited) return "cap-limited (hit the fleet-size cap - a scope bound, not physics)";
   return "still growing at the horizon (no ceiling reached in the window)";

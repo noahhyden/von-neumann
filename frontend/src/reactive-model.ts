@@ -70,7 +70,7 @@ export function createWallModel(initialFactory: Factory): WallModel {
   // Replication assumptions as signals - the sliders.
   const power = param(rep0.available_power_kw, { min: 250, max: 12000, step: 250, label: "Available power", unit: "kW" });
   const buildRate = param(rep0.local_build_rate_kg_per_day, { min: 2, max: 100, step: 1, label: "Seed build rate", unit: "kg/day" });
-  const resupplyMass = param(rep0.vitamin_resupply_mass_kg, { min: 0, max: 500, step: 10, label: "Vitamin resupply / delivery", unit: "kg" });
+  const resupplyMass = param(rep0.vitamin_resupply_mass_kg, { min: 0, max: 500, step: 10, label: "Imported parts / delivery", unit: "kg" });
   const cadence = param(rep0.resupply_cadence_days, { min: 7, max: 180, step: 1, label: "Resupply cadence", unit: "days" });
   const target = param(rep0.target_output_kg_per_day, { min: 50, max: 3000, step: 50, label: "Output goal", unit: "kg/day" });
   const seedMass = param(rep0.seed_mass_kg, { min: 2000, max: 40000, step: 500, label: "Seed mass (landed)", unit: "kg" });
@@ -150,7 +150,7 @@ export function createWallModel(initialFactory: Factory): WallModel {
     const regime = lateRegimeOf(s);
     const C = s.closure_ratio;
     if (regime === Regime.RESUPPLY) {
-      return `Resupply-limited. Vitamins arrive at a fixed trickle, so at ${(C * 100).toFixed(1)}% closure growth is capped at R/(1−C) = ${s.resupply_ceiling_kg_per_day.toFixed(0)} kg/day. Push closure toward 100% and this ceiling climbs toward infinity - that is the only escape.`;
+      return `Resupply-limited. Imported parts arrive at a fixed trickle, so at ${(C * 100).toFixed(1)}% closure growth is capped at R/(1−C) = ${s.resupply_ceiling_kg_per_day.toFixed(0)} kg/day. Push closure toward 100% and this ceiling climbs toward infinity - that is the only escape.`;
     }
     if (regime === Regime.ENERGY) {
       return `Energy-limited. Making its own chips raised the energy cost per kg so far that ${s.energy_cap_kg_per_day.toFixed(0)} kg/day is all the available power can produce locally. The factory runs out of electricity before it runs out of parts - the backfire.`;
@@ -170,7 +170,7 @@ export function createWallModel(initialFactory: Factory): WallModel {
       r.expose("energy_cap_kg_per_day", () => sim().energy_cap_kg_per_day);
       r.expose("chips_are_local", () => chipsAreLocal());
       r.action("makeChipsLocal", () => commitChipsLocal(), { params: [], readOnly: false, description: "Toggle every electronics subsystem to locally producible" });
-      r.action("restoreChips", () => restoreChips(), { params: [], readOnly: false, description: "Revert electronics to imported vitamins" });
+      r.action("restoreChips", () => restoreChips(), { params: [], readOnly: false, description: "Revert electronics to imported parts" });
       r.action("setPowerKw", (kw) => power.set(Number(kw)), { params: ["kw"], description: "Set available power in kW" });
     },
     { writeTap: (record) => onStoreWrite((e) => record(e.path.join("."))) },
