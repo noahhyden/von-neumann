@@ -79,7 +79,7 @@ The power-limited `R(d) = k/d^2` is not a fitted guess; it is Shannon meeting Fr
   distance; `comms` uses Earth-spacecraft range. A scenario must not mix them.
 - **Throughput, not latency.** This is bits/s once they can flow. `swarm`'s
   light-speed `coordination="lightspeed"` is the *latency* layer (news arrives no
-  sooner than dist/c). They compose; they do not merge (comms-SPEC.md).
+  sooner than dist/c). They compose; they do not merge.
 - No per-photon link budget, no DSN scheduling/contention, no modulation/coding
   internals - the runtime is one division plus a clamp (over-nesting guard, CLAUDE.md §3).
 

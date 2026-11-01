@@ -46,8 +46,16 @@ budget it uses.
 
 ## Value (value.py - the output side of the case)
 
-The `value` candidate from `ROADMAP-PROPOSAL.md` is folded in here rather than built as a
-module, because only one output survives the iron rule.
+The economic case is one-sided: the mission prices cost avoided, never value returned. A
+standalone `value` module was considered and rejected, and its defensible core is folded
+in here instead, because only one output survives the iron rule (CLAUDE.md 1):
+launch-cost-avoided value (`mass x $/kg-in-orbit`), which is definitional arithmetic over
+numbers already sourced in this file. Realized PGM value, settlement value, and $/bit for
+data are `[ESTIMATE]`/`[GAP]` and are not modelled as returns. The PGM figures below are
+kept only as a heavily-caveated illustration whose point is to debunk the headline
+figures: the entire annual global platinum market is ~USD 7.25 billion
+(`PLATINUM_MARKET_ANNUAL_USD`, sourced below), so "$X quintillion" headlines (e.g.
+`PSYCHE_QUOTED_VALUE_USD`) collapse under market-flooding.
 
 ### The defensible output (no new numbers)
 

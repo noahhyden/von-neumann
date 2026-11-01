@@ -1,11 +1,11 @@
 # dispositions - the three candidates that are not full modules (proposal)
 
-Status: **proposal**, not yet adopted. Companion to the ten build-ready module specs
-(`transfer`, `comms`, `assembly`, `isru`, `propellant`, `thermal`, `power-source`,
-`autonomy`, `shielding`, `reliability`). This covers the three `ROADMAP-PROPOSAL.md`
-candidates that research and the completeness critic judged should NOT become full
-modules - and says exactly what each should be instead. Numbers below were recomputed and
-confirmed.
+Status: **proposal**, not yet adopted. During build-prep, 13 candidate modules were
+researched; ten became full modules (`transfer`, `comms`, `assembly`, `isru`, `propellant`,
+`thermal`, `power-source`, `autonomy`, `shielding`, `reliability`, each now documented by its
+own README and REFERENCES.md). This document covers the other three, which research and the
+completeness critic judged should NOT become full modules, and says exactly what each should
+be instead. Numbers below were recomputed and confirmed.
 
 Recording a disposition is as much a deliverable as a spec: under the iron rule, "do not
 build this as a module" is a real, defensible engineering decision, and writing down why
@@ -111,9 +111,6 @@ or settlement; it cannot meet the iron rule. Sources: SpaceX pricing (in repo), 
 
 ## Build-prep phase: complete
 
-With these dispositions, every one of the 13 researched candidates now has a resolution:
-**10 verified build-ready specs** + **3 dispositions** (a closure-sim parameter, a paper,
-a launch-economics fold). Nothing module-shaped remains open. The next phase is actual
-implementation in code (per the recommended build order in `ROADMAP-PROPOSAL.md`), which
-is a separate commitment for the repo owner to authorize.
-</content>
+Every one of the 13 researched candidates has a resolution: **10 modules** (built) +
+**3 dispositions** (a closure-sim parameter, a paper, a launch-economics fold). Adopting
+the three dispositions is a separate commitment for the repo owner to authorize.
