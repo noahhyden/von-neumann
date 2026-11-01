@@ -1103,12 +1103,7 @@ const STRENGTH_NOTE: Record<string, string> = {
 
 function SourcesSurface() {
   return (
-    <PageShell title="Every number on this site, and where it came from." lede="No number is assumed. Each mass, energy, rate and cost traces to a source below or is derived by explicit math from ones that do. Each entry gives what the source is, a link where one exists, and the quantity it grounds, tagged by weight: peer-reviewed work, vendor page or wiki cross-check." hero={<>
-
-          <Note>
-            {() => `${SOURCES.length} sources across ${sourceCategories().length} areas. Where the literature has no value, the gap is marked where it is used rather than filled - see Gaps and estimates at the foot of this page.`}
-          </Note>
-      </>} footer={<>A figure that does not match its cited source is a bug.</>}>
+    <PageShell title="Every number on this site, and where it came from.">
 
       <For each={() => sourceCategories()}>
         {(cat: string, i: () => number) => (
@@ -1143,9 +1138,6 @@ function SourcesSurface() {
             <li><strong>[GAP] - the probe bill-of-materials.</strong> Borgue and Hein<Cite ids="borgue-hein-2020" /> give six modules and a 70/30 replicated-to-imported split, but not per-module masses at the detail a closure computation needs. No masses are invented; probe-sim and the mission model use a real lunar-regolith factory as a stand-in until a defensible breakdown exists.</li>
             <li><strong>[ESTIMATE] - values the literature brackets but does not pin.</strong> Examples: brain-equivalent compute (~1e18 FLOPS, uncertain by ~2 orders of magnitude)<Cite ids="sandberg-bostrom-2008" />; the stars' galactic velocity in the slingshot model (~220 +/- 40 km/s), which Nicholson and Forgan defer<Cite ids="nicholson-forgan-2013" />; the coordination decision-timescale and rung edges<Cite ids={["ferrell-1965", "olfati-saber-murray-2004", "rfc-4838"]} />; and solar-cell and compute efficiencies, which are scenario inputs, not constants. Each is labelled [ESTIMATE] with its reasoning where it is used.</li>
           </ul>
-          <Note>
-            The repository's REFERENCES.md files record each value, its source, and a verdict on how solid it is.
-          </Note>
       </Band>
     </PageShell>
   );
