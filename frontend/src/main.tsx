@@ -1106,11 +1106,11 @@ function SourcesSurface() {
     <PageShell title="Every number on this site, and where it came from.">
 
       <For each={() => sourceCategories()}>
-        {(cat: string, i: () => number) => {
+        {(cat: string) => {
           const inCat = () => SOURCES.filter((s) => s.category === cat);
           return (
             <Band title={cat}>
-                <Accordion title="Sources" count={() => inCat().length} open={i() === 0}>
+                <Accordion title="Sources" count={() => inCat().length}>
                   <For each={inCat}>
                     {(s: Source) => (
                       <div class="src">
