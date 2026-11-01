@@ -44,8 +44,13 @@ regenerates it for you: on checkout, on merge, on rebase, and on any commit that
 touches a rule file. Install the hooks once per clone:
 
     uv tool install pre-commit      # or: pipx install pre-commit
-    pre-commit install --hook-type pre-commit --hook-type post-checkout \
+    pre-commit install --allow-missing-config \
+                       --hook-type pre-commit --hook-type post-checkout \
                        --hook-type post-merge --hook-type post-rewrite
+
+`--allow-missing-config` matters: without it, checking out any commit from before
+these hooks existed (an old tag, a bisect, a stale branch) makes every git operation
+error out because the config file is not there.
 
 Because `AGENTS.md` is untracked, these hooks only ever rewrite an untracked file.
 They cannot dirty your index and cannot block a commit. `make agents` still forces a
