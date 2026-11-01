@@ -16,7 +16,7 @@ fail=0
 
 for m in "${PY_MODULES[@]}"; do
   echo "== ${m} (pytest) =="
-  if ( cd "${m}" && uv run --extra dev pytest -q ); then
+  if ( cd "$([ -d "modules/${m}" ] && echo "modules/${m}" || echo "${m}")" && uv run --extra dev pytest -q ); then
     echo "   OK: ${m}"
   else
     echo "   FAIL: ${m}"

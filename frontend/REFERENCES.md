@@ -5,10 +5,10 @@
 computed by the ported math from the same inputs the Python package uses. So the
 grounding for all of it lives in one place:
 
-- **[`../closure-sim/REFERENCES.md`](../closure-sim/REFERENCES.md)** - the sources
+- **[`../modules/closure-sim/REFERENCES.md`](../modules/closure-sim/REFERENCES.md)** - the sources
   for closure, replication, and the electronics wall (NASA CP-2255 (1980), Freitas &
   Merkle (2004), arXiv:2110.15198). The two example scenarios in `src/scenarios.ts`
-  are transcribed verbatim from `closure-sim/scenarios/*.yaml`.
+  are transcribed verbatim from `modules/closure-sim/scenarios/*.yaml`.
 
 ## Why porting doesn't introduce unsourced numbers
 
@@ -41,14 +41,14 @@ These figures are cited in source comments and carry no new value; each traces t
 
 | Figure (file) | Basis | Source of truth |
 | --- | --- | --- |
-| Array area 9,798 m^2 = 4e6 W / (1360.8 W/m^2 * 0.30) (`mission.ts`) | derived: area sized to deliver the closure scenario's ~4 MW at 1 AU; 0.30 efficiency is `[ESTIMATE]` | [`../mission/REFERENCES.md`](../mission/REFERENCES.md), [`../probe-sim/REFERENCES.md`](../probe-sim/REFERENCES.md) |
-| Δv ~9400 m/s, Isp 311 s (LOX/RP-1), $3,000/kg (Falcon 9 reusable) (`mission.ts`) | sourced launch inputs, SI units; target installed mass is a design choice | [`../launch-economics/REFERENCES.md`](../launch-economics/REFERENCES.md), [`../mission/REFERENCES.md`](../mission/REFERENCES.md) |
-| Compute efficiency 1e11 FLOPS/W (`mission.ts`) | `[ESTIMATE]` scenario input | [`../power-budget/REFERENCES.md`](../power-budget/REFERENCES.md) |
-| ~1e18 FLOPS brain scale, ~20 W brain, Landauer floor (`probe-sim.ts`, `power-budget.ts`) | `[ESTIMATE]` midpoint, Sandberg & Bostrom (2008) | [`../power-budget/REFERENCES.md`](../power-budget/REFERENCES.md) |
-| Power split 70 / 20 / 10 and the 10% housekeeping floor with a 0-90% compute slider (`mission-model.ts`) | design choice (fractions of delivered power), not physics | [`../mission/REFERENCES.md`](../mission/REFERENCES.md) |
-| ~13.6 AU spatial power wall (`multi-probe.ts`) | derived crossover where the 1/d^2 energy cap overtakes the machinery rate | [`../multi-probe/REFERENCES.md`](../multi-probe/REFERENCES.md) |
-| Mean heliocentric distances for the quick-jump buttons (`main.tsx`) | NASA planetary fact sheet | [`../probe-sim/REFERENCES.md`](../probe-sim/REFERENCES.md) |
-| Coordination rungs, 1 s / 1 min / 1 hr / 1 yr bucket edges (`coordination.ts`) | rung transitions sourced; the round-number edges are an `[ESTIMATE]` presentation choice | [`../swarm/REFERENCES.md`](../swarm/REFERENCES.md) ("Coordination-horizon visualization") |
-| 1 Julian year = 365.25 d = 3.15576e7 s (`spine.ts`) | 3.15576e7 s / 86400 s-per-day = 365.25 d; same year basis as swarm's `C_PC_PER_YEAR` | [`../spine/REFERENCES.md`](../spine/REFERENCES.md) |
-| ~1.6 yr dwell vs ~1e5 yr powered hops (`spine-model.ts`) | derived by spine from the shared factory | [`../spine/REFERENCES.md`](../spine/REFERENCES.md) |
+| Array area 9,798 m^2 = 4e6 W / (1360.8 W/m^2 * 0.30) (`mission.ts`) | derived: area sized to deliver the closure scenario's ~4 MW at 1 AU; 0.30 efficiency is `[ESTIMATE]` | [`../modules/mission/REFERENCES.md`](../modules/mission/REFERENCES.md), [`../modules/probe-sim/REFERENCES.md`](../modules/probe-sim/REFERENCES.md) |
+| Δv ~9400 m/s, Isp 311 s (LOX/RP-1), $3,000/kg (Falcon 9 reusable) (`mission.ts`) | sourced launch inputs, SI units; target installed mass is a design choice | [`../modules/launch-economics/REFERENCES.md`](../modules/launch-economics/REFERENCES.md), [`../modules/mission/REFERENCES.md`](../modules/mission/REFERENCES.md) |
+| Compute efficiency 1e11 FLOPS/W (`mission.ts`) | `[ESTIMATE]` scenario input | [`../modules/power-budget/REFERENCES.md`](../modules/power-budget/REFERENCES.md) |
+| ~1e18 FLOPS brain scale, ~20 W brain, Landauer floor (`probe-sim.ts`, `power-budget.ts`) | `[ESTIMATE]` midpoint, Sandberg & Bostrom (2008) | [`../modules/power-budget/REFERENCES.md`](../modules/power-budget/REFERENCES.md) |
+| Power split 70 / 20 / 10 and the 10% housekeeping floor with a 0-90% compute slider (`mission-model.ts`) | design choice (fractions of delivered power), not physics | [`../modules/mission/REFERENCES.md`](../modules/mission/REFERENCES.md) |
+| ~13.6 AU spatial power wall (`multi-probe.ts`) | derived crossover where the 1/d^2 energy cap overtakes the machinery rate | [`../modules/multi-probe/REFERENCES.md`](../modules/multi-probe/REFERENCES.md) |
+| Mean heliocentric distances for the quick-jump buttons (`main.tsx`) | NASA planetary fact sheet | [`../modules/probe-sim/REFERENCES.md`](../modules/probe-sim/REFERENCES.md) |
+| Coordination rungs, 1 s / 1 min / 1 hr / 1 yr bucket edges (`coordination.ts`) | rung transitions sourced; the round-number edges are an `[ESTIMATE]` presentation choice | [`../modules/swarm/REFERENCES.md`](../modules/swarm/REFERENCES.md) ("Coordination-horizon visualization") |
+| 1 Julian year = 365.25 d = 3.15576e7 s (`spine.ts`) | 3.15576e7 s / 86400 s-per-day = 365.25 d; same year basis as swarm's `C_PC_PER_YEAR` | [`../modules/spine/REFERENCES.md`](../modules/spine/REFERENCES.md) |
+| ~1.6 yr dwell vs ~1e5 yr powered hops (`spine-model.ts`) | derived by spine from the shared factory | [`../modules/spine/REFERENCES.md`](../modules/spine/REFERENCES.md) |
 | ~8 px star hit radius (`main.tsx`) | UI pick tolerance, not a physical quantity | none needed |

@@ -34,10 +34,10 @@ The fold modules carry `if __debug__:` invariant checks at each `step` call site
 - **Ensemble runs** (Sobol sweeps, 200k-star swarm ensembles, anything measuring wall
   clock) should invoke Python with `-O`: it strips both the `if __debug__:` prologue
   and every `assert` statement, restoring bit-identical results at zero overhead.
-  The swarm ensemble scripts (`swarm/experiments/*.py`) print a one-line stderr
+  The swarm ensemble scripts (`modules/swarm/experiments/*.py`) print a one-line stderr
   warning if they are run without `-O`, so the discipline surfaces even when
   someone bypasses `make sweep` (which already passes `-O`). See
-  `swarm/experiments/_run.py`.
+  `modules/swarm/experiments/_run.py`.
 - **Everything else** runs with assertions on. Losing a bug because it violated an
   invariant we forgot to check in release is a §2 failure mode; keep the guard on
   unless the specific run needs the speed.
@@ -48,7 +48,7 @@ bug at runtime.
 
 ## Optional Rust toolchain (issue #33, swarm only)
 
-The swarm module ships an optional pyo3 Rust drop-in (`swarm/rust/`) for two hot
+The swarm module ships an optional pyo3 Rust drop-in (`modules/swarm/rust/`) for two hot
 paths, gated behind the `[project.optional-dependencies] rust` extra:
 
 - the nearest-unsettled k-d tree **query** (`nearest_unsettled`, issue #33 Phase 1); and
@@ -88,12 +88,12 @@ is 1 ULP off from correctly-rounded `sqrt(x)` for some arguments. A single-ULP h
 cascades (hop -> arrive -> a star's `settled_year` -> every downstream `learn_year`
 -> which target a mid-flight learner re-selects), so `run_fill` reproduces glibc `pow`
 for hops via an FFI call guarded with `black_box` (LLVM otherwise folds `pow(x,0.5)`
-back to `sqrt`). See `rust/src/lib.rs::ref_root`. Verified by `swarm/tests/test_kdtree_backends.py` (A/B/C query oracle)
-and `swarm/tests/test_rust_fill_loop.py` (the fill oracle: Rust `SwarmResult` ==
+back to `sqrt`). See `rust/src/lib.rs::ref_root`. Verified by `modules/swarm/tests/test_kdtree_backends.py` (A/B/C query oracle)
+and `modules/swarm/tests/test_rust_fill_loop.py` (the fill oracle: Rust `SwarmResult` ==
 Python `SwarmResult`, plus a direct check against the committed `finite_size.json`).
 
 Optional at runtime. A checkout without Cargo, without `maturin`, or without
-building the extension still runs and passes the whole test suite; `swarm/sim.py`
+building the extension still runs and passes the whole test suite; `modules/swarm/sim.py`
 falls back to numba (`swarm.kd_njit`) or pure Python for the query, and to the
 Python fold for the loop. Override via `SWARM_NO_RUST=1` / `SWARM_NO_NJIT=1`, or
 `SWARM_NO_RUST_FILL=1` to keep the Rust query but force the Python loop. CI runs
@@ -170,7 +170,7 @@ uv run --extra dev python -O -m experiments.measure --merge finite_size_periodic
 
 Only measurements listed in `experiments/measure.py::SHARDABLE` support this today
 (currently `finite_size_periodic`); adding another is a small refactor - see
-`swarm/tests/test_seed_slice.py` for the bit-identity contract to preserve.
+`modules/swarm/tests/test_seed_slice.py` for the bit-identity contract to preserve.
 
 ## Adding a machine
 

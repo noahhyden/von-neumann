@@ -11,12 +11,14 @@
 #   make test-py    # just the python modules
 #   make test M=swarm   # one module
 #   make frontend   # live-rebuild the frontend (npm run serve)
-#   make run SPEC=swarm/runs/branching-scale.yaml   # one simulation, config in the yaml
+#   make run SPEC=modules/swarm/runs/branching-scale.yaml   # one simulation, config in the yaml
 #   make papers     # generate + typography-check the papers
 
-# Python modules = top-level dirs with a pyproject.toml but no package.json (those are JS).
-PY_MODULES := $(shell for d in */; do d=$${d%/}; \
-	[ -f "$$d/pyproject.toml" ] && [ ! -f "$$d/package.json" ] && echo $$d; done)
+# Python modules = dirs under modules/ or the repo root with a pyproject.toml but no package.json (JS).
+PY_MODULES := $(sort $(shell for d in modules/*/ */; do d=$${d%/}; \
+	[ -f "$$d/pyproject.toml" ] && [ ! -f "$$d/package.json" ] && basename $$d; done))
+# Shell snippet: cd into module $$m, wherever it lives.
+MODCD = cd "$$([ -d modules/$$m ] && echo modules/$$m || echo $$m)"
 
 M ?=
 WORKERS ?=
@@ -54,13 +56,13 @@ ifeq ($(strip $(M)),)
 	@$(MAKE) --no-print-directory test-frontend
 else
 	@echo ">> tests: $(M)"
-	@cd $(M) && uv run pytest -q
+	@m=$(M); $(MODCD) && uv run pytest -q
 endif
 
 test-py:
 	@for m in $(PY_MODULES); do \
 		echo ">> tests: $$m"; \
-		( cd $$m && uv run pytest -q ) || exit $$?; \
+		( $(MODCD) && uv run pytest -q ) || exit $$?; \
 	done
 
 # `make affected M=<module>` runs the tests of every module a change to M reaches
@@ -75,7 +77,7 @@ else
 	@echo ""
 	@for m in $$(python3 scripts/depgraph.py --changed $(M) --list); do \
 		echo ">> tests: $$m"; \
-		( cd $$m && uv run --extra dev pytest -q ) || exit $$?; \
+		( $(MODCD) && uv run --extra dev pytest -q ) || exit $$?; \
 	done
 endif
 

@@ -38,7 +38,7 @@ with zero hardcoding. That duplication is now guarded (see `--check-ci-filter` b
 ```sh
 python scripts/depgraph.py                    # whole graph + blast-radius summary
 python scripts/depgraph.py --changed vn_core  # impact of a module change
-python scripts/depgraph.py --changed swarm/src/swarm/sim.py   # ...or a file path
+python scripts/depgraph.py --changed modules/swarm/src/swarm/sim.py   # ...or a file path
 python scripts/depgraph.py --changed core,closure-sim --json  # machine output
 python scripts/depgraph.py --dot | dot -Tsvg -o deps.svg      # visualize the DAG
 python scripts/depgraph.py --selftest         # assert the correctness contract
@@ -49,7 +49,7 @@ python scripts/depgraph.py --ci-filter        # emit the paper filter groups for
 ### Keeping the CI paths-filter honest
 
 `ci.yml`'s `dorny/paths-filter` block hand-lists each paper's source modules
-(`coordination_tax -> swarm/**`, ...). `--check-ci-filter` parses that block and
+(`coordination_tax -> modules/swarm/**`, ...). `--check-ci-filter` parses that block and
 asserts it matches depgraph's paper edges, so a new figure sourced from a module
 nobody added to the filter fails CI (in the `scripts` job) instead of silently
 skipping that paper's rebuild. `--ci-filter` emits the correct paper groups to paste

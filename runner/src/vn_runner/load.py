@@ -31,17 +31,23 @@ def load_spec(path: Path) -> RunSpec:
     return spec
 
 
+def _module_dirs(repo_root: Path) -> list[Path]:
+    # Models live under modules/; anything still at the repo root (runner, scripts) is scanned too.
+    root = Path(repo_root)
+    dirs = [d for d in root.iterdir() if d.is_dir() and d.name not in _SKIP]
+    if (root / "modules").is_dir():
+        dirs += [d for d in (root / "modules").iterdir() if d.is_dir() and d.name not in _SKIP]
+    return dirs
+
+
 def _paths(repo_root: Path) -> list[Path]:
     return sorted(
-        p
-        for d in Path(repo_root).iterdir()
-        if d.is_dir() and d.name not in _SKIP
-        for p in (d / "runs").glob("*.yaml")
+        p for d in _module_dirs(repo_root) for p in (d / "runs").glob("*.yaml")
     )
 
 
 def discover(repo_root: Path) -> list[tuple[Path, RunSpec]]:
-    """Every `<module>/runs/*.yaml` in the repo, sorted by path."""
+    """Every `modules/<module>/runs/*.yaml` in the repo, sorted by path."""
     return [(p, load_spec(p)) for p in _paths(repo_root)]
 
 

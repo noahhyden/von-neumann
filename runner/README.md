@@ -3,7 +3,7 @@
 A simulation run used to be a command you had to remember:
 
 ```
-cd swarm/experiments && SWARM_WORKERS=2 uv run python -O measure.py branching_scale
+cd modules/swarm/experiments && SWARM_WORKERS=2 uv run python -O measure.py branching_scale
 ```
 
 Four things in that line decide the result, and none of them were written down
@@ -15,7 +15,7 @@ Forget `-O` and it takes two to three times longer. Leave a stale
 Now the run is a file:
 
 ```
-make run SPEC=swarm/runs/branching-scale.yaml
+make run SPEC=modules/swarm/runs/branching-scale.yaml
 ```
 
 Everything the run needs is in that file, and nothing is read from the

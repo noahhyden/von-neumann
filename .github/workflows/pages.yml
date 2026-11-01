@@ -60,7 +60,7 @@ jobs:
       # Figures are gitignored PDFs from the source modules; best-effort, so a failed figure build drops that figure but never blocks the deploy.
       - name: Render coordination-tax figures from committed results (swarm)
         continue-on-error: true
-        working-directory: swarm
+        working-directory: modules/swarm
         run: uv run --extra dev python -m experiments.paper_figures
 
       - name: Cache electronics-wall figures
@@ -68,17 +68,17 @@ jobs:
         uses: actions/cache@v4
         with:
           path: papers/electronics-wall/fig_*.pdf
-          key: figs-electronics-wall-pages-v1-${{ hashFiles('closure-sim/src/**/*.py', 'closure-sim/pyproject.toml', 'closure-sim/uv.lock') }}
+          key: figs-electronics-wall-pages-v1-${{ hashFiles('modules/closure-sim/src/**/*.py', 'modules/closure-sim/pyproject.toml', 'modules/closure-sim/uv.lock') }}
       - name: Generate electronics-wall figures (closure-sim)
         if: steps.figs-ew.outputs.cache-hit != 'true'
         continue-on-error: true
-        working-directory: closure-sim
+        working-directory: modules/closure-sim
         run: uv run --extra dev python -m closure_sim.paper_figures
 
-      # spine figures render from committed JSON (spine/experiments/results/), like coordination-tax: the harness (spine/experiments/measure.py) runs LOCALLY and commits its deterministic output, and this step only plots it (a few seconds), so no cache.
+      # spine figures render from committed JSON (modules/spine/experiments/results/), like coordination-tax: the harness (modules/spine/experiments/measure.py) runs LOCALLY and commits its deterministic output, and this step only plots it (a few seconds), so no cache.
       - name: Render spine figures from committed results (spine)
         continue-on-error: true
-        working-directory: spine
+        working-directory: modules/spine
         run: uv run --extra dev python -m experiments.paper_figures
 
       - name: Typeset the papers (LaTeX)

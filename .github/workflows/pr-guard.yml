@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   guard:
-    # Required check on main, so this name MUST stay `PR guard`. Cap is ~10x the measured typical run; a core/ change fans out to every module and is the slow case.
+    # Required check on main, so this name MUST stay `PR guard`. Cap is ~10x the measured typical run; a modules/core/ change fans out to every module and is the slow case.
     name: PR guard
     timeout-minutes: 20
     # Flip to the self-hosted pool by setting the CI_SELF_HOSTED repo variable, no edit to this file; matches the pivi and klarum-landing convention.
@@ -89,13 +89,13 @@ jobs:
           uv run --extra dev coverage run -m pytest -q
           uv run --extra dev coverage report
 
-      # vn_core holds at 100% line+branch, and that can only regress when vn_core itself changes, so the 2-minute gate runs on a core/ diff rather than on every PR.
-      - name: 'core: vn_core coverage gate, when core/ changed'
+      # vn_core holds at 100% line+branch, and that can only regress when vn_core itself changes, so the 2-minute gate runs on a modules/core/ diff rather than on every PR.
+      - name: 'core: vn_core coverage gate, when modules/core/ changed'
         id: core
         continue-on-error: true
         run: |
-          if ! grep -qE '^core/' /tmp/changed.txt; then echo "core untouched, gate not needed"; exit 0; fi
-          cd core
+          if ! grep -qE '^modules/core/' /tmp/changed.txt; then echo "core untouched, gate not needed"; exit 0; fi
+          cd modules/core
           uv run --extra dev coverage run -m pytest -q
           uv run --extra dev coverage report
 
