@@ -155,7 +155,7 @@ function App(props: { model: WallModel; scenarioKey: string; onScenario: (k: str
           </Figure>
       </>} footer={<>The model is closure-sim (NASA CP-2255, 1980; Freitas &amp; Merkle, 2004)<Cite ids={["nasa-cp-2255-1980", "freitas-merkle-2004"]} />. Figures are order-of-magnitude estimates, not predictions.</>}>
 
-      <Band n="01">
+      <Band>
           <Lab>
             <Panel kind="controls" head="Assumptions">
               <For each={() => Object.values(m.params)}>
@@ -186,7 +186,7 @@ function App(props: { model: WallModel; scenarioKey: string; onScenario: (k: str
           </Lab>
       </Band>
 
-      <Band n="02" label="The wall - should it make its own chips?" title="Preview the change before you commit it.">
+      <Band title="Making its own chips helps only if you can power it.">
           <p>
             Chips are the one part the factory can't make, and making them locally costs thousands of kWh per kg. <strong>Speculate</strong> it: pimas re-runs the model on a shadow of the reactive graph and returns the exact result, <em>without touching the live model</em>. Commit only if you like it.
           </p>
@@ -237,7 +237,7 @@ function App(props: { model: WallModel; scenarioKey: string; onScenario: (k: str
           </Show>
       </Band>
 
-      <Band n="03" label="Under the hood">
+      <Band title="Under the hood">
           <details>
             <summary>For developers: the same model as an agent surface</summary>
             <AgentPanel model={m} explain={explain} />
@@ -263,7 +263,7 @@ function LaunchSurface(props: { model: LaunchModel }) {
   return (
     <PageShell title="Don't launch the factory. Launch a seed that builds it." lede={<>Every kilogram to orbit is expensive. Self-replication trades launched mass for local mass: the more of itself a factory builds (its <strong>closure</strong>), the less you launch.</>} footer={<>Leverage = target mass ÷ (seed + imported parts), where closure sets the imported share: (1−C) kg per kg built. $/kg figures are research-grounded (SpaceX published capabilities<Cite ids="spacex-capabilities" />; standard Δv tables<Cite ids="tsiolkovsky-1903" />), not predictions.</>}>
 
-      <Band n="01">
+      <Band>
           <Lab>
             <Panel kind="controls" head="Assumptions">
               <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
@@ -295,7 +295,7 @@ function PowerBudgetSurface(props: { model: PowerBudgetModel }) {
   return (
     <PageShell title="How much can a factory think, if it also has to build?" lede={<>An autonomous factory light-minutes from Earth spends some of its power making things and some <em>thinking</em>. The split sets how much compute it buys, against the ~20 W human brain and the thermodynamic floor.</>} footer={<>Throughput = compute-watts × efficiency; the <strong>Landauer floor</strong> is k·T·ln2 (~2.9e-21 J/bit at 300 K). The brain scale (~20 W<Cite ids="raichle-gusnard-2002" />, ~1e18 FLOPS<Cite ids="sandberg-bostrom-2008" />) and Landauer limit<Cite ids="landauer-1961" /> are sourced; brain-FLOPS is an order-of-magnitude estimate.</>}>
 
-      <Band n="01">
+      <Band>
           <Lab>
             <Panel kind="controls" head="Assumptions">
               <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
@@ -322,7 +322,7 @@ function ProbeSurface(props: { model: ProbeModel }) {
   return (
     <PageShell title="How far out can a self-powered probe still work - and still think?" lede="A self-replicating probe runs on sunlight, and sunlight falls as the inverse square of distance." footer={<>Irradiance = solar constant ÷ distance² (1360.8 W/m² at 1 AU, Kopp &amp; Lean 2011<Cite ids="kopp-lean-2011" />); delivered power = irradiance × area × efficiency. After Borgue &amp; Hein (2020)<Cite ids="borgue-hein-2020" />. The probe's full replication range awaits a sourced per-module mass breakdown.</>}>
 
-      <Band n="01">
+      <Band>
           <Lab>
             <Panel kind="controls" head="Assumptions">
               <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
@@ -380,7 +380,7 @@ function MissionSurface(props: { model: MissionModel }) {
             <br /><br />
             There is no sourced per-module mass breakdown for the Borgue &amp; Hein probe<Cite ids="borgue-hein-2020" />, so the factory here is closure-sim's lunar-regolith seed scenario as a stand-in.</>}>
 
-      <Band n="01">
+      <Band>
           <Lab>
             <Panel kind="controls" head="Mission parameters">
               <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
@@ -407,7 +407,7 @@ function MissionSurface(props: { model: MissionModel }) {
           </Lab>
       </Band>
 
-      <Band n="02" label="The chain, stage by stage">
+      <Band title="The chain, stage by stage">
           <MissionStage n="00" title="Launch - put the seed in space"
             value={() => `${fmtNum(r().launchedMassKg / 1000)} t launched`}
             tone={() => "metal"}
@@ -537,7 +537,7 @@ function MultiProbeSurface(props: { model: MultiProbeModel }) {
           </Figure>
       </>} footer={<>Each probe builds at the slower of its machinery and energy limits (<strong>closure-sim</strong>), with power falling as 1/d² (<strong>probe-sim</strong>); a finite pool of imported parts and 1/d² dispersal are the two ceilings. Physics and figures trace to the cited sources<Cite ids={["nasa-cp-2255-1980", "kopp-lean-2011", "borgue-hein-2020"]} />; the factory is the lunar-regolith seed scenario used as a stand-in (the probe parts-list gap persists).</>}>
 
-      <Band n="01">
+      <Band>
           <Lab>
             <Panel kind="controls" head="Fleet parameters">
               <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
@@ -557,7 +557,7 @@ function MultiProbeSurface(props: { model: MultiProbeModel }) {
           </Lab>
       </Band>
 
-      <Band n="02" label="Where the fleet ends up">
+      <Band title="Where the fleet ends up">
           <Figure caption="FIG.2 - the final fleet, each probe placed by its distance from the Sun. Green: still building. Grey: in transit.">
             <FleetScatter model={m} />
           </Figure>
@@ -839,7 +839,7 @@ function SwarmSurface(props: { model: SwarmModel }) {
           </ActionRow>
       </>} footer={<>Three travel policies (powered, and two gravitational-slingshot policies that steal speed from stellar motion) after Nicholson &amp; Forgan (2013)<Cite ids="nicholson-forgan-2013" />; powered speed (3×10⁻⁵c ≈ 9 km/s), density (1 star/pc³), and the slingshot boost (their Eq. 4, u_esc ≈ 617.5 km/s solar) are the paper's parameters, with rotation/dispersion tagged [ESTIMATE]. The coordination-lag overlay turns each link's light-lag into a coordination mode after Olfati-Saber &amp; Murray (2004), Ferrell (1965) and RFC 4838<Cite ids={["olfati-saber-murray-2004", "ferrell-1965", "rfc-4838"]} />; mode edges tagged [ESTIMATE]. Not built: a 200k-star WebGL renderer.</>}>
 
-      <Band n="01">
+      <Band>
           <Lab>
             <Panel kind="controls" head="Parameters">
               <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
@@ -859,7 +859,7 @@ function SwarmSurface(props: { model: SwarmModel }) {
           </Lab>
       </Band>
 
-      <Band n="02" label="At interstellar distances, light-lag decides how the swarm coordinates">
+      <Band title="At interstellar distances, light-lag decides how the swarm coordinates">
           <Lab>
             <Panel kind="controls" head="The coordination ratio">
               <Note>
@@ -919,7 +919,7 @@ function SpineSurface(props: { model: SpineModel }) {
           </Panel>
       </>} footer={<>The galactic dwell is derived from the factory's 1-AU copy time (closure and machinery from NASA CP-2255 (1980)<Cite ids="nasa-cp-2255-1980" /> and Borgue &amp; Hein (2020)<Cite ids="borgue-hein-2020" />; the exploration timescale from Nicholson &amp; Forgan (2013)<Cite ids="nicholson-forgan-2013" />).</>}>
 
-      <Band n="01">
+      <Band>
           <Lab>
             <Panel kind="controls" head="The galaxy">
               <For each={() => m.params}>{(p: ParamSignal) => <Slider p={p} />}</For>
@@ -943,7 +943,7 @@ function SpineSurface(props: { model: SpineModel }) {
           </Lab>
       </Band>
 
-      <Band n="02" label="The same build time, at three scales">
+      <Band title="The same build time, at three scales">
           <MissionStage n="01" title="One factory - the build cadence is set"
             value={() => `${fmtDays(r().copyTimeDays)} per copy`}
             tone={() => "chip"}
@@ -1028,7 +1028,7 @@ function OverviewSurface() {
           </ActionRow>
       </>} footer={<>Every figure links to its source on the <a href="#/sources" onClick={(e: Event) => { e.preventDefault(); mount("sources"); }}>Sources</a> page, and gaps are marked as gaps. Built on <strong>pimas</strong>.</>}>
 
-      <Band n="01" label="What this is" title="Research models, not predictions.">
+      <Band title="Research models, not predictions.">
           <p>
             These are order-of-magnitude models. They show which physical limits bind and roughly how hard, not a schedule. Each model covers one slice, runs and is tested alone, and connects to the others through clean interfaces.
           </p>
@@ -1040,9 +1040,9 @@ function OverviewSurface() {
           </Note>
       </Band>
 
-      <Band n="02" label="What we have learned" title="One argument, told at every scale.">
+      <Band title="A physical wall reappears at every scale.">
           <p>
-            Self-replication buys large launch-mass leverage, but a physical wall reappears at every scale.
+            Self-replication buys large launch-mass leverage.
           </p>
           <Panel kind="plain">
             <For each={() => FINDINGS}>
@@ -1060,7 +1060,7 @@ function OverviewSurface() {
           </Panel>
       </Band>
 
-      <Band n="03" label="Where the project is" title="Eight models. Six complete, two in progress.">
+      <Band title="Eight models. Six complete, two in progress.">
           <p>
             The plan is upwards of ten models. Eight exist today.
           </p>
@@ -1081,7 +1081,7 @@ function OverviewSurface() {
           </Panel>
       </Band>
 
-      <Band n="04" label="Open gaps">
+      <Band title="Open gaps">
           <ul class="gaps">
             <li><strong>The probe bill-of-materials.</strong> There is no sourced per-module mass breakdown for the Borgue and Hein probe<Cite ids="borgue-hein-2020" />, which blocks probe-sim and forces the mission model onto the lunar-regolith factory as a stand-in.</li>
             <li><strong>The 200,000-star WebGL renderer.</strong> The swarm's algorithm already scales; drawing 200,000 stars at full frame rate is a parked rendering fork, since the current canvas tops out around ten thousand.</li>
@@ -1112,7 +1112,7 @@ function SourcesSurface() {
 
       <For each={() => sourceCategories()}>
         {(cat: string, i: () => number) => (
-          <Band n={String(i() + 1).padStart(2, "0")} label={cat}>
+          <Band title={cat}>
               <For each={() => SOURCES.filter((s) => s.category === cat)}>
                 {(s: Source) => (
                   <div class="src">
@@ -1135,7 +1135,7 @@ function SourcesSurface() {
         )}
       </For>
 
-      <Band label="Gaps and estimates">
+      <Band title="Gaps and estimates">
           <p>
             Two kinds of number are called out at their use sites rather than sourced as fact, because no source exists today:
           </p>
@@ -1166,8 +1166,9 @@ function PapersSurface() {
       )}>
         <For each={() => PAPERS}>
           {(p: PaperMeta, i: () => number) => (
-            <Band n={String(i() + 1).padStart(2, "0")} label={p.date} title={p.title}>
+            <Band title={p.title}>
                 <Note>
+                  {p.date}{" . "}
                   {() => p.authors.map((a, i) => {
                     const label = a.affiliation ? `${a.name} (${a.affiliation})` : a.name;
                     return a.orcid

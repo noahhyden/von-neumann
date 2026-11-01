@@ -38,17 +38,14 @@ export function PageShell(props: {
   );
 }
 
-/** One numbered band of the page. */
-export function Band(props: { n?: string; label?: Child; title?: Child; children?: Child }): Child {
+/** One band of the page; its heading is a claim, never a label above a label. */
+export function Band(props: { title?: Child; children?: Child }): Child {
   return (
     <section>
       <div class="wrap">
-        {props.label || props.title ? (
+        {props.title ? (
           <Scrim spread="md" style="width:fit-content; max-width:100%; padding:var(--sp-3) var(--sp-5); margin:calc(-1 * var(--sp-3)) calc(-1 * var(--sp-5)) var(--sp-2);">
-            {props.label ? (
-              <p class="marker">{props.n ? <b>{props.n}</b> : null}{props.n ? " / " : ""}{props.label}</p>
-            ) : null}
-            {props.title ? <h2 style="margin:0;">{props.title}</h2> : null}
+            <h2 style="margin:0;">{props.title}</h2>
           </Scrim>
         ) : null}
         {props.children ?? null}
