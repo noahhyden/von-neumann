@@ -15,7 +15,7 @@ because the fold is deterministic*. That criterion is the lens for every step be
 Every top-level module directory is built and owns its status in its own `README.md` and
 `REFERENCES.md`; the CI module matrix in `.github/workflows/ci.yml` is the live list. This
 file does not track per-module status, because that rots. `frontend/` is the single
-pimas-only surface; `core/` (vn_core) holds the shared linalg, ode, rng and uq code.
+pimas-only surface; `modules/core/` (vn_core) holds the shared linalg, ode, rng and uq code.
 
 ## Design notes
 

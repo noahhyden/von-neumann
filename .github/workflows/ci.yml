@@ -25,8 +25,8 @@ jobs:
         with:
           filters: |
             swarm:
-              - 'swarm/**'
-              - 'core/**'
+              - 'modules/swarm/**'
+              - 'modules/core/**'
             frontend:
               - 'frontend/**'
               - 'papers/**'
@@ -39,9 +39,9 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      # Run the shared vn_core package (RNG, UQ, ODE, linalg) suite under the coverage gate in core/pyproject.toml.
+      # Run the shared vn_core package (RNG, UQ, ODE, linalg) suite under the coverage gate in modules/core/pyproject.toml.
       - name: pytest + coverage gate (vn_core)
-        working-directory: core
+        working-directory: modules/core
         run: |
           uv run --extra dev coverage run -m pytest -q
           uv run --extra dev coverage report
@@ -78,7 +78,7 @@ jobs:
         with:
           enable-cache: true
       - name: pytest ${{ matrix.module }}
-        working-directory: ${{ matrix.module }}
+        working-directory: modules/${{ matrix.module }}
         run: uv run --extra dev pytest -q
 
   swarm:
@@ -93,12 +93,12 @@ jobs:
       # Rust toolchain + maturin for the pyo3 fast-path (issue #33), so the 3-way backend oracle runs the Rust case instead of skipping it.
       - uses: dtolnay/rust-toolchain@stable
       - name: Build the swarm_rust pyo3 extension into swarm's venv
-        working-directory: swarm
+        working-directory: modules/swarm
         run: |
           uv sync --extra dev --extra rust
           uv run --extra rust maturin develop --release --manifest-path rust/Cargo.toml
       - name: pytest (deterministic settlement-front assertions, all 3 backends)
-        working-directory: swarm
+        working-directory: modules/swarm
         run: uv run --extra dev pytest -q
 
   papers:
@@ -121,15 +121,15 @@ jobs:
             coordination_tax:
               - *shared
               - 'papers/coordination-tax/**'
-              - 'swarm/**'
+              - 'modules/swarm/**'
             electronics_wall:
               - *shared
               - 'papers/electronics-wall/**'
-              - 'closure-sim/**'
+              - 'modules/closure-sim/**'
             spine:
               - *shared
               - 'papers/spine/**'
-              - 'spine/**'
+              - 'modules/spine/**'
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -159,7 +159,7 @@ jobs:
       # Figures are generated (gitignored vector PDFs) from the validated source modules, so the paper restates only their real output (papers/RULES.md R1, P4); a figure-build failure fails the PR because the typeset needs them.
       - name: Render coordination-tax figures from committed results (swarm)
         if: steps.changed.outputs.coordination_tax == 'true'
-        working-directory: swarm
+        working-directory: modules/swarm
         run: uv run --extra dev python -m experiments.paper_figures
       - name: Typeset coordination-tax (LaTeX) - a broken .tex fails the PR
         if: steps.changed.outputs.coordination_tax == 'true'
@@ -173,10 +173,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: papers/electronics-wall/fig_*.pdf
-          key: figs-electronics-wall-ci-v1-${{ hashFiles('closure-sim/src/**/*.py', 'closure-sim/pyproject.toml', 'closure-sim/uv.lock') }}
+          key: figs-electronics-wall-ci-v1-${{ hashFiles('modules/closure-sim/src/**/*.py', 'modules/closure-sim/pyproject.toml', 'modules/closure-sim/uv.lock') }}
       - name: Generate electronics-wall figures (closure-sim)
         if: steps.changed.outputs.electronics_wall == 'true' && steps.figs-ew.outputs.cache-hit != 'true'
-        working-directory: closure-sim
+        working-directory: modules/closure-sim
         run: uv run --extra dev python -m closure_sim.paper_figures
       - name: Typeset electronics-wall (LaTeX) - a broken .tex fails the PR
         if: steps.changed.outputs.electronics_wall == 'true'
@@ -184,10 +184,10 @@ jobs:
         with:
           working_directory: papers/electronics-wall
           root_file: main.tex
-      # spine figures RENDER from committed JSON (spine/experiments/results/), exactly like coordination-tax above: the heavy ensemble (spine/experiments/measure.py) runs LOCALLY and commits its deterministic seeded output; CI only plots it (a few seconds), and the spine pytest job's drift-guard re-checks that committed JSON against the fold - so no figure cache here.
+      # spine figures RENDER from committed JSON (modules/spine/experiments/results/), exactly like coordination-tax above: the heavy ensemble (modules/spine/experiments/measure.py) runs LOCALLY and commits its deterministic seeded output; CI only plots it (a few seconds), and the spine pytest job's drift-guard re-checks that committed JSON against the fold - so no figure cache here.
       - name: Render spine figures from committed results (spine)
         if: steps.changed.outputs.spine == 'true'
-        working-directory: spine
+        working-directory: modules/spine
         run: uv run --extra dev python -m experiments.paper_figures
       - name: Typeset spine (LaTeX) - a broken .tex fails the PR
         if: steps.changed.outputs.spine == 'true'

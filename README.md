@@ -14,7 +14,9 @@ let it build copies of itself from local material, growing an entire industry fr
 one rocket's worth of cargo. The name is the standard term for the concept:
 "von Neumann"-style self-replicating machines.
 
-This is a **monorepo**. Each project lives in its own top-level directory, is
+This is a **monorepo**. The models live in `modules/` (including `modules/core`, the shared
+`vn_core` library); `frontend/`, `papers/`, `runner/`, `scripts/` and `docs/` sit beside
+it at the root. Each module is its own directory, is
 independently runnable and tested, and models one slice of the problem. They share
 concepts (and, over time, data) but not a single giant simulation - the whole point
 is to keep each piece small, honest, and verifiable.
@@ -28,17 +30,17 @@ The machines these runs execute on are inventoried in [HARDWARE.md](docs/HARDWAR
 
 | Module | Status | What it does |
 |---|---|---|
-| [`closure-sim`](closure-sim/) | v1 | **Closure & replication.** Define a factory as a bill of materials; compute how much of itself it can build locally ("closure"), simulate how a seed multiplies over time, and analyze the "electronics wall" - why chips are the part that can't be made in space. |
+| [`closure-sim`](modules/closure-sim/) | v1 | **Closure & replication.** Define a factory as a bill of materials; compute how much of itself it can build locally ("closure"), simulate how a seed multiplies over time, and analyze the "electronics wall" - why chips are the part that can't be made in space. |
 | [`frontend`](frontend/) | live | **The monorepo's central interactive surface.** The project's models run live in the browser, built entirely on [pimas](https://github.com/noahhyden/pimas). A shell that hosts one surface per model; the first is the interactive electronics wall (drag the assumptions, speculate "make its own chips" before committing, watch the model explain which ceiling binds). |
-| [`probe-sim`](probe-sim/) | in progress | **A single self-replicating probe** (after Borgue & Hein 2020). Solar-electric power vs heliocentric distance, and the operational range it gates - feeds delivered power into `closure-sim`'s replication to find where a probe stops being able to reproduce. |
-| [`power-budget`](power-budget/) | live | **Making vs. thinking, per watt.** Split a solar-limited power budget among manufacturing, compute, and housekeeping; convert compute-watts to throughput - floored by the Landauer limit and anchored to the ~20 W human brain. |
-| [`launch-economics`](launch-economics/) | live | **The economics of not launching mass.** Launch cost, the rocket-equation Δv penalty, and the launch-mass leverage of shipping a self-replicating seed instead of the finished installation. |
-| [`mission`](mission/) | live | **The whole operation, end to end.** One pure fold that composes all four modules above: launch a seed, arrive at a heliocentric distance, split its solar power between building and thinking, replicate, and price the launch-mass payoff. The frontend's "Full mission" surface follows the chain stage by stage. |
-| [`multi-probe`](multi-probe/) | live | **A small, deterministic fleet.** Tens of self-replicating probes, each an agent that builds copies at a rate its local sunlight allows and disperses children outward. Seeded and pure, so `speculate` stays exact. Re-instantiates two ceilings: the electronics wall (a finite vitamin pool) and a spatial power wall (1/d² sunlight vs dispersal). The frontend's "Fleet" surface scrubs the 40-year mission live. The intermediate step before the swarm. |
-| [`swarm`](swarm/) | core done + live surface | **How fast a probe fills the galaxy.** A deterministic, seeded settlement front: probes spread star-to-star through a field, settling and re-launching, filling the reachable galaxy outward from one homeworld (the exploration-timescale question of Nicholson & Forgan 2013). The pure algorithm core, plus **three travel policies** - powered flight and two **gravitational-slingshot** policies that steal speed from stellar motion (Nicholson & Forgan's headline: slingshots ≫ powered, and nearest-star beats max-boost on time). A live canvas "Swarm" surface plays/scrubs the fill, toggles the policy, and - hover any star - reads its **light-speed coordination lag** from home (every interstellar hop is years of latency: the "independent colonies" regime). A proven spatial hash keeps the fill fast. It also **simulates light-speed-limited coordination** ([FRONTIER #1](https://github.com/noahhyden/von-neumann/issues/1)): probes decide against a light-delayed *belief* of what's settled, so they race for the same star from stale views - costing a median ~30–50% of the exploration timescale in the slingshot regime (but ~0% for powered flight), a live-toggle finding that refines Nicholson & Forgan. The one parked fork left is the **200k-star WebGL** render engine. |
-| [`spine`](spine/) | done | **One factory across all three scales.** The cross-scale integrator: threads one `closure-sim` factory through the single-factory fold, the local fleet (`multi-probe`), and the galaxy (`swarm`), so their replication cadences are *derived from one source* instead of assumed independently. It adds no new numbers - it replaces the swarm's old unsourced zero manufacturing dwell with a figure derived from the same build physics the fleet uses, and shows that dwell is a negligible tax on galactic exploration. The frontend's "Across scales" surface follows it. |
+| [`probe-sim`](modules/probe-sim/) | in progress | **A single self-replicating probe** (after Borgue & Hein 2020). Solar-electric power vs heliocentric distance, and the operational range it gates - feeds delivered power into `closure-sim`'s replication to find where a probe stops being able to reproduce. |
+| [`power-budget`](modules/power-budget/) | live | **Making vs. thinking, per watt.** Split a solar-limited power budget among manufacturing, compute, and housekeeping; convert compute-watts to throughput - floored by the Landauer limit and anchored to the ~20 W human brain. |
+| [`launch-economics`](modules/launch-economics/) | live | **The economics of not launching mass.** Launch cost, the rocket-equation Δv penalty, and the launch-mass leverage of shipping a self-replicating seed instead of the finished installation. |
+| [`mission`](modules/mission/) | live | **The whole operation, end to end.** One pure fold that composes all four modules above: launch a seed, arrive at a heliocentric distance, split its solar power between building and thinking, replicate, and price the launch-mass payoff. The frontend's "Full mission" surface follows the chain stage by stage. |
+| [`multi-probe`](modules/multi-probe/) | live | **A small, deterministic fleet.** Tens of self-replicating probes, each an agent that builds copies at a rate its local sunlight allows and disperses children outward. Seeded and pure, so `speculate` stays exact. Re-instantiates two ceilings: the electronics wall (a finite vitamin pool) and a spatial power wall (1/d² sunlight vs dispersal). The frontend's "Fleet" surface scrubs the 40-year mission live. The intermediate step before the swarm. |
+| [`swarm`](modules/swarm/) | core done + live surface | **How fast a probe fills the galaxy.** A deterministic, seeded settlement front: probes spread star-to-star through a field, settling and re-launching, filling the reachable galaxy outward from one homeworld (the exploration-timescale question of Nicholson & Forgan 2013). The pure algorithm core, plus **three travel policies** - powered flight and two **gravitational-slingshot** policies that steal speed from stellar motion (Nicholson & Forgan's headline: slingshots ≫ powered, and nearest-star beats max-boost on time). A live canvas "Swarm" surface plays/scrubs the fill, toggles the policy, and - hover any star - reads its **light-speed coordination lag** from home (every interstellar hop is years of latency: the "independent colonies" regime). A proven spatial hash keeps the fill fast. It also **simulates light-speed-limited coordination** ([FRONTIER #1](https://github.com/noahhyden/von-neumann/issues/1)): probes decide against a light-delayed *belief* of what's settled, so they race for the same star from stale views - costing a median ~30–50% of the exploration timescale in the slingshot regime (but ~0% for powered flight), a live-toggle finding that refines Nicholson & Forgan. The one parked fork left is the **200k-star WebGL** render engine. |
+| [`spine`](modules/spine/) | done | **One factory across all three scales.** The cross-scale integrator: threads one `closure-sim` factory through the single-factory fold, the local fleet (`multi-probe`), and the galaxy (`swarm`), so their replication cadences are *derived from one source* instead of assumed independently. It adds no new numbers - it replaces the swarm's old unsourced zero manufacturing dwell with a figure derived from the same build physics the fleet uses, and shows that dwell is a negligible tax on galactic exploration. The frontend's "Across scales" surface follows it. |
 | [`papers`](papers/) | live | **Longer-form write-ups, in LaTeX.** The place to publish papers typeset with the IEEE template. A small generator builds each paper's bibliography (`refs.bib`) from the same [`sources.ts`](frontend/src/sources.ts) that powers the site's citations, so a claim in a paper and a claim on a live surface point at the identical reference. CI compiles the PDF and publishes it; the frontend's "Papers" surface lists each one. |
-| _more to come_ | | Modules are added over time; the full list is the top-level directories and the CI module matrix. Architecture rationale: [ROADMAP.md](ROADMAP.md). |
+| _more to come_ | | Modules are added over time; the full list is the directories under `modules/` and the CI module matrix. Architecture rationale: [ROADMAP.md](ROADMAP.md). |
 
 ## Working in here
 
@@ -46,7 +48,7 @@ Each module is self-contained - `cd` into it and follow its own README. They don
 share a top-level build; a module brings its own dependencies and tests.
 
 ```bash
-cd closure-sim
+cd modules/closure-sim
 uv venv --python 3.12 .venv
 uv pip install -e ".[dev]"
 .venv/bin/pytest
@@ -80,7 +82,7 @@ It exits nonzero if any suite fails.
 - **Real tests, real numbers.** Assertions check that the math behaves correctly,
   not just that code runs.
 - **Grounded inputs.** Assumptions trace to real research; modules document their
-  sources (see, e.g., [`closure-sim/REFERENCES.md`](closure-sim/REFERENCES.md)).
+  sources (see, e.g., [`modules/closure-sim/REFERENCES.md`](modules/closure-sim/REFERENCES.md)).
 - **Plain language.** This work gets shared with non-specialists; explanations are
   written to be read by people who aren't engineers.
 

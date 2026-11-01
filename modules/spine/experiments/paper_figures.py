@@ -11,7 +11,7 @@ mpl.use("Agg")
 import matplotlib.pyplot as plt
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
-OUT_DIR = Path(__file__).resolve().parents[2] / "papers" / "spine"
+OUT_DIR = Path(__file__).resolve().parents[3] / "papers" / "spine"
 
 COLW = 3.5
 GOLDEN = (5**0.5 - 1) / 2

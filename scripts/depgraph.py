@@ -34,10 +34,17 @@ def _skip(path: Path, repo: Path) -> bool:
     return any(part in _SKIP_PARTS for part in rel.parts)
 
 
+def module_dir(repo: Path, name: str) -> Path:
+    """Directory of module `name`: under modules/ if it lives there, else at the repo root."""
+    return repo / "modules" / name if (repo / "modules" / name).is_dir() else repo / name
+
+
 def discover_modules(repo: Path) -> dict[str, str]:
-    """Return {package_name: module_dir}. A module is a top-level dir with src/<pkg>/__init__.py."""
+    """Return {package_name: module_name}; a module is a dir with src/<pkg>/__init__.py, in modules/ or at the root."""
     pkg_to_module: dict[str, str] = {}
-    for d in sorted(repo.iterdir()):
+    mods = repo / "modules"
+    dirs = sorted(d for d in [*repo.iterdir(), *(mods.iterdir() if mods.is_dir() else [])] if d != mods)
+    for d in dirs:
         if not d.is_dir() or d.name in _NON_MODULE:
             continue
         src = d / "src"
@@ -71,7 +78,7 @@ def build_import_edges(repo: Path, pkg_to_module: dict[str, str]) -> dict[str, s
     edges: dict[str, set[str]] = {}
     for module in sorted(set(pkg_to_module.values())):
         deps: set[str] = set()
-        for pyfile in sorted((repo / module).rglob("*.py")):
+        for pyfile in sorted(module_dir(repo, module).rglob("*.py")):
             if _skip(pyfile, repo):
                 continue
             for pkg in _top_level_imports(pyfile):
@@ -88,7 +95,7 @@ def build_results(repo: Path, modules: list[str]) -> dict[str, list[str]]:
     for module in modules:
         jsons = sorted(
             str(p.relative_to(repo))
-            for p in (repo / module).rglob("results/*.json")
+            for p in module_dir(repo, module).rglob("results/*.json")
             if not _skip(p, repo)
         )
         if jsons:
@@ -101,7 +108,7 @@ def build_figures(repo: Path, modules: list[str]) -> dict[str, set[str]]:
     out: dict[str, set[str]] = {}
     for module in modules:
         figs: set[str] = set()
-        for gen in sorted((repo / module).rglob("paper_figures.py")):
+        for gen in sorted(module_dir(repo, module).rglob("paper_figures.py")):
             if _skip(gen, repo):
                 continue
             for node in ast.walk(ast.parse(gen.read_text(encoding="utf-8"))):
@@ -179,7 +186,7 @@ def parse_ci_filter(repo: Path, modules: set[str]) -> dict[str, set[str]]:
             continue
         pm = re.match(r"^- '([^']+)'$", stripped)
         if pm and key and key != "shared":
-            first = pm.group(1).split("/")[0]
+            first = re.sub(r"^modules/", "", pm.group(1)).split("/")[0]
             if first in modules:
                 out[key].add(first)
     return out
@@ -343,7 +350,7 @@ def _fmt_ci_filter(g: Graph) -> str:
         lines.append("  - *shared")
         lines.append(f"  - 'papers/{slug}/**'")
         for m in sorted(mods):
-            lines.append(f"  - '{m}/**'")
+            lines.append(f"  - '{module_dir(g.repo, m).relative_to(g.repo)}/**'")
     return "\n".join(lines)
 
 

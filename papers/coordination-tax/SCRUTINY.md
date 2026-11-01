@@ -4,7 +4,7 @@ This is a post-hoc adversarial scrutiny of `main.pdf` ("The Coordination Cost of
 Light-Speed Delay in a Self-Replicating Probe Swarm Scales as v/c"), run as if the
 paper were under review at a prestigious venue in this area (International Journal of
 Astrobiology, JBIS, Acta Astronautica; MNRAS/Icarus considered and largely ruled out
-on scope). It follows the discipline of `spine/SCRUTINY.md`: every finding names the
+on scope). It follows the discipline of `modules/spine/SCRUTINY.md`: every finding names the
 claim under scrutiny, how it was checked, the verdict, why it matters, and the fix.
 
 Method: one agent built a field-specific review rubric from real reviewer guidance
@@ -221,7 +221,7 @@ current source, 3 sites: `introduction.tex:29`, `the-light-delayed-belief-model.
 Carroll-Nellenback only for the Aurora / stellar-motion / settlement-death points, where
 it is correct. **Status:** `[x]`.
 
-**M7b - swarm/REFERENCES.md branching section is stale** - stops at offspring=4 and claims
+**M7b - modules/swarm/REFERENCES.md branching section is stale** - stops at offspring=4 and claims
 saturation "within an order of magnitude," directly contradicting the paper's
 non-saturation-through-16 headline; the 8- and 16-offspring numbers appear in no
 provenance doc. **Verdict:** CONFIRMED. **Fix:** update to the 2/3/4/8/16 series and the
@@ -290,13 +290,13 @@ from current source before submitting. **Status:** `[x]` rebuilt in this pass.
 
 ## Fix log
 
-Applied in this pass (all numbers traced to committed `swarm/experiments/results/*.json`; the
+Applied in this pass (all numbers traced to committed `modules/swarm/experiments/results/*.json`; the
 `swarm` suite stays green at 58 passed, and the paper rebuilds clean with no undefined references):
 
 - **M7a** removed `carroll-nellenback-2019` from the three "0.1-0.2c" citation sites
   (`introduction.tex`, `the-light-delayed-belief-model.tex`, `the-coordination-tax.tex`); it remains
   cited for the Aurora / settlement-death points, where it is correct. Same correction noted in
-  `swarm/REFERENCES.md`.
+  `modules/swarm/REFERENCES.md`.
 - **M6** replaced "reproduces quantitatively" with "reproduces to the same order of magnitude" at all
   six sites (abstract, intro, results, model, discussion, conclusion) and added the field-size
   caveat: 166x on 400 stars vs N&F's ~100x on 200,000 stars.

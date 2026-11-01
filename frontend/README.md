@@ -141,10 +141,10 @@ src/
   model.ts               faithful TS port of closure-sim's math (models + closure + replication + wall)
   model.test.ts          parity test - the port must reproduce the Python CLI exactly (node --test)
   pimas-contract.test.ts framework canary - exercises ONLY pimas primitives (see "pimas canary" below)
-  scenarios.ts           the two example factories, transcribed from closure-sim/scenarios/*.yaml
+  scenarios.ts           the two example factories, transcribed from modules/closure-sim/scenarios/*.yaml
   sources.ts             the project-wide bibliography (pure data); sources.test.ts guards its integrity
   coordination.ts        the light-speed coordination-rung logic (pure); coordination.test.ts covers it
-  spine.ts               the cross-scale integrator (pure); spine.test.ts parity-guards it vs spine/run.py
+  spine.ts               the cross-scale integrator (pure); spine.test.ts parity-guards it vs modules/spine/run.py
   spine-model.ts         the spine as a pimas graph: signals + memos over the three-scale fold
   reactive-model.ts      the model as a pimas graph: store + signals + memos + speculate + agent bridge
   chart.tsx              the growth chart, driven by the real sim output

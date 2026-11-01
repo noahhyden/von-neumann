@@ -78,8 +78,8 @@ jobs:
         if: steps.gate.outputs.gated == 'false'
         run: |
           case "$SLUG" in
-            coordination-tax) cd swarm && uv run --extra dev python -m experiments.paper_figures ;;
-            electronics-wall) cd closure-sim && uv run --extra dev python -m closure_sim.paper_figures ;;
+            coordination-tax) cd modules/swarm && uv run --extra dev python -m experiments.paper_figures ;;
+            electronics-wall) cd modules/closure-sim && uv run --extra dev python -m closure_sim.paper_figures ;;
             *) echo "no figure module mapped for $SLUG"; exit 1 ;;
           esac
 
@@ -99,7 +99,7 @@ jobs:
             electronics-wall) MOD=closure-sim ;;
           esac
           zip -r "$RUNNER_TEMP/${SLUG}-repro.zip" \
-            "papers/$SLUG" "$MOD" frontend/src/sources.ts \
+            "papers/$SLUG" "modules/$MOD" frontend/src/sources.ts \
             -x '*/.venv/*' '*/__pycache__/*' '*/build/*' '*/node_modules/*' '*.aux' '*.log' '*.fls' '*.fdb_latexmk' >/dev/null
           echo "zip: $(du -h "$RUNNER_TEMP/${SLUG}-repro.zip" | cut -f1)"
 

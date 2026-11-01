@@ -38,7 +38,7 @@ def main(argv: list[str]) -> int:
     for m in modules:
         print(f"\n== {m} ==", flush=True)
         rc = subprocess.run(
-            ["uv", "run", "--extra", "dev", "pytest", "-q"], cwd=REPO / m
+            ["uv", "run", "--extra", "dev", "pytest", "-q"], cwd=REPO / "modules" / m
         ).returncode
         if rc != 0:
             failed.append(m)
@@ -50,11 +50,11 @@ def main(argv: list[str]) -> int:
 
 def selftest() -> int:
     # A change to core must reach every module; a change to comms must not reach closure-sim.
-    everything = affected_modules(["core/src/vn_core/rng.py"])
+    everything = affected_modules(["modules/core/src/vn_core/rng.py"])
     assert len(everything) > 15, everything
     assert "swarm" in everything and "comms" in everything, everything
 
-    narrow = affected_modules(["comms/src/comms/link.py"])
+    narrow = affected_modules(["modules/comms/src/comms/link.py"])
     assert "comms" in narrow, narrow
     assert "closure-sim" not in narrow, narrow
 

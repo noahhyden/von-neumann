@@ -7,7 +7,7 @@ that reappear at every scale, and we can say which limit binds where.*
 
 Every number below traces to a cited source or is derived by explicit math from numbers
 that do (see each module's `REFERENCES.md` and the consolidated
-[bibliography](frontend/src/sources.ts)). These are order-of-magnitude research results,
+[bibliography](../frontend/src/sources.ts)). These are order-of-magnitude research results,
 not forecasts. Where the literature has no value, we mark the gap rather than fill it.
 
 ---
