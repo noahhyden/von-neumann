@@ -32,9 +32,9 @@ mpl.rcParams.update(
 
 DAYS_PER_YEAR = 365.25  # Julian year, used for every day -> year conversion below.
 
-# Repo root is parents[3] of this file (parents[0]=closure_sim, [1]=src, [2]=closure-sim).
+# Repo root is parents[4] of this file (parents[0]=closure_sim, [1]=src, [2]=closure-sim, [3]=modules).
 _HERE = Path(__file__).resolve()
-REPO_ROOT = _HERE.parents[3]
+REPO_ROOT = _HERE.parents[4]
 OUT_DIR = REPO_ROOT / "papers" / "electronics-wall"
 SCENARIO = _HERE.parents[2] / "scenarios" / "lunar_regolith_seed.yaml"
 

@@ -15,7 +15,7 @@ from matplotlib.ticker import NullLocator
 from experiments.stats_util import bootstrap_median_ci
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
-OUT_DIR = Path(__file__).resolve().parents[2] / "papers" / "coordination-tax"
+OUT_DIR = Path(__file__).resolve().parents[3] / "papers" / "coordination-tax"
 
 COLW = 3.5
 GOLDEN = (5**0.5 - 1) / 2
