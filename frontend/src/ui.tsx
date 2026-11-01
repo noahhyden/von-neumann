@@ -129,6 +129,20 @@ export function Note(props: { children?: Child }): Child {
   return <p class="note">{props.children}</p>;
 }
 
+/** A native <details>/<summary> disclosure - no signal, no per-entity reactivity, just a collapsible region with an optional item count in its summary. */
+export function Accordion(props: { title: Child; count?: (() => number) | number; open?: boolean; children?: Child }): Child {
+  const count = props.count;
+  return (
+    <details class="accordion" open={props.open ?? false}>
+      <summary class="accordion-summary panel-head">
+        {props.title}
+        {count != null ? <span class="accordion-count">{typeof count === "function" ? (() => ` (${count()})`) : ` (${count})`}</span> : null}
+      </summary>
+      <div class="accordion-body">{props.children}</div>
+    </details>
+  );
+}
+
 export function Slider(props: { p: ParamSignal }): Child {
   const p = props.p;
   // For commit-on-release knobs, a local signal tracks the thumb + readout live during a drag while the model value (which may trigger an expensive recompute) is committed only on release.
