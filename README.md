@@ -38,7 +38,7 @@ The machines these runs execute on are inventoried in [HARDWARE.md](docs/HARDWAR
 | [`swarm`](swarm/) | core done + live surface | **How fast a probe fills the galaxy.** A deterministic, seeded settlement front: probes spread star-to-star through a field, settling and re-launching, filling the reachable galaxy outward from one homeworld (the exploration-timescale question of Nicholson & Forgan 2013). The pure algorithm core, plus **three travel policies** - powered flight and two **gravitational-slingshot** policies that steal speed from stellar motion (Nicholson & Forgan's headline: slingshots ≫ powered, and nearest-star beats max-boost on time). A live canvas "Swarm" surface plays/scrubs the fill, toggles the policy, and - hover any star - reads its **light-speed coordination lag** from home (every interstellar hop is years of latency: the "independent colonies" regime). A proven spatial hash keeps the fill fast. It also **simulates light-speed-limited coordination** ([FRONTIER #1](https://github.com/noahhyden/von-neumann/issues/1)): probes decide against a light-delayed *belief* of what's settled, so they race for the same star from stale views - costing a median ~30–50% of the exploration timescale in the slingshot regime (but ~0% for powered flight), a live-toggle finding that refines Nicholson & Forgan. The one parked fork left is the **200k-star WebGL** render engine. |
 | [`spine`](spine/) | done | **One factory across all three scales.** The cross-scale integrator: threads one `closure-sim` factory through the single-factory fold, the local fleet (`multi-probe`), and the galaxy (`swarm`), so their replication cadences are *derived from one source* instead of assumed independently. It adds no new numbers - it replaces the swarm's old unsourced zero manufacturing dwell with a figure derived from the same build physics the fleet uses, and shows that dwell is a negligible tax on galactic exploration. The frontend's "Across scales" surface follows it. |
 | [`papers`](papers/) | live | **Longer-form write-ups, in LaTeX.** The place to publish papers typeset with the IEEE template. A small generator builds each paper's bibliography (`refs.bib`) from the same [`sources.ts`](frontend/src/sources.ts) that powers the site's citations, so a claim in a paper and a claim on a live surface point at the identical reference. CI compiles the PDF and publishes it; the frontend's "Papers" surface lists each one. |
-| _more to come_ | | The plan is upwards of ten interacting projects over the coming year - see [ROADMAP.md](ROADMAP.md). |
+| _more to come_ | | Modules are added over time; the full list is the top-level directories and the CI module matrix. Architecture rationale: [ROADMAP.md](ROADMAP.md). |
 
 ## Working in here
 
@@ -54,14 +54,14 @@ uv pip install -e ".[dev]"
 
 ## Reproducing all results
 
-Every result in this repo is meant to be reproducible from a clone. The eight Python
+Every result in this repo is meant to be reproducible from a clone. The Python
 modules use [`uv`](https://docs.astral.sh/uv/) and stand alone. The **frontend** is
 built on [pimas](https://github.com/noahhyden/pimas), consumed from npm as
 [`pimas-ui`](https://www.npmjs.com/package/pimas-ui) (aliased to the bare `pimas`
 specifier in `frontend/package.json`), so `npm ci` in `frontend/` resolves it like any
 ordinary registry dependency - no sibling clone or source build required.
 
-Run everything - all eight module suites plus the frontend's two test layers and build
+Run everything - every module suite plus the frontend's two test layers and build
 - with one command from the repo root:
 
 ```bash

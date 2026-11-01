@@ -116,9 +116,15 @@ actually drives this finding" attribution issue #35 asks the papers to report.
 
 ## Structural strength (the `structures` decision - `structures.py`)
 
-`ROADMAP-PROPOSAL.md` weighed making `structures` its own module vs a parameter here. The
-default was to demote it to a mass-penalty parameter unless the k=1.0 regression showed
-the physics moved real closure numbers. It was demoted; `structures.py` is that parameter.
+Whether `structures` should be its own module or a parameter here was weighed against the
+iron rule (CLAUDE.md 1). The case for a module: it gives the `producible_locally` boolean a
+physics basis (local material strength vs a required-strength threshold) plus a mass
+penalty `k` for weaker material. The case against: the `k = 1.0` regression test (must
+reproduce closure-sim exactly) is itself an admission that it may collapse into closure-sim.
+The default was therefore to demote it to a mass-penalty parameter `k` unless the k=1.0
+regression showed the physics moved real closure numbers, and to promote it to its own
+directory only in that case. It was demoted; `structures.py` is that parameter. Because
+sintered-regolith strength spans >100x by technique, it carries uncertainty bands (below).
 
 - **Sintered lunar-regolith compressive strength: ~2.49-355 MPa, a >100x span by
   technique.** `SINTERED_REGOLITH_STRENGTH_MPA` (representative points): solar-3D/PBF
