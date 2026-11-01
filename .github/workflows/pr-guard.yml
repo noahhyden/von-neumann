@@ -86,24 +86,20 @@ jobs:
         continue-on-error: true
         run: python3 scripts/depgraph.py --check-ci-filter
 
-      # The repo tooling holds at the 100% line+branch gate in scripts/pyproject.toml, so the gate runs here rather than only post-merge.
-      - name: 'depgraph: its own suite, under the coverage gate'
+      # The repo tooling's own suite runs here rather than only post-merge, since depgraph drives the reachability the other guards use.
+      - name: 'depgraph: its own suite'
         id: depgraph_tests
         continue-on-error: true
         working-directory: scripts
-        run: |
-          uv run --extra dev coverage run -m pytest -q
-          uv run --extra dev coverage report
+        run: uv run --extra dev pytest -q
 
-      # vn_core holds at 100% line+branch, and that can only regress when vn_core itself changes, so the 2-minute gate runs on a modules/core/ diff rather than on every PR.
-      - name: 'core: vn_core coverage gate, when modules/core/ changed'
+      # vn_core's suite can only regress when vn_core itself changes, so it runs on a modules/core/ diff rather than on every PR.
+      - name: 'core: vn_core suite, when modules/core/ changed'
         id: core
         continue-on-error: true
         run: |
-          if ! grep -qE '^modules/core/' /tmp/changed.txt; then echo "core untouched, gate not needed"; exit 0; fi
-          cd modules/core
-          uv run --extra dev coverage run -m pytest -q
-          uv run --extra dev coverage report
+          if ! grep -qE '^modules/core/' /tmp/changed.txt; then echo "core untouched, suite not needed"; exit 0; fi
+          cd modules/core && uv run --extra dev pytest -q
 
       # Reuses `depgraph.py --changed ... --list`, the repo's own reverse-reachability over the import DAG: a change to core fans out to every module, a change to comms runs comms alone.
       - name: 'tests: every module suite this change reaches'

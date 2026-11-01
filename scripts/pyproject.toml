@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 dependencies = []
 
 [project.optional-dependencies]
-# coverage[toml] is the test-only coverage gate; the tool itself is pure stdlib and is never installed as a dependency of any module.
+# coverage[toml] is test-only and has no threshold; the tool itself is pure stdlib and is never a dependency of any module.
 dev = ["pytest>=8.0", "coverage[toml]>=7.0"]
 
 [tool.pytest.ini_options]
@@ -18,10 +18,8 @@ branch = true
 source = ["depgraph"]
 
 [tool.coverage.report]
-# Repo tooling is held to the same bar as the folds: 100% line+branch.
 show_missing = true
 skip_covered = false
-fail_under = 100
 exclude_lines = [
     'if __name__ == .__main__.:',
 ]

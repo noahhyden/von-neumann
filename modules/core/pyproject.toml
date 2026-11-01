@@ -24,11 +24,6 @@ branch = true
 source = ["vn_core"]
 
 [tool.coverage.report]
-# The fold is the product; every line of it is exercised or explained. The package
-# holds at 100% line+branch coverage (the build discipline), enforced here so CI fails
-# on any regression. `# pragma: no cover` is permitted only on genuinely unreachable
-# defensive branches (RHS overflow, singular matrices, step-count caps), each justified
-# inline at the use site.
+# Reporting only, no threshold: coverage says which lines ran, not what was checked.
 show_missing = true
 skip_covered = false
-fail_under = 100

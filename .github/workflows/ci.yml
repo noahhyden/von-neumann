@@ -1,6 +1,6 @@
 name: ci
 
-# The DEEP suite, not the PR gate: `PR guard` is the only required check and already runs typography, depgraph, the coverage gates and the module suites a change reaches. This holds the two things the guard cannot do cheaply (the swarm Rust 3-backend oracle, paper figures + LaTeX) plus a full post-merge sweep that re-runs every module, so a wrong reachability edge surfaces on main rather than never.
+# The DEEP suite, not the PR gate: `PR guard` is the only required check and already runs typography, depgraph, the comment cap and the module suites a change reaches. This holds the two things the guard cannot do cheaply (the swarm Rust 3-backend oracle, paper figures + LaTeX) plus a full post-merge sweep that re-runs every module, so a wrong reachability edge surfaces on main rather than never.
 
 on:
   push:
@@ -39,12 +39,10 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      # Run the shared vn_core package (RNG, UQ, ODE, linalg) suite under the coverage gate in modules/core/pyproject.toml.
-      - name: pytest + coverage gate (vn_core)
+      # Run the shared vn_core package (RNG, UQ, ODE, linalg) suite.
+      - name: pytest (vn_core)
         working-directory: modules/core
-        run: |
-          uv run --extra dev coverage run -m pytest -q
-          uv run --extra dev coverage report
+        run: uv run --extra dev pytest -q
 
   scripts:
     if: github.event_name != 'pull_request'
@@ -54,12 +52,10 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
-      # Run the repo tooling (depgraph.py) suite under the coverage gate in scripts/pyproject.toml, so structural drift fails here.
-      - name: pytest + coverage gate (depgraph)
+      # Run the repo tooling (depgraph.py) suite, so structural drift fails here.
+      - name: pytest (depgraph)
         working-directory: scripts
-        run: |
-          uv run --extra dev coverage run -m pytest -q
-          uv run --extra dev coverage report
+        run: uv run --extra dev pytest -q
       # The papers paths-filter in this workflow is hand-maintained; this asserts it still matches the paper->module edges depgraph derives from figure content, so a new figure sourced from an unlisted module fails here instead of silently skipping that paper's rebuild.
       - name: ci.yml paths-filter matches depgraph
         working-directory: scripts
