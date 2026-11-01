@@ -3,6 +3,12 @@ import { createMemo } from "pimas";
 import type { Accessor } from "pimas";
 import type { SimResult } from "./model.js";
 import type { WallModel } from "./reactive-model.js";
+import { token } from "./tokens.ts";
+
+const tint = (name: string, pct: number, fallback: string) => {
+  const c = token(name);
+  return c ? `color-mix(in srgb, ${c} ${pct}%, transparent)` : fallback;
+};
 
 const W = 900, H = 380, PADL = 58, PADR = 116, PADT = 22, PADB = 44;
 
@@ -81,7 +87,7 @@ export function GrowthChart(props: {
     const els: unknown[] = [];
     // horizontal grid
     for (const t of g.yTicks) {
-      els.push(<line x1={PADL} y1={t.y} x2={W - PADR} y2={t.y} stroke="rgba(232,226,214,0.08)" stroke-width="1" />);
+      els.push(<line x1={PADL} y1={t.y} x2={W - PADR} y2={t.y} stroke="var(--line)" stroke-width="1" />);
       els.push(<text x={PADL - 8} y={t.y + 4} text-anchor="end" fill="var(--muted)" style="font:11px var(--mono)">{t.label}</text>);
     }
     for (const t of g.xTicks) {
@@ -95,8 +101,8 @@ export function GrowthChart(props: {
     els.push(<text x={W - PADR + 6} y={g.targetY + 4} fill="var(--muted)" style="font:11px var(--mono)">goal</text>);
 
     // time-to-target markers
-    if (g.tttPreviewX !== null) els.push(<line x1={g.tttPreviewX} y1={PADT} x2={g.tttPreviewX} y2={H - PADB} stroke="rgba(199,154,91,0.45)" stroke-width="1" stroke-dasharray="3 3" />);
-    if (g.tttCommittedX !== null) els.push(<line x1={g.tttCommittedX} y1={PADT} x2={g.tttCommittedX} y2={H - PADB} stroke="rgba(127,169,181,0.55)" stroke-width="1" stroke-dasharray="3 3" />);
+    if (g.tttPreviewX !== null) els.push(<line x1={g.tttPreviewX} y1={PADT} x2={g.tttPreviewX} y2={H - PADB} stroke={tint("metal", 45, "rgba(199,154,91,0.45)")} stroke-width="1" stroke-dasharray="3 3" />);
+    if (g.tttCommittedX !== null) els.push(<line x1={g.tttCommittedX} y1={PADT} x2={g.tttCommittedX} y2={H - PADB} stroke={tint("chip", 55, "rgba(127,169,181,0.55)")} stroke-width="1" stroke-dasharray="3 3" />);
 
     // preview curve (bronze dashed) under committed
     if (g.preview) {

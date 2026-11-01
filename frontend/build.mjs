@@ -44,6 +44,8 @@ await cp(join(ROOT, "index.html"), join(OUT, "index.html"));
 await cp(join(ROOT, "og.svg"), join(OUT, "og.svg"));
 // GitHub Pages custom domain: the CNAME must live in the published artifact.
 await cp(join(ROOT, "CNAME"), join(OUT, "CNAME"));
+// Self-hosted woff2 fonts referenced by index.html.
+await cp(join(ROOT, "fonts"), join(OUT, "fonts"), { recursive: true });
 
 // Report shipped size.
 const js = await readFile(join(OUT, "app.js"));
