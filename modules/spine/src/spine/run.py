@@ -58,7 +58,7 @@ class DwellTax:
 
 def _fleet_binding(binding) -> str:
     if binding.vitamin_limited:
-        return "vitamin-limited (the electronics wall: the imported-parts pool ran out)"
+        return "imported-parts-limited (the electronics wall: the pool ran out)"
     if binding.power_limited:
         return "power-limited (dispersed probes build too slowly to copy in time - the spatial power wall)"
     if binding.cap_limited:

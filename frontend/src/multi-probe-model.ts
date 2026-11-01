@@ -21,7 +21,7 @@ export interface MultiProbeModel {
 
 export function createMultiProbeModel(): MultiProbeModel {
   const startDistanceAu = param(1.0, { min: 0.3, max: 40, step: 0.1, label: "Start distance", unit: "AU" });
-  const vitaminPoolT = param(1000, { min: 0, max: 2000, step: 5, label: "Vitamin pool", unit: "t" }); // tonnes
+  const vitaminPoolT = param(1000, { min: 0, max: 2000, step: 5, label: "Imported parts pool", unit: "t" }); // tonnes
   const dispersalFactor = param(1.3, { min: 1.0, max: 2.0, step: 0.05, label: "Dispersal", unit: "×/gen" });
   const maxProbes = param(64, { min: 2, max: 200, step: 1, label: "Fleet cap", unit: "probes" });
   const transitDays = param(365, { min: 0, max: 1460, step: 5, label: "Transit time", unit: "d" });
