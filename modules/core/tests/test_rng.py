@@ -101,7 +101,7 @@ class TestNextFloat:
 
 # --- JS parity: bit-identical to the frontend mulberry32 --------------------
 
-# Python-side parity with swarm.rng and multi_probe.rng is verified two ways:
+# Python-side parity with vn_core.rng is verified two ways:
 
 
 def _load_fixture() -> dict:

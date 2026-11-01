@@ -5,7 +5,7 @@ from __future__ import annotations
 import statistics
 from math import comb
 
-from swarm.rng import next_u32, seed_state
+from vn_core.rng import next_u32, seed_state
 
 
 def sign_test_positive(xs: list[float]) -> tuple[int, int, float]:

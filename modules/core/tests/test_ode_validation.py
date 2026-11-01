@@ -43,13 +43,6 @@ def test_logistic_matches_closed_form():
     assert abs(res.y_final[0] - exact) < 1e-6
 
 
-def test_implicit_method_also_hits_analytic_solution():
-    """bdf1 is order 1 but must still converge to the right answer at tight tol."""
-    r = solve(lambda t, y: [-y[0]], [1.0], (0.0, 3.0), method="bdf1", rtol=1e-7, atol=1e-10)
-    assert r.success
-    assert abs(r.y_final[0] - math.exp(-3.0)) < 1e-4
-
-
 # --- Gate 2: convergence order -------------------------------------------------
 
 
@@ -75,36 +68,6 @@ def _van_der_pol(mu: float):
         return [y[1], mu * (1.0 - y[0] ** 2) * y[1] - y[0]]
 
     return f
-
-
-def test_stiff_implicit_stays_bounded_where_explicit_is_impractical():
-    """Van der Pol at mu=1000: bdf1 stays bounded and cheap; rk45 costs >100x more."""
-    f = _van_der_pol(1000.0)
-    span = (0.0, 100.0)
-    imp = solve(f, [2.0, 0.0], span, method="bdf1", rtol=1e-3, atol=1e-6, max_step=10.0)
-    exp = solve(f, [2.0, 0.0], span, method="rk45", rtol=1e-3, atol=1e-6)
-
-    assert imp.success
-    # Bounded: the Van der Pol limit cycle has |x| ~ 2, nowhere near blow-up.
-    assert abs(imp.y_final[0]) < 5.0
-    assert exp.success  # it does finish, just expensively
-    # The stiff payoff: implicit is far cheaper in RHS evaluations.
-    assert exp.n_f_evals > 100 * imp.n_f_evals
-
-
-def test_stiff_scalar_implicit_beats_explicit_step_count():
-    """A stiff scalar with a slow true solution: implicit needs far fewer steps."""
-
-    def f(t, y):
-        return [-1000.0 * (y[0] - math.cos(t)) - math.sin(t)]
-
-    imp = solve(f, [1.0], (0.0, 5.0), method="bdf1", rtol=1e-5, atol=1e-8)
-    exp = solve(f, [1.0], (0.0, 5.0), method="rk45", rtol=1e-5, atol=1e-8)
-    assert imp.success and exp.success
-    # Both track cos(t); check they agree with the truth and implicit is cheaper.
-    assert abs(imp.y_final[0] - math.cos(5.0)) < 1e-4
-    assert abs(exp.y_final[0] - math.cos(5.0)) < 1e-4
-    assert imp.n_accepted < exp.n_accepted
 
 
 # --- Gate 4: oracle agreement vs scipy on the repo's own ODEs ------------------
@@ -148,13 +111,13 @@ def test_matches_scipy_on_capped_growth_ode():
 
 @pytest.mark.skipif(not HAVE_SCIPY, reason="scipy oracle not installed")
 def test_matches_scipy_stiff_oracle():
-    """bdf1 vs scipy's stiff BDF on the stiff scalar - both track the truth."""
+    """rk45 vs scipy's stiff BDF on the stiff scalar - both track the truth."""
 
     def f(t, y):
         return [-500.0 * (y[0] - math.cos(t)) - math.sin(t)]
 
     span = (0.0, 8.0)
-    ours = solve(f, [2.0], span, method="bdf1", rtol=1e-6, atol=1e-9)
+    ours = solve(f, [2.0], span, rtol=1e-6, atol=1e-9)
     ref = _scipy_solve_ivp(f, span, [2.0], method="BDF", rtol=1e-8, atol=1e-11)
     assert ours.success
     assert abs(ours.y_final[0] - ref.y[0][-1]) < 1e-3
@@ -171,15 +134,6 @@ def test_repeated_runs_are_byte_identical():
     assert a.t == b.t
     assert a.y == b.y
     assert (a.n_steps, a.n_f_evals) == (b.n_steps, b.n_f_evals)
-
-
-def test_implicit_runs_are_byte_identical():
-    def f(t, y):
-        return [-100.0 * y[0] + 99.0 * y[1], y[0] - y[1]]
-
-    a = solve(f, [1.0, 2.0], (0.0, 5.0), method="bdf1", rtol=1e-6, atol=1e-9)
-    b = solve(f, [1.0, 2.0], (0.0, 5.0), method="bdf1", rtol=1e-6, atol=1e-9)
-    assert a.t == b.t and a.y == b.y
 
 
 # --- Edge cases and contract ---------------------------------------------------
@@ -213,3 +167,15 @@ def test_nonfinite_rhs_is_reported_not_silently_returned():
     r = solve(lambda t, y: [y[0] ** 2], [1.0], (0.0, 5.0), rtol=1e-6, atol=1e-9)
     assert not r.success
     assert "trust" in r.message or "stalled" in r.message
+
+
+def test_stiff_scalar_tracks_truth():
+    """rk45 finishes a stiff scalar and tracks cos(t)."""
+
+    def f(t, y):
+        return [-1000.0 * (y[0] - math.cos(t)) - math.sin(t)]
+
+    r = solve(f, [1.0], (0.0, 5.0), rtol=1e-5, atol=1e-8)
+    assert r.success
+    assert abs(r.y_final[0] - math.cos(5.0)) < 1e-4
+

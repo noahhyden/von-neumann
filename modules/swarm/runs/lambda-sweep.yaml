@@ -1,0 +1,19 @@
+# Committed spec for the lambda_sweep measurement; nothing here is read from the environment.
+name: lambda-sweep
+module: swarm
+entry: experiments.measure:m_lambda_sweep
+description: >
+  Headline fuel/time/travel/energy tax vs Lambda = v/c, powered, event stepping, lightspeed vs instant coordination.
+
+runtime:
+  # No RAM cap recorded for this run, so workers is blank (every core).
+  workers:
+  # Was `python -O`. Strips the fold's __debug__ invariants; bit-identical, ~2-3x faster.
+  optimize: true
+  backends:
+    rust: true
+    njit: true
+
+params:
+  n_stars: 500
+  n_seeds: 512

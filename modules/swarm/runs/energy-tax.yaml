@@ -1,0 +1,19 @@
+# Committed spec for the energy_tax measurement; nothing here is read from the environment.
+name: energy-tax
+module: swarm
+entry: experiments.measure:m_energy_tax
+description: >
+  Energy-weighted tax per policy: count tax vs (1/2)v^2-weighted tax, 1x and 2x brackets.
+
+runtime:
+  # No RAM cap recorded for this run, so workers is blank (every core).
+  workers:
+  # Was `python -O`. Strips the fold's __debug__ invariants; bit-identical, ~2-3x faster.
+  optimize: true
+  backends:
+    rust: true
+    njit: true
+
+params:
+  n_stars: 400
+  n_seeds: 32

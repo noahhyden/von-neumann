@@ -85,12 +85,12 @@ def _break_even_multiplier(
 
 
 # C1 (decisive): the robustness margin.
-def m_copy_time_robustness(sc: SpineScenario) -> dict:
+def m_copy_time_robustness(sc: SpineScenario, *, n_stars: int | None = None) -> dict:
     """Sweep the derived copy time and record whether the finding survives (SCRUTINY.md C1)."""
     nominal = derive_settle_time_years(sc)
     nominal_copy_days = nominal * DAYS_PER_JULIAN_YEAR
     policy = "powered"
-    n_stars = sc.n_stars
+    n_stars = sc.n_stars if n_stars is None else n_stars
     seed = sc.seed
 
     multipliers = [0.1, 1.0, 10.0, 100.0, 1_000.0, 10_000.0, 100_000.0]
@@ -148,16 +148,17 @@ def _quartiles(xs: list[float]) -> dict:
     return {"median": median(ys), "q25": q(0.25), "q75": q(0.75), "min": ys[0], "max": ys[-1]}
 
 
-def m_dwell_tax(sc: SpineScenario) -> dict:
+def m_dwell_tax(sc: SpineScenario, *, n_stars: int | None = None, n_seeds: int = len(SEEDS)) -> dict:
     """The manufacturing dwell's galactic cost, measured A/B over a seed ensemble (C6)."""
     nominal = derive_settle_time_years(sc)
-    n_stars = sc.tax_n_stars
+    n_stars = sc.tax_n_stars if n_stars is None else n_stars
+    seeds = SEEDS[:n_seeds]
     policies = ["slingshot_nearest", "slingshot_maxboost"]
 
     ensemble = {}
     for policy in policies:
         per_seed = []
-        for seed in SEEDS:
+        for seed in seeds:
             withd = _t100(policy, nominal, n_stars=n_stars, seed=seed, stepping="event")
             zerod = _t100(policy, 0.0, n_stars=n_stars, seed=seed, stepping="event")
             tax = (
@@ -190,7 +191,7 @@ def m_dwell_tax(sc: SpineScenario) -> dict:
     size_check = {"policy": dt_policy, "sizes": []}
     for n in [200, 400, 800]:
         taxes = []
-        for seed in SEEDS:
+        for seed in seeds:
             w = _t100(dt_policy, nominal, n_stars=n, seed=seed, stepping="event")
             z = _t100(dt_policy, 0.0, n_stars=n, seed=seed, stepping="event")
             if w is not None and z not in (None, 0.0):
@@ -203,7 +204,7 @@ def m_dwell_tax(sc: SpineScenario) -> dict:
         "measurement": "dwell_tax",
         "config": {
             "n_stars": n_stars,
-            "n_seeds": len(SEEDS),
+            "n_seeds": len(seeds),
             "settle_years": nominal,
             "stepping": "event",
             "offspring_per_settlement": sc.offspring_per_settlement,
@@ -215,12 +216,12 @@ def m_dwell_tax(sc: SpineScenario) -> dict:
 
 
 # C7: the generalization - dwell fraction across policies and the crossover.
-def m_policy_sweep(sc: SpineScenario) -> dict:
+def m_policy_sweep(sc: SpineScenario, *, n_stars: int | None = None) -> dict:
     """Dwell fraction and break-even copy time for every policy (SCRUTINY.md C7)."""
     nominal = derive_settle_time_years(sc)
     nominal_copy_days = nominal * DAYS_PER_JULIAN_YEAR
     # Cross-policy comparison and crossover run on the smaller (tax) field, so all three policies - including the ~50 break-even fills powered needs - are cheap and on one footing.
-    n_stars = sc.tax_n_stars
+    n_stars = sc.tax_n_stars if n_stars is None else n_stars
     seed = sc.seed
 
     policies = ["powered", "slingshot_nearest", "slingshot_maxboost"]
@@ -261,14 +262,14 @@ MEASUREMENTS = {
 }
 
 
-def run_measurement(name: str, force: bool = False) -> None:
+def run_measurement(name: str, force: bool = False, **kw: int) -> None:
     """Zero-argument-shaped entry for vn-run: the measurement functions take a scenario, specs do not."""
-    rc = main([name] + (["--force"] if force else []))
+    rc = main([name] + (["--force"] if force else []), **kw)
     if rc:
         raise RuntimeError(f"spine measurement {name!r} failed with exit code {rc}")
 
 
-def main(argv: list[str]) -> int:
+def main(argv: list[str], **kw: int) -> int:
     force = "--force" in argv
     names = [a for a in argv if not a.startswith("--")]
     if not names:
@@ -285,7 +286,7 @@ def main(argv: list[str]) -> int:
             print(f"skip {name} (exists; --force to recompute)")
             continue
         print(f"run  {name} ...", flush=True)
-        result = MEASUREMENTS[name](sc)
+        result = MEASUREMENTS[name](sc, **kw)
         path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
         print(f"wrote {path.relative_to(RESULTS.parent)}")
     return 0

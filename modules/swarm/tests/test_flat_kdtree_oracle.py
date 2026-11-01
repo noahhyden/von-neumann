@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from swarm import models
-from swarm.rng import seed_state
+from vn_core.rng import seed_state
 from swarm.sim import (
     _build_kdtree,
     _generate_galaxy,

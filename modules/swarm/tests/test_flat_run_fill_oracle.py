@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from swarm import SwarmParams, models
-from swarm.rng import seed_state
+from vn_core.rng import seed_state
 from swarm.sim import (
     HOP_BIN_EDGES,
     KM_S_TO_PC_YR,

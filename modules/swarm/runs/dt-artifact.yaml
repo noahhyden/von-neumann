@@ -1,0 +1,19 @@
+# Committed spec for the dt_artifact measurement; nothing here is read from the environment.
+name: dt-artifact
+module: swarm
+entry: experiments.measure:m_dt_artifact
+description: >
+  Fixed-step dt rows vs the event row: how much of the tax is a timestep artifact (slingshot_nearest).
+
+runtime:
+  # No RAM cap recorded for this run, so workers is blank (every core).
+  workers:
+  # Was `python -O`. Strips the fold's __debug__ invariants; bit-identical, ~2-3x faster.
+  optimize: true
+  backends:
+    rust: true
+    njit: true
+
+params:
+  n_stars: 300
+  n_seeds: 32

@@ -11,3 +11,5 @@ runtime:
 
 params:
   name: dwell_tax
+  n_stars: 400
+  n_seeds: 24

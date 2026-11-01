@@ -38,11 +38,10 @@ P2_FIXED_N = {
 }
 
 
-def _p2_fixed_n(name: str) -> int:
-    """Canonical p2 star count for a fixed-N base sweep, honouring the SWARM_P2_N_OVERRIDE probe."""
-    override = os.environ.get("SWARM_P2_N_OVERRIDE")
-    return int(override) if override else P2_FIXED_N[name]
-
+_FS_LADDER = [(300, 48), (600, 48), (1200, 48), (2400, 48), (4800, 32),
+              (9600, 32), (24000, 24), (48000, 16), (200000, 8)]
+_FS_EDGE_LADDER = [(300, 32), (600, 32), (1200, 24), (2400, 16), (4800, 12),
+                   (9600, 12), (24000, 10), (48000, 8), (200000, 6)]
 
 # At-scale finite-size p2 ladder: N = 2^8..2^18 (11 points) with a linear 32->8 seed ramp, shared by the base, interior-edge and periodic-control companions.
 _FS_P2_LADDER = [(256, 32), (512, 30), (1024, 27), (2048, 25), (4096, 22), (8192, 20),
@@ -464,10 +463,9 @@ def _print_plateau_report(rep: dict) -> None:
 
 # --------------------------------------------------------------------------------------------
 
-def m_lambda_sweep() -> None:
+def m_lambda_sweep(*, n_stars: int = 500, n_seeds: int = 512) -> None:
     """Headline: fuel/time/travel/energy tax vs Lambda = v/c (powered, event, lightspeed vs instant)."""
-    seeds = SEEDS[:512]
-    n_stars = 500
+    seeds = SEEDS[:n_seeds]
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
     data = {}
     for lam in lambdas:
@@ -482,10 +480,9 @@ def m_lambda_sweep() -> None:
                  {"data": data})
 
 
-def p2_lambda_sweep() -> None:
+def p2_lambda_sweep(*, n_stars: int = P2_FIXED_N["lambda_sweep"], n_seeds: int = 128) -> None:
     """P2 companion to ``m_lambda_sweep``: at-scale N=262,144, 128 seeds (see P2_FIXED_N)."""
-    seeds = SEEDS[:128]
-    n_stars = _p2_fixed_n("lambda_sweep")
+    seeds = SEEDS[:n_seeds]
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
     data = {}
     for lam in lambdas:
@@ -500,10 +497,9 @@ def p2_lambda_sweep() -> None:
                        {"data": data})
 
 
-def m_lambda_sweep_scale() -> None:
+def m_lambda_sweep_scale(*, n_stars: int = 200_000, n_seeds: int = 8) -> None:
     """N=200k companion to the headline speed sweep: does tax ~ v/c linearity hold at scale?"""
-    seeds = SEEDS[:8]
-    n_stars = 200_000
+    seeds = SEEDS[:n_seeds]
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
     data = {}
     for lam in lambdas:
@@ -518,10 +514,9 @@ def m_lambda_sweep_scale() -> None:
                  {"data": data})
 
 
-def p2_lambda_sweep_scale() -> None:
+def p2_lambda_sweep_scale(*, n_stars: int = 524_288, n_seeds: int = 8) -> None:
     """P2 companion to ``m_lambda_sweep_scale``: at-scale N=524_288."""
-    seeds = SEEDS[:8]
-    n_stars = 524_288
+    seeds = SEEDS[:n_seeds]
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
     data = {}
     for lam in lambdas:
@@ -536,10 +531,9 @@ def p2_lambda_sweep_scale() -> None:
                        {"data": data})
 
 
-def m_branching() -> None:
+def m_branching(*, n_stars: int = 400, n_seeds: int = 32) -> None:
     """Fuel/time/energy tax vs the replication branching factor (offspring per settlement)."""
-    seeds = SEEDS[:32]
-    n_stars = 400
+    seeds = SEEDS[:n_seeds]
     # Swept high (to 16) so the saturation claim is tested, not asserted from a 3-point plateau:
     offspring = [2, 3, 4, 8, 16]
     lambdas = [0.05, 0.2]
@@ -559,10 +553,9 @@ def m_branching() -> None:
                  {"data": data})
 
 
-def p2_branching() -> None:
+def p2_branching(*, n_stars: int = P2_FIXED_N["branching"], n_seeds: int = 32) -> None:
     """P2 companion to ``m_branching``: N=400 -> the 1-min-ceiling p2 N (see P2_FIXED_N)."""
-    seeds = SEEDS[:32]
-    n_stars = _p2_fixed_n("branching")
+    seeds = SEEDS[:n_seeds]
     offspring = [2, 3, 4, 8, 16]
     lambdas = [0.05, 0.2]
     data = {}
@@ -581,10 +574,9 @@ def p2_branching() -> None:
                        {"data": data})
 
 
-def m_branching_scale() -> None:
+def m_branching_scale(*, n_stars: int = 200_000, n_seeds: int = 6) -> None:
     """N=200k companion to the branching sweep: does the tax-grows-with-branching claim hold at scale?"""
-    seeds = SEEDS[:6]
-    n_stars = 200_000
+    seeds = SEEDS[:n_seeds]
     offspring = [2, 3, 4, 8]
     lambdas = [0.05, 0.2]
     data = {}
@@ -603,10 +595,9 @@ def m_branching_scale() -> None:
                  {"data": data})
 
 
-def p2_branching_scale() -> None:
+def p2_branching_scale(*, n_stars: int = 524_288, n_seeds: int = 6) -> None:
     """P2 companion to ``m_branching_scale``: N=200_000 -> N=262_144 (next p2 above 200k)."""
-    seeds = SEEDS[:6]
-    n_stars = 524_288
+    seeds = SEEDS[:n_seeds]
     offspring = [2, 3, 4, 8]
     lambdas = [0.05, 0.2]
     data = {}
@@ -625,10 +616,9 @@ def p2_branching_scale() -> None:
                        {"data": data})
 
 
-def m_energy_tax() -> None:
+def m_energy_tax(*, n_stars: int = 400, n_seeds: int = 32) -> None:
     """Energy-weighted tax per policy: count-tax vs (1/2)v^2-weighted tax (1x and 2x brackets)."""
-    seeds = SEEDS[:32]
-    n_stars = 400
+    seeds = SEEDS[:n_seeds]
     policies = ["powered", "slingshot_nearest", "slingshot_maxboost"]
     data = {}
     for pol in policies:
@@ -647,10 +637,9 @@ def m_energy_tax() -> None:
                  {"data": data})
 
 
-def p2_energy_tax() -> None:
+def p2_energy_tax(*, n_stars: int = P2_FIXED_N["energy_tax"], n_seeds: int = 32) -> None:
     """P2 companion to ``m_energy_tax``: N=400 -> the 1-min-ceiling p2 N (see P2_FIXED_N)."""
-    seeds = SEEDS[:32]
-    n_stars = _p2_fixed_n("energy_tax")
+    seeds = SEEDS[:n_seeds]
     policies = ["powered", "slingshot_nearest", "slingshot_maxboost"]
     data = {}
     for pol in policies:
@@ -668,11 +657,9 @@ def p2_energy_tax() -> None:
                        {"data": data})
 
 
-def m_finite_size() -> None:
+def m_finite_size(*, n_seeds_by_n: list[tuple[int, int]] = _FS_LADDER) -> None:
     """Fuel tax % vs system size over a 16x span (300..4800), powered, Lambda=0.2, event."""
     # High-seed sweep reaching N=200,000 (near-linear since #30), with seeds scaled down as N grows to hold the median tight.
-    n_seeds_by_n = [(300, 48), (600, 48), (1200, 48), (2400, 48), (4800, 32),
-                    (9600, 32), (24000, 24), (48000, 16), (200000, 8)]
     data = {}
     per_n_fuel: dict[int, list[float]] = {}
     for n, k in n_seeds_by_n:
@@ -694,9 +681,8 @@ def m_finite_size() -> None:
                                        "slope": slope, "ci_lo": slope_lo, "ci_hi": slope_hi}})
 
 
-def p2_finite_size() -> None:
+def p2_finite_size(*, n_seeds_by_n: list[tuple[int, int]] = _FS_P2_LADDER) -> None:
     """P2 companion to ``m_finite_size``: the full power-of-two ladder 256..262,144."""
-    n_seeds_by_n = _FS_P2_LADDER
     data = {}
     per_n_fuel: dict[int, list[float]] = {}
     for n, k in n_seeds_by_n:
@@ -753,10 +739,9 @@ def _concurrency_ensemble(seeds: list[int], n_stars: int, lam: float,
     return data
 
 
-def m_concurrency() -> None:
+def m_concurrency(*, n_stars: int = 500, n_seeds: int = 16) -> None:
     """In-flight probe count vs coverage fraction: the mechanism behind 'no fill-time tax'."""
-    seeds = SEEDS[:16]
-    n_stars = 500
+    seeds = SEEDS[:n_seeds]
     lam = 0.2
     # coverage fractions to 0.90 in steps of 0.05, then fine tail bins into the final few percent
     bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
@@ -767,10 +752,9 @@ def m_concurrency() -> None:
                  {"data": data})
 
 
-def p2_concurrency() -> None:
+def p2_concurrency(*, n_stars: int = P2_FIXED_N["concurrency"], n_seeds: int = 32) -> None:
     """P2 companion to ``m_concurrency``: at-scale N=262,144, 32 seeds (see P2_FIXED_N)."""
-    seeds = SEEDS[:32]
-    n_stars = _p2_fixed_n("concurrency")
+    seeds = SEEDS[:n_seeds]
     lam = 0.2
     bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
     data = _concurrency_ensemble(seeds, n_stars, lam, bins)
@@ -780,10 +764,9 @@ def p2_concurrency() -> None:
                        {"data": data})
 
 
-def m_concurrency_scale() -> None:
+def m_concurrency_scale(*, n_stars: int = 200_000, n_seeds: int = 8) -> None:
     """N=200k companion to the concurrency sweep: does the many-probes-in-flight mechanism hold at the honest lever arm?"""
-    seeds = SEEDS[:8]
-    n_stars = 200_000
+    seeds = SEEDS[:n_seeds]
     lam = 0.2
     bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
     data = _concurrency_ensemble(seeds, n_stars, lam, bins)
@@ -793,10 +776,9 @@ def m_concurrency_scale() -> None:
                  {"data": data})
 
 
-def p2_concurrency_scale() -> None:
+def p2_concurrency_scale(*, n_stars: int = 524_288, n_seeds: int = 8) -> None:
     """P2 companion to ``m_concurrency_scale``: N=200_000 -> N=262_144 (next p2 above 200k)."""
-    seeds = SEEDS[:8]
-    n_stars = 524_288
+    seeds = SEEDS[:n_seeds]
     lam = 0.2
     bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
     data = _concurrency_ensemble(seeds, n_stars, lam, bins)
@@ -832,10 +814,9 @@ def _floor_bracket_body(seeds: list[int], n_stars: int, lambdas: list[float]) ->
     return data
 
 
-def m_floor_bracket() -> None:
+def m_floor_bracket(*, n_stars: int = 400, n_seeds: int = 48) -> None:
     """instant / inflight / lightspeed: how much of the decision-site tax survives in-flight relay."""
-    seeds = SEEDS[:48]
-    n_stars = 400
+    seeds = SEEDS[:n_seeds]
     lambdas = [0.05, 0.1, 0.2]
     data = _floor_bracket_body(seeds, n_stars, lambdas)
     write_result("floor_bracket",
@@ -844,10 +825,9 @@ def m_floor_bracket() -> None:
                  {"data": data})
 
 
-def p2_floor_bracket() -> None:
+def p2_floor_bracket(*, n_stars: int = P2_FIXED_N["floor_bracket"], n_seeds: int = 32) -> None:
     """P2 companion to ``m_floor_bracket``: at-scale N=262,144, 32 seeds (see P2_FIXED_N)."""
-    seeds = SEEDS[:32]
-    n_stars = _p2_fixed_n("floor_bracket")
+    seeds = SEEDS[:n_seeds]
     lambdas = [0.05, 0.1, 0.2]
     data = _floor_bracket_body(seeds, n_stars, lambdas)
     write_p2_companion("floor_bracket",
@@ -857,10 +837,9 @@ def p2_floor_bracket() -> None:
                        {"data": data})
 
 
-def m_floor_bracket_scale() -> None:
+def m_floor_bracket_scale(*, n_stars: int = 200_000, n_seeds: int = 8) -> None:
     """N=200k companion to the floor bracket: how much of the (already tiny, ~1.5%) tax survives in-flight relay at scale?"""
-    seeds = SEEDS[:8]
-    n_stars = 200_000
+    seeds = SEEDS[:n_seeds]
     lambdas = [0.05, 0.1, 0.2]
     data = _floor_bracket_body(seeds, n_stars, lambdas)
     write_result("floor_bracket_scale",
@@ -869,10 +848,9 @@ def m_floor_bracket_scale() -> None:
                  {"data": data})
 
 
-def p2_floor_bracket_scale() -> None:
+def p2_floor_bracket_scale(*, n_stars: int = 524_288, n_seeds: int = 8) -> None:
     """P2 companion to ``m_floor_bracket_scale``: at-scale N=524_288."""
-    seeds = SEEDS[:8]
-    n_stars = 524_288
+    seeds = SEEDS[:n_seeds]
     lambdas = [0.05, 0.1, 0.2]
     data = _floor_bracket_body(seeds, n_stars, lambdas)
     write_p2_companion("floor_bracket_scale",
@@ -882,10 +860,9 @@ def p2_floor_bracket_scale() -> None:
                        {"data": data})
 
 
-def m_retarget_cap() -> None:
+def m_retarget_cap(*, n_stars: int = 400, n_seeds: int = 32) -> None:
     """Fuel tax vs the max_retargets bookkeeping cap: show the result is insensitive to it."""
-    seeds = SEEDS[:32]
-    n_stars = 400
+    seeds = SEEDS[:n_seeds]
     caps = [2, 4, 8, 16, 32]
     data = {}
     for cap in caps:
@@ -899,10 +876,9 @@ def m_retarget_cap() -> None:
                  {"data": data})
 
 
-def p2_retarget_cap() -> None:
+def p2_retarget_cap(*, n_stars: int = P2_FIXED_N["retarget_cap"], n_seeds: int = 32) -> None:
     """P2 companion to ``m_retarget_cap``: N=400 -> the 1-min-ceiling p2 N (see P2_FIXED_N)."""
-    seeds = SEEDS[:32]
-    n_stars = _p2_fixed_n("retarget_cap")
+    seeds = SEEDS[:n_seeds]
     caps = [2, 4, 8, 16, 32]
     data = {}
     for cap in caps:
@@ -916,10 +892,9 @@ def p2_retarget_cap() -> None:
                        {"data": data})
 
 
-def m_retarget_cap_scale() -> None:
+def m_retarget_cap_scale(*, n_stars: int = 200_000, n_seeds: int = 8) -> None:
     """N=200k companion to the re-target-cap sweep: does insensitivity to the bookkeeping cap hold at scale?"""
-    seeds = SEEDS[:8]
-    n_stars = 200_000
+    seeds = SEEDS[:n_seeds]
     caps = [2, 4, 8, 16, 32]
     data = {}
     for cap in caps:
@@ -933,10 +908,9 @@ def m_retarget_cap_scale() -> None:
                  {"data": data})
 
 
-def p2_retarget_cap_scale() -> None:
+def p2_retarget_cap_scale(*, n_stars: int = 262_144, n_seeds: int = 8) -> None:
     """P2 companion to ``m_retarget_cap_scale``: N=200_000 -> N=262_144 (next p2 above 200k)."""
-    seeds = SEEDS[:8]
-    n_stars = 262_144
+    seeds = SEEDS[:n_seeds]
     caps = [2, 4, 8, 16, 32]
     data = {}
     for cap in caps:
@@ -950,10 +924,9 @@ def p2_retarget_cap_scale() -> None:
                        {"data": data})
 
 
-def m_dt_artifact() -> None:
+def m_dt_artifact(*, n_stars: int = 300, n_seeds: int = 32) -> None:
     """Fill-time tax vs fixed timestep, collapsing to ~0 at the event (dt->0) limit."""
-    seeds = SEEDS[:32]
-    n_stars = 300
+    seeds = SEEDS[:n_seeds]
     dts = [5000.0, 2000.0, 1000.0, 500.0, 250.0]
     rows_out = []
     for dt in dts + [None]:
@@ -973,10 +946,9 @@ def m_dt_artifact() -> None:
                  {"rows": rows_out})
 
 
-def p2_dt_artifact() -> None:
+def p2_dt_artifact(*, n_stars: int = P2_FIXED_N["dt_artifact"], n_seeds: int = 32) -> None:
     """P2 companion to ``m_dt_artifact``: N=300 -> N=512 (70% larger, cleanly p2)."""
-    seeds = SEEDS[:32]
-    n_stars = _p2_fixed_n("dt_artifact")
+    seeds = SEEDS[:n_seeds]
     dts = [5000.0, 2000.0, 1000.0, 500.0, 250.0]
     rows_out = []
     for dt in dts + [None]:
@@ -1052,10 +1024,9 @@ def _clumpiness_run(seeds: list[int], n_stars: int, lambdas: list[float],
     return data
 
 
-def m_clumpiness() -> None:
+def m_clumpiness(*, n_stars: int = 500, n_seeds: int = 48) -> None:
     """Does tax = Lambda survive a CLUMPY (non-uniform) field? [reviewer robustness ask]."""
-    seeds = SEEDS[:48]
-    n_stars = 500
+    seeds = SEEDS[:n_seeds]
     lambdas = [0.05, 0.1, 0.2]
     n_clumps = 25  # ~20 stars/clump at N=500: dense enough to over-subscribe under 2-offspring branching
     # Levels: the exact uniform cube (null), then Thomas clumps tightening from near-uniform to
@@ -1074,10 +1045,9 @@ def m_clumpiness() -> None:
                  {"data": data})
 
 
-def p2_clumpiness() -> None:
+def p2_clumpiness(*, n_stars: int = P2_FIXED_N["clumpiness"], n_seeds: int = 48) -> None:
     """P2 companion to ``m_clumpiness``: N=500 -> the 1-min-ceiling p2 N (see P2_FIXED_N). Same n_clumps=25."""
-    seeds = SEEDS[:48]
-    n_stars = _p2_fixed_n("clumpiness")
+    seeds = SEEDS[:n_seeds]
     lambdas = [0.05, 0.1, 0.2]
     n_clumps = 25
     levels = [
@@ -1095,10 +1065,9 @@ def p2_clumpiness() -> None:
                        {"data": data})
 
 
-def m_clumpiness_scale() -> None:
+def m_clumpiness_scale(*, n_stars: int = 200_000, n_seeds: int = 8) -> None:
     """N=200k companion to the clumpy-field sweep: does tax = Lambda still hold on non-uniform fields at scale?"""
-    seeds = SEEDS[:8]
-    n_stars = 200_000
+    seeds = SEEDS[:n_seeds]
     lambdas = [0.05, 0.1, 0.2]
     n_clumps = 25
     levels = [
@@ -1116,10 +1085,9 @@ def m_clumpiness_scale() -> None:
                  {"data": data})
 
 
-def p2_clumpiness_scale() -> None:
+def p2_clumpiness_scale(*, n_stars: int = 262_144, n_seeds: int = 8) -> None:
     """P2 companion to ``m_clumpiness_scale``: N=200_000 -> N=262_144 (next p2 above 200k)."""
-    seeds = SEEDS[:8]
-    n_stars = 262_144
+    seeds = SEEDS[:n_seeds]
     lambdas = [0.05, 0.1, 0.2]
     n_clumps = 25
     levels = [
@@ -1137,10 +1105,10 @@ def p2_clumpiness_scale() -> None:
                        {"data": data})
 
 
-def m_validation() -> None:
+def m_validation(*, n_stars: int = 400) -> None:
     """Nicholson & Forgan quantitative reproduction at the event timestep (single canonical seed)."""
     seed = 0x9E3779B9
-    n = 400
+    n = n_stars
     out = {}
     for pol in ("powered", "slingshot_nearest", "slingshot_maxboost"):
         r = simulate_swarm(SwarmParams(n_stars=n, policy=pol, stepping="event"), seed=seed)
@@ -1152,10 +1120,10 @@ def m_validation() -> None:
                   "nearest_beats_maxboost_on_time": out["slingshot_nearest"]["t100"] < out["slingshot_maxboost"]["t100"]})
 
 
-def p2_validation() -> None:
+def p2_validation(*, n_stars: int = 512) -> None:
     """P2 companion to ``m_validation``: N=400 -> N=512 (28% larger, cleanly p2)."""
     seed = 0x9E3779B9
-    n = 512
+    n = n_stars
     out = {}
     for pol in ("powered", "slingshot_nearest", "slingshot_maxboost"):
         r = simulate_swarm(SwarmParams(n_stars=n, policy=pol, stepping="event"), seed=seed)
@@ -1176,10 +1144,8 @@ def _interior_settled(rec: dict, start_bin: int) -> int:
     return sum(rec["settle_wall_hist"][start_bin:])
 
 
-def m_finite_size_interior() -> None:
+def m_finite_size_interior(*, n_seeds_by_n: list[tuple[int, int]] = _FS_EDGE_LADDER) -> None:
     """Finite-size EDGE test (referee finding M1): does the with-N tax decline survive when the tax is measured on BULK stars only?"""
-    n_seeds_by_n = [(300, 32), (600, 32), (1200, 24), (2400, 16), (4800, 12),
-                    (9600, 12), (24000, 10), (48000, 8), (200000, 6)]
     # Shell start-bins for WALL_BIN_EDGES_NN=(0.5,1,1.5,2): shell>=1.0 NN -> bins 2.., shell>=2.0 -> bin 4.
     shells = {"all": 0, "interior_1nn": 2, "interior_2nn": 4}
     data = {}
@@ -1215,9 +1181,8 @@ def m_finite_size_interior() -> None:
                                        "resample": "seeds within each N", "by_shell": regressions}})
 
 
-def p2_finite_size_interior() -> None:
+def p2_finite_size_interior(*, n_seeds_by_n: list[tuple[int, int]] = _FS_P2_LADDER) -> None:
     """P2 companion to ``m_finite_size_interior``: p2 ladder matched to the historical seed pattern."""
-    n_seeds_by_n = _FS_P2_LADDER
     shells = {"all": 0, "interior_1nn": 2, "interior_2nn": 4}
     data = {}
     per_n: dict[str, dict[int, list]] = {s: {} for s in shells}
@@ -1253,10 +1218,8 @@ def p2_finite_size_interior() -> None:
                                              "by_shell": regressions}})
 
 
-def m_finite_size_periodic() -> None:
+def m_finite_size_periodic(*, n_seeds_by_n: list[tuple[int, int]] = _FS_EDGE_LADDER) -> None:
     """Finite-size EDGE test, second control (referee finding M1): the periodic-box cross-check."""
-    n_seeds_by_n = [(300, 32), (600, 32), (1200, 24), (2400, 16), (4800, 12),
-                    (9600, 12), (24000, 10), (48000, 8), (200000, 6)]
     data = {}
     per_n: dict[int, list[float]] = {}
     for n, k in n_seeds_by_n:
@@ -1290,9 +1253,8 @@ def m_finite_size_periodic() -> None:
                                        "slope": slope, "ci_lo": lo, "ci_hi": hi}})
 
 
-def p2_finite_size_periodic() -> None:
+def p2_finite_size_periodic(*, n_seeds_by_n: list[tuple[int, int]] = _FS_P2_LADDER) -> None:
     """P2 companion to ``m_finite_size_periodic``: p2 ladder matched to the historical seed pattern."""
-    n_seeds_by_n = _FS_P2_LADDER
     data = {}
     per_n: dict[int, list[float]] = {}
     for n, k in n_seeds_by_n:

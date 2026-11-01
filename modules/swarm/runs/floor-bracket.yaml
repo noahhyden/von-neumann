@@ -1,0 +1,19 @@
+# Committed spec for the floor_bracket measurement; nothing here is read from the environment.
+name: floor-bracket
+module: swarm
+entry: experiments.measure:m_floor_bracket
+description: >
+  Instant / lightspeed / inflight coordination bracket across Lambda.
+
+runtime:
+  # No RAM cap recorded for this run, so workers is blank (every core).
+  workers:
+  # Was `python -O`. Strips the fold's __debug__ invariants; bit-identical, ~2-3x faster.
+  optimize: true
+  backends:
+    rust: true
+    njit: true
+
+params:
+  n_stars: 400
+  n_seeds: 48

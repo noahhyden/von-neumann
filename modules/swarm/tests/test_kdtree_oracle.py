@@ -6,7 +6,7 @@ import pytest
 
 from swarm import SwarmParams
 from swarm.models import Coordination
-from swarm.rng import next_float, seed_state
+from vn_core.rng import next_float, seed_state
 from swarm.sim import (
     _believes_settled_at,
     _kd_mark_settled,

@@ -14,9 +14,3 @@ ARRAY_DEGRADATION_DIST: Distribution = Uniform(
 
 # LogUniform over the satellite-bus hazard range 5e-6 to 2e-5 per day ([ESTIMATE], REFERENCES.md); proxy 1.1e-5 sits inside it.
 SATELLITE_HAZARD_PER_DAY_DIST: Distribution = LogUniform(low=5e-6, high=2e-5)
-
-
-__all__ = [
-    "ARRAY_DEGRADATION_DIST",
-    "SATELLITE_HAZARD_PER_DAY_DIST",
-]

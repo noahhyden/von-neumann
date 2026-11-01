@@ -1,0 +1,19 @@
+# Committed spec for the branching measurement; nothing here is read from the environment.
+name: branching
+module: swarm
+entry: experiments.measure:m_branching
+description: >
+  Tax vs offspring per settlement (branching factor) at small N.
+
+runtime:
+  # No RAM cap recorded for this run, so workers is blank (every core).
+  workers:
+  # Was `python -O`. Strips the fold's __debug__ invariants; bit-identical, ~2-3x faster.
+  optimize: true
+  backends:
+    rust: true
+    njit: true
+
+params:
+  n_stars: 400
+  n_seeds: 32

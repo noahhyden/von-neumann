@@ -22,12 +22,3 @@ BRAIN_COMPUTE_FLOPS_DIST: Distribution = LogUniform(low=1e15, high=1e20)
 
 # Present-day accelerator compute efficiency (FLOPS/W): H100-class sits near 1e11 and the Koomey trend is ~2x every 1.6 years, so LogUniform spans two orders of magnitude (narrow it if a device is pinned).
 COMPUTE_EFFICIENCY_FLOPS_PER_W_DIST: Distribution = LogUniform(low=1e10, high=1e12)
-
-
-__all__ = [
-    "BOLTZMANN_DIST",
-    "REFERENCE_TEMPERATURE_K_DIST",
-    "HUMAN_BRAIN_POWER_DIST",
-    "BRAIN_COMPUTE_FLOPS_DIST",
-    "COMPUTE_EFFICIENCY_FLOPS_PER_W_DIST",
-]

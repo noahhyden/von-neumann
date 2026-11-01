@@ -1,10 +1,9 @@
-# The reference run spec. Everything this run needs is here; nothing is read from the environment.
+# Committed spec for the branching_scale measurement; nothing here is read from the environment.
 name: branching-scale
 module: swarm
 entry: experiments.measure:m_branching_scale
 description: >
-  Branching-factor sweep at the top of the N ladder. RAM-bound rather than
-  CPU-bound at 200k stars, which is why workers is capped below core count.
+  Branching-factor sweep at the top of the N ladder. RAM-bound rather than CPU-bound at 200k stars, which is why workers is capped below core count.
 
 runtime:
   # Was SWARM_WORKERS=2. A blank value means every core, which OOMs this sweep.
@@ -14,3 +13,7 @@ runtime:
   backends:
     rust: true
     njit: true
+
+params:
+  n_stars: 200000
+  n_seeds: 6

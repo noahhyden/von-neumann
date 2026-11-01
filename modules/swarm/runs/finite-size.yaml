@@ -1,0 +1,27 @@
+# Committed spec for the finite_size measurement; nothing here is read from the environment.
+name: finite-size
+module: swarm
+entry: experiments.measure:m_finite_size
+description: >
+  Fuel tax vs system size over a 16x span plus a 200k point, with a log-log scale regression.
+
+runtime:
+  # No RAM cap recorded for this run, so workers is blank (every core).
+  workers:
+  # Was `python -O`. Strips the fold's __debug__ invariants; bit-identical, ~2-3x faster.
+  optimize: true
+  backends:
+    rust: true
+    njit: true
+
+params:
+  n_seeds_by_n:   # [N, seeds] pairs, one ladder rung each
+    - [300, 48]
+    - [600, 48]
+    - [1200, 48]
+    - [2400, 48]
+    - [4800, 32]
+    - [9600, 32]
+    - [24000, 24]
+    - [48000, 16]
+    - [200000, 8]

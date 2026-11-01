@@ -18,10 +18,3 @@ MOUSE_BRAIN_FLOPS_DIST: Distribution = LogUniform(low=1e13, high=1e17)
 
 # Self-driving car: relatively tight band (vision to full L4), Uniform.
 SELF_DRIVING_OPS_PER_S_DIST: Distribution = Uniform(low=5e13, high=3.2e14)
-
-
-__all__ = [
-    "HONEYBEE_BRAIN_FLOPS_DIST",
-    "MOUSE_BRAIN_FLOPS_DIST",
-    "SELF_DRIVING_OPS_PER_S_DIST",
-]
