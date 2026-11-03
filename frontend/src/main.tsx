@@ -33,8 +33,8 @@ import type { PaperMeta } from "./papers-index.js";
 // Generated at build time from git history (a version = every commit touching papers/<slug>/); see papers/scripts/gen-versions.mjs.
 import { PAPER_VERSIONS } from "./papers-versions.js";
 import type { VersionMeta } from "./papers-versions.js";
-
-type Surface = "overview" | "wall" | "mission" | "fleet" | "swarm" | "spine" | "launch" | "power" | "probe" | "sources" | "papers";
+import { VALID_SURFACES, SURFACE_TITLE, DEFAULT_SCENARIO, pathForSurface, parsePath, pathFromLegacyHash, isKnownPath } from "./routes.js";
+import type { Surface } from "./routes.js";
 
 const fmtNum = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
 const usdCompact = (d: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact", minimumFractionDigits: d, maximumFractionDigits: d });
@@ -1026,7 +1026,7 @@ function OverviewSurface() {
             <Action onClick={() => mount("swarm")}>Watch the galaxy fill</Action>
             <Action kind="ghost" onClick={() => mount("sources")}>Sources</Action>
           </ActionRow>
-      </>} footer={<>Every figure links to its source on the <a href="#/sources" onClick={(e: Event) => { e.preventDefault(); mount("sources"); }}>Sources</a> page, and gaps are marked as gaps. Built on <strong>pimas</strong>.</>}>
+      </>} footer={<>Every figure links to its source on the <a href="/sources" onClick={(e: Event) => { e.preventDefault(); mount("sources"); }}>Sources</a> page, and gaps are marked as gaps. Built on <strong>pimas</strong>.</>}>
 
       <Band title="Research models, not predictions.">
           <p>
@@ -1036,7 +1036,7 @@ function OverviewSurface() {
             <strong>No number is assumed.</strong> Every mass, energy, rate and cost traces to a published source or is derived by explicit math from numbers that do<Cite ids={["nasa-cp-2255-1980", "kopp-lean-2011", "landauer-1961"]} />. Where the literature has no value, the gap is marked and not filled. Best-defensible estimates are labelled as estimates. The models are pure and deterministic: same inputs and seed, same result.
           </p>
           <Note>
-            Every figure on this site carries a marker like this<Cite ids="borgue-hein-2020" /> - hover or tab to it for the exact paper and what it grounds. The full list is on the <a href="#/sources" onClick={(e: Event) => { e.preventDefault(); mount("sources"); }}>Sources</a> page.
+            Every figure on this site carries a marker like this<Cite ids="borgue-hein-2020" /> - hover or tab to it for the exact paper and what it grounds. The full list is on the <a href="/sources" onClick={(e: Event) => { e.preventDefault(); mount("sources"); }}>Sources</a> page.
           </Note>
       </Band>
 
@@ -1221,45 +1221,12 @@ function PapersSurface() {
   );
 }
 
-// Mount + routing: a shell hosting one surface per model, with the surface kept in the URL hash (#/swarm, #/wall/low_closure) so views are shareable and Back/Forward and refresh work.
+// Mount + routing: a shell hosting one surface per model, with the surface kept in the real pathname (/swarm, /wall/low_closure - see routes.ts) so views are shareable and Back/Forward and refresh work; build.mjs emits a real file per path.
 const appEl = document.getElementById("app")!;
 let disposeRender: (() => void) | null = null;
 let model: WallModel | null = null;
 
-const VALID_SURFACES: Surface[] = [
-  "overview", "mission", "fleet", "swarm", "spine", "wall", "probe", "launch", "power", "papers", "sources",
-];
-const SURFACE_TITLE: Record<Surface, string> = {
-  overview: "The Arithmetic of Self-Replication",
-  mission: "Full mission - The Arithmetic of Self-Replication",
-  fleet: "Fleet - The Arithmetic of Self-Replication",
-  swarm: "Swarm - The Arithmetic of Self-Replication",
-  spine: "Across scales - The Arithmetic of Self-Replication",
-  wall: "Electronics wall - The Arithmetic of Self-Replication",
-  probe: "Single probe - The Arithmetic of Self-Replication",
-  launch: "Launch economics - The Arithmetic of Self-Replication",
-  power: "Power budget - The Arithmetic of Self-Replication",
-  papers: "Papers - The Arithmetic of Self-Replication",
-  sources: "Sources - The Arithmetic of Self-Replication",
-};
-
-function surfaceToHash(surface: Surface, scenarioKey: string): string {
-  if (surface === "overview") return "#/";
-  if (surface === "wall" && scenarioKey && scenarioKey !== "lunar") return `#/wall/${scenarioKey}`;
-  return `#/${surface}`;
-}
-function parseHash(): { surface: Surface; scenarioKey: string } {
-  const raw = location.hash.replace(/^#\/?/, "");
-  const [s, scen] = raw.split("/");
-  const surface = (VALID_SURFACES as string[]).includes(s) ? (s as Surface) : "overview";
-  const scenarioKey = surface === "wall" && scen && SCENARIOS[scen] ? scen : "lunar";
-  return { surface, scenarioKey };
-}
-
-// True while we are the ones writing the hash, so our own hashchange is ignored.
-let suppressHash = false;
-
-function mount(surface: Surface, scenarioKey = "lunar", updateUrl = true) {
+function mount(surface: Surface, scenarioKey = DEFAULT_SCENARIO, updateUrl = true) {
   disposeRender?.();
   model?.dispose();
   model = null;
@@ -1362,25 +1329,32 @@ function mount(surface: Surface, scenarioKey = "lunar", updateUrl = true) {
 
   document.title = SURFACE_TITLE[surface];
   if (updateUrl) {
-    const hash = surfaceToHash(surface, scenarioKey);
-    if (location.hash !== hash) {
-      suppressHash = true; // our own write; the listener below will skip it
-      location.hash = hash;
-    }
+    const path = pathForSurface(surface, scenarioKey);
+    if (location.pathname !== path) history.pushState(null, "", path);
   }
 }
 
-// Back/Forward, or a pasted deep link: re-mount from the hash (without re-writing it).
-window.addEventListener("hashchange", () => {
-  if (suppressHash) { suppressHash = false; return; }
-  const { surface, scenarioKey } = parseHash();
+// Back/Forward: re-mount from the new pathname (without pushing another history entry).
+window.addEventListener("popstate", () => {
+  const { surface, scenarioKey } = parsePath(location.pathname);
   mount(surface, scenarioKey, false);
 });
 
-// Initial load: honor a deep link, and normalize the bar without adding a history entry.
+// Intercept same-origin link clicks so in-site navigation stays client-side (pushState) instead of a full reload.
+document.addEventListener("click", (e: MouseEvent) => {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  const a = (e.target as HTMLElement).closest?.("a[href]") as HTMLAnchorElement | null;
+  if (!a || a.target || a.hasAttribute("download") || a.origin !== location.origin) return;
+  e.preventDefault();
+  const { surface, scenarioKey } = parsePath(a.pathname);
+  mount(surface, scenarioKey);
+});
+
+// Initial load: translate a legacy hash link (#/swarm) to its real path, then honor a deep link and normalize the bar without adding a history entry.
 {
-  const { surface, scenarioKey } = parseHash();
-  const hash = surfaceToHash(surface, scenarioKey);
-  if (location.hash !== hash) history.replaceState(null, "", hash);
+  if (location.hash) history.replaceState(null, "", pathFromLegacyHash(location.hash) ?? "/");
+  const { surface, scenarioKey } = parsePath(location.pathname);
+  const canonical = pathForSurface(surface, scenarioKey);
+  if (isKnownPath(location.pathname) && location.pathname !== canonical) history.replaceState(null, "", canonical);
   mount(surface, scenarioKey, false);
 }
