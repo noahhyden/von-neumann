@@ -82,12 +82,14 @@ total exploration time (boost-chasing wastes travel).
 ## 8. Light-speed coordination is a real tax, sized by v/c and hop locality
 
 When probes must decide against a light-delayed *belief* of which stars are already
-settled, they race for the same target from stale views and waste trips. Measured over a
-32-seed paired ensemble, the median cost versus perfect information is ~30% of the
-exploration timescale for nearest-slingshot, ~50% for max-boost, and ~0% for powered
-flight. A connected field still fills to 100% - lag alone produces no permanent
-"Aurora" plateau. The scale is set by Lambda ~ v/c; whether it bites is decided by how
-non-local each hop is. This implements the source paper's own stated future work.
+settled, they race for the same target from stale views and waste trips. The cost is
+redundant TRAVEL, not fill time: the tens-of-percent fill-time penalty a fixed timestep
+reports is a discretization artifact, and it collapses to ~0 once each probe decides at
+its true arrival time. What remains is a fuel tax in wasted journeys, scaling as
+Lambda ~ v/c, with a coefficient near 1 on a few-hundred-star field that falls as the
+field grows. A connected field still fills to 100% - lag alone produces no permanent
+"Aurora" plateau. Whether the tax bites is decided by how non-local each hop is. This
+implements the source paper's own stated future work.
 *Module: `swarm` (FRONTIER #1). Sources: Nicholson & Forgan (2013); Olfati-Saber & Murray (2004); Ferrell (1965); RFC 4838.*
 
 ## 9. Which constraint binds at which scale (the cross-scale answer)
