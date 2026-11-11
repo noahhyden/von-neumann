@@ -53,6 +53,11 @@ papers/
    }
    ```
 
+   An optional `"draft": true` keeps the paper out of the site: it is still validated
+   and typeset, but `gen-index.mjs` leaves it out of `papers-index.ts`,
+   `gen-versions.mjs` emits no version list for it, and the deploy publishes none of
+   its PDFs. Remove the key to publish.
+
    Every id in `cites` must exist in `sources.ts`; `gen-index.mjs` fails hard if one
    does not. If a number you want to state has no source there, do not state it
    (CLAUDE.md 1).

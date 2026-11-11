@@ -103,7 +103,7 @@ nonzero on any em-dash, en-dash, or emoji, and skips generated and binary artifa
 | --- | --- | --- | --- |
 | `refs.bib` | generated from `sources.ts` | no (gitignored) | never hand-edit (R2) |
 | `main.tex`, `body/*.tex` | hand-written | yes | `gen-tex.mjs` scaffolds them **once** and never overwrites |
-| `paper.json` | hand-written | yes | the paper's metadata + manifest |
+| `paper.json` | hand-written | yes | the paper's metadata + manifest; optional `draft: true` withholds it from the site |
 | `frontend/src/papers-index.ts` | generated from all `paper.json` | yes | must match generator output |
 | `*.pdf`, `*.aux`, ... | LaTeX build | no (gitignored) | CI produces the published PDF |
 

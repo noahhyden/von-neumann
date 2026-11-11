@@ -140,9 +140,12 @@ jobs:
       - name: Publish paper PDFs into the site
         run: |
           mkdir -p frontend/dist/papers
+          # A draft is still typeset and archived, but none of its PDFs reach the site.
+          is_draft() { [ "$(jq -r '.draft // false' "papers/$1/paper.json" 2>/dev/null)" = "true" ]; }
           # Every version PDF from the archive branch, at its <slug>/<shortSha>.pdf path.
           if [ -d ../ppdfs ]; then
             for f in $(git -C ../ppdfs ls-files '*.pdf'); do
+              if is_draft "$(dirname "$f")"; then echo "draft $(dirname "$f"); skip $f"; continue; fi
               mkdir -p "frontend/dist/papers/$(dirname "$f")"
               cp "../ppdfs/$f" "frontend/dist/papers/$f"
               echo "published papers/$f"
@@ -152,6 +155,7 @@ jobs:
           for d in papers/*/; do
             [ -f "${d}main.tex" ] || continue
             slug=$(basename "$d")
+            if is_draft "$slug"; then echo "draft ${slug}; skip latest alias"; continue; fi
             if [ -f "${d}main.pdf" ]; then
               cp "${d}main.pdf" "frontend/dist/papers/${slug}.pdf"
               echo "published ${slug}.pdf (latest alias)"

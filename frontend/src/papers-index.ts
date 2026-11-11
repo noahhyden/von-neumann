@@ -32,47 +32,6 @@ export interface PaperMeta {
 
 export const PAPERS: PaperMeta[] = [
   {
-    "slug": "spine",
-    "title": "The Manufacturing Clock of a Self-Replicating Fleet Is a Rounding Error on Galactic Settlement",
-    "authors": [
-      {
-        "name": "Noah Hydén",
-        "affiliation": "Independent researcher",
-        "orcid": "0009-0003-4523-0467"
-      }
-    ],
-    "abstract": "A programme of self-replicating space manufacturing is usually modelled one scale at a time: a single factory that copies itself, a local fleet that disperses across a solar system, or a settlement front that crosses a galaxy. We thread one sourced factory through all three folds, so that a quantity every scale needs, the time to build one copy, is derived once rather than assumed three times over. The result is a clean cross-scale statement. The copy time that sets a local fleet's doubling clock, about 582 days for a lunar-regolith seed, is the same quantity that, at galactic scale, is under one part in a million of the roughly two-million-year time a powered front takes to fill a stellar field. The constraint that governs one scale is a rounding error at the next. Because that copy time is a lunar-factory stand-in for an interstellar probe whose own bill of materials is not yet known, we do not defend its exact value; we show the conclusion survives not knowing it. Across a copy-time sweep of five orders of magnitude the manufacturing dwell stays below one percent of the fill until the copy time is about fifteen thousand times its nominal value, so an error of four orders of magnitude in the build cadence does not change the verdict. Measured directly, seed by seed, the dwell costs a median of about a third of a percent of exploration time for the fastest slingshot policy and is within seed-to-seed noise for the slower one. The picture is therefore robust: manufacturing time is the binding clock for a local fleet, where transit is days, and a negligible tax on interstellar exploration, where transit is millennia.",
-    "date": "2026-07-10",
-    "keywords": [
-      "self-replication",
-      "interstellar exploration",
-      "cross-scale modelling",
-      "in-situ manufacturing",
-      "von Neumann probes"
-    ],
-    "cites": [
-      "von-neumann-burks-1966",
-      "freitas-1980-interstellar-probe",
-      "hart-1975",
-      "tipler-1980",
-      "nicholson-forgan-2013",
-      "forgan-papadog-kitching-2013",
-      "lubin-2016",
-      "nasa-cp-2255-1980",
-      "chirikjian-2004-niac",
-      "moses-chirikjian-2020",
-      "borgue-hein-2020",
-      "guided-self-replicating-factory-2021",
-      "nagapurkar-das-2022",
-      "freitas-merkle-2004",
-      "tsiolkovsky-1903",
-      "kopp-lean-2011"
-    ],
-    "pdf": "papers/spine.pdf",
-    "doi": null,
-    "doiIsSandbox": false
-  },
-  {
     "slug": "coordination-tax",
     "title": "The Coordination Cost of Light-Speed Delay in a Self-Replicating Probe Swarm Scales as v/c",
     "authors": [
@@ -118,57 +77,6 @@ export const PAPERS: PaperMeta[] = [
     ],
     "pdf": "papers/coordination-tax.pdf",
     "doi": "10.5072/zenodo.568808",
-    "doiIsSandbox": true
-  },
-  {
-    "slug": "electronics-wall",
-    "title": "The Electronics Wall: Why a Self-Replicating Space Factory Cannot Close on Its Own Chips",
-    "authors": [
-      {
-        "name": "Noah Hydén",
-        "affiliation": "Independent researcher",
-        "orcid": "0009-0003-4523-0467"
-      }
-    ],
-    "abstract": "A self-replicating space factory lands with a fixed cargo and builds copies of itself from local material. Its promise is leverage: the fraction of its own mass it can remake locally, its closure, sets how much installed capacity each launched kilogram becomes, exactly 1/(1-C). We show why that fraction stops short of one at a wall built of chips. The wall is twofold. Chips sit at the end of the deepest supply chain on Earth, and they are staggeringly energy-hungry to make, with an embodied energy roughly three orders of magnitude above smelted metal. Modern seed-factory studies converge on achievable closure near 70 to 96 percent and agree that chasing 100 percent is not worthwhile, so imported electronics are a permanent design feature rather than a temporary compromise. Letting a highly closed seed make its own chips pays off only when it is also swimming in power; starved of power it backfires. Imported electronics, and the launch-mass leverage they cap, are therefore intrinsic to the concept.",
-    "date": "2026-07-09",
-    "keywords": [
-      "self-replication",
-      "in-situ manufacturing",
-      "material closure",
-      "embodied energy",
-      "space systems"
-    ],
-    "cites": [
-      "von-neumann-burks-1966",
-      "nasa-cp-2255-1980",
-      "freitas-merkle-2004",
-      "chirikjian-2004-niac",
-      "moses-chirikjian-2020",
-      "zykov-lipson-2005",
-      "reprap-jones-2011",
-      "borgue-hein-2020",
-      "metzger-2013",
-      "guided-self-replicating-factory-2021",
-      "csis-semiconductor-supply-chain",
-      "williams-ayres-heller-2002",
-      "nagapurkar-das-2022",
-      "gutowski-2009",
-      "boyd-2012",
-      "murphy-2003",
-      "ice-coefficients",
-      "ashby-2012",
-      "peng-2013-pv-lca",
-      "power-electronics-lca",
-      "sensor-embodied-2021",
-      "guerrero-zabel-2023",
-      "tsiolkovsky-1903",
-      "sutton-biblarz-2016",
-      "curtis-2020",
-      "jones-2018-launch-cost"
-    ],
-    "pdf": "papers/electronics-wall.pdf",
-    "doi": "10.5072/zenodo.568806",
     "doiIsSandbox": true
   }
 ];

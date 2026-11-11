@@ -1,6 +1,6 @@
 // gen-versions.mjs - build frontend/src/papers-versions.ts from git history (issue #7; see papers/README.md).
 
-import { readdirSync, existsSync, writeFileSync } from "node:fs";
+import { readdirSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 
@@ -45,10 +45,11 @@ function archivedPdfs() {
 const GH = repoSlug();
 const archived = archivedPdfs();
 
-// Discover paper slugs the same way gen-index does: papers/<slug>/paper.json.
+// Discover paper slugs the same way gen-index does: papers/<slug>/paper.json, drafts excluded.
 const slugs = readdirSync(papersRoot, { withFileTypes: true })
   .filter((d) => d.isDirectory() && d.name !== "scripts" && d.name !== "node_modules")
   .filter((d) => existsSync(join(papersRoot, d.name, "paper.json")))
+  .filter((d) => !JSON.parse(readFileSync(join(papersRoot, d.name, "paper.json"), "utf8")).draft)
   .map((d) => d.name)
   .sort();
 

@@ -91,6 +91,9 @@ for (const path of entries) {
     }
   }
 
+  // A draft is validated above like any paper but kept out of the index, so the site never lists it.
+  if (paper.draft) continue;
+
   // Per-paper Zenodo DOI (issue #8) from paper.json: production wins over sandbox, sandbox is flagged.
   const prodDoi = paper.zenodo_concept_doi || "";
   const sandboxDoi = paper.zenodo_sandbox_concept_doi || "";
