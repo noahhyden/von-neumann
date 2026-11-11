@@ -18,15 +18,15 @@ stellar volume to measure fill times directly \citep{bjork-2007,cotta-morales-20
 established the seeded Monte Carlo methodology that situates an exploration timescale
 within a distribution of realizations rather than a single number \citep{forgan-2009}.
 
-The sharpest treatment for self-replicators is the slingshot line.
+The closest precedent for self-replicators is the slingshot line.
 \citet{forgan-papadog-kitching-2013} showed that a single probe stealing energy from the motion of
 the stars it passes, a gravitational slingshot, explores up to two orders of magnitude
 faster than a probe under its own power. \citet{nicholson-forgan-2013} extended that manoeuvre to
 self-replicating probes and confirmed the speed-up survives replication, with the surprising result
 that aiming for the nearest star can beat aiming for the largest boost. The probe speeds that make this
 regime interesting, from the powered cruise of $3\times10^{-5}\,c$ up toward the $0.1$ to
-$0.2\,c$ of beamed directed-energy concepts \citep{lubin-2016}, are exactly where the next
-assumption starts to hurt.
+$0.2\,c$ of beamed directed-energy concepts \citep{lubin-2016}, are exactly where perfect
+information stops being a safe assumption.
 
 That assumption, which Nicholson and Forgan name as a limitation and leave for future
 work, is that every probe is granted perfect, instantaneous knowledge of which stars are
@@ -38,34 +38,33 @@ consequence of a finite signal speed, that events have only a partial ordering a
 remote event is unknowable until its signal arrives \citep{lamport-1978}.
 
 This paper adds that light-speed limit to the self-replicating slingshot model and measures
-what it costs. The answer, built from a controlled paired-ensemble experiment, has two parts,
-and the first is a caution. The cost is easy to overstate: a simulation that advances in a
-fixed timestep coarser than the interval between probe launches makes many probes decide from
-the same stale snapshot at once, and they collide far more than they physically would. Read
-that way the delay appears to slow the fill of the field by tens of percent. That number is an
-artifact. When the dynamics are resolved so that each probe decides at its own arrival time, the
-tens-of-percent slowdown collapses to a few percent at most, and to nothing at slingshot speeds,
-while the slingshot speed-up survives contact with finite information intact, reproducing the
-source model to the same order of magnitude. The dominant cost shows up elsewhere. Every star still gets settled,
-and with a negligible change in how many probes are built, well under a percent; what the delay
-chiefly changes is how many wasted journeys the swarm flies to stars other probes have already
-claimed. That is a cost paid in fuel and effort, and -- as the field grows large -- in fill time,
-which a perfect-information model hides entirely. It is governed cleanly by a single dimensionless
-number, the probe's speed in units of the speed of light. The delay multiplies the wasted
-journeys by at most $1+\Lambda$, so the fuel tax -- the extra wasted trips as a fraction of those a
-perfect-information swarm already flies -- is negligible for a powered cruise, about a percent at
-slingshot speeds, and a sixth at the directed-energy speeds that beamed-propulsion concepts target
-on a few-thousand-star field; on our quarter-million-star headline field that same coefficient has
-fallen to about $0.07$, a fuel tax of about $1.3\%$ at directed-energy speed. That baseline is
-itself wasteful: even with a perfect map about nine in ten journeys are
-redundant, so the tax is a $v/c$ surcharge on an already-saturated process. We derive from a short
-collision argument that this relative tax has $\Lambda$ as its leading-order ceiling, and find in
-simulation that the measured coefficient sits below it -- about $0.8$ on a few-thousand-star field,
-$0.07$ at a quarter million, declining with size as saturation removes waste the delay would
-otherwise add. The fill-time cost runs the other way, negligible beside the fuel tax on small fields
-but exceeding it at scale. We show the tax grows with the replication branching factor
-without saturating up to sixteen offspring and survives a clumpy (non-uniform) field, and -- because a probe deciding only
-at its stops is pessimistic -- that a probe which listens in flight recovers almost all of it,
-bounding how much coordination can ever buy back. The cost is dominated
-by fuel and effort, with a secondary fill-time penalty that emerges only at the highest speeds; and
-it scales, cleanly, with how fast the swarm flies.
+what it costs, in a controlled paired-ensemble experiment. The cost is easy to overstate: a
+simulation that advances in a fixed timestep coarser than the interval between probe launches makes
+many probes decide from the same stale snapshot at once, and they collide far more than they
+physically would. Read that way the delay appears to slow the fill of the field by tens of percent.
+That number is an artifact. When the dynamics are resolved so that each probe decides at its own
+arrival time, the tens-of-percent slowdown collapses to a few percent at most, and to nothing at
+slingshot speeds; the slingshot speed-up is unchanged, reproducing the source model to the same
+order of magnitude.
+
+The dominant cost is redundant travel. Every star still gets settled, and with a negligible change
+in how many probes are built, well under a percent; what the delay chiefly changes is how many
+wasted journeys the swarm flies to stars other probes have already claimed. That is a cost paid in
+fuel and effort, and, as the field grows large, in fill time, which a perfect-information model
+hides entirely. It is governed by a single dimensionless number, the probe's speed in units of the
+speed of light. The delay multiplies the wasted journeys by at most $1+\Lambda$, so the fuel tax,
+the extra wasted trips as a fraction of those a perfect-information swarm already flies, is
+negligible for a powered cruise, about a percent at slingshot speeds, and a sixth at directed-energy speeds on a
+few-thousand-star field. On our quarter-million-star headline field that same coefficient has fallen
+to about $0.07$, a fuel tax of about $1.3\%$ at directed-energy speed. That baseline is itself wasteful: even with a perfect map
+about nine in ten journeys are redundant, so the tax is a $v/c$ surcharge on an already-saturated
+process.
+
+We derive from a short collision argument that this relative tax has $\Lambda$ as its leading-order
+ceiling, and find in simulation that the measured coefficient sits below it: about $0.8$ on a
+few-thousand-star field, $0.07$ at a quarter million, declining with size as saturation removes
+waste the delay would otherwise add. The fill-time cost runs the other way, negligible beside the
+fuel tax on small fields but exceeding it at scale. We show the tax grows with the replication
+branching factor without saturating up to sixteen offspring and survives a clumpy (non-uniform)
+field, and, because a probe deciding only at its stops is pessimistic, that a probe which listens in
+flight recovers almost all of it, bounding how much coordination can ever buy back.

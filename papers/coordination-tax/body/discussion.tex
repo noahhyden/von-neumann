@@ -1,6 +1,6 @@
 \section{Discussion}
 
-The result refines rather than overturns the slingshot picture, and it does so twice over.
+The result refines rather than overturns the slingshot picture.
 Nicholson and Forgan's speed-up is real, large, and here reproduced to the same order of magnitude
 \citep{nicholson-forgan-2013}; finite light-speed does not erode it, and does not measurably
 delay the fill of the field. What a perfect-information model hides is not lost time but lost
@@ -20,12 +20,11 @@ than spent as propellant, and a probe that re-targets on arrival keeps its speed
 further. The genuine energy penalty of a wasted trip is whatever a rendezvous at the doomed star
 would have cost -- braking to rest and re-accelerating -- which scales with $v^2$ for a fuel-braked
 craft but is near zero for a flyby or a gravitationally-braked one. We therefore do not headline an
-energy figure; the honest statement is that the journey tax becomes an energy tax only to the
-extent a mission must brake, and then it grows with $v^2$. A caveat cuts the other way, too: even as
-a travel cost the tax is denominated in journeys, not in the swarm's total resource budget, which
-is dominated by building the probes -- a cost we hold fixed and identical across regimes and do not
-model. As a fraction of total mission resources the coordination tax is smaller than its share of
-journeys.
+energy figure: the journey tax becomes an energy tax only to the extent a mission must brake, and
+then it grows with $v^2$. A caveat cuts the other way, too. The tax is denominated in journeys, not
+in the swarm's total resource budget, which is dominated by building the probes, a cost we hold
+fixed and identical across regimes and do not model; as a fraction of total mission resources the
+coordination tax is therefore smaller than its share of journeys.
 
 \subsection{Limitations}
 \label{sec:limitations}
@@ -47,24 +46,25 @@ dispersion alone carries it some $30$ to $40$ pc \citep{kerr-lynden-bell-1986,no
 far past the roughly one-parsec mean hop, so over a Myr-scale fill real proper motion would
 reshuffle which stars are near which. One might object that this touches the delayed-belief gate
 itself, not just the backdrop: the beacon leaves where the star \emph{was}, so a moving field would
-need retarded positions in (\ref{eq:gate}). But that specific correction is tiny, and for a clean
-reason: during a beacon's light-crossing a star moves only the fraction $v_\star/c$ of the distance
-it is signalling across, where $v_\star$ is the \emph{relative} velocity between emitter and
-observer -- the bulk Galactic rotation is common to both and cancels, leaving the peculiar and shear
-velocity, $\sim\!40~\mathrm{km/s}$, so $v_\star/c \approx 10^{-4}$, a hundredth of a percent whatever
-the decision distance (and even the full circular speed, $220~\mathrm{km/s}$, gives $7\times10^{-4}$,
-under a tenth of a percent) -- so the gate reads essentially the right geometry at the moment of
-decision. What the frozen field removes is the slow, Myr-scale drift
-of the layout, and that is exactly what the paired design controls: both coordination regimes run on
-the \emph{identical} frozen field, so the difference still isolates the light-lag cost even where the
-absolute layout is idealized. This cancellation extends to the \emph{dynamics}, not just the static
-geometry: what the tax multiplies is the baseline per-hop contention $p_\text{perfect}$, set by the
-local stellar density and the branching factor, both of which are mode-independent and both of which
-see the identical drift under either regime -- so a moving field would perturb the paired difference
-only at second order, through any correlation between a star's motion and its being contended, which
-the global constancy of $v$ and $c$ already suppresses in the same way it suppresses the density
-dependence (Section~\ref{sec:clumpy}). A direct moving-field spot-check would confirm this and is the
-natural next test; the absolute fill times, meanwhile, do inherit the idealization. The
+need retarded positions in (\ref{eq:gate}). But that specific correction is tiny. During a beacon's light-crossing a star moves only the
+fraction $v_\star/c$ of the distance it is signalling across, where $v_\star$ is the \emph{relative}
+velocity between emitter and observer. The bulk Galactic rotation is common to both and cancels,
+leaving the peculiar and shear velocity, $\sim\!40~\mathrm{km/s}$, so $v_\star/c \approx 10^{-4}$: a
+hundredth of a percent whatever the decision distance, and under a tenth of a percent
+($7\times10^{-4}$) even at the full circular speed of $220~\mathrm{km/s}$. The gate therefore reads
+essentially the right geometry at the moment of decision.
+
+What the frozen field removes is the slow, Myr-scale drift of the layout, and that is exactly what
+the paired design controls: both coordination regimes run on the \emph{identical} frozen field, so
+the difference still isolates the light-lag cost even where the absolute layout is idealized. The
+cancellation extends to the \emph{dynamics}, not just the static geometry. What the tax multiplies
+is the baseline per-hop contention $p_\text{perfect}$, set by the local stellar density and the
+branching factor; both are mode-independent and both see the identical drift under either regime. A
+moving field would therefore perturb the paired difference only at second order, through any
+correlation between a star's motion and its being contended, which the global constancy of $v$ and
+$c$ already suppresses as it suppresses the density dependence (Section~\ref{sec:clumpy}). A direct
+moving-field spot-check would confirm this and is the natural next test; the absolute fill times,
+meanwhile, do inherit the idealization. The
 slingshot is idealized in a second way we inherit from the source models: we track the scalar speed a
 probe gains from an encounter and let it then depart toward its chosen target, rather than resolving
 the outgoing \emph{direction} that a real gravitational assist fixes by geometry. A directional model
@@ -120,18 +120,18 @@ claimed, and communication cutting that overlap -- is familiar from multi-robot 
 coordinated frontier assignment exists precisely to suppress it \citep{burgard-2005,amigoni-2017}.
 What is specific here is not that stale views waste trips but that, when the delay is light-speed
 itself, the wasted fraction takes the clean form $\Lambda = v/c$, independent of hop length and
-density. The coordination tax is simply what that enforced independence costs when probes want the
-same stars.
+density.
 
 \subsection{An implication for design}
-The corollary is a threshold, not a preference. At slingshot speeds the fuel tax is well under a
+Whether coordination machinery is worth its mass depends on how fast the swarm flies. At
+slingshot speeds the fuel tax is well under a
 percent, so coordination machinery -- relay, gossip, a shared map -- returns less than its mass
 costs, and the coordination overhead is negligible against what speed buys. At the directed-energy
 speeds that make a probe fast enough to matter, the same physics that buys the speed also makes stale
-views expensive -- a sixth more journeys wasted on a few-thousand-star field, and at galactic scale a
-saturated fuel tax of about a percent but a fill-time lag of order ten percent -- of which, as
-Section~\ref{sec:floor} shows, a probe that merely listens in flight recovers the completed wasted
-arrivals, though at a fill-time cost of its own. The implication is that the value of coordination
+views expensive: a sixth more journeys wasted on a few-thousand-star field, and at galactic scale a
+saturated fuel tax of about a percent alongside a fill-time lag of order ten percent. A probe that
+merely listens in flight recovers the completed wasted arrivals from that, as
+Section~\ref{sec:floor} shows, though at a fill-time cost of its own. The implication is that the value of coordination
 scales with how fast the swarm flies and how large the field it must fill, while the finite speed of
 light sets only the small residual -- the travel already flown before the news arrives -- that no
 protocol can ever recover.

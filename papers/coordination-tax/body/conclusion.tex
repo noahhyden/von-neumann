@@ -1,32 +1,35 @@
 \section{Conclusion}
 
-Adding a finite speed of information to the self-replicating slingshot model turns a convenient
-assumption into a measurable cost, but not the cost a coarse model reports. Once the dynamics are
-resolved so that each probe decides at its true arrival time, the tens-of-percent fill-time penalty
-seen in a fixed-timestep model collapses -- it was a discretization artifact -- and the slingshot
-speed-up survives intact, reproducing Nicholson and Forgan to the same order of magnitude. The genuine cost is
-redundant travel: every star is still settled, with a negligible change in the number of probes
-built, but stale views send probes to stars others have already claimed. That waste follows a
-simple law we both derive and measure -- the delay multiplies the wasted journeys by at most $1 + v/c$,
-so the tax, the extra wasted trips as a fraction of those a perfect-information swarm already flies,
-scales with the probe's speed in units of light, $\Lambda = v/c$, at a coefficient that saturation
-holds below one and that shrinks with system size -- about $0.8$ on a few-thousand-star field, where
-the tax runs from negligible at the powered cruise through about a percent at slingshot speeds to a
-sixth at directed-energy speeds, but only about $0.07$ on our quarter-million-star headline field,
-where even the directed-energy fuel tax is about $1.3\%$. (The baseline is itself wasteful, about
-nine in ten journeys even with a perfect map, so this is a $v/c$ surcharge on an already-saturated
-process.) The law holds under a clumpy field, where if
-anything it softens; it grows with the replication branching factor without saturating up to sixteen
-offspring; and whether it also costs energy is mission-dependent: only a rendezvous that must brake
+Adding a finite speed of information to the self-replicating slingshot model costs redundant
+travel, not fill time. Once the dynamics are resolved so that each probe decides at its true
+arrival time, the tens-of-percent fill-time penalty seen in a fixed-timestep model collapses: it
+was a discretization artifact. The slingshot speed-up survives intact, reproducing Nicholson and
+Forgan to the same order of magnitude.
+
+What the delay costs instead is wasted travel. Every star is still settled, with a negligible
+change in the number of probes built, but stale views send probes to stars others have already
+claimed. The delay multiplies the wasted journeys by at most $1 + v/c$, a bound we both derive and
+measure, so the tax scales with the probe's speed in units of light, $\Lambda = v/c$. Its
+coefficient stays below one and shrinks with system size: about $0.8$ on a few-thousand-star field,
+where the tax runs from negligible at the powered cruise through about a percent at slingshot
+speeds to a sixth at directed-energy speeds, but only about $0.07$ on our quarter-million-star
+headline field, where even the directed-energy fuel tax is about $1.3\%$. The baseline is itself
+wasteful, about nine in ten journeys even with a perfect map, so this is a $v/c$ surcharge on an
+already-saturated process.
+
+The law survives the variations we tested. It holds under a clumpy field, where if anything it
+softens, and it grows with the replication branching factor without saturating up to sixteen
+offspring. Whether it also costs energy is mission-dependent: only a rendezvous that must brake
 pays for a wasted trip's kinetic energy, which for the fast policies was largely gravitationally
-sourced rather than fuelled. On the small fields of earlier work the cost is dominated by fuel and
-effort, with a smaller fill-time penalty alongside it; at galactic scale the two invert -- the fuel
-tax saturates toward a percent while the fill-time lag, set by the front crossing an ever-larger
-field, grows to exceed it. It is not a hard floor: a probe that
-listens in flight, one of the two extensions the model invites, recovers essentially all of the
-wasted-arrival tax at a small cost in fill time, while a full probe-to-probe relay of the settled
-map remains open. Neither can remove the physical floor beneath the tax, and how much either can buy
-back is itself bounded by the finite speed of light.
+sourced rather than fuelled. Scale decides which cost dominates. On the small fields of earlier
+work the tax is mostly fuel and effort, with a smaller fill-time penalty alongside it; at galactic
+scale the two invert, the fuel tax saturating toward a percent while the fill-time lag, set by the
+front crossing an ever-larger field, grows to exceed it.
+
+The tax is not a hard floor. A probe that listens in flight, one of the two extensions the model
+invites, recovers essentially all of the wasted-arrival tax at a small cost in fill time, while a
+full probe-to-probe relay of the settled map remains open. How much either buys back is itself
+bounded by the finite speed of light.
 
 \section*{Data Availability}
 The model is a deterministic, seeded, event-driven fold; every figure, table, and reported

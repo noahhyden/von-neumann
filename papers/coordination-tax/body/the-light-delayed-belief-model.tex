@@ -38,9 +38,8 @@ $v/c$, from the source model's $3\times10^{-5}\,c$ up to $0.2\,c$. Powered fligh
 whole speed axis, while the two slingshot policies sit near $v/c \approx 0.01$.
 
 \subsection{Event-driven resolution, and why it is necessary}
-The fold can advance either by a fixed timestep or by jumping to the next probe arrival. This
-is not a mere numerical convenience, and getting it wrong is the single largest source of error
-in this problem. A fixed timestep $\Delta t$ processes together every probe that arrives within
+The fold can advance either by a fixed timestep or by jumping to the next probe arrival. A
+fixed timestep $\Delta t$ processes together every probe that arrives within
 a window, so all of them decide against the same snapshot of the settled map. When $\Delta t$
 exceeds the interval between launches -- which it does badly in the boosted regime, where a
 probe crosses a parsec in centuries against a source-model step of thousands of years -- the
@@ -54,8 +53,8 @@ Section~\ref{sec:results} shows directly that the apparent fill-time tax is an a
 coarse step and collapses to zero as the step resolves.
 
 \subsection{The governing ratio}
-How much the gate matters is governed by one dimensionless number: the information delay across
-a hop divided by the travel time across it. For a hop of length $d$ the delay is $d/c$ and the
+The gate's effect is set by one dimensionless number: the information delay across a hop
+divided by the travel time across it. For a hop of length $d$ the delay is $d/c$ and the
 travel time is $d/v$, so the ratio is
 \begin{equation}
 \Lambda \;=\; \frac{d/c}{d/v} \;=\; \frac{v}{c}, \label{eq:lambda}
@@ -82,18 +81,15 @@ proportional to the exposure window, so the ratio of wasted trips with and witho
 \label{eq:tax}
 \end{equation}
 and the coordination tax -- the extra wasted trips as a fraction of the perfect-information
-baseline -- is just $p_{\text{lag}}/p_{\text{perfect}} - 1 \approx \Lambda$. Two features of
-(\ref{eq:tax}) are worth stating because the simulation independently reproduces both: the hop
+baseline -- is just $p_{\text{lag}}/p_{\text{perfect}} - 1 \approx \Lambda$. (\ref{eq:tax}) makes two predictions the simulation reproduces: the hop
 length $d$ cancels, so the tax cannot depend on how far apart the stars are, and the local claim
-rate cancels, so it cannot depend on the stellar density. This is a leading-order estimate -- it
+rate cancels, so it cannot depend on the stellar density. This is a leading-order estimate. It
 assumes claims of a candidate are independent and locally uniform in time, and it ignores both the
-geometry of which stars are in contention and the saturation of already-doomed hops -- so it predicts
-the coefficient of proportionality is one, as a ceiling that those corrections can only lower.
+geometry of which stars are in contention and the saturation of already-doomed hops, so the
+coefficient of proportionality it predicts, one, is a ceiling those corrections can only lower.
 Section~\ref{sec:results} shows the measured tax follows $\Lambda$ in \emph{form} but with a
-coefficient below that ceiling: a through-origin slope of $0.069$ on the $N = 262{,}144$ headline
-field, resolvably under one, the endpoint of a decline with system size as saturation strengthens
-(from $a \approx 0.97$ at a few hundred stars down to this value at a quarter-million). The simulation confirms the $d$- and
-density-independence of the form directly.
+coefficient resolvably below that ceiling, a through-origin slope of $0.069$ on the $N = 262{,}144$
+headline field.
 
 \subsection{Experimental design and parameters}
 The field is a box of stars at a uniform density of one star per cubic parsec, the convention of
@@ -107,31 +103,29 @@ undercounts what a probe could know and so makes the measured waste a conservati
 we measure the opposite, optimistic bound (a probe that listens in flight) separately in
 Section~\ref{sec:floor}. Second, a probe that loses a race re-targets, but only up to a fixed
 number of times before it is retired; this cap is applied identically under both coordination
-regimes, so the paired comparison is fair. On the few-hundred-star fields of earlier work the tax
-plateaued above about $\text{cap} = 8$, which is why we adopt $\text{cap} = 8$ as the default -- but
-that plateau does not survive to larger fields (Section~\ref{sec:scale-companions}): at $\Lambda =
-0.2$ and $N = 262{,}144$ the fuel tax is $0.27$, $0.27$, $1.31$, $4.79$, $8.97\%$ for caps of
-$2, 4, 8, 16, 32$, still climbing with no sign of levelling. The default cap of $8$ is therefore a
-documented \emph{lower bound}, not a converged value, and every fuel-tax figure it produces is an
-underestimate whose size grows with the field (negligible at small $N$, substantial at scale). Third, the whole simulation is a pure,
+regimes, so the paired comparison is fair. We adopt $\text{cap} = 8$ as the default because the tax
+plateaued above about that value on the few-hundred-star fields of earlier work. That plateau does
+not survive to larger fields (Section~\ref{sec:scale-companions}): at $\Lambda = 0.2$ and $N =
+262{,}144$ the fuel tax is $0.27$, $0.27$, $1.31$, $4.79$, $8.97\%$ for caps of $2, 4, 8, 16, 32$,
+still climbing with no sign of levelling. The default cap is therefore a documented \emph{lower
+bound}, not a converged value, and every fuel-tax figure it produces is an underestimate whose size
+grows with the field. Third, the whole simulation is a pure,
 seeded, event-driven fold: fixing the seed fixes the star field, every arrival, and every target
 choice, so a run with the light-speed gate and a run without it can be compared on the
 \emph{identical} galaxy. That paired design attributes a difference to the delay alone rather than
 to the luck of the star layout.
 
-Two dependencies are worth stating because they are easy to over-read. Changing the value of the
-uniform density rescales every inter-star distance by a common factor, multiplying travel time and
+Changing the value of the uniform density rescales every inter-star distance by a common factor, multiplying travel time and
 light-travel time on every hop equally, so $\Lambda$ and the relative penalties are unchanged: this
 is a scale-free property of a uniform field, exactly what (\ref{eq:tax}) predicts when the hop
-length cancels, so confirming it holds to the printed digit from $0.14$ to $5$ stars per cubic
-parsec \citep{recons-census} is a consistency check on the derivation, not an independent robustness
-result. The case that would genuinely test density sensitivity is a clumpy, non-uniform field, which
+length cancels, and it holds to the printed digit from $0.14$ to $5$ stars per cubic
+parsec \citep{recons-census}. That is a consistency check on the derivation, not an independent
+robustness result. The case that would genuinely test density sensitivity is a clumpy, non-uniform field, which
 we examine directly in Section~\ref{sec:clumpy}; what we do not probe is a full galactic disk with a
 large-scale radial density gradient. And because the field always fills under
 both regimes and each settlement launches a fixed number of offspring, the two regimes build
 essentially the same number of probes -- they differ only in a handful of terminal launches as
-targets run out, well under a percent -- so the resource the delay actually moves is the number
-of journeys flown, which is why the coordination cost is a travel cost.
+targets run out, well under a percent -- so the resource the delay actually moves is the number of journeys flown.
 
 The ensemble size varies by measurement, sized to each one's event-mode cost; Table~\ref{tab:ensembles}
 lists them. Every run is event-driven and paired -- each seed fills the identical field under both

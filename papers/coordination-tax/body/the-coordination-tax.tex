@@ -7,14 +7,13 @@ the \emph{identical} field, once with perfect information and once with the ligh
 ensemble follows the seeded Monte Carlo practice of the field \citep{forgan-2009}; we give the
 median with a seeded percentile-bootstrap 95\% confidence interval. A stale view can only make a
 probe believe a settled star is still open, never the reverse, so the delay adds wasted journeys
-\emph{in expectation}; but the sign is statistical, not structural, because retarget cascades make
-the paired difference non-monotone from seed to seed (at $\Lambda = 0.01$ a sizable minority of
-galaxies, $41$ of $128$, come out slightly negative, since at scale the $\Lambda = 0.01$ tax is only
-about $0.07\%$). We therefore report the median and its interval, not a
-sign test, as the finding -- though a two-sided sign test, which the pipeline computes, agrees
-where the effect is large ($87$ of $128$ seeds positive at $\Lambda = 0.01$, a bare majority for a
-near-zero effect, rising to all $128$ at $\Lambda = 0.2$). What is informative is the magnitude and
-its scaling, which the intervals and sweeps below report. (The direction is itself regime-specific:
+\emph{in expectation}. The sign is nonetheless statistical rather than
+structural: retarget cascades make the paired difference non-monotone from seed to seed, and at
+$\Lambda = 0.01$ a sizable minority of galaxies, $41$ of $128$, come out slightly negative, because
+at that scale the tax is only about $0.07\%$. We therefore report the median and its interval, not a
+sign test, as the finding. A two-sided sign test, which the pipeline computes, agrees where the
+effect is large: $87$ of $128$ seeds positive at $\Lambda = 0.01$, a bare majority for a near-zero
+effect, rising to all $128$ at $\Lambda = 0.2$. (The direction is itself regime-specific:
 the in-flight-relay variant of Section~\ref{sec:floor} can \emph{lower} waste
 below the perfect-information baseline, by aborting doomed hops that perfect knowledge at the stops
 would not.) For the one genuinely null claim -- no fill-time tax at low speed -- we do not wave the
@@ -34,8 +33,7 @@ that cost time disappear. The same refinement restores the slingshot speed-up to
 against powered flight the event-driven fold reproduces Nicholson and Forgan's roughly
 two-orders-of-magnitude figure to the same order (about $166\times$ on a 400-star field, against
 their factor of about $100$ on a much larger field; Section~\ref{sec:model}), where the coarse step
-had reported only about $20\times$. The celebrated speed-up survives contact with finite information;
-the fill-time tax does not exist.
+had reported only about $20\times$. The slingshot speed-up survives finite information; we measure no fill-time tax.
 
 \subsection{At scale the fuel cost shrinks below the fill-time cost}
 \label{sec:mechanism}
@@ -78,9 +76,8 @@ ensemble is our canonical configuration for the $\Lambda = 0.2$ tax, the largest
 branching, re-target-cap, in-flight-floor, concurrency and timestep sweeps run on the \emph{same}
 $N = 262{,}144$ field (Table~\ref{tab:ensembles}), so the branching base case, for one, reproduces the
 headline ($1.3\%$ at two offspring), while the scale companions of Section~\ref{sec:scale-companions}
-carry each claim one power of two further, to $N = 524{,}288$. About $1.3\%$ more wasted trips is what
-the headline means -- against a $90\%$ baseline it lifts the wasted fraction only from about $90.0\%$
-to about $90.1\%$ of all journeys, a $v/c$ surcharge on an already-saturated process. (We count wasted arrivals; Fig.~\ref{fig:floor}
+carry each claim one power of two further, to $N = 524{,}288$. Against a $90\%$ baseline, that $1.3\%$ lifts the wasted fraction only from about $90.0\%$ to
+about $90.1\%$ of all journeys, a $v/c$ surcharge on an already-saturated process. (We count wasted arrivals; Fig.~\ref{fig:floor}
 instead measures redundant travel in parsecs, and the two track each other because the hops are
 near-uniform in length, so a count ratio and a distance ratio agree.)
 
@@ -95,15 +92,11 @@ on the tax, not an equality: the linear-in-$\Lambda$ \emph{form} holds cleanly -
 $1 + \Lambda$ with a fixed proportionality -- but the coefficient sits below one because saturation
 removes waste the delay would otherwise add (a hop already likely to be scooped leaves the delay
 little room; Section~\ref{sec:clumpy}), together with the non-stationary front (the extra pre-launch
-window $d/c$ falls when the region was less contended than during the flight itself). Neither changes
-the law's form, and both act downward, which is why the residual is a systematic shortfall rather
-than scatter. Crucially the coefficient is not a constant of the model but declines with field size,
+window $d/c$ falls when the region was less contended than during the flight itself). Both act downward, which is why the residual is a systematic
+shortfall rather than scatter. The coefficient is not a constant of the model but declines with field size,
 because a larger field saturates more: it falls from $a \approx 0.97$ on the few-hundred-star field
 of the clumpy-field sweep (Section~\ref{sec:clumpy}) to $0.069$ here at $N = 262{,}144$, and further
-to $0.040$ on the $N = 524{,}288$ scale companion (Section~\ref{sec:scale-companions}). What the derivation fixes is the \emph{form} and
-its ceiling of one; the measured coefficient is what saturation leaves of that ceiling at a given
-size, and the size dependence of that residual is exactly what the finite-size sweep of
-Section~\ref{sec:scale} maps. The same cancellation makes the \emph{form} independent of hop length
+to $0.040$ on the $N = 524{,}288$ scale companion (Section~\ref{sec:scale-companions}). The same cancellation makes the \emph{form} independent of hop length
 and density (both drop out of (\ref{eq:tax})), which Section~\ref{sec:scale}, the density check, and
 the clumpy-field test (Section~\ref{sec:clumpy}) confirm.
 
@@ -114,10 +107,7 @@ completion-time tail is noisy enough at a quarter-million stars that this is an 
 few percent rather than the razor-sharp null a smaller, higher-seed field would give. It resolves by
 $\Lambda = 0.05$ ($3.8\%$ $[0.6, 5.8]$), is unambiguous by $\Lambda = 0.1$, and reaches a median of
 $10.5\%$ $[8.9, 13.3]$ at $\Lambda = 0.2$ (Table~\ref{tab:lambda}) -- roughly eight times the $1.35\%$
-fuel tax at the same speed. This is the reversal Section~\ref{sec:mechanism} explains: the parallel
-population dilutes the fuel waste as the field grows but not the front lag, so the cost,
-fuel-dominated on the few-thousand-star fields of earlier work, becomes fill-time-inclusive at
-galactic scale.
+fuel tax at the same speed. This is the reversal Section~\ref{sec:mechanism} explains.
 
 \begin{table}[!t]
   \centering
@@ -170,7 +160,7 @@ listens continuously: the moment the beacon from a now-claimed target overtakes 
 closed-form time set by the beacon closing on the probe at $c$ while the probe closes on the target
 at $v$ -- it abandons the doomed hop and re-aims from wherever it then is. This ``in-flight relay''
 mode is the optimistic bound on what any relay protocol can recover, and we measure it directly.
-Its effect is dramatic. Because a beacon travelling at $c$ always overtakes a probe travelling at
+Because a beacon travelling at $c$ always overtakes a probe travelling at
 $v < c$ before the probe arrives, a listening probe essentially never completes a wasted arrival:
 the count of wasted arrivals falls from about $2.4$ million under decision-site knowledge to zero at
 $\Lambda = 0.2$ (on this $N = 262{,}144$ field). Redundant travel falls too, and below even the
@@ -194,8 +184,7 @@ before the relatively slower news catches up.
 A tax measured on a few-hundred-star field is only interesting if it survives to larger ones, so we
 sweep the system size at $\Lambda = 0.2$ over a range of about $1024\times$, from 256 to 262{,}144
 stars, with 8 to 32 seeds per size (fewer at the largest fields, where the per-seed spread is tight;
-Fig.~\ref{fig:scale}). This reach is what lets the question be answered rather than gestured at: it
-opens up once the nearest-not-yet-settled query -- the one non-local step in the fold -- is served by
+Fig.~\ref{fig:scale}). That reach opens up once the nearest-not-yet-settled query -- the one non-local step in the fold -- is served by
 a dynamic spatial index over the unsettled set that skips already-settled space, which makes a single
 run near-linear in $N$ rather than the quadratic cost that previously capped the sweep at a
 sixteen-fold range. The absolute count of wasted journeys grows with the field, as it must, from a
@@ -210,20 +199,19 @@ $N$, with a seeded-bootstrap 95\% interval of $[-7.8, -6.4]$ well clear of zero 
 interval are computed in the measurement pipeline alongside the per-$N$ medians, so they regenerate
 from source), and the confidence intervals at the ends of the range are separated by an order of
 magnitude. The decline is convex and monotone -- gentle to a thousand stars, then steepening through
-the mid-range -- so the single slope is a conservative local summary of a fall that carries the tax
+the mid-range -- so the single slope averages a fall that carries the tax
 from roughly a fifth of the perfect-information waste to about one part in eighty.
 
 Is that decline physical, or an artifact of the hard wall of a finite box? Edge stars have fewer
 neighbours and so draw less contention, and the edge fraction falls as $N^{-1/3}$, so in principle
-the fraction could shrink with $N$ for a purely geometric reason. We test it two ways. First, tagging
-each contested arrival by its target's distance to the nearest wall and recomputing the tax on
-interior stars only does shift the level up -- edge stars carry a lower tax and dilute the all-stars
-value downward, so the interior tax sits at or above the all-stars value, clearly so once the field
-is large enough for the edge fraction to bite: $7.4\%$ $[5.9, 9.3]$ against $5.7\%$ $[5.2, 6.7]$ at
-32{,}768 stars, and $2.8\%$ $[2.7, 3.4]$ against $1.3\%$ $[1.2, 1.7]$ at 262{,}144 (this masking test
-runs on the lighter interior-edge sub-ensemble of Table~\ref{tab:ensembles}); at the smallest fields,
-where the edge fraction is largest but the tax is high everywhere, the two are within noise of each
-other. Crucially the interior tax declines just as steeply -- a bulk-only slope of $-5.6$
+the fraction could shrink with $N$ for a purely geometric reason. We test it two ways. First, we tag each contested arrival by its target's distance to the nearest wall
+and recompute the tax on interior stars only. That does shift the level up: edge stars carry a lower
+tax and dilute the all-stars value downward, so the interior tax sits at or above it, clearly so
+once the field is large enough for the edge fraction to bite. The interior tax reads $7.4\%$
+$[5.9, 9.3]$ against $5.7\%$ $[5.2, 6.7]$ at 32{,}768 stars, and $2.8\%$ $[2.7, 3.4]$ against
+$1.3\%$ $[1.2, 1.7]$ at 262{,}144 (this masking test runs on the lighter interior-edge sub-ensemble
+of Table~\ref{tab:ensembles}). At the smallest fields, where the edge fraction is largest but the
+tax is high everywhere, the two are within noise of each other. The interior tax declines just as steeply -- a bulk-only slope of $-5.6$
 $[-7.1, -3.6]$ percentage points per decade at the one-nearest-neighbour shell -- so
 the shrinkage is not carried by the edge. The decisive control is a periodic (toroidal) box, which
 removes the boundary altogether: every star then sits in a full neighbourhood. Rerun that way the
@@ -234,9 +222,8 @@ against $1.3\%$ at 262{,}144), exactly the small upward shift the edge dilution 
 shrinkage is a genuine, bulk effect, not a boundary artifact: the wall moves the level, not the
 trend, and the effect holds over a $1024\times$ span with the boundary present, masked, and removed.
 
-The direction is what matters for the one extrapolation a reader might be tempted to make: the
-fraction does not grow with scale -- it genuinely shrinks, on a hard-walled box, an interior-only
-sub-field, and a periodic box alike -- so nothing here supports carrying a fixed-percentage tax out
+The tax does not grow with scale. It shrinks on a hard-walled box, an interior-only sub-field,
+and a periodic box alike, so nothing here supports carrying a fixed-percentage tax out
 to a $10^{11}$-star galaxy. A $1024\times$ lever arm is far longer than we had, but it is still five
 orders of magnitude short of a real galaxy, so we report the scale behaviour over the range we can
 measure and make no quantitative claim beyond it.
@@ -294,9 +281,9 @@ The finite-size sweep (Section~\ref{sec:scale}) settles one question at scale --
 fraction of effort shrinks with $N$ and does not extrapolate flat -- but says nothing about whether
 each fixed-$N$ subsidiary result also survives that reach. The dynamic spatial index that lets the
 finite-size sweep run to 262{,}144 stars also lets the other fixed-$N$ sweeps of
-Table~\ref{tab:ensembles} be repeated there at their precision-target seed count. The picture is
-uniform: the qualitative shape of every result holds, and the redundant-travel tax rescales in step
-with the finite-size decline. The one nuance is bookkeeping-side and does not touch a physical claim.
+Table~\ref{tab:ensembles} be repeated there at their precision-target seed count. The picture is uniform. Every result keeps its qualitative shape, and the
+redundant-travel tax rescales in step with the finite-size decline; the one exception, the re-target
+cap below, changes a methodological claim rather than a physical one.
 
 \emph{Linearity in $\Lambda$ persists (Speed sweep beyond the headline).} Pushing one power of two
 past the headline, to $N = 524{,}288$, the same $\Lambda$ ladder returns fuel taxes of $0.07\%$,
@@ -356,8 +343,7 @@ fields where the plateau holds and grows with $N$, so the $N = 262{,}144$ headli
 $\text{cap} = 8$, carries this shortfall directly. Every fuel-tax figure in this paper
 that uses cap 8 should therefore be read as ``at least this much,'' with the shortfall small at small
 $N$ and substantial at scale (the same headline field at $\text{cap} = 32$ reads about $9\%$ rather
-than $1.3\%$ at $\Lambda = 0.2$). Whether the cap-tax ever saturates at some field size is a
-natural next question.
+than $1.3\%$ at $\Lambda = 0.2$).
 
 \subsection{Where the cost falls}
 Table~\ref{tab:regime} places the physical propulsion concepts on the speed axis. The source model's
