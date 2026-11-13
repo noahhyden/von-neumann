@@ -138,7 +138,7 @@ def _dt_paired_worker(args: tuple[dict, int]) -> tuple[float | None, float | Non
 
 
 def _parallel_map(worker, args_list: list, *, label: str = ""):
-    """ProcessPoolExecutor.map with the same determinism + progress conventions as ``_paired``."""
+    """Run ``worker`` over ``args_list`` across cores, returning results in input (seed) order."""
     n = len(args_list)
     workers = _worker_count()
     results = []
@@ -340,21 +340,8 @@ def _p2_has_companion(name: str) -> bool:
 def _paired(mode_treat: str, *, seeds: list[int], mode_base: str = "instant", **params) -> list[tuple[dict, dict]]:
     """Fill each seeded galaxy under ``mode_base`` and ``mode_treat`` (same seed); return records."""
     args = [(mode_base, mode_treat, params, s) for s in seeds]
-    n = len(args)
-    rows: list[tuple[dict, dict]] = []
-    workers = _worker_count()
-    if workers <= 1:
-        for i, a in enumerate(args):
-            rows.append(_paired_worker(a))
-            print(f"      seed {i + 1}/{n}", end="\r", flush=True)
-    else:
-        # executor.map preserves input order, so rows come back in seed order regardless of which
-        with ProcessPoolExecutor(max_workers=workers) as ex:
-            for i, row in enumerate(ex.map(_paired_worker, args)):
-                rows.append(row)
-                print(f"      seed {i + 1}/{n} ({workers} workers)", end="\r", flush=True)
-    print(" " * 40, end="\r")
-    return rows
+    # executor.map preserves input order, so rows come back in seed order regardless of which
+    return _parallel_map(_paired_worker, args, label="seed")
 
 
 def _tax_block(rows: list[tuple[dict, dict]]) -> dict:
