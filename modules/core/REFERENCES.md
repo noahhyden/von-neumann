@@ -340,6 +340,33 @@ constants, each a mathematical identity, not an assumption.
   [GAP] The `>=1.11` and `>=7.0` version floors have no recorded source; they are
   lower bounds the suite currently passes with, not verified minimums.
 
+## `vn_core.constants` - the shared time basis
+
+One definition of the astronomical clock, because three modules had their own and
+`spine/SCRUTINY.md` row C4 flags the divergence as a silent-failure risk.
+
+- **`SECONDS_PER_DAY = 86_400.0` s.** Exact by definition: the SI second is exact
+  (BIPM SI Brochure, 9th ed., the caesium-133 hyperfine definition), and this clock
+  is a fixed 86400 s day with no leap seconds, which is what every duration in this
+  repo means. Source:
+  [BIPM SI Brochure](https://www.bipm.org/en/publications/si-brochure).
+  Verdict: reasonable - durations here are elapsed-time intervals, not civil dates,
+  so a leap-second-free day is the correct basis.
+- **`DAYS_PER_JULIAN_YEAR = 365.25` d.** The IAU Julian year, exact by definition and
+  the standard year for astronomical intervals (it is the basis of the light-year and
+  of the IAU parsec). Source:
+  [IAU SI units / Julian year](https://www.iau.org/publications/proceedings_rules/units/).
+  Verdict: reasonable - this is the same year the IAU parsec
+  `3.0856775814913673e13` km that `swarm.models` divides by is defined against, so
+  using any other year basis here would make `C_PC_PER_YEAR` internally inconsistent.
+- **`SECONDS_PER_JULIAN_YEAR = 31_557_600.0` s.** Derived, not a fourth literal:
+  `DAYS_PER_JULIAN_YEAR * SECONDS_PER_DAY = 365.25 * 86400 = 3.15576e7`.
+  Both inputs are exactly representable in IEEE-754 double and the product is an
+  integer well under 2^53, so the derived value is **bit-identical** to the
+  `3.15576e7` literal it replaces. `tests/test_constants.py` pins that bit-identity
+  and pins that swarm's `C_PC_PER_YEAR` does not move, since swarm's published
+  results depend on that float exactly.
+
 ## Everything else in `vn-core`
 
 `vn_core.uq` (distributions, Monte Carlo, Sobol, the unified UQ+GSA surface, and

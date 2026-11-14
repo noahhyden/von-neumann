@@ -10,6 +10,7 @@ mpl.use("Agg")  # deterministic, headless, file-only backend
 import matplotlib.pyplot as plt
 
 from closure_sim import compute_closure, electronics_wall, load_factory
+from vn_core.constants import DAYS_PER_JULIAN_YEAR
 
 # --- IEEE single-column geometry + serif fonts (drops into a two-column IEEEtran paper) ---
 COLW = 3.5
@@ -29,8 +30,6 @@ mpl.rcParams.update(
         "figure.dpi": 150,
     }
 )
-
-DAYS_PER_YEAR = 365.25  # Julian year, used for every day -> year conversion below.
 
 # Repo root is parents[4] of this file (parents[0]=closure_sim, [1]=src, [2]=closure-sim, [3]=modules).
 _HERE = Path(__file__).resolve()
@@ -135,9 +134,9 @@ def fig_chip_crossover(factory) -> tuple[Path, dict[float, tuple[float | None, f
         b = report.before.time_to_target_days
         a = report.after.time_to_target_days
         if b is not None:
-            import_yr.append((p, b / DAYS_PER_YEAR))
+            import_yr.append((p, b / DAYS_PER_JULIAN_YEAR))
         if a is not None:  # None = never completes -> do NOT plot a fake value
-            local_yr.append((p, a / DAYS_PER_YEAR))
+            local_yr.append((p, a / DAYS_PER_JULIAN_YEAR))
 
     # Reference points at ~4 MW and ~1 MW, computed explicitly.
     for p_ref in (4000.0, 1000.0):
@@ -147,8 +146,8 @@ def fig_chip_crossover(factory) -> tuple[Path, dict[float, tuple[float | None, f
         b = rep.before.time_to_target_days
         a = rep.after.time_to_target_days
         ref[p_ref] = (
-            None if b is None else b / DAYS_PER_YEAR,
-            None if a is None else a / DAYS_PER_YEAR,
+            None if b is None else b / DAYS_PER_JULIAN_YEAR,
+            None if a is None else a / DAYS_PER_JULIAN_YEAR,
         )
 
     fig, ax = plt.subplots(figsize=(COLW, COLW * GOLDEN))
