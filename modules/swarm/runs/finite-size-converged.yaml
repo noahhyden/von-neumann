@@ -1,0 +1,24 @@
+# Committed spec for the finite_size_converged measurement; nothing here is read from the environment.
+name: finite-size-converged
+module: swarm
+entry: experiments.measure:m_finite_size_converged
+description: >
+  Fuel tax vs system size at a CONVERGED retarget cap (128), powers of two 2^3..2^18, Lambda=0.2,
+  powered, event stepping. The cap=8 companion (finite-size.yaml) truncates bounce chains harder as
+  N grows and so overstates the with-N decline; this ladder is the uncontaminated one.
+
+runtime:
+  # No RAM cap recorded for this run, so workers is blank (every core).
+  workers:
+  # Was `python -O`. Strips the fold's __debug__ invariants; bit-identical, ~2-3x faster.
+  optimize: true
+  backends:
+    rust: true
+    njit: true
+
+params:
+  # 2^3..2^8 at 2048 seeds, 2^9..2^13 at 1024, then halving. 2^2 is excluded as degenerate.
+  n_seeds_by_n: [[8, 2048], [16, 2048], [32, 2048], [64, 2048], [128, 2048], [256, 2048],
+                 [512, 1024], [1024, 1024], [2048, 1024], [4096, 1024], [8192, 1024],
+                 [16384, 512], [32768, 256], [65536, 256], [131072, 128], [262144, 128]]
+  max_retargets: 128

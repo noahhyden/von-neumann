@@ -218,3 +218,20 @@ def test_validation_p2_matches_fold() -> None:
         assert r.max_probe_speed_km_s == pytest.approx(want["max_speed_km_s"], rel=1e-9), (
             f"validation p2 {pol} max_speed"
         )
+
+
+def test_finite_size_converged_json_matches_fold() -> None:
+    # Smallest rung only, and at max_retargets=128: the committed ladder's whole point is the converged cap.
+    d = _load("finite_size_converged")
+    n = min(int(k) for k in d["data"])
+    block = d["data"][str(n)]
+    assert d["config"]["max_retargets"] == 128, "converged ladder must be at the converged cap"
+    assert 4 not in [x[0] for x in d["config"]["n_and_seeds"]], "N=4 is degenerate and excluded"
+    for i in range(2):
+        seed = SEEDS[i]
+        common = dict(n_stars=n, policy="powered", probe_speed_c=0.2, speed_cap_c=0.4,
+                      stepping="event", max_retargets=128)
+        base = record(simulate_swarm(SwarmParams(**common, coordination="instant"), seed=seed))
+        treat = record(simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=seed))
+        _assert_record_matches(base, block["per_seed"][i]["base"], f"fs_converged base seed{i}")
+        _assert_record_matches(treat, block["per_seed"][i]["treat"], f"fs_converged treat seed{i}")

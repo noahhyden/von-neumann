@@ -337,6 +337,45 @@ fraction" claim (which rested on a 4x span to N=1200): over a 16x span the fract
 scale, it gently shrinks, so there is no support for extrapolating a fixed-percentage tax to a
 10¹¹-star galaxy. (An earlier 4-seed N=4800 point read ~11%; 32 seeds tighten it to 13.1%.)
 
+**The converged-cap ladder supersedes the numbers above for any with-N claim**
+(`experiments/measure.py::finite_size_converged`, `runs/finite-size-converged.yaml`). Every figure in
+the preceding paragraph was measured at `max_retargets = 8`, which truncates bounce chains harder as
+N grows (see "The retarget-cap plateau" above), so it manufactures decline on top of the real one.
+Re-run at the converged cap of 128 over powers of two `2^3 .. 2^18` (2048 seeds to `2^8`, 1024 to
+`2^13`, then halving to 128 at `2^17`/`2^18`), `Λ=0.2`, powered, event:
+
+| N | tax | | N | tax |
+|---|---|---|---|---|
+| 2^3 = 8 | +18.18% | | 2^11 = 2,048 | +20.47% |
+| 2^4 = 16 | +18.52% | | 2^12 = 4,096 | +19.16% |
+| 2^5 = 32 | +18.62% | | 2^13 = 8,192 | +17.95% |
+| 2^6 = 64 | +19.61% | | 2^14 = 16,384 | +16.61% |
+| 2^7 = 128 | +20.71% | | 2^15 = 32,768 | +14.95% |
+| 2^8 = 256 | +21.23% | | 2^16 = 65,536 | +13.15% |
+| 2^9 = 512 | **+21.61%** (peak) | | 2^17 = 131,072 | +11.63% |
+| 2^10 = 1,024 | +21.30% | | 2^18 = 262,144 | +11.21% |
+
+**The curve is not a power law and a single slope describes no part of it.** It *rises* to a peak at
+`2^9`, then declines. Fitted per segment (`scale_regression` in the artifact): rise `2^3..2^9`
+**+2.114 pp/decade [+1.240,+2.429]** (interval clear of zero, so the rise is resolved, not scatter);
+decline `2^9..2^18` **-4.264 [-4.429,-4.087]**; top `2^16..2^18` **-3.229 [-4.656,-2.108]**; a single
+line over the whole range gives -1.707, which is an artefact of averaging a rise against a decline.
+Against the cap=8 ladder's **-7.043 [-7.820,-6.365]** every one of these is disjoint, and at the top
+rung the converged tax is **11.21%** where cap=8 reported 1.52% at a *smaller* N. `[GAP]` The decline
+has not been shown to stop: the top-segment interval still excludes zero, so there is no measured
+floor, and above `2^18` nothing is measured at all.
+
+**Why the converged ladder starts at `2^3`.** `2^2` (N=4) is excluded as degenerate, not for
+convenience. The tax there takes exactly **6 distinct values** (0, 33.3, 50, 66.7, 100, 150%) because
+it is a ratio of two or three wasted arrivals, so its median is a lottery between 0% and 50% rather
+than an estimate of anything. Doubling the ensemble from 1024 to 2048 seeds left its bootstrap CI
+width at **exactly 50.0, unchanged**, while every rung from `2^3` up tightened by ~1.4x (the 1/sqrt(n)
+expectation); including it makes the low-range regression CI span zero ([-5.845,+5.807]). The
+quantisation resolves quickly above it: 84 distinct values at `2^3`, 375 at `2^4`, 989 of 1024 at
+`2^7`. `N=2` runs but the tax is **undefined** there (exactly 1.00 arrivals per run, never wasted, so
+the baseline denominator is zero), and `N=1` is rejected by `SwarmParams` (`n_stars` is `gt=1`): with
+one star the homeworld is the whole field and is settled at year 0.
+
 **Density-rescaling invariance (checked):** changing the *uniform* density rescales every
 distance by a common factor, so travel time and light-time scale together and `Λ` (hence the
 relative penalty) is unchanged - a pure geometric rescaling of the absolute clock, confirmed to
