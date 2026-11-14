@@ -76,7 +76,10 @@ def solve(
         # Defensive: the integrators never record a non-finite state (a step producing inf or nan is rejected), so this branch is unreachable.
         message = "integration produced a non-finite state (RHS blew up); result is not trustworthy"
     else:
-        message = f"integration stalled at t={reached!r} before t1={t1!r} (step size collapsed)"
+        message = (
+            f"integration stalled at t={reached!r} before t1={t1!r}: a step was rejected "
+            "at the minimum step size (singularity, non-finite RHS, or tolerance unreachable)"
+        )
 
     return ODEResult(
         t=tuple(ts),
