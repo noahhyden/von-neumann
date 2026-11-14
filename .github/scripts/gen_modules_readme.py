@@ -14,20 +14,14 @@ BEGIN = "<!-- BEGIN GENERATED:inventory -->"
 END = "<!-- END GENERATED:inventory -->"
 
 
-def loc(src: Path) -> int:
-    """Lines across every .py file under src."""
-    return sum(len(p.read_text().splitlines()) for p in src.rglob("*.py") if "__pycache__" not in p.parts)
-
-
 def render() -> str:
     """The generated block body: a count line and the table."""
     rows = []
     for d in sorted(p for p in MODULES.iterdir() if (p / "pyproject.toml").is_file()):
         proj = tomllib.loads((d / "pyproject.toml").read_text())["project"]
-        tests = len(list((d / "tests").rglob("test_*.py")))
         purpose = " ".join(proj.get("description", "-").split()).replace("|", "\\|")
-        rows.append(f"| `{d.name}/` | `{proj['name']}` | {loc(d / 'src')} | {tests} | {purpose} |")
-    head = [f"`modules/` has **{len(rows)}** modules.", "", "| Module | Package | LOC | Tests | Purpose |", "|---|---|---|---|---|"]
+        rows.append(f"| `{d.name}/` | `{proj['name']}` | {purpose} |")
+    head = [f"`modules/` has **{len(rows)}** modules.", "", "| Module | Package | Purpose |", "|---|---|---|"]
     return "\n".join(head + rows)
 
 
