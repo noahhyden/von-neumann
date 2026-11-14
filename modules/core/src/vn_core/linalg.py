@@ -5,37 +5,6 @@ from __future__ import annotations
 import math
 
 
-def solve_linear(a: list[list[float]], b: list[float]) -> list[float]:
-    """Solve the dense system ``a x = b`` by Gaussian elimination w/ partial pivot."""
-    n = len(b)
-    if any(len(row) != n for row in a) or len(a) != n:
-        raise ValueError("a must be square and match len(b)")
-    # Work on an augmented copy so callers' data is untouched.
-    m = [list(a[i]) + [b[i]] for i in range(n)]
-    for col in range(n):
-        # Partial pivot: pick the row with the largest magnitude in this column.
-        pivot = max(range(col, n), key=lambda r: abs(m[r][col]))
-        if abs(m[pivot][col]) < 1e-300:
-            raise ValueError("matrix is singular to working precision")
-        if pivot != col:
-            m[col], m[pivot] = m[pivot], m[col]
-        inv = 1.0 / m[col][col]
-        for r in range(col + 1, n):
-            factor = m[r][col] * inv
-            if factor == 0.0:
-                continue
-            for c in range(col, n + 1):
-                m[r][c] -= factor * m[col][c]
-    # Back-substitution.
-    x = [0.0] * n
-    for row in range(n - 1, -1, -1):
-        acc = m[row][n]
-        for c in range(row + 1, n):
-            acc -= m[row][c] * x[c]
-        x[row] = acc / m[row][row]
-    return x
-
-
 def solve_lstsq(a: list[list[float]], b: list[float]) -> list[float]:
     """Least-squares solution of the overdetermined system ``a x ~= b`` by Householder QR."""
     m = len(a)
@@ -89,7 +58,4 @@ def solve_lstsq(a: list[list[float]], b: list[float]) -> list[float]:
     return x
 
 
-__all__ = ["solve_least_squares", "solve_linear", "solve_lstsq"]
-
-# Long-form alias for call sites that prefer it.
-solve_least_squares = solve_lstsq
+__all__ = ["solve_lstsq"]

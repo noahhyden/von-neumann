@@ -4,56 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from vn_core.linalg import solve_least_squares, solve_linear, solve_lstsq
-
-
-# --- solve_linear --------------------------------------------------------------
-
-
-def test_solve_linear_known_system():
-    # 2x + y = 5 ; x + 3y = 10  ->  x = 1, y = 3
-    x = solve_linear([[2.0, 1.0], [1.0, 3.0]], [5.0, 10.0])
-    assert x == pytest.approx([1.0, 3.0])
-
-
-def test_solve_linear_upper_triangular_hits_zero_factor():
-    # Below-pivot entries already zero -> the factor==0 fast path.
-    x = solve_linear([[2.0, 1.0], [0.0, 3.0]], [4.0, 9.0])
-    assert x == pytest.approx([0.5, 3.0])
-
-
-def test_solve_linear_needs_row_swap():
-    # Zero leading pivot forces a partial-pivot row swap.
-    x = solve_linear([[0.0, 1.0], [1.0, 0.0]], [2.0, 3.0])
-    assert x == pytest.approx([3.0, 2.0])
-
-
-def test_solve_linear_matches_numpy():
-    np = pytest.importorskip("numpy")
-    rng = np.random.default_rng(1)
-    for _ in range(20):
-        a = rng.standard_normal((4, 4))
-        b = rng.standard_normal(4)
-        mine = solve_linear([list(r) for r in a], list(b))
-        assert mine == pytest.approx(list(np.linalg.solve(a, b)), abs=1e-9)
-
-
-def test_solve_linear_rejects_singular():
-    with pytest.raises(ValueError, match="singular"):
-        solve_linear([[1.0, 2.0], [2.0, 4.0]], [1.0, 2.0])
-
-
-def test_solve_linear_rejects_non_square():
-    with pytest.raises(ValueError, match="square"):
-        solve_linear([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]], [1.0, 2.0])
-
-
-def test_solve_linear_does_not_mutate_inputs():
-    a = [[2.0, 1.0], [1.0, 3.0]]
-    b = [5.0, 10.0]
-    solve_linear(a, b)
-    assert a == [[2.0, 1.0], [1.0, 3.0]]
-    assert b == [5.0, 10.0]
+from vn_core.linalg import solve_lstsq
 
 
 # --- solve_lstsq ---------------------------------------------------------------
@@ -102,7 +53,7 @@ def test_lstsq_beats_normal_equations_on_ill_conditioned_design():
     am = np.array(a)
     gram = (am.T @ am).tolist()
     proj = list(am.T @ np.array(b))
-    normal = np.array(solve_linear(gram, proj))
+    normal = np.linalg.solve(gram, proj)
 
     qr_err = np.max(np.abs(qr - x_true))
     ne_err = np.max(np.abs(normal - x_true))
@@ -137,12 +88,6 @@ def test_lstsq_square_system_is_exact_solve():
     a = [[2.0, 1.0], [1.0, 3.0]]
     b = [5.0, 10.0]
     assert solve_lstsq(a, b) == pytest.approx([1.0, 3.0], abs=1e-12)
-
-
-def test_lstsq_long_form_alias():
-    a = [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]
-    b = [1.0, 2.0, 3.0]
-    assert solve_least_squares(a, b) == solve_lstsq(a, b)
 
 
 def test_lstsq_rejects_empty():
