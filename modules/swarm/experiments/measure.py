@@ -954,7 +954,7 @@ def p2_floor_bracket_scale(*, n_stars: int = 524_288, n_seeds: int = 8) -> None:
 def m_retarget_cap(*, n_stars: int = 400, n_seeds: int = 32) -> None:
     """Fuel tax vs the max_retargets bookkeeping cap: show the result is insensitive to it."""
     seeds = SEEDS[:n_seeds]
-    caps = [2, 4, 8, 16, 32]
+    caps = [2, 4, 8, 16, 32, 64, 128, 256]
     config = {"policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
               "caps": caps, "mode_treat": "lightspeed", "stepping": "event"}
 
@@ -971,7 +971,7 @@ def m_retarget_cap(*, n_stars: int = 400, n_seeds: int = 32) -> None:
 def p2_retarget_cap(*, n_stars: int = P2_FIXED_N["retarget_cap"], n_seeds: int = 32) -> None:
     """P2 companion to ``m_retarget_cap``: N=400 -> the 1-min-ceiling p2 N (see P2_FIXED_N)."""
     seeds = SEEDS[:n_seeds]
-    caps = [2, 4, 8, 16, 32]
+    caps = [2, 4, 8, 16, 32, 64, 128, 256]
     config = {"policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
               "caps": caps, "mode_treat": "lightspeed", "stepping": "event"}
 
@@ -988,7 +988,7 @@ def p2_retarget_cap(*, n_stars: int = P2_FIXED_N["retarget_cap"], n_seeds: int =
 def m_retarget_cap_scale(*, n_stars: int = 200_000, n_seeds: int = 8) -> None:
     """N=200k companion to the re-target-cap sweep: does insensitivity to the bookkeeping cap hold at scale?"""
     seeds = SEEDS[:n_seeds]
-    caps = [2, 4, 8, 16, 32]
+    caps = [2, 4, 8, 16, 32, 64, 128, 256]
     config = {"policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
               "caps": caps, "mode_treat": "lightspeed", "stepping": "event"}
 
@@ -1005,7 +1005,7 @@ def m_retarget_cap_scale(*, n_stars: int = 200_000, n_seeds: int = 8) -> None:
 def p2_retarget_cap_scale(*, n_stars: int = 262_144, n_seeds: int = 8) -> None:
     """P2 companion to ``m_retarget_cap_scale``: N=200_000 -> N=262_144 (next p2 above 200k)."""
     seeds = SEEDS[:n_seeds]
-    caps = [2, 4, 8, 16, 32]
+    caps = [2, 4, 8, 16, 32, 64, 128, 256]
     config = {"policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
               "caps": caps, "mode_treat": "lightspeed", "stepping": "event"}
 

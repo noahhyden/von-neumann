@@ -177,10 +177,13 @@ distant star `i` as settled only once the news has arrived -
   modes (symmetric), so the paired wasted-journey comparison is fair - `instant` also loses
   in-transit races and re-targets, so capping only `lightspeed` would inflate `instant`'s waste.
   The measured fuel tax at `Λ=0.2` (powered, N=400, 32 seeds) *converges* with the cap rather than
-  being flat: +6.3 / +12.9 / +18.4 / +20.4 / +20.4% at cap = 2/4/8/16/32. It rises while the cap
-  still truncates live bounce chains, then saturates by cap ~16. The default cap = 8 sits near
-  convergence (+18.4%, ~90% of the +20.4% asymptote) - a mild lower bound, not a knob the result is
-  blind to. Honest correction of an earlier "insensitive" note (`experiments/measure.py::retarget_cap`).
+  being flat: +6.3 / +12.9 / +18.4 / +20.4 / +20.4 / +20.4 / +20.4 / +20.4% at
+  cap = 2/4/8/16/32/64/128/256. It rises while the cap still truncates live bounce chains, then
+  saturates by cap ~16. The default cap = 8 sits near convergence **at this N only** (+18.4%, ~90%
+  of the +20.4% asymptote). **The cap at which it converges grows with N**, so cap = 8 is a far
+  harsher truncation at scale - see "The retarget-cap plateau" below, where the same sweep at
+  N=262,144 converges only at cap ~128 and cap = 8 reports 12% of the converged tax. Honest
+  correction of an earlier "insensitive" note (`experiments/measure.py::retarget_cap`).
 
 - **Plateau-locator threshold `= 0.05` `[ESTIMATE]` - a diagnostic tolerance, not a physical
   number.** Issue #73's `--locate-plateau` finds `cap*(N)` from the instant-only bounce depth
@@ -494,14 +497,30 @@ Two exceptions stay on the historical (non-p2) block:
   the N=262,144 headline, and 0.040 at the N=524,288 scale companion. The paper reframes
   "tax IS v/c" as "tax scales as v/c with a coefficient below one that shrinks with N," and the
   Lambda=0.2 headline fuel tax falls from ~16% (N=2048) to ~1.3% (N=262,144).
-- The retarget-cap plateau that justified the default cap=8 does not survive to
-  scale (`retarget_cap.json` p2, now at N=262,144, 32 seeds): the tax climbs
-  monotonically 0.27/0.27/1.31/4.79/8.97% across caps 2/4/8/16/32 with no levelling,
-  so cap=8 captures only ~15% of the cap-32 tax (the shortfall grew from ~40% at the
-  earlier N=32,768 companion - the plateau is *more* absent at larger N). The 8-seed
-  `retarget_cap_scale` p2 at the same N=262,144 agrees (0.27 .. 8.60%). cap=8 is
-  documented as a *lower bound* whose downward bias grows with N; every fuel-tax
-  figure using it is "at least this much."
+- **The retarget-cap plateau exists at every N measured; it is the plateau's
+  *location* that grows with N, and the old ladder simply stopped below it.**
+  Carrying the sweep from cap 32 to cap 256 (`retarget_cap.json` p2, N=262,144, 32
+  seeds) gives 0.267/0.267/1.310/4.789/8.965/11.068/11.084/11.084% across caps
+  2/4/8/16/32/64/128/256: caps 128 and 256 agree to every printed digit on both the
+  fuel and the fill-time tax, so no probe in 32 seeds reaches 128 retargets and the
+  cascade terminates on its own. The converged tax is **11.08%**, and the default
+  cap=8 reports **1.31%, i.e. 11.8% of it** - an 8.5x truncation, not the ~15%-of-cap-32
+  shortfall an earlier note recorded against a ladder that had not yet converged. The
+  8-seed `retarget_cap_scale` p2 at the same N agrees (converged 10.70%), as does the
+  non-p2 N=200,000 sweep (converged 10.64% at cap 128). cap=8 remains a *lower bound*
+  whose downward bias grows with N; every fuel-tax figure using it is "at least this much."
+- **Consequence for the with-N decline: at matched convergence the tax is close to
+  N-independent.** Comparing converged caps rather than truncated ones, the `Λ=0.2`
+  fuel tax is 20.45% at N=400 (converged by cap 32) against 11.08% at N=262,144
+  (converged by cap 128): a factor of 1.85 across a 655x span in N, a local exponent
+  `α ≈ 0.09`. The cap=8 ladder reports 18.4% -> 1.31% over the same span (a factor of
+  14, `α ≈ 0.58`), so most of the apparent decline was the cap truncating longer
+  cascades at larger N rather than physics. Every N-trend measured at cap=8 - including
+  the `finite_size` ladder and the DN5 "convex, no stable exponent" finding in
+  `experiments/ANALYTICAL_BOUNDS.md` - is contaminated by this and is pending a
+  converged-cap rerun. `[GAP]` The converged tax above N=262,144 is unmeasured: the
+  N=2^22 sweep reached only cap 32 (+4.18%, still climbing), so the two-point `α ≈ 0.09`
+  has no confirmation at the top of the ladder.
 - The in-flight-relay fill-time cost at Lambda=0.2 is ~27% at the N=262,144 headline
   (`floor_bracket.json` p2, 32 seeds), and ~28% at the N=524,288 scale companion; the
   relay still drives completed wasted arrivals to exactly zero, at a substantial fill-time price.

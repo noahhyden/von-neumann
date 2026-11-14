@@ -17,7 +17,8 @@ def sign_test_positive(xs: list[float]) -> tuple[int, int, float]:
         return 0, 0, 1.0
     hi = max(k, n - k)
     tail = sum(comb(n, i) for i in range(hi, n + 1))
-    p = min(1.0, 2.0 * tail / (2.0**n))
+    # Exact ints divided once: 2.0**n overflows the double range at n >= 1024 (i.e. 1024 seeds).
+    p = min(1.0, 2 * tail / (1 << n))
     return k, n, p
 
 
