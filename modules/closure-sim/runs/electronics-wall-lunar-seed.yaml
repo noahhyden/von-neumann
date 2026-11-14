@@ -1,0 +1,12 @@
+# Committed spec for the closure-sim wall command on the lunar regolith seed; nothing here is read from the environment.
+name: electronics-wall-lunar-seed
+module: closure-sim
+entry: closure_sim.cli:main
+description: >
+  Electronics wall comparison, chips shipped from Earth vs made locally, on the lunar regolith seed with the scenario's own replication block.
+
+runtime:
+  optimize: true
+
+params:
+  argv: [wall, scenarios/lunar_regolith_seed.yaml]

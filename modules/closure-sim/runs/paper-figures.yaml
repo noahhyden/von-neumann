@@ -1,0 +1,9 @@
+# Committed spec for the electronics-wall paper figures; nothing here is read from the environment.
+name: paper-figures
+module: closure-sim
+entry: closure_sim.paper_figures:main
+description: >
+  Regenerates the three electronics-wall paper figures into papers/electronics-wall from the lunar regolith seed scenario.
+
+runtime:
+  optimize: true
