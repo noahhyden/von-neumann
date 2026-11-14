@@ -353,8 +353,8 @@ def test_main_changed_list(capsys):
 
 
 def test_main_changed_none_stale(capsys):
-    # comms owns no results and nothing imports it -> the "(none)" formatting branches.
-    assert dg.main(["--changed", "comms"]) == 0
+    # subsystems owns no results and nothing imports it -> the "(none)" formatting branches.
+    assert dg.main(["--changed", "subsystems"]) == 0
     out = capsys.readouterr().out
     assert "(none)" in out
 
