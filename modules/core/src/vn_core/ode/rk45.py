@@ -145,6 +145,8 @@ def integrate_rk45(
         else:
             # Reject: shrink and retry from the same point with the pure proportional term (PI memory is not updated on a reject, per Hairer), floored at _MIN_FACTOR.
             rejected += 1
+            if h <= min_step:  # rejected while already floored: no smaller step exists, a true stall
+                return ts, ys, accepted, rejected, f_evals, steps
             factor = max(_MIN_FACTOR, _SAFETY * err ** (-_PI_ALPHA))
             h = h * factor
 

@@ -166,7 +166,19 @@ def test_nonfinite_rhs_is_reported_not_silently_returned():
     # dy/dt = y^2 from y0=1 escapes to infinity at t=1; integrating to t=5 blows up.
     r = solve(lambda t, y: [y[0] ** 2], [1.0], (0.0, 5.0), rtol=1e-6, atol=1e-9)
     assert not r.success
-    assert "trust" in r.message or "stalled" in r.message
+    assert "rejected at the minimum step size" in r.message
+
+
+def test_tiny_accepted_steps_do_not_trigger_stall_bail():
+    """A very stiff problem needs tiny steps yet must finish accurately (bail is reject-at-floor only)."""
+
+    def f(t, y):
+        return [-10000.0 * (y[0] - math.cos(t)) - math.sin(t)]
+
+    r = solve(f, [1.0], (0.0, 2.0), rtol=1e-6, atol=1e-9)
+    assert r.success
+    assert r.n_accepted > 1000
+    assert abs(r.y_final[0] - math.cos(2.0)) < 1e-4
 
 
 def test_stiff_scalar_tracks_truth():
