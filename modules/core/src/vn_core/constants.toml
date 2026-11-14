@@ -1,12 +1,4 @@
-# Defined physical constants shared across modules AND mirrored into the frontend.
-# This file is the single source: vn_core/constants.py and frontend/src/constants.ts
-# are both GENERATED from it by .github/scripts/gen_constants.py. Edit here, never there.
-#
-# `value` is a STRING holding the literal verbatim, so the digits in code stay identical
-# to the digits in the cited source and the papers; the generator checks it round-trips.
-# Only constants that are EXACT BY DEFINITION belong in this file. A measured value
-# carries an uncertainty and a distribution and belongs in its module's
-# distributions.py, not here. Every entry needs value, unit, source, basis, verdict.
+# Single source for constants exact by definition; see core/REFERENCES.md and modules/AGENTS.d.
 
 [SECONDS_PER_DAY]
 value = "86400.0"
