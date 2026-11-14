@@ -28,3 +28,16 @@ repos:
         always_run: true
         pass_filenames: false
         stages: [pre-push]
+      - id: constants-generate
+        name: regenerate constants.py and constants.ts from constants.toml
+        entry: python3 .github/scripts/gen_constants.py --write
+        language: system
+        always_run: true
+        pass_filenames: false
+      - id: constants-check
+        name: generated constants match constants.toml
+        entry: python3 .github/scripts/gen_constants.py
+        language: system
+        always_run: true
+        pass_filenames: false
+        stages: [pre-push]

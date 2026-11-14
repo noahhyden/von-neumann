@@ -340,32 +340,41 @@ constants, each a mathematical identity, not an assumption.
   [GAP] The `>=1.11` and `>=7.0` version floors have no recorded source; they are
   lower bounds the suite currently passes with, not verified minimums.
 
-## `vn_core.constants` - the shared time basis
+## `vn_core.constants` - defined physical constants
 
-One definition of the astronomical clock, because three modules had their own and
-`spine/SCRUTINY.md` row C4 flags the divergence as a silent-failure risk.
+**The source of record is [`src/vn_core/constants.toml`](src/vn_core/constants.toml), not
+this file.** Each entry there carries `value`, `unit`, `source`, `basis` and `verdict` as
+structured fields, and `tests/test_constants.py` asserts every one of them is present and
+that the source is a URL - so CLAUDE.md section 1 is an executable check here rather than a
+prose promise. Restating the numbers in this file would recreate exactly the duplication the
+table exists to remove, so this section describes the arrangement instead.
 
-- **`SECONDS_PER_DAY = 86_400.0` s.** Exact by definition: the SI second is exact
-  (BIPM SI Brochure, 9th ed., the caesium-133 hyperfine definition), and this clock
-  is a fixed 86400 s day with no leap seconds, which is what every duration in this
-  repo means. Source:
-  [BIPM SI Brochure](https://www.bipm.org/en/publications/si-brochure).
-  Verdict: reasonable - durations here are elapsed-time intervals, not civil dates,
-  so a leap-second-free day is the correct basis.
-- **`DAYS_PER_JULIAN_YEAR = 365.25` d.** The IAU Julian year, exact by definition and
-  the standard year for astronomical intervals (it is the basis of the light-year and
-  of the IAU parsec). Source:
-  [IAU SI units / Julian year](https://www.iau.org/publications/proceedings_rules/units/).
-  Verdict: reasonable - this is the same year the IAU parsec
-  `3.0856775814913673e13` km that `swarm.models` divides by is defined against, so
-  using any other year basis here would make `C_PC_PER_YEAR` internally inconsistent.
-- **`SECONDS_PER_JULIAN_YEAR = 31_557_600.0` s.** Derived, not a fourth literal:
-  `DAYS_PER_JULIAN_YEAR * SECONDS_PER_DAY = 365.25 * 86400 = 3.15576e7`.
-  Both inputs are exactly representable in IEEE-754 double and the product is an
-  integer well under 2^53, so the derived value is **bit-identical** to the
-  `3.15576e7` literal it replaces. `tests/test_constants.py` pins that bit-identity
-  and pins that swarm's `C_PC_PER_YEAR` does not move, since swarm's published
-  results depend on that float exactly.
+Holds the constants that are **exact by definition** and were previously written out
+separately in more than one place: the SI day and the IAU Julian year, the speed of light,
+the IAU parsec, and the Boltzmann constant. A *measured* value carries an uncertainty and
+belongs in its module's `distributions.py`, not here.
+
+Three things the arrangement buys:
+
+- **One definition across two languages.** `vn_core/constants.py` and
+  `frontend/src/constants.ts` are both generated from the table by
+  `.github/scripts/gen_constants.py` (`make constants`), so a constant cannot drift between
+  the Python fold and its TypeScript port. Before this, four constants were duplicated across
+  that boundary with nothing pinning them - unlike the mulberry32, which has a parity fixture,
+  and closure-sim, which has `frontend/scripts/diff_check.py`. Neither covered these.
+- **`SECONDS_PER_JULIAN_YEAR` is derived, not stored**, as
+  `DAYS_PER_JULIAN_YEAR * SECONDS_PER_DAY`. Both inputs are exactly representable in IEEE-754
+  double and the product is an integer well under 2^53, so it is bit-identical to the
+  `3.15576e7` literal it replaced. This answers `spine/SCRUTINY.md` row C4, which asked for a
+  test proving swarm's and spine's clocks trace to one definition.
+- **Literals are stored verbatim as quoted strings.** Storing them as TOML floats round-trips
+  correctly but re-renders `3.0856775814913673e13` as `30856775814913.67` - numerically
+  identical, and a traceability regression, since the digits in the code would no longer match
+  the digits in the IAU resolution and in the papers. The generator checks each literal
+  round-trips through `float`.
+
+Bit-identity is pinned by tests rather than asserted: `test_constants.py` compares the raw
+doubles against every literal replaced, and checks that swarm's `C_PC_PER_YEAR` does not move.
 
 ## Everything else in `vn-core`
 

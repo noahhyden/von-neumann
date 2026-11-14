@@ -9,12 +9,12 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from pydantic import BaseModel, Field
-from vn_core.constants import SECONDS_PER_JULIAN_YEAR
+from vn_core.constants import KM_PER_PARSEC, SECONDS_PER_JULIAN_YEAR, SPEED_OF_LIGHT_KM_S
 
 # Speed of light in pc/yr: c = 299792.458 km/s (SI exact) x SECONDS_PER_JULIAN_YEAR s/yr (vn_core.constants) / 3.0856775814913673e13 km/pc (IAU parsec).
-C_PC_PER_YEAR: float = 299792.458 * SECONDS_PER_JULIAN_YEAR / 3.0856775814913673e13
+C_PC_PER_YEAR: float = SPEED_OF_LIGHT_KM_S * SECONDS_PER_JULIAN_YEAR / KM_PER_PARSEC
 # 1 km/s expressed in pc/yr (derived from the same constants).
-KM_S_TO_PC_YR: float = SECONDS_PER_JULIAN_YEAR / 3.0856775814913673e13
+KM_S_TO_PC_YR: float = SECONDS_PER_JULIAN_YEAR / KM_PER_PARSEC
 
 # Fixed log-spaced hop-length bin edges, 0.1 to 30 pc in 12 steps (sub-nearest-neighbour to cross-box at the densities used), for the clumpy-field d-cancellation check.
 HOP_BIN_EDGES: tuple[float, ...] = tuple(round(0.1 * (300.0 ** (k / 12.0)), 6) for k in range(13))
