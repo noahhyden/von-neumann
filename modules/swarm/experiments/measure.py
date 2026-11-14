@@ -55,6 +55,11 @@ _FORCE = False  # set by --force: ignore and clear any progress sidecar
 _SEED_SLICE: tuple[int, int] | None = None  # (index, count) - set by --seed-slice; else full run
 _ROW_SIDECAR: Path | None = None  # set by _sweep: per-seed row stream for the running measurement
 
+_PROV_LAMCAP = {"speed_cap_c": "max(0.05, 2*lambda)", "max_retargets": SwarmParams.model_fields["max_retargets"].default}
+_PROV_04 = {"speed_cap_c": 0.4, "max_retargets": SwarmParams.model_fields["max_retargets"].default}
+_PROV_DEF = {"speed_cap_c": SwarmParams.model_fields["speed_cap_c"].default,
+             "max_retargets": SwarmParams.model_fields["max_retargets"].default}
+
 
 def _apply_slice(seeds: list[int]) -> list[int]:
     """Filter ``seeds`` down to the active seed slice, or return unchanged when no slice."""
@@ -547,7 +552,7 @@ def m_lambda_sweep(*, n_stars: int = 500, n_seeds: int = 512) -> None:
     """Headline: fuel/time/travel/energy tax vs Lambda = v/c (powered, event, lightspeed vs instant)."""
     seeds = SEEDS[:n_seeds]
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "mode_base": "instant", "mode_treat": "lightspeed",
               "stepping": "event"}
 
@@ -565,7 +570,7 @@ def p2_lambda_sweep(*, n_stars: int = P2_FIXED_N["lambda_sweep"], n_seeds: int =
     """P2 companion to ``m_lambda_sweep``: at-scale N=262,144, 128 seeds (see P2_FIXED_N)."""
     seeds = SEEDS[:n_seeds]
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "mode_base": "instant", "mode_treat": "lightspeed",
               "stepping": "event"}
 
@@ -583,7 +588,7 @@ def m_lambda_sweep_scale(*, n_stars: int = 200_000, n_seeds: int = 8) -> None:
     """N=200k companion to the headline speed sweep: does tax ~ v/c linearity hold at scale?"""
     seeds = SEEDS[:n_seeds]
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "mode_base": "instant", "mode_treat": "lightspeed",
               "stepping": "event"}
 
@@ -601,7 +606,7 @@ def p2_lambda_sweep_scale(*, n_stars: int = 524_288, n_seeds: int = 8) -> None:
     """P2 companion to ``m_lambda_sweep_scale``: at-scale N=524_288."""
     seeds = SEEDS[:n_seeds]
     lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "mode_base": "instant", "mode_treat": "lightspeed",
               "stepping": "event"}
 
@@ -621,7 +626,7 @@ def m_branching(*, n_stars: int = 400, n_seeds: int = 32) -> None:
     # Swept high (to 16) so the saturation claim is tested, not asserted from a 3-point plateau:
     offspring = [2, 3, 4, 8, 16]
     lambdas = [0.05, 0.2]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "offspring": offspring, "mode_treat": "lightspeed",
               "stepping": "event"}
 
@@ -643,7 +648,7 @@ def p2_branching(*, n_stars: int = P2_FIXED_N["branching"], n_seeds: int = 32) -
     seeds = SEEDS[:n_seeds]
     offspring = [2, 3, 4, 8, 16]
     lambdas = [0.05, 0.2]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "offspring": offspring, "mode_treat": "lightspeed",
               "stepping": "event"}
 
@@ -665,7 +670,7 @@ def m_branching_scale(*, n_stars: int = 200_000, n_seeds: int = 6) -> None:
     seeds = SEEDS[:n_seeds]
     offspring = [2, 3, 4, 8]
     lambdas = [0.05, 0.2]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "offspring": offspring, "mode_treat": "lightspeed",
               "stepping": "event"}
 
@@ -687,7 +692,7 @@ def p2_branching_scale(*, n_stars: int = 524_288, n_seeds: int = 6) -> None:
     seeds = SEEDS[:n_seeds]
     offspring = [2, 3, 4, 8]
     lambdas = [0.05, 0.2]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "offspring": offspring, "mode_treat": "lightspeed",
               "stepping": "event"}
 
@@ -708,7 +713,7 @@ def m_energy_tax(*, n_stars: int = 400, n_seeds: int = 32) -> None:
     """Energy-weighted tax per policy: count-tax vs (1/2)v^2-weighted tax (1x and 2x brackets)."""
     seeds = SEEDS[:n_seeds]
     policies = ["powered", "slingshot_nearest", "slingshot_maxboost"]
-    config = {"policies": policies, "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_DEF, "policies": policies, "n_stars": n_stars, "n_seeds": len(seeds),
               "mode_treat": "lightspeed", "stepping": "event",
               "note": "energy_pct_1x/2x are the flyby/rendezvous bracket; relativistic excess < 3.1% to 0.2c"}
 
@@ -730,7 +735,7 @@ def p2_energy_tax(*, n_stars: int = P2_FIXED_N["energy_tax"], n_seeds: int = 32)
     """P2 companion to ``m_energy_tax``: N=400 -> the 1-min-ceiling p2 N (see P2_FIXED_N)."""
     seeds = SEEDS[:n_seeds]
     policies = ["powered", "slingshot_nearest", "slingshot_maxboost"]
-    config = {"policies": policies, "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_DEF, "policies": policies, "n_stars": n_stars, "n_seeds": len(seeds),
               "mode_treat": "lightspeed", "stepping": "event",
               "note": "energy_pct_1x/2x are the flyby/rendezvous bracket; relativistic excess < 3.1% to 0.2c"}
 
@@ -750,7 +755,7 @@ def p2_energy_tax(*, n_stars: int = P2_FIXED_N["energy_tax"], n_seeds: int = 32)
 def m_finite_size(*, n_seeds_by_n: list[tuple[int, int]] = _FS_LADDER) -> None:
     """Fuel tax % vs system size over a 16x span (300..4800), powered, Lambda=0.2, event."""
     # High-seed sweep reaching N=200,000 (near-linear since #30), with seeds scaled down as N grows to hold the median tight.
-    config = {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
+    config = {**_PROV_04, "policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
               "mode_treat": "lightspeed", "stepping": "event"}
 
     def one(item: tuple[int, int]) -> dict:
@@ -776,7 +781,7 @@ def m_finite_size(*, n_seeds_by_n: list[tuple[int, int]] = _FS_LADDER) -> None:
 
 def p2_finite_size(*, n_seeds_by_n: list[tuple[int, int]] = _FS_P2_LADDER) -> None:
     """P2 companion to ``m_finite_size``: the full power-of-two ladder 256..262,144."""
-    config = {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
+    config = {**_PROV_04, "policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
               "mode_treat": "lightspeed", "stepping": "event"}
 
     def one(item: tuple[int, int]) -> dict:
@@ -842,7 +847,7 @@ def m_concurrency(*, n_stars: int = 500, n_seeds: int = 16) -> None:
     bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
     data = _concurrency_ensemble(seeds, n_stars, lam, bins)
     write_result("concurrency",
-                 {"policy": "powered", "lambda": lam, "n_stars": n_stars, "n_seeds": len(seeds),
+                 {**_PROV_LAMCAP, "policy": "powered", "lambda": lam, "n_stars": n_stars, "n_seeds": len(seeds),
                   "stepping": "event"},
                  {"data": data})
 
@@ -854,7 +859,7 @@ def p2_concurrency(*, n_stars: int = P2_FIXED_N["concurrency"], n_seeds: int = 3
     bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
     data = _concurrency_ensemble(seeds, n_stars, lam, bins)
     write_p2_companion("concurrency",
-                       {"policy": "powered", "lambda": lam, "n_stars": n_stars, "n_seeds": len(seeds),
+                       {**_PROV_LAMCAP, "policy": "powered", "lambda": lam, "n_stars": n_stars, "n_seeds": len(seeds),
                         "stepping": "event"},
                        {"data": data})
 
@@ -866,7 +871,7 @@ def m_concurrency_scale(*, n_stars: int = 200_000, n_seeds: int = 8) -> None:
     bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
     data = _concurrency_ensemble(seeds, n_stars, lam, bins)
     write_result("concurrency_scale",
-                 {"policy": "powered", "lambda": lam, "n_stars": n_stars, "n_seeds": len(seeds),
+                 {**_PROV_LAMCAP, "policy": "powered", "lambda": lam, "n_stars": n_stars, "n_seeds": len(seeds),
                   "stepping": "event"},
                  {"data": data})
 
@@ -878,7 +883,7 @@ def p2_concurrency_scale(*, n_stars: int = 524_288, n_seeds: int = 8) -> None:
     bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
     data = _concurrency_ensemble(seeds, n_stars, lam, bins)
     write_p2_companion("concurrency_scale",
-                       {"policy": "powered", "lambda": lam, "n_stars": n_stars, "n_seeds": len(seeds),
+                       {**_PROV_LAMCAP, "policy": "powered", "lambda": lam, "n_stars": n_stars, "n_seeds": len(seeds),
                         "stepping": "event"},
                        {"data": data})
 
@@ -915,7 +920,7 @@ def m_floor_bracket(*, n_stars: int = 400, n_seeds: int = 48) -> None:
     """instant / inflight / lightspeed: how much of the decision-site tax survives in-flight relay."""
     seeds = SEEDS[:n_seeds]
     lambdas = [0.05, 0.1, 0.2]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "modes": ["instant", "lightspeed", "inflight"], "stepping": "event"}
     data = _floor_bracket_body("floor_bracket", config, seeds, n_stars, lambdas, p2=False)
     write_result("floor_bracket", config, {"data": data})
@@ -925,7 +930,7 @@ def p2_floor_bracket(*, n_stars: int = P2_FIXED_N["floor_bracket"], n_seeds: int
     """P2 companion to ``m_floor_bracket``: at-scale N=262,144, 32 seeds (see P2_FIXED_N)."""
     seeds = SEEDS[:n_seeds]
     lambdas = [0.05, 0.1, 0.2]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "modes": ["instant", "lightspeed", "inflight"], "stepping": "event"}
     data = _floor_bracket_body("floor_bracket", config, seeds, n_stars, lambdas, p2=True)
     write_p2_companion("floor_bracket", config, {"data": data})
@@ -935,7 +940,7 @@ def m_floor_bracket_scale(*, n_stars: int = 200_000, n_seeds: int = 8) -> None:
     """N=200k companion to the floor bracket: how much of the (already tiny, ~1.5%) tax survives in-flight relay at scale?"""
     seeds = SEEDS[:n_seeds]
     lambdas = [0.05, 0.1, 0.2]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "modes": ["instant", "lightspeed", "inflight"], "stepping": "event"}
     data = _floor_bracket_body("floor_bracket_scale", config, seeds, n_stars, lambdas, p2=False)
     write_result("floor_bracket_scale", config, {"data": data})
@@ -945,7 +950,7 @@ def p2_floor_bracket_scale(*, n_stars: int = 524_288, n_seeds: int = 8) -> None:
     """P2 companion to ``m_floor_bracket_scale``: at-scale N=524_288."""
     seeds = SEEDS[:n_seeds]
     lambdas = [0.05, 0.1, 0.2]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "modes": ["instant", "lightspeed", "inflight"], "stepping": "event"}
     data = _floor_bracket_body("floor_bracket_scale", config, seeds, n_stars, lambdas, p2=True)
     write_p2_companion("floor_bracket_scale", config, {"data": data})
@@ -955,7 +960,7 @@ def m_retarget_cap(*, n_stars: int = 400, n_seeds: int = 32) -> None:
     """Fuel tax vs the max_retargets bookkeeping cap: show the result is insensitive to it."""
     seeds = SEEDS[:n_seeds]
     caps = [2, 4, 8, 16, 32, 64, 128, 256]
-    config = {"policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**{"speed_cap_c": 0.4, "max_retargets": caps}, "policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
               "caps": caps, "mode_treat": "lightspeed", "stepping": "event"}
 
     def one(cap: int) -> dict:
@@ -972,7 +977,7 @@ def p2_retarget_cap(*, n_stars: int = P2_FIXED_N["retarget_cap"], n_seeds: int =
     """P2 companion to ``m_retarget_cap``: N=400 -> the 1-min-ceiling p2 N (see P2_FIXED_N)."""
     seeds = SEEDS[:n_seeds]
     caps = [2, 4, 8, 16, 32, 64, 128, 256]
-    config = {"policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**{"speed_cap_c": 0.4, "max_retargets": caps}, "policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
               "caps": caps, "mode_treat": "lightspeed", "stepping": "event"}
 
     def one(cap: int) -> dict:
@@ -989,7 +994,7 @@ def m_retarget_cap_scale(*, n_stars: int = 200_000, n_seeds: int = 8) -> None:
     """N=200k companion to the re-target-cap sweep: does insensitivity to the bookkeeping cap hold at scale?"""
     seeds = SEEDS[:n_seeds]
     caps = [2, 4, 8, 16, 32, 64, 128, 256]
-    config = {"policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**{"speed_cap_c": 0.4, "max_retargets": caps}, "policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
               "caps": caps, "mode_treat": "lightspeed", "stepping": "event"}
 
     def one(cap: int) -> dict:
@@ -1006,7 +1011,7 @@ def p2_retarget_cap_scale(*, n_stars: int = 262_144, n_seeds: int = 8) -> None:
     """P2 companion to ``m_retarget_cap_scale``: N=200_000 -> N=262_144 (next p2 above 200k)."""
     seeds = SEEDS[:n_seeds]
     caps = [2, 4, 8, 16, 32, 64, 128, 256]
-    config = {"policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**{"speed_cap_c": 0.4, "max_retargets": caps}, "policy": "powered", "lambda": 0.2, "n_stars": n_stars, "n_seeds": len(seeds),
               "caps": caps, "mode_treat": "lightspeed", "stepping": "event"}
 
     def one(cap: int) -> dict:
@@ -1023,7 +1028,7 @@ def m_dt_artifact(*, n_stars: int = 300, n_seeds: int = 32) -> None:
     """Fill-time tax vs fixed timestep, collapsing to ~0 at the event (dt->0) limit."""
     seeds = SEEDS[:n_seeds]
     dts = [5000.0, 2000.0, 1000.0, 500.0, 250.0]
-    config = {"policy": "slingshot_nearest", "n_stars": n_stars, "n_seeds": len(seeds), "dts": dts}
+    config = {**_PROV_DEF, "policy": "slingshot_nearest", "n_stars": n_stars, "n_seeds": len(seeds), "dts": dts}
 
     def one(dt: float | None) -> dict:
         label = f"dt={dt:.0f}" if dt is not None else "event"
@@ -1045,7 +1050,7 @@ def p2_dt_artifact(*, n_stars: int = P2_FIXED_N["dt_artifact"], n_seeds: int = 3
     """P2 companion to ``m_dt_artifact``: N=300 -> N=512 (70% larger, cleanly p2)."""
     seeds = SEEDS[:n_seeds]
     dts = [5000.0, 2000.0, 1000.0, 500.0, 250.0]
-    config = {"policy": "slingshot_nearest", "n_stars": n_stars, "n_seeds": len(seeds), "dts": dts}
+    config = {**_PROV_DEF, "policy": "slingshot_nearest", "n_stars": n_stars, "n_seeds": len(seeds), "dts": dts}
 
     def one(dt: float | None) -> dict:
         label = f"dt={dt:.0f}" if dt is not None else "event"
@@ -1135,7 +1140,7 @@ def m_clumpiness(*, n_stars: int = 500, n_seeds: int = 48) -> None:
         ("sigma0.08", {"n_clumps": n_clumps, "clump_sigma_frac": 0.08}),
         ("sigma0.05", {"n_clumps": n_clumps, "clump_sigma_frac": 0.05}),
     ]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "n_clumps": n_clumps, "levels": [lb for lb, _ in levels],
               "mode_base": "instant", "mode_treat": "lightspeed", "stepping": "event"}
     data = _clumpiness_run("clumpiness", config, seeds, n_stars, lambdas, levels, p2=False)
@@ -1154,7 +1159,7 @@ def p2_clumpiness(*, n_stars: int = P2_FIXED_N["clumpiness"], n_seeds: int = 48)
         ("sigma0.08", {"n_clumps": n_clumps, "clump_sigma_frac": 0.08}),
         ("sigma0.05", {"n_clumps": n_clumps, "clump_sigma_frac": 0.05}),
     ]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "n_clumps": n_clumps, "levels": [lb for lb, _ in levels],
               "mode_base": "instant", "mode_treat": "lightspeed", "stepping": "event"}
     data = _clumpiness_run("clumpiness", config, seeds, n_stars, lambdas, levels, p2=True)
@@ -1173,7 +1178,7 @@ def m_clumpiness_scale(*, n_stars: int = 200_000, n_seeds: int = 8) -> None:
         ("sigma0.08", {"n_clumps": n_clumps, "clump_sigma_frac": 0.08}),
         ("sigma0.05", {"n_clumps": n_clumps, "clump_sigma_frac": 0.05}),
     ]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "n_clumps": n_clumps, "levels": [lb for lb, _ in levels],
               "mode_base": "instant", "mode_treat": "lightspeed", "stepping": "event"}
     data = _clumpiness_run("clumpiness_scale", config, seeds, n_stars, lambdas, levels, r_seed_count=8, p2=False)
@@ -1192,7 +1197,7 @@ def p2_clumpiness_scale(*, n_stars: int = 262_144, n_seeds: int = 8) -> None:
         ("sigma0.08", {"n_clumps": n_clumps, "clump_sigma_frac": 0.08}),
         ("sigma0.05", {"n_clumps": n_clumps, "clump_sigma_frac": 0.05}),
     ]
-    config = {"policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+    config = {**_PROV_LAMCAP, "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
               "lambdas": lambdas, "n_clumps": n_clumps, "levels": [lb for lb, _ in levels],
               "mode_base": "instant", "mode_treat": "lightspeed", "stepping": "event"}
     data = _clumpiness_run("clumpiness_scale", config, seeds, n_stars, lambdas, levels, r_seed_count=8, p2=True)
@@ -1209,7 +1214,7 @@ def m_validation(*, n_stars: int = 400) -> None:
         out[pol] = {"t100": r.t100_years, "max_speed_km_s": r.max_probe_speed_km_s}
     speedup = out["powered"]["t100"] / out["slingshot_nearest"]["t100"]
     write_result("validation",
-                 {"n_stars": n, "seed": seed, "stepping": "event"},
+                 {**_PROV_DEF, "n_stars": n, "seed": seed, "stepping": "event"},
                  {"policies": out, "nearest_speedup_over_powered": speedup,
                   "nearest_beats_maxboost_on_time": out["slingshot_nearest"]["t100"] < out["slingshot_maxboost"]["t100"]})
 
@@ -1224,7 +1229,7 @@ def p2_validation(*, n_stars: int = 512) -> None:
         out[pol] = {"t100": r.t100_years, "max_speed_km_s": r.max_probe_speed_km_s}
     speedup = out["powered"]["t100"] / out["slingshot_nearest"]["t100"]
     write_p2_companion("validation",
-                       {"n_stars": n, "seed": seed, "stepping": "event"},
+                       {**_PROV_DEF, "n_stars": n, "seed": seed, "stepping": "event"},
                        {"policies": out, "nearest_speedup_over_powered": speedup,
                         "nearest_beats_maxboost_on_time": out["slingshot_nearest"]["t100"] < out["slingshot_maxboost"]["t100"]})
 
@@ -1246,7 +1251,7 @@ def m_finite_size_converged(*, n_seeds_by_n: list[tuple[int, int]] = _FS_CONVERG
                             max_retargets: int = 128) -> None:
     """Fuel tax vs N at a CONVERGED retarget cap, powers of two 2^3..2^18, Lambda=0.2, event."""
     # 2^2 (N=4) is excluded: the tax there takes only 6 distinct values, so its median is a quantised lottery that wrecks any regression (REFERENCES.md, "Why the converged ladder starts at 2^3").
-    config = {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
+    config = {"speed_cap_c": 0.4, "policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
               "max_retargets": max_retargets, "mode_treat": "lightspeed", "stepping": "event"}
 
     def one(item: tuple[int, int]) -> dict:
@@ -1281,7 +1286,7 @@ def m_finite_size_interior(*, n_seeds_by_n: list[tuple[int, int]] = _FS_EDGE_LAD
     """Finite-size EDGE test (referee finding M1): does the with-N tax decline survive when the tax is measured on BULK stars only?"""
     # Shell start-bins for WALL_BIN_EDGES_NN=(0.5,1,1.5,2): shell>=1.0 NN -> bins 2.., shell>=2.0 -> bin 4.
     shells = {"all": 0, "interior_1nn": 2, "interior_2nn": 4}
-    config = {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
+    config = {**_PROV_04, "policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
               "mode_treat": "lightspeed", "stepping": "event",
               "shells_nn": {"interior_1nn": 1.0, "interior_2nn": 2.0},
               "note": "tax on interior stars only (target >= shell mean-NN distances from any wall)"}
@@ -1324,7 +1329,7 @@ def m_finite_size_interior(*, n_seeds_by_n: list[tuple[int, int]] = _FS_EDGE_LAD
 def p2_finite_size_interior(*, n_seeds_by_n: list[tuple[int, int]] = _FS_P2_LADDER) -> None:
     """P2 companion to ``m_finite_size_interior``: p2 ladder matched to the historical seed pattern."""
     shells = {"all": 0, "interior_1nn": 2, "interior_2nn": 4}
-    config = {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
+    config = {**_PROV_04, "policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
               "mode_treat": "lightspeed", "stepping": "event",
               "shells_nn": {"interior_1nn": 1.0, "interior_2nn": 2.0},
               "note": "tax on interior stars only (target >= shell mean-NN distances from any wall)"}
@@ -1365,7 +1370,7 @@ def p2_finite_size_interior(*, n_seeds_by_n: list[tuple[int, int]] = _FS_P2_LADD
 
 def m_finite_size_periodic(*, n_seeds_by_n: list[tuple[int, int]] = _FS_EDGE_LADDER) -> None:
     """Finite-size EDGE test, second control (referee finding M1): the periodic-box cross-check."""
-    config = {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
+    config = {**_PROV_04, "policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
               "mode_treat": "lightspeed", "stepping": "event", "periodic": True}
 
     def one(item: tuple[int, int]) -> dict:
@@ -1401,7 +1406,7 @@ def m_finite_size_periodic(*, n_seeds_by_n: list[tuple[int, int]] = _FS_EDGE_LAD
 
 def p2_finite_size_periodic(*, n_seeds_by_n: list[tuple[int, int]] = _FS_P2_LADDER) -> None:
     """P2 companion to ``m_finite_size_periodic``: p2 ladder matched to the historical seed pattern."""
-    config = {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
+    config = {**_PROV_04, "policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
               "mode_treat": "lightspeed", "stepping": "event", "periodic": True}
 
     def one(item: tuple[int, int]) -> dict:
