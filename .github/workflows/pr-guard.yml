@@ -101,7 +101,7 @@ jobs:
           if ! grep -qE '^modules/core/' /tmp/changed.txt; then echo "core untouched, suite not needed"; exit 0; fi
           cd modules/core && uv run --extra dev pytest -q
 
-      # Reuses `depgraph.py --changed ... --list`, the repo's own reverse-reachability over the import DAG: a change to core fans out to every module, a change to comms runs comms alone.
+      # Reuses `depgraph.py --changed ... --list`, the repo's own reverse-reachability over the import DAG: a change to core fans out to every module, a change to subsystems runs subsystems alone.
       - name: 'tests: every module suite this change reaches'
         id: affected
         continue-on-error: true

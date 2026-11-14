@@ -87,8 +87,18 @@ This is physics-heavy. Grounding is not optional.
 
 - **One module = one directory** with its own README, dependencies, tests, and
   `REFERENCES.md`. Independently runnable.
+- **A model earns its own directory by having a presentation surface, a paper, or two
+  or more importers.** Everything else is a *submodule* of the module it belongs with
+  (`subsystems.thermal`, not `modules/thermal/`). A directory per model is right when a
+  model is something a reader can be shown; ten directories for ten things nobody
+  imports and nobody sees cost ten `pyproject.toml` files, ten lockfiles, ten venvs and
+  ten entries to scan before reaching the models that do have surfaces. When a
+  submodule gains a surface, a paper, or a second importer, that is the signal to
+  promote it back out - and the reverse is just as binding.
 - Modules share concepts and data through **clean interfaces**, never by reaching
-  into each other's internals. Leave seams for the modules still to come.
+  into each other's internals. Leave seams for the modules still to come. A submodule
+  is not a licence to reach past its `__init__.py`: the same rule holds inside a module
+  as between modules.
 - **`frontend` is the one shared surface, and it is pimas-only.** The repo's single
   interactive/presentation layer lives in `frontend/` - a shell that hosts *one
   surface per model* rather than fusing them (each model still owns its slice; the

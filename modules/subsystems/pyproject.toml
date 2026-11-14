@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "subsystems"
+version = "0.1.0"
+description = "Spacecraft subsystem physics: assembly, autonomy, comms, isru, power-source, propellant, reliability, shielding, thermal and transfer, each a submodule with no presentation surface of its own"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.6",
+    "launch-economics",
+    "power-budget",
+    "probe-sim",
+    "vn-core",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+# Sibling modules in this monorepo, consumed through their public APIs.
+[tool.uv.sources]
+launch-economics = { path = "../launch-economics", editable = true }
+power-budget = { path = "../power-budget", editable = true }
+probe-sim = { path = "../probe-sim", editable = true }
+vn-core = { path = "../core", editable = true }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Submodule test dirs each carry a test_distributions.py, so basenames repeat; importlib mode imports by path and does not need __init__.py in every test dir.
+addopts = "--import-mode=importlib"
