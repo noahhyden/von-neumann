@@ -78,7 +78,7 @@ jobs:
       - name: 'depgraph: the import DAG still matches its correctness contract'
         id: depgraph
         continue-on-error: true
-        run: python3 scripts/depgraph.py --selftest
+        run: python3 scripts/depgraph.py --selftest && python3 .github/guards/run_affected.py --selftest
 
       # A paper gaining a figure from a module nobody added to its paths-filter would silently stop rebuilding that paper.
       - name: 'ci filter: ci.yml paths-filter matches the derived paper edges'
