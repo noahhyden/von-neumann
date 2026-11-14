@@ -1,0 +1,36 @@
+# Single source for constants exact by definition; see core/REFERENCES.md and modules/AGENTS.d.
+
+[SECONDS_PER_DAY]
+value = "86400.0"
+unit = "s"
+source = "https://www.bipm.org/en/publications/si-brochure"
+basis = "SI second is exact (caesium-133 hyperfine); a fixed 86400 s day with no leap seconds, which is what every duration in this repo means"
+verdict = "reasonable: durations here are elapsed-time intervals, not civil dates"
+
+[DAYS_PER_JULIAN_YEAR]
+value = "365.25"
+unit = "d"
+source = "https://www.iau.org/publications/proceedings_rules/units/"
+basis = "IAU Julian year, exact by definition; the year the light-year and the IAU parsec are defined against"
+verdict = "reasonable: any other year basis would make C_PC_PER_YEAR internally inconsistent with the IAU parsec it divides by"
+
+[SPEED_OF_LIGHT_KM_S]
+value = "299792.458"
+unit = "km/s"
+source = "https://www.bipm.org/en/publications/si-brochure"
+basis = "exact by the SI definition of the metre"
+verdict = "reasonable: definitional"
+
+[KM_PER_PARSEC]
+value = "3.0856775814913673e13"
+unit = "km"
+source = "https://www.iau.org/static/resolutions/IAU2015_English.pdf"
+basis = "IAU 2015 Resolution B2 exact parsec, 648000/pi au with the au defined as 1.495978707e11 m"
+verdict = "reasonable: definitional"
+
+[BOLTZMANN_J_PER_K]
+value = "1.380649e-23"
+unit = "J/K"
+source = "https://www.bipm.org/en/publications/si-brochure"
+basis = "exact by the 2019 SI redefinition of the kelvin; CODATA agrees by construction"
+verdict = "reasonable: definitional"

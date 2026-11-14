@@ -2,9 +2,10 @@
 import { computeClosure, simulate, type Factory } from "./model.ts";
 import { paramsFromFactory, simulateFleet, timeToBuildOneCopyDays } from "./multi-probe.ts";
 import { simulateSwarm, SWARM_DEFAULTS, type Policy, type SwarmResult } from "./swarm.ts";
+import { DAYS_PER_JULIAN_YEAR } from "./constants.ts";
 
 // 1 Julian year = 365.25 d = 3.15576e7 s - the same year basis the swarm uses for C_PC_PER_YEAR, so build-days -> years shares the swarm's clock.
-export const DAYS_PER_JULIAN_YEAR = 365.25;
+export { DAYS_PER_JULIAN_YEAR };
 
 export interface SpineScenario {
   factory: Factory;

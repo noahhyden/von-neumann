@@ -1,9 +1,10 @@
 /** TS port of the `swarm` module (slice 1) - a deterministic settlement front. */
+import { KM_PER_PARSEC, SECONDS_PER_JULIAN_YEAR, SPEED_OF_LIGHT_KM_S } from "./constants.ts";
 import { nextFloat } from "./rng.ts";
 
 // c in parsecs per Julian year - derived from defined constants (see swarm/REFERENCES.md).
-export const C_PC_PER_YEAR = (299792.458 * 3.15576e7) / 3.0856775814913673e13;
-export const KM_S_TO_PC_YR = (3.15576e7) / 3.0856775814913673e13; // 1 km/s in pc/yr
+export const C_PC_PER_YEAR = (SPEED_OF_LIGHT_KM_S * SECONDS_PER_JULIAN_YEAR) / KM_PER_PARSEC;
+export const KM_S_TO_PC_YR = (SECONDS_PER_JULIAN_YEAR) / KM_PER_PARSEC; // 1 km/s in pc/yr
 
 export type Policy = "powered" | "slingshot_nearest" | "slingshot_maxboost";
 // Knowledge regime (FRONTIER #1): "instant" is perfect global info (bit-identical to the perfect-info port), "lightspeed" lets a decider know a star is settled only once the news-light arrives (swarm/REFERENCES.md).

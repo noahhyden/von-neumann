@@ -10,8 +10,9 @@ import {
   RUNGS,
   SEC_PER_YEAR,
 } from "./coordination.ts";
+import { KM_PER_PARSEC } from "./constants.ts";
 
-const KM_PER_PC = 3.0856775814913673e13; // IAU 2015
+const KM_PER_PC = KM_PER_PARSEC;
 const KM_PER_AU = 1.495978707e8; // IAU 2012
 const pcFromKm = (km: number) => km / KM_PER_PC;
 const pcFromAu = (au: number) => (au * KM_PER_AU) / KM_PER_PC;

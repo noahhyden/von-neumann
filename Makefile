@@ -11,7 +11,7 @@ WORKERS ?=
 NAME ?=
 
 .DEFAULT_GOAL := help
-.PHONY: help test test-py test-frontend frontend run runs ps papers list affected lint-rules agents modules-readme
+.PHONY: help test test-py test-frontend frontend run runs ps papers list affected lint-rules agents modules-readme constants
 
 help:
 	@echo "von-neumann dev-suite"
@@ -29,6 +29,7 @@ help:
 	@echo "  make lint-rules        one-line comments + AGENTS.d rule cap"
 	@echo "  make agents            regenerate every AGENTS.md from its AGENTS.d/"
 	@echo "  make modules-readme    regenerate the modules/README.md inventory table"
+	@echo "  make constants         regenerate constants.py and constants.ts from constants.toml"
 	@echo "  make list             list the discovered python modules"
 	@echo ""
 	@echo "python modules: $(PY_MODULES)"
@@ -100,3 +101,6 @@ agents:
 
 modules-readme:
 	@python3 .github/scripts/gen_modules_readme.py --write
+
+constants:
+	@python3 .github/scripts/gen_constants.py --write

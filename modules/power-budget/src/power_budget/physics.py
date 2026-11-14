@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import math
 
-# Boltzmann constant, J/K. Exact by the 2019 SI redefinition. (CODATA / SI.)
-BOLTZMANN_J_PER_K: float = 1.380649e-23
+from vn_core.constants import BOLTZMANN_J_PER_K  # noqa: F401
 
 # Resting human brain power draw, W. Raichle & Gusnard (2002), PNAS. See REFERENCES.
 HUMAN_BRAIN_POWER_W: float = 20.0

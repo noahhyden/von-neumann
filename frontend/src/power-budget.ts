@@ -1,7 +1,7 @@
 /** TS port of the `power-budget` module - pure math, no pimas; sources: ../../power-budget/REFERENCES.md. */
 
-// Boltzmann constant, J/K - exact by the 2019 SI redefinition.
-export const BOLTZMANN_J_PER_K = 1.380649e-23;
+import { BOLTZMANN_J_PER_K } from "./constants.ts";
+export { BOLTZMANN_J_PER_K };
 // Resting human brain power, W (Raichle & Gusnard 2002).
 export const HUMAN_BRAIN_POWER_W = 20.0;
 // [ESTIMATE] brain-equivalent compute, FLOPS (Sandberg & Bostrom 2008; ~±2 orders).

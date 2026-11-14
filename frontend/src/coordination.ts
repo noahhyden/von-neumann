@@ -1,8 +1,9 @@
 /** Light-speed coordination limits (round-trip = 2d/c) as a pure, pimas-free core (Layer A); sourced in swarm/REFERENCES.md, whose 1 s / 1 min / 1 hr / 1 yr bucket edges are an [ESTIMATE] presentation choice. */
 import { C_PC_PER_YEAR } from "./swarm.ts";
+import { SECONDS_PER_JULIAN_YEAR } from "./constants.ts";
 
 /** Julian year in seconds - matches the value C_PC_PER_YEAR is derived from (swarm.ts). */
-export const SEC_PER_YEAR = 3.15576e7;
+export const SEC_PER_YEAR = SECONDS_PER_JULIAN_YEAR;
 
 /** One-way light-travel time (years) across a distance in parsecs. */
 export function lightTimeYears(distPc: number): number {
