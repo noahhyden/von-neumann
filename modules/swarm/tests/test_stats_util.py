@@ -62,3 +62,11 @@ def test_loglog_slope_is_negative_for_a_declining_trend() -> None:
     slope, lo, hi = loglog_slope_ci(x, groups)
     assert slope < 0.0
     assert hi < 0.0  # whole interval below zero
+
+
+def test_sign_test_survives_1024_samples() -> None:
+    # 2.0**n overflows the double range at n >= 1024, so the exact-int path is what makes 1024-seed ensembles possible.
+    k, n, p = sign_test_positive([1.0] * 1024)
+    assert (k, n) == (1024, 1024)
+    assert p == pytest.approx(2.0 ** -1023, rel=1e-12)
+    assert sign_test_positive([1.0] * 512 + [-1.0] * 512)[2] == 1.0
