@@ -34,7 +34,7 @@ LOC is source lines under `src/`; Tests is the count of `test_*.py` files. Regen
 
 ## `core/` first: the shared primitives
 
-`core/` is the shared-primitives package, imported as `vn_core`, and all 19 modules depend on it. It holds:
+`core/` is the shared-primitives package, imported as `vn_core`. Every one of the other 18 modules imports it. It holds:
 
 - `rng` - seeded mulberry32, pinned for parity with the JS implementation.
 - `uq` - distributions, Monte Carlo, Sobol sampling, polynomial chaos expansion (PCE).
