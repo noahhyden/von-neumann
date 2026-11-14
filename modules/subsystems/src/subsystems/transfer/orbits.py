@@ -5,14 +5,13 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from vn_core.constants import SECONDS_PER_DAY
+
 # Heliocentric gravitational parameter GM_sun, m^3/s^2: IAU 2015 nominal value (GM_sun^N = 1.3271244e20), defined not measured; see REFERENCES.md.
 GM_SUN_M3_S2: float = 1.32712440018e20
 
 # Astronomical unit, m. IAU 2012 exact definition. See REFERENCES.md.
 AU_M: float = 1.495978707e11
-
-# Seconds per day (exact: 86400 SI seconds).
-SECONDS_PER_DAY: float = 86_400.0
 
 # Reference heliocentric semi-major axes, AU: Earth/Mars/Jupiter from the NASA Planetary Fact Sheet, Ceres from the JPL small-body database; transfer inputs, not constants (REFERENCES.md).
 BODY_SEMI_MAJOR_AXIS_AU: dict[str, float] = {

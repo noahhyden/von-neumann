@@ -12,6 +12,7 @@ from .closure import ClosureReport, compute_closure
 from .models import Factory, ReplicationParams
 from .replication import Regime, SimResult, simulate
 from .scenarios import load_factory
+from vn_core.constants import DAYS_PER_JULIAN_YEAR
 
 # Plain-language explanation of each growth bottleneck, for non-technical readers.
 REGIME_PLAIN = {
@@ -45,7 +46,7 @@ def _table(title, headers, rows, right=()):
 def _fmt_days(days: float | None) -> str:
     if days is None:
         return "never"
-    return f"{days:,.0f} d  ({days / 365.25:.1f} yr)"
+    return f"{days:,.0f} d  ({days / DAYS_PER_JULIAN_YEAR:.1f} yr)"
 
 
 def _fmt_rate(x: float) -> str:
@@ -208,7 +209,7 @@ def _print_wall(report: ElectronicsWallReport) -> None:
         d = report.time_to_target_delta_days
         print(
             f"\nMaking its own chips gets the factory to the target "
-            f"{d:,.0f} days ({d / 365.25:.1f} years) sooner."
+            f"{d:,.0f} days ({d / DAYS_PER_JULIAN_YEAR:.1f} years) sooner."
         )
     elif b.time_to_target_days is None and a.time_to_target_days is not None:
         print(

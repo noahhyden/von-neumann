@@ -11,9 +11,8 @@ from swarm.models import SwarmParams
 from swarm.sim import simulate_swarm
 
 from spine.scenario import SpineScenario
+from vn_core.constants import DAYS_PER_JULIAN_YEAR  # noqa: F401
 
-# 1 Julian year = 365.25 days = 3.15576e7 s, the same year basis swarm uses for C_PC_PER_YEAR (see REFERENCES.md).
-DAYS_PER_JULIAN_YEAR: float = 365.25
 
 
 @dataclass
@@ -26,7 +25,7 @@ class SpineResult:
 
     # --- the derived cross-scale cadence (the seam this module closes) ---
     copy_time_days: float  # time to build one offspring's worth of local mass at 1 AU
-    settle_time_years: float  # = copy_time_days / 365.25; the swarm dwell, DERIVED
+    settle_time_years: float  # = copy_time_days / DAYS_PER_JULIAN_YEAR; the swarm dwell, DERIVED
 
     # --- scale 2: the local fleet (multi-probe) ---
     fleet_doubling_days: float | None
