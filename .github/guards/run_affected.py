@@ -49,13 +49,15 @@ def main(argv: list[str]) -> int:
 
 
 def selftest() -> int:
-    # A change to core must reach every module; a change to comms must not reach closure-sim.
+    # A change to core must reach every module; a change to subsystems must not reach closure-sim.
     everything = affected_modules(["modules/core/src/vn_core/rng.py"])
-    assert len(everything) > 15, everything
-    assert "swarm" in everything and "comms" in everything, everything
+    # Derived, not a hardcoded count: a module fold once left this assertion asserting `> 15` against a repo of ten.
+    every_module = sorted(depgraph.Graph(REPO).modules)
+    assert sorted(everything) == every_module, (everything, every_module)
+    assert "swarm" in everything and "subsystems" in everything, everything
 
-    narrow = affected_modules(["modules/comms/src/comms/link.py"])
-    assert "comms" in narrow, narrow
+    narrow = affected_modules(["modules/subsystems/src/subsystems/comms/link.py"])
+    assert "subsystems" in narrow, narrow
     assert "closure-sim" not in narrow, narrow
 
     assert affected_modules(["README.md"]) == [], "a docs-only change reaches no module"
