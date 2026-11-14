@@ -23,7 +23,7 @@ RESULTS_DIR = Path(__file__).resolve().parent / "results"
 SCHEMA_VERSION = 3
 
 # Deterministic seed ensemble (paired: every mode shares each seed): 512 available, each measurement uses a prefix sized to its cost (see REFERENCES.md, "Measurement design").
-SEEDS = [0x9E3779B9 + 2654435761 * k for k in range(512)]
+SEEDS = [0x9E3779B9 + 2654435761 * k for k in range(2048)]
 
 
 # Per-measurement canonical N for the p2 fixed-N base sweeps (issue #38 follow-up): at-scale N=262,144 for the headline set, else the largest power of two regenerating in <= 1 min (REFERENCES.md, "Measurement design").
@@ -1238,6 +1238,45 @@ def _interior_settled(rec: dict, start_bin: int) -> int:
     return sum(rec["settle_wall_hist"][start_bin:])
 
 
+_FS_CONVERGED_LADDER = [(2**k, 2048) for k in range(3, 9)] + [(2**k, 1024) for k in range(9, 14)] + [
+    (2**14, 512), (2**15, 256), (2**16, 256), (2**17, 128), (2**18, 128)]
+
+
+def m_finite_size_converged(*, n_seeds_by_n: list[tuple[int, int]] = _FS_CONVERGED_LADDER,
+                            max_retargets: int = 128) -> None:
+    """Fuel tax vs N at a CONVERGED retarget cap, powers of two 2^3..2^18, Lambda=0.2, event."""
+    # 2^2 (N=4) is excluded: the tax there takes only 6 distinct values, so its median is a quantised lottery that wrecks any regression (REFERENCES.md, "Why the converged ladder starts at 2^3").
+    config = {"policy": "powered", "lambda": 0.2, "n_and_seeds": n_seeds_by_n,
+              "max_retargets": max_retargets, "mode_treat": "lightspeed", "stepping": "event"}
+
+    def one(item: tuple[int, int]) -> dict:
+        n, k = item
+        print(f"    N={n} ({k} seeds)", flush=True)
+        rows = _paired("lightspeed", seeds=SEEDS[:k], n_stars=n, policy="powered",
+                       probe_speed_c=0.2, speed_cap_c=0.4, stepping="event",
+                       max_retargets=max_retargets)
+        if len(rows) != k:
+            raise SystemExit(f"m_finite_size_converged: wanted {k} seeds at N={n}, got {len(rows)}")
+        return _tax_block(rows)
+
+    data = _sweep("finite_size_converged", config, {str(n): (n, k) for n, k in n_seeds_by_n}, one)
+    per_n = {n: [pct_delta(r["treat"]["wasted_arrivals"], r["base"]["wasted_arrivals"])
+                 for r in data[str(n)]["per_seed"]] for n, _ in n_seeds_by_n}
+
+    def fit(lo: int, hi: int) -> dict:
+        sub = [n for n, _ in n_seeds_by_n if lo <= n <= hi]
+        slope, slope_lo, slope_hi = loglog_slope_ci([math.log10(n) for n in sub], [per_n[n] for n in sub])
+        return {"n_lo": lo, "n_hi": hi, "rungs": len(sub),
+                "slope": slope, "ci_lo": slope_lo, "ci_hi": slope_hi}
+
+    write_result("finite_size_converged", config,
+                 {"data": data,
+                  "scale_regression": {"x": "log10(N)", "unit": "percentage points per decade of N",
+                                       "resample": "seeds within each N",
+                                       "overall": fit(8, 2**18), "rise": fit(8, 512),
+                                       "decline": fit(512, 2**18), "top": fit(2**16, 2**18)}})
+
+
 def m_finite_size_interior(*, n_seeds_by_n: list[tuple[int, int]] = _FS_EDGE_LADDER) -> None:
     """Finite-size EDGE test (referee finding M1): does the with-N tax decline survive when the tax is measured on BULK stars only?"""
     # Shell start-bins for WALL_BIN_EDGES_NN=(0.5,1,1.5,2): shell>=1.0 NN -> bins 2.., shell>=2.0 -> bin 4.
@@ -1392,6 +1431,7 @@ MEASUREMENTS = {
     "branching_scale": m_branching_scale,
     "energy_tax": m_energy_tax,
     "finite_size": m_finite_size,
+    "finite_size_converged": m_finite_size_converged,
     "finite_size_interior": m_finite_size_interior,
     "finite_size_periodic": m_finite_size_periodic,
     "concurrency": m_concurrency,
@@ -1431,7 +1471,7 @@ P2_MEASUREMENTS = {
 # Cheap-first order so an interrupted run lands the quick wins early.
 ORDER = ["validation", "dt_artifact", "retarget_cap", "energy_tax", "branching",
          "lambda_sweep", "concurrency", "floor_bracket", "clumpiness", "finite_size",
-         "finite_size_interior", "finite_size_periodic",
+         "finite_size_converged", "finite_size_interior", "finite_size_periodic",
          "concurrency_scale", "retarget_cap_scale", "lambda_sweep_scale",
          "floor_bracket_scale", "clumpiness_scale", "branching_scale"]
 
