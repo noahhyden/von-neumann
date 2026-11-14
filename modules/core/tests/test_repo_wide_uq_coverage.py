@@ -37,11 +37,12 @@ def _pkg_name(module_dir: Path) -> str:
 @pytest.mark.parametrize("module_dir", _module_dirs(), ids=lambda p: p.name)
 def test_module_has_a_distributions_file(module_dir: Path) -> None:
     pkg = _pkg_name(module_dir)
-    dist_py = module_dir / "src" / pkg / "distributions.py"
-    assert dist_py.exists(), (
+    # A module that holds submodules carries one distributions.py per submodule, so search the package tree rather than only its root.
+    found = sorted((module_dir / "src" / pkg).rglob("distributions.py"))
+    assert found, (
         f"module {module_dir.name!r} has REFERENCES.md but no distributions.py; "
-        f"add {dist_py.relative_to(REPO_ROOT)} to carry the sourced spreads "
-        f"for the numbers in that REFERENCES.md (issue #35)"
+        f"add src/{pkg}/distributions.py (or one per submodule) to carry the sourced "
+        f"spreads for the numbers in that REFERENCES.md (issue #35)"
     )
 
 
@@ -63,10 +64,11 @@ def test_module_reaches_uq_only_through_vn_core_public_api(module_dir: Path) -> 
 def test_distributions_file_is_not_a_stub(module_dir: Path) -> None:
     # Guard against the trivial case: an empty distributions.py that would satisfy the other checks vacuously.
     pkg = _pkg_name(module_dir)
-    dist_py = module_dir / "src" / pkg / "distributions.py"
-    text = dist_py.read_text()
-    assert re.search(r"from\s+vn_core\.uq(\.[a-z_]+)?\s+import", text), (
-        f"{dist_py.relative_to(REPO_ROOT)} does not import from vn_core.uq; "
-        f"a stub distributions.py that carries no bands defeats the purpose "
-        f"of the repo-wide UQ rollout (issue #35)."
-    )
+    # Every distributions.py must carry bands, not just the first one found, so one stub submodule cannot hide behind a populated sibling.
+    for dist_py in sorted((module_dir / "src" / pkg).rglob("distributions.py")):
+        text = dist_py.read_text()
+        assert re.search(r"from\s+vn_core\.uq(\.[a-z_]+)?\s+import", text), (
+            f"{dist_py.relative_to(REPO_ROOT)} does not import from vn_core.uq; "
+            f"a stub distributions.py that carries no bands defeats the purpose "
+            f"of the repo-wide UQ rollout (issue #35)."
+        )

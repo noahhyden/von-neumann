@@ -67,7 +67,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module: [closure-sim, probe-sim, power-budget, launch-economics, mission, multi-probe, spine, transfer, comms, assembly, isru, propellant, thermal, power-source, autonomy, shielding, reliability]
+        module: [closure-sim, probe-sim, power-budget, launch-economics, mission, multi-probe, spine, subsystems]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5

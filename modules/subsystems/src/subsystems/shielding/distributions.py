@@ -1,0 +1,27 @@
+"""Distributional companions to shielding's sourced numbers."""
+
+from __future__ import annotations
+
+from vn_core.uq import Distribution, Fixed, Uniform
+
+from subsystems.shielding.radenv import (
+    ALUMINIUM_DENSITY_G_CM3,
+    EUROPA_CLIPPER_VAULT_MASS_KG,
+    GCR_DEEP_SPACE_DOSE_MSV_PER_DAY,
+    GCR_DOSE_MIN_AREAL_DENSITY_G_CM2,
+    JUNO_ANTICIPATED_TID_RAD,
+    JUNO_VAULT_ATTENUATION_FACTOR,
+    JUNO_VAULT_MASS_KG,
+    LUNAR_REGOLITH_DENSITY_G_CM3,
+    TITANIUM_DENSITY_G_CM3,
+)
+
+GCR_DEEP_SPACE_DOSE_DIST: Distribution = Uniform(low=1.5, high=2.1)
+GCR_DOSE_MIN_AREAL_DENSITY_DIST: Distribution = Uniform(low=15.0, high=25.0)
+JUNO_ANTICIPATED_TID_DIST: Distribution = Fixed(JUNO_ANTICIPATED_TID_RAD)
+JUNO_VAULT_ATTENUATION_DIST: Distribution = Uniform(low=500.0, high=1000.0)
+TITANIUM_DENSITY_DIST: Distribution = Fixed(TITANIUM_DENSITY_G_CM3)
+ALUMINIUM_DENSITY_DIST: Distribution = Fixed(ALUMINIUM_DENSITY_G_CM3)
+LUNAR_REGOLITH_DENSITY_DIST: Distribution = Uniform(low=1.5, high=1.8)
+JUNO_VAULT_MASS_DIST: Distribution = Fixed(JUNO_VAULT_MASS_KG)
+EUROPA_CLIPPER_VAULT_MASS_DIST: Distribution = Fixed(EUROPA_CLIPPER_VAULT_MASS_KG)
