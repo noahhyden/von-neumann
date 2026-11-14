@@ -1,0 +1,12 @@
+# Committed spec for the closure-sim replicate command on the lunar regolith seed; nothing here is read from the environment.
+name: replicate-lunar-seed
+module: closure-sim
+entry: closure_sim.cli:main
+description: >
+  Replication simulation of the lunar regolith seed factory with the scenario's own replication block (no overrides).
+
+runtime:
+  optimize: true
+
+params:
+  argv: [replicate, scenarios/lunar_regolith_seed.yaml]

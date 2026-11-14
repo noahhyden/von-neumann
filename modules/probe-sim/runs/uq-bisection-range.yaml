@@ -1,0 +1,9 @@
+# Committed spec for the probe-sim UQ validation on the bisection range; nothing here is read from the environment.
+name: uq-bisection-range
+module: probe-sim
+entry: scripts.uq_bisection_range:main
+description: >
+  Monte Carlo and Sobol total-order validation on the operational range found by bisection with closure-sim in the loop.
+
+runtime:
+  optimize: false

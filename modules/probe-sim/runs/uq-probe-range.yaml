@@ -1,0 +1,9 @@
+# Committed spec for the probe-sim UQ validation on solar reach; nothing here is read from the environment.
+name: uq-probe-range
+module: probe-sim
+entry: scripts.uq_probe_range:main
+description: >
+  Monte Carlo and Sobol total-order validation on the maximum heliocentric reach of a 200 m^2 array at 208 kW demand.
+
+runtime:
+  optimize: false
