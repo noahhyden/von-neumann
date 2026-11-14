@@ -81,13 +81,25 @@ Knobs (`SwarmParams`): `n_stars`, `density_stars_per_pc3`, `probe_speed_c`,
   once the news-light has arrived (`settled_year[i] + dist/c ≤ year`), so probes race from
   stale views and waste trips. The finding, at the resolved event timestep: light-speed lag
   does **not** slow the fill (the coarse-dt penalty is a discretization artifact), but it costs
-  redundant TRAVEL - wasted journeys - a fuel tax that scales with `Λ = v/c` (~1% at slingshot
-  speeds, ~18% at directed-energy speeds). This is the basis of the coordination-tax paper.
-  Experiments in `experiments/` (all event mode):
-  - `lightspeed_coordination.py` - the 32-seed paired A/B: the fuel + time tax vs `Λ = v/c`.
-  - `dt_artifact.py` - the fill-time tax collapsing to ~0 as the fixed timestep resolves.
-  - `finite_size.py` - the fuel tax is a scale-stable fraction (~18-19%) of effort.
-  - `validation.py` - the perfect-info baseline reproduces Nicholson & Forgan quantitatively (~166x).
+  redundant TRAVEL - wasted journeys - a fuel tax that rises with `Λ = v/c`: at N=500 the median
+  is **+0.7%** of the perfect-information waste at `Λ=0.01` and **+19.3%** at `Λ=0.2`
+  (`results/lambda_sweep.json`, 512 seeds). That fraction is **not** size-independent, though -
+  held at `Λ=0.2` it falls from **19.0%** at N=300 to **1.5%** at N=200,000
+  (`results/finite_size.json`), so at galactic scale the coordination fuel tax largely vanishes.
+  This is the basis of the coordination-tax paper.
+  Each measurement below is a committed spec in [`runs/`](runs), run with
+  `make run SPEC=modules/swarm/runs/<name>.yaml` (see "Run specs"); all are event mode except
+  `dt-artifact`, whose whole point is the fixed step:
+  - `runs/lambda-sweep.yaml` → `measure.py::m_lambda_sweep` - the headline paired A/B:
+    the fuel + time tax vs `Λ = v/c`, 512 seeds at N=500.
+  - `runs/dt-artifact.yaml` → `measure.py::m_dt_artifact` - the fill-time tax collapsing to
+    ~0 as the fixed timestep resolves.
+  - `runs/finite-size.yaml` → `measure.py::m_finite_size` - the fuel tax vs N, the decline
+    quoted above (`finite-size-interior` and `finite-size-periodic` are its edge controls).
+  - `runs/validation.yaml` → `measure.py::m_validation` - the perfect-info baseline reproduces
+    Nicholson & Forgan quantitatively (~166x).
+  - The other specs in `runs/` (branching, energy-tax, concurrency, clumpiness, floor-bracket,
+    retarget-cap, and their `-scale` companions) cover the robustness and mechanism checks.
   - `stats_util.py` - seeded, dependency-free bootstrap CI + sign test.
   - `paper_figures.py` - regenerates the four paper figures and prints every cited number.
   - `measure.py --locate-plateau N` - a paired-free shortcut (issue #73) that finds the

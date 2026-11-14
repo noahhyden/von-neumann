@@ -252,7 +252,7 @@ the relativistic `(γ−1)c²` exceeds Newtonian by < 3.1% up to 0.2c.)
 
 **Finding (paired ensemble, event timestep).** Several parts, all deterministic.
 
-*No fill-time tax; the coarse-dt one is an artifact* (`experiments/dt_artifact.py`). With the
+*No fill-time tax; the coarse-dt one is an artifact* (`experiments/measure.py::dt_artifact`). With the
 slice-1 fixed `dt=5000 yr` the fill-100% penalty for slingshot-nearest looks like a robust
 median **+30.3%** (32/32 seeds). It is an artifact of the step: a fixed dt >> hop time batches
 many launches into one window so they decide from the same stale snapshot and collide. Refining
