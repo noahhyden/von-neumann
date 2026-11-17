@@ -71,8 +71,18 @@ def _clean_log_x(ax, xs) -> None:
 
 # --------------------------------------------------------------------------------------------
 
+def load_converged(name: str) -> dict:
+    """Load a ``*_converged`` artifact, normalised to the shape the legacy figure code expects."""
+    d = load(f"{name}_converged")
+    if name == "branching":
+        d["data"] = {f"lam{k.split('|')[0]}_off{k.split('|')[1]}": v for k, v in d["data"].items()}
+    elif name == "dt_artifact":
+        d["rows"] = list(d["data"].values())
+    return d
+
+
 def fig_fuel_tax_vs_lambda() -> Path:
-    d = load("lambda_sweep", p2=True)
+    d = load_converged("lambda_sweep")
     lam = d["config"]["lambdas"]
     fuel = [d["data"][str(l)]["fuel_pct"] for l in lam]
     time = [d["data"][str(l)]["time_pct"] for l in lam]
@@ -99,7 +109,7 @@ def fig_fuel_tax_vs_lambda() -> Path:
 
 
 def fig_fuel_tax_by_seed() -> Path:
-    d = load("lambda_sweep", p2=True)
+    d = load_converged("lambda_sweep")
 
     def per_seed_fuel(l):
         rows = d["data"][str(l)]["per_seed"]
@@ -127,7 +137,7 @@ def fig_fuel_tax_by_seed() -> Path:
 
 
 def fig_time_tax_vs_dt() -> Path:
-    d = load("dt_artifact", p2=True)
+    d = load_converged("dt_artifact")
     rows = [r for r in d["rows"] if r["dt"] is not None]
     ev = next(r for r in d["rows"] if r["dt"] is None)
     xs = [r["dt"] for r in rows]
@@ -150,7 +160,7 @@ def fig_time_tax_vs_dt() -> Path:
 
 
 def fig_branching() -> Path:
-    d = load("branching", p2=True)
+    d = load_converged("branching")
     offs = d["config"]["offspring"]
     lambdas = d["config"]["lambdas"]
     fig, ax = plt.subplots(figsize=(COLW, COLW * 0.8))
@@ -170,7 +180,7 @@ def fig_branching() -> Path:
 
 
 def fig_floor_bracket() -> Path:
-    d = load("floor_bracket", p2=True)
+    d = load_converged("floor_bracket")
     lambdas = d["config"]["lambdas"]
     modes = ["instant", "lightspeed", "inflight"]
     colors = {"instant": "0.75", "lightspeed": "0.15", "inflight": "0.45"}
@@ -202,7 +212,7 @@ def fig_floor_bracket() -> Path:
 
 
 def fig_concurrency() -> Path:
-    d = load("concurrency", p2=True)
+    d = load_converged("concurrency")
     fig, ax = plt.subplots(figsize=(COLW, COLW * GOLDEN))
     for mode, col, ls in (("instant", "0.55", "--"), ("lightspeed", "0.0", "-")):
         cov = d["data"][mode]["coverage"]
@@ -224,7 +234,7 @@ def fig_concurrency() -> Path:
 
 
 def fig_fuel_tax_vs_n() -> Path:
-    d = load("finite_size", p2=True)
+    d = load_converged("finite_size")
     ns = sorted(int(k) for k in d["data"])
     summ = [d["data"][str(n)]["fuel_pct"] for n in ns]
     med = [s["median"] for s in summ]

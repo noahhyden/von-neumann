@@ -88,8 +88,9 @@ assumes claims of a candidate are independent and locally uniform in time, and i
 geometry of which stars are in contention and the saturation of already-doomed hops, so the
 coefficient of proportionality it predicts, one, is a ceiling those corrections can only lower.
 Section~\ref{sec:results} shows the measured tax follows $\Lambda$ in \emph{form} but with a
-coefficient resolvably below that ceiling, a through-origin slope of $0.069$ on the $N = 262{,}144$
-headline field.
+coefficient resolvably below that ceiling at large $N$: a through-origin slope of $0.561$ on the
+$N = 262{,}144$ headline field, rising to about $1.03$ on a few-thousand-star field, where the
+derived ceiling is met.
 
 \subsection{Experimental design and parameters}
 The field is a box of stars at a uniform density of one star per cubic parsec, the convention of
@@ -103,13 +104,17 @@ undercounts what a probe could know and so makes the measured waste a conservati
 we measure the opposite, optimistic bound (a probe that listens in flight) separately in
 Section~\ref{sec:floor}. Second, a probe that loses a race re-targets, but only up to a fixed
 number of times before it is retired; this cap is applied identically under both coordination
-regimes, so the paired comparison is fair. We adopt $\text{cap} = 8$ as the default because the tax
-plateaued above about that value on the few-hundred-star fields of earlier work. That plateau does
-not survive to larger fields (Section~\ref{sec:scale-companions}): at $\Lambda = 0.2$ and $N =
-262{,}144$ the fuel tax is $0.27$, $0.27$, $1.31$, $4.79$, $8.97\%$ for caps of $2, 4, 8, 16, 32$,
-still climbing with no sign of levelling. The default cap is therefore a documented \emph{lower
-bound}, not a converged value, and every fuel-tax figure it produces is an underestimate whose size
-grows with the field. Third, the whole simulation is a pure,
+regimes, so the paired comparison is fair. Earlier work adopted $\text{cap} = 8$ because the tax plateaued above about that value on
+few-hundred-star fields. It does plateau there -- but \emph{where} it plateaus grows with the field,
+and the earlier ladder simply stopped below it. Carried to $\text{cap} = 256$ at $\Lambda = 0.2$ and
+$N = 262{,}144$, the fuel tax is $0.27$, $0.27$, $1.31$, $4.79$, $8.97$, $11.07$, $11.08$, $11.08\%$
+for caps of $2, 4, 8, 16, 32, 64, 128, 256$: caps $128$ and $256$ agree to every printed digit on
+both the fuel and the fill-time tax, because no probe in the ensemble reaches $128$ re-targets and
+the cascade terminates on its own. The converged value is therefore $11.08\%$, and $\text{cap} = 8$
+reports $11.8\%$ of it -- an $8.5\times$ truncation. Every figure in this paper is measured at
+$\text{cap} = 128$. The cap is a modelling parameter with a documented $N$-dependence, not a
+bookkeeping detail: it converges by about $16$ at $N = 400$ but only by $64$ to $128$ at
+$N \geq 200{,}000$. Third, the whole simulation is a pure,
 seeded, event-driven fold: fixing the seed fixes the star field, every arrival, and every target
 choice, so a run with the light-speed gate and a run without it can be compared on the
 \emph{identical} galaxy. That paired design attributes a difference to the delay alone rather than
