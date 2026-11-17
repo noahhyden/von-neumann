@@ -376,6 +376,44 @@ quantisation resolves quickly above it: 84 distinct values at `2^3`, 375 at `2^4
 the baseline denominator is zero), and `N=1` is rejected by `SwarmParams` (`n_stars` is `gt=1`): with
 one star the homeworld is the whole field and is settled at year 0.
 
+**Every paper-facing measurement, re-run at the converged cap.** `max_retargets = 8` truncates the
+bounce cascade (see "The retarget-cap plateau"), so the whole measurement suite was repeated at cap
+128 as `*_converged` siblings (`runs/*-converged.yaml`). The cap=8 artifacts are kept for the
+comparison; the converged ones supersede them for any quantitative claim.
+
+*The Lambda law survives; its coefficient does not* (`lambda_sweep_converged`, N=262,144, 128 seeds).
+Fuel tax at Λ = 0.01/0.03/0.05/0.1/0.2 is **0.579 / 1.706 / 2.754 / 5.623 / 11.210%** against cap=8's
+0.069 / 0.246 / 0.414 / 0.738 / 1.348% - a near-uniform **6.6x to 8.4x** understatement. Because the
+ratio is near-constant in Λ, the *linearity* is unaffected: what moves is the coefficient
+`a = tax/Λ`, from **0.067 to 0.561** at this N. The Λ=0.2 value reproduces the `finite_size_converged`
+2^18 rung (11.21%) and the cap ladder (11.08%) - three independent paths to the same number.
+
+*`a` is ~1 at small N, and the deficit is the finite-size decline, not a separate effect*
+(`clumpiness_converged`, N=4,096, 48 seeds): the uniform null gives `a = 1.027 [0.93,1.08]`, matching
+the `finite_size_converged` N=4,096 rung (19.16% at Λ=0.2, i.e. `a = 0.958`). So `tax = Λ` holds with
+coefficient ~1 at N=4,096 and falls to 0.56 by N=262,144.
+
+*Clumpiness robustness was a cap artifact.* At cap=8 the slope `a` fell 0.730 -> 0.353 from the
+uniform null to the most clustered field (`R = 1.02 -> 0.57`), a 2.1x collapse. At the converged cap
+it is **1.027 / 1.007 / 1.010 / 0.966 / 0.928** across the same five levels - flat within overlapping
+CIs. The law is robust to a non-uniform field; the apparent clumpiness sensitivity was the cap
+truncating harder where local claim rates are higher.
+
+*Branching: the ordering holds, the spread collapses.* At Λ=0.2, offspring 2/3/4/8/16 give
+**11.084 / 15.379 / 16.645 / 18.321 / 19.618%** converged against 1.310 / 3.664 / 4.761 / 6.947 /
+8.793% at cap=8. Still monotone with no saturation to k=16, so that finding stands, but the span from
+k=2 to k=16 is **1.8x, not 6.7x**.
+
+*The no-fill-time-tax claim survives cleanly* (`dt_artifact_converged`, N=262,144, 32 seeds): the
+time tax falls **26.9 / 24.5 / 22.7 / 15.6 / 15.3%** across dt = 5000/2000/1000/500/250 yr and
+collapses to **0.209%** at the resolved event timestep.
+
+*The in-flight relay's fill-time price largely vanishes at Λ=0.2* (`floor_bracket_converged`): the
+cost over instant is **-0.48% [-4.28,+3.78]** at Λ=0.2, against cap=8's +27.23% [+21.66,+32.75] -
+disjoint intervals, and the converged figure is indistinguishable from zero. `[GAP]` The converged
+bracket is **non-monotonic in Λ** (+10.78 / +17.62 / -0.48% at Λ = 0.05/0.1/0.2) and that shape is
+unexplained; do not read a clean "relay is free" result from the Λ=0.2 row alone.
+
 **Density-rescaling invariance (checked):** changing the *uniform* density rescales every
 distance by a common factor, so travel time and light-time scale together and `Λ` (hence the
 relative penalty) is unchanged - a pure geometric rescaling of the absolute clock, confirmed to

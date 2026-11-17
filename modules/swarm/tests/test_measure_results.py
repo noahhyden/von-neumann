@@ -235,3 +235,14 @@ def test_finite_size_converged_json_matches_fold() -> None:
         treat = record(simulate_swarm(SwarmParams(**common, coordination="lightspeed"), seed=seed))
         _assert_record_matches(base, block["per_seed"][i]["base"], f"fs_converged base seed{i}")
         _assert_record_matches(treat, block["per_seed"][i]["treat"], f"fs_converged treat seed{i}")
+
+
+def test_every_converged_artifact_records_its_cap() -> None:
+    # The whole point of the *_converged siblings is the cap; an artifact that does not record it is unusable.
+    names = ["lambda_sweep_converged", "branching_converged", "concurrency_converged",
+             "floor_bracket_converged", "clumpiness_converged", "dt_artifact_converged",
+             "finite_size_converged"]
+    for name in names:
+        cfg = _load(name)["config"]
+        assert cfg.get("max_retargets") == 128, f"{name}: cap not recorded as 128, got {cfg.get('max_retargets')}"
+        assert "speed_cap_c" in cfg, f"{name}: speed_cap_c missing from config"

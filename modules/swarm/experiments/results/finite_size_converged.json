@@ -3,6 +3,7 @@
   "generator": "experiments.measure",
   "measurement": "finite_size_converged",
   "config": {
+    "speed_cap_c": 0.4,
     "policy": "powered",
     "lambda": 0.2,
     "n_and_seeds": [
