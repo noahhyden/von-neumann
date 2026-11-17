@@ -55,6 +55,10 @@ _FORCE = False  # set by --force: ignore and clear any progress sidecar
 _SEED_SLICE: tuple[int, int] | None = None  # (index, count) - set by --seed-slice; else full run
 _ROW_SIDECAR: Path | None = None  # set by _sweep: per-seed row stream for the running measurement
 
+_DEFAULT_CAP = SwarmParams.model_fields["max_retargets"].default
+# Converged cap: at N>=200,000 the tax plateaus by cap 64-128 and caps 128/256 agree to every printed digit (REFERENCES.md, "The retarget-cap plateau").
+_CONVERGED_CAP = 128
+
 _PROV_LAMCAP = {"speed_cap_c": "max(0.05, 2*lambda)", "max_retargets": SwarmParams.model_fields["max_retargets"].default}
 _PROV_04 = {"speed_cap_c": 0.4, "max_retargets": SwarmParams.model_fields["max_retargets"].default}
 _PROV_DEF = {"speed_cap_c": SwarmParams.model_fields["speed_cap_c"].default,
@@ -805,11 +809,11 @@ def p2_finite_size(*, n_seeds_by_n: list[tuple[int, int]] = _FS_P2_LADDER) -> No
 
 
 def _concurrency_ensemble(seeds: list[int], n_stars: int, lam: float,
-                          bins: list[float]) -> dict:
+                          bins: list[float], *, max_retargets: int = _DEFAULT_CAP) -> dict:
     """Run the paired instant/lightspeed concurrency ensemble in parallel over (seed, mode)."""
     modes = ("instant", "lightspeed")
     params = dict(n_stars=n_stars, policy="powered", probe_speed_c=lam,
-                  speed_cap_c=max(0.05, 2 * lam), stepping="event")
+                  speed_cap_c=max(0.05, 2 * lam), stepping="event", max_retargets=max_retargets)
     args = [(mode, params, s, tuple(bins)) for s in seeds for mode in modes]
     results = _parallel_map(_concurrency_worker, args, label="seed")
     # Bucket back per mode, preserving seed order (args are emitted seed-then-mode, so the mode
@@ -889,7 +893,7 @@ def p2_concurrency_scale(*, n_stars: int = 524_288, n_seeds: int = 8) -> None:
 
 
 def _floor_bracket_body(name: str, config: dict, seeds: list[int], n_stars: int, lambdas: list[float],
-                        p2: bool = False) -> dict:
+                        p2: bool = False, max_retargets: int = _DEFAULT_CAP) -> dict:
     """Shared floor-bracket ensemble body (used by ``m_floor_bracket`` and its p2 companion)."""
     modes = ("instant", "lightspeed", "inflight")
 
@@ -897,7 +901,7 @@ def _floor_bracket_body(name: str, config: dict, seeds: list[int], n_stars: int,
         print(f"    Lambda={lam}", flush=True)
         cap = max(0.05, 2 * lam)
         params = dict(n_stars=n_stars, policy="powered", probe_speed_c=lam,
-                      speed_cap_c=cap, stepping="event")
+                      speed_cap_c=cap, stepping="event", max_retargets=max_retargets)
         args = [(mode, params, s) for mode in modes for s in seeds]
         recs = _parallel_map(_single_worker, args, label=f"lam={lam}")
         runs = {mode: recs[i * len(seeds):(i + 1) * len(seeds)] for i, mode in enumerate(modes)}
@@ -1069,7 +1073,8 @@ def p2_dt_artifact(*, n_stars: int = P2_FIXED_N["dt_artifact"], n_seeds: int = 3
 
 
 def _clumpiness_run(name: str, config: dict, seeds: list[int], n_stars: int, lambdas: list[float],
-                    levels: list[tuple[str, dict]], r_seed_count: int = 16, p2: bool = False) -> dict:
+                    levels: list[tuple[str, dict]], r_seed_count: int = 16, p2: bool = False,
+                    max_retargets: int = _DEFAULT_CAP) -> dict:
     """Shared clumpy-field sweep body, used by ``m_clumpiness`` (N=500) and its scale companion."""
 
     def one(level: tuple[str, dict]) -> dict:
@@ -1091,7 +1096,8 @@ def _clumpiness_run(name: str, config: dict, seeds: list[int], n_stars: int, lam
                     for m in ("instant", "lightspeed")}
             base_waste_frac = []
             params = dict(n_stars=n_stars, policy="powered", probe_speed_c=lam,
-                          speed_cap_c=max(0.05, 2 * lam), stepping="event", **field_kw)
+                          speed_cap_c=max(0.05, 2 * lam), stepping="event",
+                          max_retargets=max_retargets, **field_kw)
             # Parallel over seeds: each worker runs the paired instant/lightspeed pair AND returns
             args = [(params, s) for s in seeds]
             results = _parallel_map(_clumpy_paired_worker, args, label=f"lam={lam}")
@@ -1282,6 +1288,127 @@ def m_finite_size_converged(*, n_seeds_by_n: list[tuple[int, int]] = _FS_CONVERG
                                        "decline": fit(512, 2**18), "top": fit(2**16, 2**18)}})
 
 
+def m_lambda_sweep_converged(*, n_stars: int = P2_FIXED_N["lambda_sweep"], n_seeds: int = 128,
+                             max_retargets: int = _CONVERGED_CAP) -> None:
+    """The headline Lambda sweep at a CONVERGED retarget cap (the cap=8 p2 block understates it)."""
+    seeds = SEEDS[:n_seeds]
+    lambdas = [0.01, 0.03, 0.05, 0.1, 0.2]
+    config = {"speed_cap_c": "max(0.05, 2*lambda)", "max_retargets": max_retargets,
+              "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+              "lambdas": lambdas, "mode_base": "instant", "mode_treat": "lightspeed",
+              "stepping": "event"}
+
+    def one(lam: float) -> dict:
+        print(f"    Lambda={lam}", flush=True)
+        rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy="powered",
+                       probe_speed_c=lam, speed_cap_c=max(0.05, 2 * lam), stepping="event",
+                       max_retargets=max_retargets)
+        return _tax_block(rows)
+
+    data = _sweep("lambda_sweep_converged", config, {str(lam): lam for lam in lambdas}, one)
+    write_result("lambda_sweep_converged", config, {"data": data})
+
+
+def m_branching_converged(*, n_stars: int = P2_FIXED_N["branching"], n_seeds: int = 32,
+                          max_retargets: int = _CONVERGED_CAP) -> None:
+    """Branching sweep at a CONVERGED retarget cap: does tax rising with k survive the cap fix?"""
+    seeds = SEEDS[:n_seeds]
+    offspring = [2, 3, 4, 8, 16]
+    lambdas = [0.05, 0.2]
+    config = {"speed_cap_c": "max(0.05, 2*lambda)", "max_retargets": max_retargets,
+              "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+              "lambdas": lambdas, "offspring": offspring, "mode_treat": "lightspeed",
+              "stepping": "event"}
+
+    def one(item: tuple[float, int]) -> dict:
+        lam, off = item
+        print(f"    Lambda={lam} offspring={off}", flush=True)
+        rows = _paired("lightspeed", seeds=seeds, n_stars=n_stars, policy="powered",
+                       probe_speed_c=lam, speed_cap_c=max(0.05, 2 * lam),
+                       offspring_per_settlement=off, stepping="event",
+                       max_retargets=max_retargets)
+        return _tax_block(rows)
+
+    items = {f"{lam}|{off}": (lam, off) for lam in lambdas for off in offspring}
+    data = _sweep("branching_converged", config, items, one)
+    write_result("branching_converged", config, {"data": data})
+
+
+def m_concurrency_converged(*, n_stars: int = P2_FIXED_N["concurrency"], n_seeds: int = 32,
+                            max_retargets: int = _CONVERGED_CAP) -> None:
+    """In-flight probe population at a CONVERGED retarget cap (explains the time-vs-fuel ordering)."""
+    seeds = SEEDS[:n_seeds]
+    lam = 0.2
+    bins = [round(i / 20, 2) for i in range(1, 19)] + [0.95, 0.97, 0.99]
+    data = _concurrency_ensemble(seeds, n_stars, lam, bins, max_retargets=max_retargets)
+    write_result("concurrency_converged",
+                 {"speed_cap_c": "max(0.05, 2*lambda)", "max_retargets": max_retargets,
+                  "policy": "powered", "lambda": lam, "n_stars": n_stars,
+                  "n_seeds": len(seeds), "stepping": "event"},
+                 {"data": data})
+
+
+def m_floor_bracket_converged(*, n_stars: int = P2_FIXED_N["floor_bracket"], n_seeds: int = 32,
+                              max_retargets: int = _CONVERGED_CAP) -> None:
+    """The instant/lightspeed/inflight bracket at a CONVERGED retarget cap."""
+    seeds = SEEDS[:n_seeds]
+    lambdas = [0.05, 0.1, 0.2]
+    config = {"speed_cap_c": "max(0.05, 2*lambda)", "max_retargets": max_retargets,
+              "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+              "lambdas": lambdas, "modes": ["instant", "lightspeed", "inflight"], "stepping": "event"}
+    data = _floor_bracket_body("floor_bracket_converged", config, seeds, n_stars, lambdas,
+                               max_retargets=max_retargets)
+    write_result("floor_bracket_converged", config, {"data": data})
+
+
+def m_clumpiness_converged(*, n_stars: int = P2_FIXED_N["clumpiness"], n_seeds: int = 48,
+                           max_retargets: int = _CONVERGED_CAP) -> None:
+    """Non-uniform (Thomas cluster) field robustness at a CONVERGED retarget cap."""
+    seeds = SEEDS[:n_seeds]
+    lambdas = [0.05, 0.1, 0.2]
+    n_clumps = 25
+    levels = [
+        ("uniform", {}),
+        ("sigma0.30", {"n_clumps": n_clumps, "clump_sigma_frac": 0.30}),
+        ("sigma0.15", {"n_clumps": n_clumps, "clump_sigma_frac": 0.15}),
+        ("sigma0.08", {"n_clumps": n_clumps, "clump_sigma_frac": 0.08}),
+        ("sigma0.05", {"n_clumps": n_clumps, "clump_sigma_frac": 0.05}),
+    ]
+    config = {"speed_cap_c": "max(0.05, 2*lambda)", "max_retargets": max_retargets,
+              "policy": "powered", "n_stars": n_stars, "n_seeds": len(seeds),
+              "lambdas": lambdas, "n_clumps": n_clumps, "levels": [lb for lb, _ in levels],
+              "mode_base": "instant", "mode_treat": "lightspeed", "stepping": "event"}
+    data = _clumpiness_run("clumpiness_converged", config, seeds, n_stars, lambdas, levels,
+                           max_retargets=max_retargets)
+    write_result("clumpiness_converged", config, {"data": data})
+
+
+def m_dt_artifact_converged(*, n_stars: int = P2_FIXED_N["dt_artifact"], n_seeds: int = 32,
+                            max_retargets: int = _CONVERGED_CAP) -> None:
+    """The fill-time tax vs timestep at a CONVERGED retarget cap (the no-time-tax claim)."""
+    seeds = SEEDS[:n_seeds]
+    dts = [5000.0, 2000.0, 1000.0, 500.0, 250.0]
+    config = {"speed_cap_c": SwarmParams.model_fields["speed_cap_c"].default,
+              "max_retargets": max_retargets, "policy": "slingshot_nearest",
+              "n_stars": n_stars, "n_seeds": len(seeds), "dts": dts}
+
+    def one(dt: float | None) -> dict:
+        label = f"dt={dt:.0f}" if dt is not None else "event"
+        print(f"    {label}", flush=True)
+        common = dict(n_stars=n_stars, policy="slingshot_nearest", max_retargets=max_retargets)
+        common.update({"stepping": "event"} if dt is None else {"stepping": "fixed", "dt_years": dt})
+        args = [(common, s) for s in seeds]
+        pairs = _parallel_map(_dt_paired_worker, args, label=label)
+        pens = [((l - i) / i * 100.0) for (i, l) in pairs if i and l]
+        kpos, nnz, _ = sign_test_positive(pens)
+        return {"dt": dt, "label": label, "time_pct": summarize(pens),
+                "seeds_positive": kpos, "seeds_nonzero": nnz}
+
+    items = {(f"dt{dt:.0f}" if dt is not None else "event"): dt for dt in [*dts, None]}
+    data = _sweep("dt_artifact_converged", config, items, one)
+    write_result("dt_artifact_converged", config, {"data": data})
+
+
 def m_finite_size_interior(*, n_seeds_by_n: list[tuple[int, int]] = _FS_EDGE_LADDER) -> None:
     """Finite-size EDGE test (referee finding M1): does the with-N tax decline survive when the tax is measured on BULK stars only?"""
     # Shell start-bins for WALL_BIN_EDGES_NN=(0.5,1,1.5,2): shell>=1.0 NN -> bins 2.., shell>=2.0 -> bin 4.
@@ -1431,8 +1558,10 @@ def p2_finite_size_periodic(*, n_seeds_by_n: list[tuple[int, int]] = _FS_P2_LADD
 
 MEASUREMENTS = {
     "lambda_sweep": m_lambda_sweep,
+    "lambda_sweep_converged": m_lambda_sweep_converged,
     "lambda_sweep_scale": m_lambda_sweep_scale,
     "branching": m_branching,
+    "branching_converged": m_branching_converged,
     "branching_scale": m_branching_scale,
     "energy_tax": m_energy_tax,
     "finite_size": m_finite_size,
@@ -1440,13 +1569,17 @@ MEASUREMENTS = {
     "finite_size_interior": m_finite_size_interior,
     "finite_size_periodic": m_finite_size_periodic,
     "concurrency": m_concurrency,
+    "concurrency_converged": m_concurrency_converged,
     "concurrency_scale": m_concurrency_scale,
     "floor_bracket": m_floor_bracket,
+    "floor_bracket_converged": m_floor_bracket_converged,
     "floor_bracket_scale": m_floor_bracket_scale,
     "retarget_cap": m_retarget_cap,
     "retarget_cap_scale": m_retarget_cap_scale,
     "dt_artifact": m_dt_artifact,
+    "dt_artifact_converged": m_dt_artifact_converged,
     "clumpiness": m_clumpiness,
+    "clumpiness_converged": m_clumpiness_converged,
     "clumpiness_scale": m_clumpiness_scale,
     "validation": m_validation,
 }
@@ -1476,7 +1609,9 @@ P2_MEASUREMENTS = {
 # Cheap-first order so an interrupted run lands the quick wins early.
 ORDER = ["validation", "dt_artifact", "retarget_cap", "energy_tax", "branching",
          "lambda_sweep", "concurrency", "floor_bracket", "clumpiness", "finite_size",
-         "finite_size_converged", "finite_size_interior", "finite_size_periodic",
+         "finite_size_converged", "lambda_sweep_converged", "branching_converged",
+         "concurrency_converged", "floor_bracket_converged", "clumpiness_converged",
+         "dt_artifact_converged", "finite_size_interior", "finite_size_periodic",
          "concurrency_scale", "retarget_cap_scale", "lambda_sweep_scale",
          "floor_bracket_scale", "clumpiness_scale", "branching_scale"]
 

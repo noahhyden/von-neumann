@@ -1,0 +1,20 @@
+# Committed spec for the branching_converged measurement; nothing here is read from the environment.
+name: branching-converged
+module: swarm
+entry: experiments.measure:m_branching_converged
+description: >
+  Branching-factor sweep at a CONVERGED retarget cap (128), N=262,144, 32 seeds.
+
+runtime:
+  # No RAM cap recorded for this run, so workers is blank (every core).
+  workers:
+  # Was `python -O`. Strips the fold's __debug__ invariants; bit-identical, ~2-3x faster.
+  optimize: true
+  backends:
+    rust: true
+    njit: true
+
+params:
+  n_stars: 262144
+  n_seeds: 32
+  max_retargets: 128

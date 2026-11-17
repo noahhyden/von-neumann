@@ -1,0 +1,20 @@
+# Committed spec for the clumpiness_converged measurement; nothing here is read from the environment.
+name: clumpiness-converged
+module: swarm
+entry: experiments.measure:m_clumpiness_converged
+description: >
+  Thomas-cluster non-uniform field robustness at a CONVERGED retarget cap (128), N=4,096, 48 seeds.
+
+runtime:
+  # No RAM cap recorded for this run, so workers is blank (every core).
+  workers:
+  # Was `python -O`. Strips the fold's __debug__ invariants; bit-identical, ~2-3x faster.
+  optimize: true
+  backends:
+    rust: true
+    njit: true
+
+params:
+  n_stars: 4096
+  n_seeds: 48
+  max_retargets: 128

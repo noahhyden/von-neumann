@@ -1,0 +1,21 @@
+# Committed spec for the dt_artifact_converged measurement; nothing here is read from the environment.
+name: dt-artifact-converged
+module: swarm
+entry: experiments.measure:m_dt_artifact_converged
+description: >
+  Fill-time tax vs fixed timestep at a CONVERGED retarget cap (128), N=262,144, 32 seeds.
+  Slingshot policy, so every run is on the Python fold: this is the slowest spec in the module.
+
+runtime:
+  # No RAM cap recorded for this run, so workers is blank (every core).
+  workers:
+  # Was `python -O`. Strips the fold's __debug__ invariants; bit-identical, ~2-3x faster.
+  optimize: true
+  backends:
+    rust: true
+    njit: true
+
+params:
+  n_stars: 262144
+  n_seeds: 32
+  max_retargets: 128
